@@ -1,0 +1,2 @@
+# [0073. CommonJS 练习 - 制作一个斗地主洗牌发牌的程序](https://github.com/Tdahuyou/html-css-js/tree/main/0073.%20CommonJS%20%E7%BB%83%E4%B9%A0%20-%20%E5%88%B6%E4%BD%9C%E4%B8%80%E4%B8%AA%E6%96%97%E5%9C%B0%E4%B8%BB%E6%B4%97%E7%89%8C%E5%8F%91%E7%89%8C%E7%9A%84%E7%A8%8B%E5%BA%8F)
+

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://tdahuyou.github.io/notes/sitemap.xml

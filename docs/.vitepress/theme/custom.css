@@ -1,0 +1,14 @@
+/* .vitepress/theme/custom.css */
+:root {
+  --vp-c-brand-1: #646cff;
+  --vp-c-brand-2: #747bff;
+}
+
+/* hide default last updated */
+.last-updated {
+    display: none;
+}
+
+a {
+    text-decoration: none !important;
+}
