@@ -5,7 +5,7 @@ import {
   EOL,
   MERGED_README_FILENAME,
   SEPERATOR
-} from './constants'
+} from './constants.js'
 
 function mergeReadme(baseDir, ignoreDirs) {
   const mergedReadmePath = path.resolve(baseDir, MERGED_README_FILENAME);

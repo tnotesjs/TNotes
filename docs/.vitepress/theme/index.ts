@@ -7,7 +7,7 @@ import type { Theme } from 'vitepress'
 import './custom.css'
 // import MyGlobalComponent from "../components/MyGlobalComponent.vue";
 import MyLayout from '../components/MyLayout.vue'
-import Dynamic from '../components/Dynamic.vue'
+import Footprints from '../components/Footprints.vue'
 import EnWordList from '../components/EnWordList.vue'
 import MyGiscusComp from '../components/MyGiscusComp.vue'
 import BilibiliOutsidePlayer from '../components/BilibiliOutsidePlayer.vue'
@@ -28,7 +28,7 @@ export default {
   // doc: https://vitepress.dev/zh/guide/extending-default-theme#registering-global-components
   enhanceApp({ app }) {
     // 注册自定义全局组件
-    app.component('Dynamic', Dynamic)
+    app.component('Footprints', Footprints)
     app.component('EnWordList', EnWordList)
     app.component('MyGiscusComp', MyGiscusComp)
     app.component('BilibiliOutsidePlayer', BilibiliOutsidePlayer)

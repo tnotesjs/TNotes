@@ -5,7 +5,7 @@ import ReadmeUpdater from './updateREADME.js';
 import { mergeReadme, distributeReadme } from './notes-merge-distribute.js';
 import { syncLocalAndRemote, initPkg, parseTnotesConfig } from './utils.js';
 // import notesmeta from './.notesmeta.json' assert { type: 'json' };
-import { __dirname } from './constants';
+import { __dirname } from './constants.js';
 import fs from 'fs';
 
 const notesmeta = JSON.parse(fs.readFileSync(path.resolve(__dirname, '.notesmeta.json'), 'utf-8'));

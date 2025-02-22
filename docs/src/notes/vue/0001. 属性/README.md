@@ -207,7 +207,7 @@ defineProps({
 <BlogPost
   :author="{
     name: 'Veronica',
-    company: 'Veridian Dynamics'
+    company: 'Veridian Footprintss'
   }"
  />
 

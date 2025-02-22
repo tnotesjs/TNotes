@@ -12,7 +12,7 @@ import path, { dirname } from 'path';
 // import notesmeta from './.notesmeta.json' assert { type: 'json' };
 
 import GithubSlugger from 'github-slugger'; // doc: https://www.npmjs.com/package/github-slugger
-import { __dirname } from './constants';
+import { __dirname } from './constants.js';
 
 const notesmeta = JSON.parse(fs.readFileSync(path.resolve(__dirname, '.notesmeta.json'), 'utf-8'));
 

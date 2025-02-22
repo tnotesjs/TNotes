@@ -2,7 +2,7 @@ import { exec } from 'child_process';
 // import notesmeta from './.notesmeta.json' assert { type: 'json' }; // !ExperimentalWarning: Importing JSON modules is an experimental feature and might change at any time
 import fs from 'fs/promises';
 import path from 'path';
-import { __dirname } from './constants';
+import { __dirname } from './constants.js';
 
 
 const notesmeta = JSON.parse(fs.readFileSync(path.resolve(__dirname, '.notesmeta.json'), 'utf-8'));
