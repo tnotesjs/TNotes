@@ -14,7 +14,7 @@ const notesmeta = JSON.parse(fs.readFileSync(path.resolve(__dirname, '.notesmeta
   const args = minimist(process.argv.slice(2), {
     string: ['repoName']
   });
-  // console.log('args', args);
+  console.log('args', args);
   
   const repoName = args.repoName;
 
@@ -31,9 +31,9 @@ const notesmeta = JSON.parse(fs.readFileSync(path.resolve(__dirname, '.notesmeta
     doneNoteIds,
     bilibiliMap
   } = parseTnotesConfig(pkg);
-  // console.log('ignoreDirs', ignoreDirs)
-  // console.log('doneNoteIds', doneNoteIds)
-  // console.log('bilibiliMap', bilibiliMap)
+  console.log('ignoreDirs', ignoreDirs)
+  console.log('doneNoteIds', doneNoteIds)
+  console.log('bilibiliMap', bilibiliMap)
 
   ignoreDirs = [...ignoreDirs, ...notesmeta.common_ignore_dirs];
 

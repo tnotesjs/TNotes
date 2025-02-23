@@ -34,4 +34,11 @@
 'mutator',
 'compose',
 'decompose',
+'cave',
+'badge',
+'represent',
+'archive',
+'dimension',
+'accord',
+'orientation',
 ]"></EnWordList>

@@ -28,8 +28,6 @@ import sidebar__vscode from '../src/notes/vscode/sidebar.json'
 import sidebar__vue from '../src/notes/vue/sidebar.json'
 import sidebar__webpack from '../src/notes/webpack/sidebar.json'
 
-// import notesmeta from '../../scripts/.notesmeta.json'
-
 const slugger = new GithubSlugger()
 
 // doc => https://vitepress.dev/zh/reference/site-config
@@ -121,37 +119,6 @@ export default defineConfig({
       lazyLoading: true,
     },
   },
-  // async buildEnd(siteConfig) {
-  //   console.log('buildEnd', siteConfig)
-  // },
-
-  // async postRender(context) {
-  //   console.log('postRender', context);
-  // },
-
-  // async transformHead(context) {
-  //   console.log('transformHead', context)
-  // },
-
-  // transformPageData(pageData, context) {
-  //   console.log('transformPageData', pageData, context)
-  //   // pageData.frontmatter.head ??= []
-  //   // pageData.frontmatter.head.push([
-  //   //   'meta',
-  //   //   {
-  //   //     name: 'og:title',
-  //   //     content:
-  //   //       pageData.frontmatter.layout === 'home'
-  //   //         ? `VitePress`
-  //   //         : `${pageData.title} | VitePress`
-  //   //   }
-  //   // ])
-  // },
-
-  // async transformHtml(code, id, context) {
-  //   console.log('transformHtml', code, id, context)
-  //   // ...
-  // }
   router: {
     prefetchLinks: false, // 禁止预加载，确保每次加载内容是同步的
   },
@@ -202,6 +169,7 @@ function sidebar() {
           items: [
             { ...sidebar__electron },
             { ...sidebar__react },
+            { link: 'https://tdahuyou.github.io/TNotes.react/', text: 'react' },
             { ...sidebar__vue },
             { ...sidebar__vite },
             { ...sidebar__vitepress },
@@ -321,14 +289,14 @@ function head() {
       'meta',
       {
         name: 'keywords',
-        content: 'TNotes, Tdahuyou, Tdahuyou 的笔记, 家乐的笔记',
+        content: 'Tdahuyou, Tdahuyou notes, TNotes',
       },
     ],
     ['meta', { name: 'author', content: 'Tdahuyou' }],
     ['link', { rel: 'canonical', href: 'https://tdahuyou.github.io/notes' }],
 
     // 当用户在社交媒体上分享链接时，预览效果会更加美观
-    ['meta', { property: 'og:title', content: 'TNotes - Tdahuyou 的笔记' }],
+    ['meta', { property: 'og:title', content: 'TNotes' }],
     [
       'meta',
       {
@@ -348,13 +316,6 @@ function head() {
       'link',
       { rel: 'icon', href: 'https://tdahuyou.github.io/notes/favicon.ico' },
     ],
-    // [
-    //   'link',
-    //   {
-    //     rel: 'icon',
-    //     href: 'https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/public/favicon.ico',
-    //   },
-    // ],
     ['link', { rel: 'preconnect', href: 'https://fonts.googleapis.com' }],
     [
       'link',

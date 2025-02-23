@@ -72,7 +72,7 @@ createRoot(document.getElementById('root')).render(
 import { StrictMode, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
-function MyFootprintsComponent({ isActive }) {
+function MyDynamicComponent({ isActive }) {
   const dynamicStyle = {
     color: isActive ? 'green' : 'red',
     fontWeight: isActive ? 'bold' : 'normal',
@@ -90,7 +90,7 @@ function App() {
           Toggle Active State
         </button>
       </p>
-      <MyFootprintsComponent isActive={isActive} />
+      <MyDynamicComponent isActive={isActive} />
     </>
   )
 }
