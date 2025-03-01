@@ -19,120 +19,124 @@ hero:
     #   link: https://github.com/Tdahuyou/notes
 
 features:
+  - icon: 📒
+    title: TNotes.template
+    details: 📒 TNotes 笔记模板
+    link: https://tdahuyou.github.io/TNotes.template/
+  - icon:
+      src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--react.svg
+    title: TNotes.react
+    details: 🌐 前端生态
+    link: https://tdahuyou.github.io/TNotes.react/
+  - icon:
+      src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--en-notes.svg
+    title: TNotes.en-notes
+    details: 🌍 外语
+    link: https://tdahuyou.github.io/TNotes.en-notes/
+  - icon:
+      src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--en-words.svg
+    title: TNotes.en-words
+    details: 🌍 外语
+    link: https://github.com/Tdahuyou/TNotes.en-words
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--c-cpp.svg
     title: c-cpp
-    details: 📚 语言基础
+    details: 📚 语言基础 - ⏰ TNotes.c-cpp
     link: /notes/c-cpp/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--html-css-js.png
     title: html-css-js
-    details: 📚 语言基础
+    details: 📚 语言基础 - ⏰ TNotes.html-css-js
     link: /notes/html-css-js/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--canvas.svg
     title: canvas
-    details: 📚 语言基础
+    details: 📚 语言基础 - ⏰ TNotes.canvas
     link: /notes/canvas/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--svg.png
     title: svg
-    details: 📚 语言基础
+    details: 📚 语言基础 - ⏰ TNotes.svg
     link: /notes/svg/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--typescript.svg
     title: typescript
-    details: 📚 语言基础
+    details: 📚 语言基础 - ⏰ TNotes.typescript
     link: /notes/typescript/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--nodejs.svg
     title: nodejs
-    details: 📚 语言基础
+    details: 📚 语言基础 - ⏰ TNotes.nodejs
     link: /notes/nodejs/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--markdown.svg
     title: markdown
-    details: 📚 语言基础
+    details: 📚 语言基础 - ⏰ TNotes.markdown
     link: /notes/markdown/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--electron.svg
     title: electron
-    details: 🌐 前端生态
+    details: 🌐 前端生态 - ⏰ TNotes.electron
     link: /notes/electron/README
-  - icon:
-      src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--react.svg
-    title: react
-    details: 🌐 前端生态
-    link: /notes/react/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--vue.svg
     title: vue
-    details: 🌐 前端生态
+    details: 🌐 前端生态 - ⏰ TNotes.vue
     link: /notes/vue/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--vite.svg
     title: vite
-    details: 🌐 前端生态
+    details: 🌐 前端生态 - ⏰ TNotes.vite
     link: /notes/vite/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--webpack.svg
     title: webpack
-    details: 🌐 前端生态
+    details: 🌐 前端生态 - ⏰ TNotes.webpack
     link: /notes/webpack/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--eslint.svg
     title: eslint
-    details: 🌐 前端生态
+    details: 🌐 前端生态 - ⏰ TNotes.eslint
     link: /notes/eslint/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--prettier.png
     title: prettier
-    details: 🌐 前端生态
+    details: 🌐 前端生态 - ⏰ TNotes.prettier
     link: /notes/prettier/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--miniprogram-wechat.svg
     title: miniprogram-wechat
-    details: 🌐 前端生态
+    details: 🌐 前端生态 - ⏰ TNotes.miniprogram-wechat
     link: /notes/miniprogram-wechat/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--i18n.svg
     title: i18n
-    details: 🌐 前端生态
+    details: 🌐 前端生态 - ⏰ TNotes.i18n
     link: /notes/i18n/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--pc.svg
     title: pc
-    details: 💻 PC 工具软件
+    details: 💻 PC 工具软件 - ⏰ TNotes.pc
     link: /notes/pc/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--vscode.svg
     title: vscode
-    details: 💻 PC 工具软件
+    details: 💻 PC 工具软件 - ⏰ TNotes.vscode
     link: /notes/vscode/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--git.svg
     title: git
-    details: 💻 PC 工具软件
+    details: 💻 PC 工具软件 - ⏰ TNotes.git
     link: /notes/git/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--chrome.svg
     title: chrome
-    details: 💻 PC 工具软件
+    details: 💻 PC 工具软件 - ⏰ TNotes.chrome
     link: /notes/chrome/README
-  - icon:
-      src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--en-notes.svg
-    title: en-notes
-    details: 🌍 外语
-    link: /notes/en-notes/README
-  - icon:
-      src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--en-words.svg
-    title: en-words
-    details: 🌍 外语
-    link: /notes/en-words
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--leetcode.svg
     title: leetcode
-    details: 🧠 数据结构与算法
+    details: 🧠 数据结构与算法 - ⏰ TNotes.leetcode
     link: /notes/leetcode/README
 ---
 

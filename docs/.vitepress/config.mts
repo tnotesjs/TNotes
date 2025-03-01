@@ -8,7 +8,6 @@ import sidebar__c_cpp from '../src/notes/c-cpp/sidebar.json'
 import sidebar__canvas from '../src/notes/canvas/sidebar.json'
 import sidebar__chrome from '../src/notes/chrome/sidebar.json'
 import sidebar__electron from '../src/notes/electron/sidebar.json'
-import sidebar__en_notes from '../src/notes/en-notes/sidebar.json'
 import sidebar__eslint from '../src/notes/eslint/sidebar.json'
 import sidebar__git from '../src/notes/git/sidebar.json'
 import sidebar__html_css_js from '../src/notes/html-css-js/sidebar.json'
@@ -19,7 +18,6 @@ import sidebar__miniprogram_wechat from '../src/notes/miniprogram-wechat/sidebar
 import sidebar__nodejs from '../src/notes/nodejs/sidebar.json'
 import sidebar__pc from '../src/notes/pc/sidebar.json'
 import sidebar__prettier from '../src/notes/prettier/sidebar.json'
-import sidebar__react from '../src/notes/react/sidebar.json'
 import sidebar__svg from '../src/notes/svg/sidebar.json'
 import sidebar__typescript from '../src/notes/typescript/sidebar.json'
 import sidebar__vite from '../src/notes/vite/sidebar.json'
@@ -168,8 +166,7 @@ function sidebar() {
           collapsed: true,
           items: [
             { ...sidebar__electron },
-            { ...sidebar__react },
-            { link: 'https://tdahuyou.github.io/TNotes.react/', text: 'react' },
+            { link: 'https://tdahuyou.github.io/TNotes.react/', text: 'TNotes.react' },
             { ...sidebar__vue },
             { ...sidebar__vite },
             { ...sidebar__vitepress },
@@ -194,8 +191,8 @@ function sidebar() {
           text: '🌍 外语',
           collapsed: true,
           items: [
-            { ...sidebar__en_notes },
-            { link: 'https://github.com/Tdahuyou/en-words', text: 'en-words' },
+            { link: 'https://tdahuyou.github.io/TNotes.en-notes/', text: 'TNotes.en-notes' },
+            { link: 'https://github.com/Tdahuyou/TNotes.en-words', text: 'en-words' },
           ],
         },
         {
