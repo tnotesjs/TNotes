@@ -4,19 +4,14 @@ import markdownItTaskLists from 'markdown-it-task-lists'
 import mila from 'markdown-it-link-attributes'
 import markdownItContainer from 'markdown-it-container'
 
-import sidebar__c_cpp from '../src/notes/c-cpp/sidebar.json'
 import sidebar__canvas from '../src/notes/canvas/sidebar.json'
 import sidebar__chrome from '../src/notes/chrome/sidebar.json'
 import sidebar__electron from '../src/notes/electron/sidebar.json'
 import sidebar__eslint from '../src/notes/eslint/sidebar.json'
 import sidebar__git from '../src/notes/git/sidebar.json'
-import sidebar__html_css_js from '../src/notes/html-css-js/sidebar.json'
 import sidebar__i18n from '../src/notes/i18n/sidebar.json'
 import sidebar__leetcode from '../src/notes/leetcode/sidebar.json'
 import sidebar__markdown from '../src/notes/markdown/sidebar.json'
-import sidebar__miniprogram_wechat from '../src/notes/miniprogram-wechat/sidebar.json'
-import sidebar__nodejs from '../src/notes/nodejs/sidebar.json'
-import sidebar__pc from '../src/notes/pc/sidebar.json'
 import sidebar__prettier from '../src/notes/prettier/sidebar.json'
 import sidebar__svg from '../src/notes/svg/sidebar.json'
 import sidebar__typescript from '../src/notes/typescript/sidebar.json'
@@ -152,12 +147,12 @@ function sidebar() {
           text: '📚 语言基础',
           collapsed: true,
           items: [
-            { ...sidebar__c_cpp },
-            { ...sidebar__html_css_js },
+            { link: 'https://tdahuyou.github.io/TNotes.c-cpp/', text: 'TNotes.c-cpp' },
+            { link: 'https://tdahuyou.github.io/TNotes.html-css-js/', text: 'TNotes.html-css-js' },
             { ...sidebar__canvas },
             { ...sidebar__svg },
             { ...sidebar__typescript },
-            { ...sidebar__nodejs },
+            { link: 'https://tdahuyou.github.io/TNotes.nodejs/', text: 'TNotes.nodejs' },
             { ...sidebar__markdown },
           ],
         },
@@ -173,7 +168,7 @@ function sidebar() {
             { ...sidebar__webpack },
             { ...sidebar__eslint },
             { ...sidebar__prettier },
-            { ...sidebar__miniprogram_wechat },
+            { link: 'https://tdahuyou.github.io/TNotes.miniprogram/', text: 'TNotes.miniprogram' },
             { ...sidebar__i18n },
           ],
         },
@@ -181,7 +176,7 @@ function sidebar() {
           text: '💻 PC 工具软件',
           collapsed: true,
           items: [
-            { ...sidebar__pc },
+            { link: 'https://tdahuyou.github.io/TNotes.notes/', text: 'TNotes.notes' },
             { ...sidebar__vscode },
             { ...sidebar__git },
             { ...sidebar__chrome },

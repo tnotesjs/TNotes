@@ -41,102 +41,102 @@ features:
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--c-cpp.svg
     title: c-cpp
-    details: 📚 语言基础 - ⏰ TNotes.c-cpp
-    link: /notes/c-cpp/README
+    details: 📚 语言基础
+    link: https://tdahuyou.github.io/TNotes.c-cpp/
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--html-css-js.png
     title: html-css-js
-    details: 📚 语言基础 - ⏰ TNotes.html-css-js
-    link: /notes/html-css-js/README
+    details: 📚 语言基础
+    link: https://tdahuyou.github.io/TNotes.html-css-js/
+  - icon:
+      src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--nodejs.svg
+    title: nodejs
+    details: 📚 语言基础
+    link: https://tdahuyou.github.io/TNotes.nodejs/
+  - icon:
+      src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--miniprogram-wechat.svg
+    title: miniprogram-wechat
+    details: 🌐 前端生态
+    link: https://tdahuyou.github.io/TNotes.miniprogram/
+  - icon:
+      src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--pc.svg
+    title: pc
+    details: 💻 PC 工具软件
+    link: https://tdahuyou.github.io/TNotes.notes/
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--canvas.svg
     title: canvas
-    details: 📚 语言基础 - ⏰ TNotes.canvas
+    details: 📚 语言基础 【⏰ TNotes.canvas】
     link: /notes/canvas/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--svg.png
     title: svg
-    details: 📚 语言基础 - ⏰ TNotes.svg
+    details: 📚 语言基础 【⏰ TNotes.svg】
     link: /notes/svg/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--typescript.svg
     title: typescript
-    details: 📚 语言基础 - ⏰ TNotes.typescript
+    details: 📚 语言基础 【⏰ TNotes.typescript】
     link: /notes/typescript/README
-  - icon:
-      src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--nodejs.svg
-    title: nodejs
-    details: 📚 语言基础 - ⏰ TNotes.nodejs
-    link: /notes/nodejs/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--markdown.svg
     title: markdown
-    details: 📚 语言基础 - ⏰ TNotes.markdown
+    details: 📚 语言基础 【⏰ TNotes.markdown】
     link: /notes/markdown/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--electron.svg
     title: electron
-    details: 🌐 前端生态 - ⏰ TNotes.electron
+    details: 🌐 前端生态 【⏰ TNotes.electron】
     link: /notes/electron/README
+  - icon:
+      src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--git.svg
+    title: git
+    details: 💻 PC 工具软件 【⏰ TNotes.git】
+    link: /notes/git/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--vue.svg
     title: vue
-    details: 🌐 前端生态 - ⏰ TNotes.vue
+    details: 🌐 前端生态 【⏰ TNotes.vue】
     link: /notes/vue/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--vite.svg
     title: vite
-    details: 🌐 前端生态 - ⏰ TNotes.vite
+    details: 🌐 前端生态 【⏰ TNotes.vite】
     link: /notes/vite/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--webpack.svg
     title: webpack
-    details: 🌐 前端生态 - ⏰ TNotes.webpack
+    details: 🌐 前端生态 【⏰ TNotes.webpack】
     link: /notes/webpack/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--eslint.svg
     title: eslint
-    details: 🌐 前端生态 - ⏰ TNotes.eslint
+    details: 🌐 前端生态 【⏰ TNotes.eslint】
     link: /notes/eslint/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--prettier.png
     title: prettier
-    details: 🌐 前端生态 - ⏰ TNotes.prettier
+    details: 🌐 前端生态 【⏰ TNotes.prettier】
     link: /notes/prettier/README
-  - icon:
-      src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--miniprogram-wechat.svg
-    title: miniprogram-wechat
-    details: 🌐 前端生态 - ⏰ TNotes.miniprogram-wechat
-    link: /notes/miniprogram-wechat/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--i18n.svg
     title: i18n
-    details: 🌐 前端生态 - ⏰ TNotes.i18n
+    details: 🌐 前端生态 【⏰ TNotes.i18n】
     link: /notes/i18n/README
-  - icon:
-      src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--pc.svg
-    title: pc
-    details: 💻 PC 工具软件 - ⏰ TNotes.pc
-    link: /notes/pc/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--vscode.svg
     title: vscode
-    details: 💻 PC 工具软件 - ⏰ TNotes.vscode
+    details: 💻 PC 工具软件 【⏰ TNotes.vscode】
     link: /notes/vscode/README
-  - icon:
-      src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--git.svg
-    title: git
-    details: 💻 PC 工具软件 - ⏰ TNotes.git
-    link: /notes/git/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--chrome.svg
     title: chrome
-    details: 💻 PC 工具软件 - ⏰ TNotes.chrome
+    details: 💻 PC 工具软件 【⏰ TNotes.chrome】
     link: /notes/chrome/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--leetcode.svg
     title: leetcode
-    details: 🧠 数据结构与算法 - ⏰ TNotes.leetcode
+    details: 🧠 数据结构与算法 【⏰ TNotes.leetcode】
     link: /notes/leetcode/README
 ---
 
