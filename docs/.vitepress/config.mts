@@ -204,18 +204,8 @@ function sidebar() {
       ],
     },
     {
-      text: '🗓 动态',
-      collapsed: true,
-      items: [
-        { text: '👀 README', link: '/footprints/README' },
-        { text: '🗓 2025', link: '/footprints/2025' },
-        { text: '🗓 2024', link: '/footprints/2024' },
-        { text: '🗓 2023', link: '/footprints/2023' },
-        { text: '🗓 2022', link: '/footprints/2022' },
-        { text: '🗓 2021', link: '/footprints/2021' },
-        { text: '🗓 2020', link: '/footprints/2020' },
-        { text: '🗓 2019', link: '/footprints/2019' },
-      ],
+      text: '🗓 我的动态',
+      link: 'https://tdahuyou.github.io/TNotes.footprints/'
     },
     {
       text: '👨‍🍳 做饭',
