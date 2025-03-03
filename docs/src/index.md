@@ -44,6 +44,11 @@ features:
     details: 📚 语言基础
     link: https://tdahuyou.github.io/TNotes.c-cpp/
   - icon:
+      src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--canvas.svg
+    title: canvas
+    details: 📚 语言基础
+    link: https://tdahuyou.github.io/TNotes.canvas/
+  - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--html-css-js.png
     title: html-css-js
     details: 📚 语言基础
@@ -64,15 +69,10 @@ features:
     details: 💻 PC 工具软件
     link: https://tdahuyou.github.io/TNotes.notes/
   - icon:
-      src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--canvas.svg
-    title: canvas
-    details: 📚 语言基础 【⏰ TNotes.canvas】
-    link: /notes/canvas/README
-  - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--svg.png
     title: svg
-    details: 📚 语言基础 【⏰ TNotes.svg】
-    link: /notes/svg/README
+    details: 📚 语言基础
+    link: https://tdahuyou.github.io/TNotes.svg/
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--typescript.svg
     title: typescript

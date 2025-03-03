@@ -4,7 +4,6 @@ import markdownItTaskLists from 'markdown-it-task-lists'
 import mila from 'markdown-it-link-attributes'
 import markdownItContainer from 'markdown-it-container'
 
-import sidebar__canvas from '../src/notes/canvas/sidebar.json'
 import sidebar__chrome from '../src/notes/chrome/sidebar.json'
 import sidebar__electron from '../src/notes/electron/sidebar.json'
 import sidebar__eslint from '../src/notes/eslint/sidebar.json'
@@ -13,7 +12,6 @@ import sidebar__i18n from '../src/notes/i18n/sidebar.json'
 import sidebar__leetcode from '../src/notes/leetcode/sidebar.json'
 import sidebar__markdown from '../src/notes/markdown/sidebar.json'
 import sidebar__prettier from '../src/notes/prettier/sidebar.json'
-import sidebar__svg from '../src/notes/svg/sidebar.json'
 import sidebar__typescript from '../src/notes/typescript/sidebar.json'
 import sidebar__vite from '../src/notes/vite/sidebar.json'
 import sidebar__vitepress from '../src/notes/vitepress/sidebar.json'
@@ -149,8 +147,8 @@ function sidebar() {
           items: [
             { link: 'https://tdahuyou.github.io/TNotes.c-cpp/', text: 'TNotes.c-cpp' },
             { link: 'https://tdahuyou.github.io/TNotes.html-css-js/', text: 'TNotes.html-css-js' },
-            { ...sidebar__canvas },
-            { ...sidebar__svg },
+            { link: 'https://tdahuyou.github.io/TNotes.canvas/', text: 'TNotes.canvas' },
+            { link: 'https://tdahuyou.github.io/TNotes.svg/', text: 'TNotes.svg' },
             { ...sidebar__typescript },
             { link: 'https://tdahuyou.github.io/TNotes.nodejs/', text: 'TNotes.nodejs' },
             { ...sidebar__markdown },

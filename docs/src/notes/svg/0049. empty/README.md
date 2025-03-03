@@ -1,1 +1,0 @@
-# [0049. empty](https://github.com/Tdahuyou/svg/tree/main/0049.%20empty)
