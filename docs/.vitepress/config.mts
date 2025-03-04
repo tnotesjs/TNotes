@@ -6,11 +6,9 @@ import markdownItContainer from 'markdown-it-container'
 
 import sidebar__chrome from '../src/notes/chrome/sidebar.json'
 import sidebar__electron from '../src/notes/electron/sidebar.json'
-import sidebar__eslint from '../src/notes/eslint/sidebar.json'
 import sidebar__git from '../src/notes/git/sidebar.json'
 import sidebar__i18n from '../src/notes/i18n/sidebar.json'
 import sidebar__leetcode from '../src/notes/leetcode/sidebar.json'
-import sidebar__prettier from '../src/notes/prettier/sidebar.json'
 import sidebar__typescript from '../src/notes/typescript/sidebar.json'
 import sidebar__vite from '../src/notes/vite/sidebar.json'
 import sidebar__vitepress from '../src/notes/vitepress/sidebar.json'
@@ -162,8 +160,6 @@ function sidebar() {
             { ...sidebar__vite },
             { ...sidebar__vitepress },
             { ...sidebar__webpack },
-            { ...sidebar__eslint },
-            { ...sidebar__prettier },
             { link: 'https://tdahuyou.github.io/TNotes.miniprogram/', text: 'TNotes.miniprogram' },
             { ...sidebar__i18n },
           ],
