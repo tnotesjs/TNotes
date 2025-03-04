@@ -10,7 +10,6 @@ import sidebar__eslint from '../src/notes/eslint/sidebar.json'
 import sidebar__git from '../src/notes/git/sidebar.json'
 import sidebar__i18n from '../src/notes/i18n/sidebar.json'
 import sidebar__leetcode from '../src/notes/leetcode/sidebar.json'
-import sidebar__markdown from '../src/notes/markdown/sidebar.json'
 import sidebar__prettier from '../src/notes/prettier/sidebar.json'
 import sidebar__typescript from '../src/notes/typescript/sidebar.json'
 import sidebar__vite from '../src/notes/vite/sidebar.json'
@@ -151,7 +150,6 @@ function sidebar() {
             { link: 'https://tdahuyou.github.io/TNotes.svg/', text: 'TNotes.svg' },
             { ...sidebar__typescript },
             { link: 'https://tdahuyou.github.io/TNotes.nodejs/', text: 'TNotes.nodejs' },
-            { ...sidebar__markdown },
           ],
         },
         {
