@@ -79,11 +79,6 @@ features:
     details: 📚 语言基础 【⏰ TNotes.typescript】
     link: /notes/typescript/README
   - icon:
-      src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--markdown.svg
-    title: markdown
-    details: 📚 语言基础 【⏰ TNotes.markdown】
-    link: /notes/markdown/README
-  - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--electron.svg
     title: electron
     details: 🌐 前端生态 【⏰ TNotes.electron】
@@ -108,16 +103,6 @@ features:
     title: webpack
     details: 🌐 前端生态 【⏰ TNotes.webpack】
     link: /notes/webpack/README
-  - icon:
-      src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--eslint.svg
-    title: eslint
-    details: 🌐 前端生态 【⏰ TNotes.eslint】
-    link: /notes/eslint/README
-  - icon:
-      src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--prettier.png
-    title: prettier
-    details: 🌐 前端生态 【⏰ TNotes.prettier】
-    link: /notes/prettier/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--i18n.svg
     title: i18n
