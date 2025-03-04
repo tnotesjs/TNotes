@@ -65,8 +65,8 @@ features:
     link: https://tdahuyou.github.io/TNotes.miniprogram/
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--pc.svg
-    title: pc
-    details: 💻 PC 工具软件
+    title: notes
+    details: 💻 PC 工具软件分享等内容
     link: https://tdahuyou.github.io/TNotes.notes/
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--svg.png
