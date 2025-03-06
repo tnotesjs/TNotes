@@ -108,16 +108,16 @@ features:
     title: i18n
     details: 🌐 前端生态 【⏰ TNotes.i18n】
     link: /notes/i18n/README
-  - icon:
-      src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--vscode.svg
-    title: vscode
-    details: 💻 PC 工具软件 【⏰ TNotes.vscode】
-    link: /notes/vscode/README
-  - icon:
-      src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--chrome.svg
-    title: chrome
-    details: 💻 PC 工具软件 【⏰ TNotes.chrome】
-    link: /notes/chrome/README
+  # - icon:
+  #     src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--vscode.svg
+  #   title: vscode
+  #   details: 💻 PC 工具软件 【⏰ TNotes.vscode】
+  #   link: /notes/vscode/README
+  # - icon:
+  #     src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--chrome.svg
+  #   title: chrome
+  #   details: 💻 PC 工具软件 【⏰ TNotes.chrome】
+  #   link: /notes/chrome/README
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--leetcode.svg
     title: leetcode

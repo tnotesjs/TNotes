@@ -4,7 +4,6 @@ import markdownItTaskLists from 'markdown-it-task-lists'
 import mila from 'markdown-it-link-attributes'
 import markdownItContainer from 'markdown-it-container'
 
-import sidebar__chrome from '../src/notes/chrome/sidebar.json'
 import sidebar__electron from '../src/notes/electron/sidebar.json'
 import sidebar__git from '../src/notes/git/sidebar.json'
 import sidebar__i18n from '../src/notes/i18n/sidebar.json'
@@ -12,7 +11,6 @@ import sidebar__leetcode from '../src/notes/leetcode/sidebar.json'
 import sidebar__typescript from '../src/notes/typescript/sidebar.json'
 import sidebar__vite from '../src/notes/vite/sidebar.json'
 import sidebar__vitepress from '../src/notes/vitepress/sidebar.json'
-import sidebar__vscode from '../src/notes/vscode/sidebar.json'
 import sidebar__vue from '../src/notes/vue/sidebar.json'
 import sidebar__webpack from '../src/notes/webpack/sidebar.json'
 
@@ -169,9 +167,7 @@ function sidebar() {
           collapsed: true,
           items: [
             { link: 'https://tdahuyou.github.io/TNotes.notes/', text: 'TNotes.notes' },
-            { ...sidebar__vscode },
             { ...sidebar__git },
-            { ...sidebar__chrome },
           ],
         },
         {
