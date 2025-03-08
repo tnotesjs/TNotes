@@ -128,7 +128,7 @@ hero:
 | -------------------------------------------------------------------- | ------- | ---------- | -------------------------------------------------------------------------------------------------------- |
 | [TNotes](https://tdahuyou.github.io/notes/)                          | ✅      | 💪 doing   | `TNotes` 主页 👉 `root`，汇总所有 `TNotes` 相关的内容。                                                  |
 | [TNotes.template](https://tdahuyou.github.io/TNotes.template/)       | ✅      | 💪 doing   | `TNotes` 笔记模板 👉 `25.03` 正在测试、优化中。                                                          |
-| [TNotes.0](https://tdahuyou.github.io/TNotes.0/)                     | ❌      | 💪 doing   | 个人学习资料汇总 👉 一些不便公开的学习资料，从 `0` 到 `1` 嘛，`0` 是学习资料、`1` 就是那些公开的笔记了。 |
+| [TNotes.0](https://github.com/Tdahuyou/TNotes.0)                     | ❌      | 💪 doing   | 个人学习资料汇总 👉 一些不便公开的学习资料，从 `0` 到 `1` 嘛，`0` 是学习资料、`1` 就是那些公开的笔记了。 |
 | [TNotes.c-cpp](https://tdahuyou.github.io/TNotes.c-cpp/)             | ✅      | ⏰ pending | `C`、`C++` 笔记 👉 对这块内容感兴趣，不过暂时没时间倒腾。                                                |
 | [TNotes.canvas](https://tdahuyou.github.io/TNotes.canvas/)           | ✅      | 💪 doing   | `Canvas` 笔记 👉 基本完成，还需要整理，目前记录的都是一些非常基础的内容。                                |
 | [TNotes.egg](https://tdahuyou.github.io/TNotes.egg/)                 | ✅      | 💪 doing   | `Egg.js` 笔记 👉 `25.03` 近期在写后端（边学边写），需要用到这玩意儿，正好写点儿笔记。                    |
