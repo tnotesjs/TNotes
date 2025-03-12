@@ -7,7 +7,6 @@ import markdownItContainer from 'markdown-it-container'
 import sidebar__electron from '../src/notes/electron/sidebar.json'
 import sidebar__git from '../src/notes/git/sidebar.json'
 import sidebar__i18n from '../src/notes/i18n/sidebar.json'
-import sidebar__leetcode from '../src/notes/leetcode/sidebar.json'
 import sidebar__typescript from '../src/notes/typescript/sidebar.json'
 import sidebar__vite from '../src/notes/vite/sidebar.json'
 import sidebar__vitepress from '../src/notes/vitepress/sidebar.json'
@@ -181,7 +180,7 @@ function sidebar() {
         {
           text: '🧠 数据结构与算法',
           collapsed: true,
-          items: [{ ...sidebar__leetcode }],
+          items: [{ link: 'https://tdahuyou.github.io/TNotes.leetcode/', text: 'TNotes.leetcode' }],
         },
       ],
     },
