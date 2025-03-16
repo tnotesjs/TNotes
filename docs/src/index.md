@@ -124,13 +124,14 @@ hero:
 #   link: /notes/leetcode/README
 ---
 
-| 📒 笔记                                                              | 🌍 公开 | 🚀 状态    | 📝 备注                                                                                                  |
-| -------------------------------------------------------------------- | ------- | ---------- | -------------------------------------------------------------------------------------------------------- |
+| 📒 笔记                                                              | 🌍 公开 | 🚀 状态      | 📝 备注                                                                                                  |
+| -------------------------------------------------------------------- | ------- | ------------ | -------------------------------------------------------------------------------------------------------- |
 | [TNotes](https://tdahuyou.github.io/notes/)                          | ✅      | `💪 doing`   | `TNotes` 主页 👉 `root`，汇总所有 `TNotes` 相关的内容。                                                  |
 | [TNotes.template](https://tdahuyou.github.io/TNotes.template/)       | ✅      | `💪 doing`   | `TNotes` 笔记模板 👉 `25.03` 正在测试、优化中。                                                          |
 | [TNotes.0](https://github.com/Tdahuyou/TNotes.0)                     | ❌      | `💪 doing`   | 个人学习资料汇总 👉 一些不便公开的学习资料，从 `0` 到 `1` 嘛，`0` 是学习资料、`1` 就是那些公开的笔记了。 |
 | [TNotes.c-cpp](https://tdahuyou.github.io/TNotes.c-cpp/)             | ✅      | `⏰ pending` | `C`、`C++` 笔记 👉 对这块内容感兴趣，不过暂时没时间倒腾。                                                |
 | [TNotes.canvas](https://tdahuyou.github.io/TNotes.canvas/)           | ✅      | `⏰ pending` | `Canvas` 笔记 👉 基本完成，还需要整理，目前记录的都是一些非常基础的内容。                                |
+| [TNotes.cooking](https://tdahuyou.github.io/TNotes.cooking/)         | ✅      | `⏰ pending` | 做饭笔记 👉 整理一些自己做过的吃的。                                                                     |
 | [TNotes.egg](https://tdahuyou.github.io/TNotes.egg/)                 | ✅      | `💪 doing`   | `Egg.js` 笔记 👉 `25.03` 近期在写后端（边学边写），需要用到这玩意儿，正好写点儿笔记。                    |
 | [TNotes.en-notes](https://tdahuyou.github.io/TNotes.en-notes/)       | ✅      | `💪 doing`   | 英语笔记 👉 记单词工具、后续也可以将学口语、练听力的功能也加上。                                         |
 | [TNotes.en-words](https://github.com/Tdahuyou/TNotes.en-words)       | ✅      | `✅ done`    | 英语词库 👉 每一个单词就是一个独立的 `.md` 文件。单词词库的来源说明，在 `TNotes.en-notes` 中有详细说明。 |
@@ -144,8 +145,9 @@ hero:
 | [TNotes.svg](https://tdahuyou.github.io/TNotes.svg/)                 | ✅      | `⏰ pending` | `SVG` 笔记 👉 基本完成，还需要整理，目前记录的都是一些非常基础的内容。                                   |
 
 :::tip 🫧 状态说明
+
 - `2025 年 3 月 12 日 23:45:45`
 - `💪 doing` 最近一个月有更新的内容；
 - `⏰ pending` 最近一个月几乎没动过的内容；
 - `✅ done` 基本完成的内容，改动极少；
-:::
+  :::

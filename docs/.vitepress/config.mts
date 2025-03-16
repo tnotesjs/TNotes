@@ -198,14 +198,7 @@ function sidebar() {
     },
     {
       text: '👨‍🍳 做饭',
-      collapsed: true,
-      items: [
-        { text: '👀 README', link: '/cooking/README' },
-        { text: '😋 蛋羹', link: '/cooking/dan-geng' },
-        { text: '😋 蛋挞', link: '/cooking/dan-ta' },
-        { text: '😋 鸡翅', link: '/cooking/ji-chi' },
-        { text: '😋 绿豆汤', link: '/cooking/lv-dou-tang' },
-      ],
+      link: 'https://tdahuyou.github.io/TNotes.cooking/'
     },
     {
       text: '🧑🏻‍💻 关于我',
