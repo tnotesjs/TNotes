@@ -1,0 +1,38 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>修改图书</title>
+</head>
+<body>
+  <h1>修改图书信息</h1>
+  <hr />
+  <form method="post">
+    <fieldset>
+      <legend>修改图书信息</legend>
+      <table>
+        <tr>
+          <td><label>Id</label></td>
+          <td><input type="text" name="id" value="<%= data.id %>" disabled /></td>
+        </tr>
+        <tr>
+          <td><label>书名</label></td>
+          <td><input type="text" name="bookname" value="<%= data.bookname %>" /></td>
+        </tr>
+        <tr>
+          <td><label>作者</label></td>
+          <td>
+            <input type="text" name="author"
+                   value="<%= data.author %>" />
+          </td>
+        </tr>
+        <tr>
+          <td><label>出版社</label></td>
+          <td><input type="text" name="press" value="<%= data.press %>" /></td>
+        </tr>
+      </table>
+      <input type="submit" />
+    </fieldset>
+  </form>
+</body>
+</html>

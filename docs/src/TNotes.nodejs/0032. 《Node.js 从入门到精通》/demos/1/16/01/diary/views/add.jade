@@ -1,0 +1,21 @@
+form(class="form-horizontal",name="add-post",method="post",action="/post/add")
+  fieldset
+    legend 添加新的日记
+
+    div.control-group
+      label.control-label 标题:
+      div.controls
+        input(type="text",name="subject",class="input-xlarge")
+
+    div.control-group
+      label.control-label 内容:
+      div.controls
+        textarea(name="body", rows="10", cols="30")
+ 
+    div.control-group
+      label.control-label 标签:
+      div.controls
+        input(type="text",name="tags",class="input-xlarge")
+
+    div.form-actions
+      input(type="submit",value="添加",name="post",class="btn btn-primary")

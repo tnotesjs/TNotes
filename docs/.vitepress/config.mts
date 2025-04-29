@@ -9,9 +9,24 @@ import sidebar__git from '../src/notes/git/sidebar.json'
 import sidebar__i18n from '../src/notes/i18n/sidebar.json'
 import sidebar__typescript from '../src/notes/typescript/sidebar.json'
 import sidebar__vite from '../src/notes/vite/sidebar.json'
-import sidebar__vitepress from '../src/notes/vitepress/sidebar.json'
+// import sidebar__vitepress from '../src/notes/vitepress/sidebar.json'
 import sidebar__vue from '../src/notes/vue/sidebar.json'
 import sidebar__webpack from '../src/notes/webpack/sidebar.json'
+import sidebar__template from '../src/TNotes.template/sidebar.json'
+import sidebar__c_cpp from '../src/TNotes.c-cpp/sidebar.json'
+import sidebar__canvas from '../src/TNotes.canvas/sidebar.json'
+import sidebar__cooking from '../src/TNotes.cooking/sidebar.json'
+import sidebar__egg from '../src/TNotes.egg/sidebar.json'
+import sidebar__en_notes from '../src/TNotes.en-notes/sidebar.json'
+import sidebar__footprints from '../src/TNotes.footprints/sidebar.json'
+import sidebar__html_css_js from '../src/TNotes.html-css-js/sidebar.json'
+import sidebar__leetcode from '../src/TNotes.leetcode/sidebar.json'
+import sidebar__miniprogram from '../src/TNotes.miniprogram/sidebar.json'
+import sidebar__nodejs from '../src/TNotes.nodejs/sidebar.json'
+import sidebar__notes from '../src/TNotes.notes/sidebar.json'
+import sidebar__react from '../src/TNotes.react/sidebar.json'
+import sidebar__svg from '../src/TNotes.svg/sidebar.json'
+import sidebar__vitepress from '../src/TNotes.vitepress/sidebar.json'
 
 const slugger = new GithubSlugger()
 
@@ -113,6 +128,86 @@ function sidebar() {
   const sidebar: DefaultTheme.Sidebar = [
     { text: '👀 README', link: '/README' },
     {
+      text: 'TNotes.template',
+      link: 'https://github.com/Tdahuyou/TNotes.template',
+      collapsed: true,
+      items: [...sidebar__template],
+    },
+    {
+      text: 'TNotes.c-cpp',
+      collapsed: true,
+      items: [...sidebar__c_cpp],
+    },
+    {
+      text: 'TNotes.canvas',
+      collapsed: true,
+      items: [...sidebar__canvas],
+    },
+    {
+      text: 'TNotes.cooking',
+      collapsed: true,
+      items: [...sidebar__cooking],
+    },
+    {
+      text: 'TNotes.egg',
+      collapsed: true,
+      items: [...sidebar__egg],
+    },
+    {
+      text: 'TNotes.en-notes',
+      collapsed: true,
+      items: [...sidebar__en_notes],
+    },
+    {
+      text: 'TNotes.en-words',
+      link: 'https://github.com/Tdahuyou/TNotes.en-words',
+    },
+    {
+      text: 'TNotes.footprints',
+      collapsed: true,
+      items: [...sidebar__footprints],
+    },
+    {
+      text: 'TNotes.html-css-js',
+      collapsed: true,
+      items: [...sidebar__html_css_js],
+    },
+    {
+      text: 'TNotes.leetcode',
+      collapsed: true,
+      items: [...sidebar__leetcode],
+    },
+    {
+      text: 'TNotes.miniprogram',
+      collapsed: true,
+      items: [...sidebar__miniprogram],
+    },
+    {
+      text: 'TNotes.nodejs',
+      collapsed: true,
+      items: [...sidebar__nodejs],
+    },
+    {
+      text: 'TNotes.notes',
+      collapsed: true,
+      items: [...sidebar__notes],
+    },
+    {
+      text: 'TNotes.react',
+      collapsed: true,
+      items: [...sidebar__react],
+    },
+    {
+      text: 'TNotes.svg',
+      collapsed: true,
+      items: [...sidebar__svg],
+    },
+    {
+      text: 'TNotes.vitepress',
+      collapsed: true,
+      items: [...sidebar__vitepress],
+    },
+    {
       text: '🚀 TNotes',
       collapsed: true,
       items: [
@@ -138,49 +233,23 @@ function sidebar() {
         {
           text: '📚 语言基础',
           collapsed: true,
-          items: [
-            { link: 'https://tdahuyou.github.io/TNotes.c-cpp/', text: 'TNotes.c-cpp' },
-            { link: 'https://tdahuyou.github.io/TNotes.html-css-js/', text: 'TNotes.html-css-js' },
-            { link: 'https://tdahuyou.github.io/TNotes.canvas/', text: 'TNotes.canvas' },
-            { link: 'https://tdahuyou.github.io/TNotes.svg/', text: 'TNotes.svg' },
-            { ...sidebar__typescript },
-            { link: 'https://tdahuyou.github.io/TNotes.nodejs/', text: 'TNotes.nodejs' },
-          ],
+          items: [{ ...sidebar__typescript }],
         },
         {
           text: '🌐 前端生态',
           collapsed: true,
           items: [
             { ...sidebar__electron },
-            { link: 'https://tdahuyou.github.io/TNotes.react/', text: 'TNotes.react' },
             { ...sidebar__vue },
             { ...sidebar__vite },
-            { ...sidebar__vitepress },
             { ...sidebar__webpack },
-            { link: 'https://tdahuyou.github.io/TNotes.miniprogram/', text: 'TNotes.miniprogram' },
             { ...sidebar__i18n },
           ],
         },
         {
           text: '💻 PC 工具软件',
           collapsed: true,
-          items: [
-            { link: 'https://tdahuyou.github.io/TNotes.notes/', text: 'TNotes.notes' },
-            { ...sidebar__git },
-          ],
-        },
-        {
-          text: '🌍 外语',
-          collapsed: true,
-          items: [
-            { link: 'https://tdahuyou.github.io/TNotes.en-notes/', text: 'TNotes.en-notes' },
-            { link: 'https://github.com/Tdahuyou/TNotes.en-words', text: 'en-words' },
-          ],
-        },
-        {
-          text: '🧠 数据结构与算法',
-          collapsed: true,
-          items: [{ link: 'https://tdahuyou.github.io/TNotes.leetcode/', text: 'TNotes.leetcode' }],
+          items: [{ ...sidebar__git }],
         },
       ],
     },
@@ -194,11 +263,11 @@ function sidebar() {
     },
     {
       text: '🗓 我的动态',
-      link: 'https://tdahuyou.github.io/TNotes.footprints/'
+      link: 'https://tdahuyou.github.io/TNotes.footprints/',
     },
     {
       text: '👨‍🍳 做饭',
-      link: 'https://tdahuyou.github.io/TNotes.cooking/'
+      link: 'https://tdahuyou.github.io/TNotes.cooking/',
     },
     {
       text: '🧑🏻‍💻 关于我',

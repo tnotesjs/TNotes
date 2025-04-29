@@ -1,0 +1,62 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>美团外卖</title>
+    <style>
+        *{
+            margin: 0 auto;
+        }
+        .info{
+            margin:0 auto;
+            width:300px;
+            border: solid  blue 1px;
+            color:blue
+        }
+        .info h3{
+            text-align: center;
+            border-bottom:dashed blue 1px;
+            line-height: 40px;
+        }
+        .info p{
+            text-align: center;
+            border-bottom:dashed blue 1px;
+            line-height: 40px;
+        }
+        .info div{
+            text-align: center;
+            border-bottom:dashed blue 1px;
+            line-height: 40px;
+        }
+        .info table{
+            margin:0 auto;
+            text-align: center;
+            padding-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+<section class="info">
+    <h3><%=No%> 美团外卖</h3>
+    <p>下单时间：<%=orderTime%></p>
+    <div>
+        送啥都快<br>
+        越吃越帅
+    </div>
+    <table>
+        <tr>
+            <td>菜品</td>
+            <td>数量</td>
+            <td>价格</td>
+        </tr>
+        <%orderPrice.forEach(function(item){%>
+        <tr>
+            <td><%=item.menu%></td>
+            <td><%=item.orderNo%></td>
+            <td><%=item.price%></td>
+        </tr>
+        <% }) %>
+    </table>
+</section>
+</body>
+</html>

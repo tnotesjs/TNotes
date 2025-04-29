@@ -1,0 +1,76 @@
+{
+  // 符号链接类型
+  "UV_FS_SYMLINK_DIR": 1, // 创建指向目录的符号链接。
+  "UV_FS_SYMLINK_JUNCTION": 2, // 创建 Windows 上的目录联接（junction）。
+
+  // 文件打开模式
+  "O_RDONLY": 0, // 以只读方式打开文件。
+  "O_WRONLY": 1, // 以只写方式打开文件。
+  "O_RDWR": 2, // 以读写方式打开文件。
+
+  // 目录条目类型
+  "UV_DIRENT_UNKNOWN": 0, // 未知类型。
+  "UV_DIRENT_FILE": 1, // 普通文件。
+  "UV_DIRENT_DIR": 2, // 目录。
+  "UV_DIRENT_LINK": 3, // 符号链接。
+  "UV_DIRENT_FIFO": 4, // FIFO（命名管道）。
+  "UV_DIRENT_SOCKET": 5, // 套接字文件。
+  "UV_DIRENT_CHAR": 6, // 字符设备文件。
+  "UV_DIRENT_BLOCK": 7, // 块设备文件。
+
+  // 扩展名格式（用于标识文件类型）
+  "EXTENSIONLESS_FORMAT_JAVASCRIPT": 0, // JavaScript 文件。
+  "EXTENSIONLESS_FORMAT_WASM": 1, // WebAssembly 文件。
+
+  // 文件类型掩码和标识
+  "S_IFMT": 61440, // 用于提取文件类型的部分（掩码）。
+  "S_IFREG": 32768, // 普通文件。
+  "S_IFDIR": 16384, // 目录。
+  "S_IFCHR": 8192, // 字符设备文件。
+  "S_IFBLK": 24576, // 块设备文件。
+  "S_IFIFO": 4096, // FIFO（命名管道）。
+  "S_IFLNK": 40960, // 符号链接。
+  "S_IFSOCK": 49152, // 套接字文件。
+
+  // 文件打开选项
+  "O_CREAT": 512, // 如果文件不存在，则创建文件。
+  "O_EXCL": 2048, // 与 O_CREAT 一起使用，确保文件是新建的（如果文件已存在则报错）。
+  "UV_FS_O_FILEMAP": 0, // 使用文件映射（仅限 Windows）。
+  "O_NOCTTY": 131072, // 如果文件是终端设备，不将其设置为控制终端。
+  "O_TRUNC": 1024, // 打开文件时清空文件内容。
+  "O_APPEND": 8, // 打开文件时，所有写入操作追加到文件末尾。
+  "O_DIRECTORY": 1048576, // 必须是一个目录，否则报错。
+  "O_NOFOLLOW": 256, // 如果路径是符号链接，则报错。
+  "O_SYNC": 128, // 同步 I/O 操作，确保数据立即写入磁盘。
+  "O_DSYNC": 4194304, // 数据同步 I/O 操作（仅同步数据部分）。
+  "O_SYMLINK": 2097152, // 打开符号链接本身，而不是其指向的目标文件。
+  "O_NONBLOCK": 4, // 非阻塞模式打开文件。
+
+  // 文件权限（所有者、所属组、其他用户）
+  "S_IRWXU": 448, // 所有者拥有读、写和执行权限（rwx------）。
+  "S_IRUSR": 256, // 所有者拥有读权限（r--------）。
+  "S_IWUSR": 128, // 所有者拥有写权限（-w-------）。
+  "S_IXUSR": 64, // 所有者拥有执行权限（--x------）。
+  "S_IRWXG": 56, // 所属组拥有读、写和执行权限（---rwx---）。
+  "S_IRGRP": 32, // 所属组拥有读权限（----r----）。
+  "S_IWGRP": 16, // 所属组拥有写权限（-----w---）。
+  "S_IXGRP": 8, // 所属组拥有执行权限（------x--）。
+  "S_IRWXO": 7, // 其他用户拥有读、写和执行权限（-------rwx）。
+  "S_IROTH": 4, // 其他用户拥有读权限（-------r--）。
+  "S_IWOTH": 2, // 其他用户拥有写权限（--------w-）。
+  "S_IXOTH": 1, // 其他用户拥有执行权限（---------x）。
+
+  // 权限检查
+  "F_OK": 0, // 检查文件是否存在。
+  "R_OK": 4, // 检查文件是否可读。
+  "W_OK": 2, // 检查文件是否可写。
+  "X_OK": 1, // 检查文件是否可执行（在 Windows 上始终返回 true）。
+
+  // 复制文件选项
+  "UV_FS_COPYFILE_EXCL": 1, // 如果目标文件已存在，则报错。
+  "COPYFILE_EXCL": 1, // 同上（UV_FS_COPYFILE_EXCL 的别名）。
+  "UV_FS_COPYFILE_FICLONE": 2, // 尝试使用“克隆”操作复制文件（如果支持）。
+  "COPYFILE_FICLONE": 2, // 同上（UV_FS_COPYFILE_FICLONE 的别名）。
+  "UV_FS_COPYFILE_FICLONE_FORCE": 4, // 强制使用“克隆”操作复制文件（即使不支持也会尝试）。
+  "COPYFILE_FICLONE_FORCE": 4 // 同上（UV_FS_COPYFILE_FICLONE_FORCE 的别名）。
+}

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        label {
+            display: block;
+            width: 230px;
+            margin: 10px auto;
+        }
+        .bold {
+            font-weight: bold;
+            color: red;
+        }
+        ul {
+            list-style: none;
+        }
+    </style>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+<form action="">
+    <fieldset style="width: 360px;margin: 0 auto">
+        <legend>发送消息</legend>
+        <label>内容：<input id="text" type="text"><br></label>
+        <div id="sendTo">
+            <button id="btn" type="button">群发</button>
+            <button id="btnB" type="button">发送给小B</button>
+        </div>
+    </fieldset>
+    <ul id="box"></ul>
+</form>
+<script>
+    window.onload = function () {
+        var box = document.getElementById("box")
+        var sendTo = document.getElementById("sendTo")
+        const socket = io.connect()
+        socket.on("toOne", function (data) {    //显示接收到的私信内容
+            var html1 = "<span>收到一条私信：</span>"
+            html1 += "<span class='bold'>" + data + "</span>"
+            var li = document.createElement("li")
+            li.innerHTML += html1
+            box.append(li)
+        })
+        socket.on("toMany",function(data){   //显示群发内容
+            var html1 = "<span>收到一条群发消息：</span>"
+            html1 += "<span class='bold'>" + data + "</span>"
+            var li = document.createElement("li")
+            li.innerHTML += html1
+            box.append(li)
+        })
+        document.getElementById("btn").onclick = function () {
+            var text = document.getElementById("text").value
+                socket.emit("all", text)    //群发消息
+        }
+        document.getElementById("btnB").onclick = function () {
+            var text = document.getElementById("text").value
+            socket.emit("only", text)     //私发消息
+        }
+    }
+</script>
+</body>
+</html>

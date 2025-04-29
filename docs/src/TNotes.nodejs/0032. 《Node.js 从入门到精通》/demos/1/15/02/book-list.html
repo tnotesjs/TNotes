@@ -1,0 +1,61 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>图书列表</title>
+  <style>
+    table{
+      padding: 0;
+      position: relative;
+      margin: 0 auto;
+    }
+    table tbody tr th {
+      background: #044599 no-repeat;
+      text-align: center;
+      border-left: 1px solid #02397F;
+      border-right: 1px solid #02397F;
+      border-bottom: 1px solid #02397F;
+      border-top: 1px solid #02397F;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      font-size: 14px;
+      color: #fff;
+      height: 37px;
+    }
+    table tbody tr td {
+      text-align: center;
+      border-left: 1px solid #ECECEC;
+      border-right: 1px solid #ECECEC;
+      border-bottom: 1px solid #ECECEC;
+      font-size: 15px;
+      color: #909090;
+      height: 37px;
+    }
+  </style>
+</head>
+<body>
+  <h1 style="text-align: center">图书列表</h1>
+  <a href="/insert">添加数据</a>
+  <br/>
+  <table width="100%">
+    <tr>
+      <th>ID</th>
+      <th>书名</th>
+      <th>作者</th>
+      <th>出版社</th>
+      <th>删除</th>
+      <th>编辑</th>
+    </tr>
+    <%data.forEach(function (item, index) { %>
+    <tr>
+      <td><%= item.id %></td>
+      <td><%= item.bookname %></td>
+      <td><%= item.author %></td>
+      <td><%= item.press %></td>
+      <td><a href="/delete/<%= item.id %>">删除</a></td>
+      <td><a href="/edit/<%= item.id %>">编辑</a></td>
+    </tr>
+    <% }); %>
+  </table>
+</body>
+</html>

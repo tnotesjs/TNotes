@@ -1,0 +1,147 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf8"/>
+    <style>
+        fieldset {
+            width: 550px;
+            margin: 0 auto;
+        }
+
+        #box1, #box2 {
+            border: 1px solid #00b800;
+            width: 256px;
+            min-height: 20px;
+            text-align: center;
+            float: left;
+            padding: 0;
+            margin: 7px;
+        }
+
+        #box1 > :first-child, #box2 > :first-child {
+            background: #FFCC77;
+            margin-top: 0;
+            padding-top: 5px;
+        }
+
+        ul li {
+            list-style: none;
+        }
+
+        .red {
+            color: red;
+            font-weight: bold;
+        }
+
+        label, .btnbox {
+            display: block;
+            text-align: center;
+            margin: 20px auto;
+        }
+
+        .btnbox button {
+            background: rgba(255, 204, 119, 0.36);
+            border: 1px solid #ffcc77;
+            outline: 0;
+            width: 85px;
+            margin: 0px 21px;
+            height: 30px;
+            border-radius: 5px;
+        }
+
+        #setName {
+            background: #67dc676e;
+            border: 1px solid #ffcc77;
+            outline: 0;
+            width: 75px;
+            height: 28px;
+            border-radius: 5px;
+        }
+
+        #name {
+            height: 20px;
+            outline: none;
+        }
+    </style>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        window.onload = function () {
+            // 声明变量.
+            var nickname = ""
+            var socket = io.connect();
+//            监听事件
+            socket.on("welcome2", function (data) {
+                show(2, "进入", data)   //客户进入2群
+            })
+            socket.on("welcome1", function (data) {
+                show(1, "进入", data)//客户进入1群
+            })
+            socket.on("leave1", function (data) {
+                show(1, "退出", data)  //客户离开1群
+            })
+            socket.on("leave2", function (data) {
+                show(2, "退出", data)//客户离开2群
+            })
+            document.getElementById("group1").onclick = function () {
+                if (nickname == "") {
+                    setName()
+                }
+                socket.emit("group1", nickname)  //发送进入1群事件
+            }
+            document.getElementById("group2").onclick = function () {
+                if (nickname == "") {
+                    setName()
+                }
+                socket.emit("group2", nickname)  //发送进入2群事件
+            }
+            document.getElementById("leavegroup1").onclick = function () {
+                socket.emit("leavegroup1", nickname)//发送离开1群事件
+            }
+            document.getElementById("leavegroup2").onclick = function () {
+                socket.emit("leavegroup2", nickname)  //发送离开2群事件
+            }
+            document.getElementById("setName").onclick = function () {
+                setName()
+            }
+
+            function setName() {
+                var name = document.getElementById("name")
+                if (name.value == "") {
+                    alert("请设置昵称")
+                }
+                else {
+                    nickname = name.value
+                    document.getElementById("none").style.display = "none"
+                }
+            }
+
+            function show(room, out, data) {
+                var box = document.getElementById("box" + room)
+                box.innerHTML += "<li><span class='red'>" + data + "</span><span>" + out + "</span><span>本群</span></li>"
+            }
+        };
+    </script>
+</head>
+<body>
+<fieldset>
+    <legend>进群</legend>
+    <label id="none"><span>设置昵称：</span><input type="text" id="name" style="">
+        <button type="button" id="setName">设置名称</button>
+    </label>
+    <div class="btnbox">
+        <button type="button" id="group1">进入1群</button>
+        <button type="button" id="group2">进入2群</button>
+        <button type="button" id="leavegroup1">退出1群</button>
+        <button type="button" id="leavegroup2">退出2群</button>
+    </div>
+    <div>
+        <ul id="box1">
+            <p>客户1群</p>
+        </ul>
+        <ul id="box2">
+            <p>客户2群</p>
+        </ul>
+    </div>
+</fieldset>
+</body>
+</html>

@@ -1,0 +1,85 @@
+body {
+	padding: 0;
+	margin: 0;
+}
+h1 {
+	text-align: center;
+}
+button {
+	background-color: #0066FF;
+	color: #ffffff;
+	/*line-height: 30px;*/
+}
+button#enter {
+	width: 80px;
+}
+#current {
+	display: flex;
+	/*flex-flow: column wrap;*/
+	justify-content: space-around;
+}
+div.userWrapper {
+	/*padding: 5px;*/
+	/*background: powderblue;*/
+	display: flex;
+	flex-flow: column wrap;
+}
+div.userInfo {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+  /*width: 250px;*/
+}
+div.userItem {
+	min-width: 40px;
+	height: 40px;
+	line-height: 40px;
+  display: inline-block;
+  border-radius: 50%;
+  text-align: center;
+  margin-left: 6px;
+  margin-top: 10px;
+}
+.waitingUser {
+  /*width: 250px;*/
+  text-align: center;
+  padding: 5px 0;
+  /*height: 100px;*/
+  /*line-height: 100px;*/
+}
+div.chessBoard {
+	margin: 0;
+	padding: 0;
+	position: relative;
+	margin-top: -10px;
+}
+canvas#layer {
+	position: absolute;
+	left: 0;
+	top: 0;
+}
+form#action {
+	display: flex;
+	justify-content: center;
+	/*padding-bottom: 10px;*/
+}
+@media screen and (max-width: 430px) {
+  div.chessBoard {
+    transform: scale(0.91);
+    transform-origin: 0 70%;
+  }
+}
+@media screen and (max-width: 376px) {
+  div.chessBoard {
+    transform: scale(0.833);
+    transform-origin: 0 40%;
+    /*transform-origin: 0;*/
+  }
+}
+@media screen and (max-width: 361px) {
+  div.chessBoard {
+    transform: scale(0.8);
+    transform-origin: 0 30%;
+    /*transform-origin: 0;*/
+  }
+}

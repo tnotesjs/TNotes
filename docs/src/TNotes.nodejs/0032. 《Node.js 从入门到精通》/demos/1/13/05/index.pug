@@ -1,0 +1,30 @@
+doctype html
+html
+  head
+    meta(charset="UTF-8")
+    title 手机账单提醒
+  body
+    div(style={margin:'0 auto',width:'300px',border:'solid blue 1px','padding':'20px'})
+      h3(style={'text-align':'center','margin-bottom':'0'}) 月度账单提醒
+      p(style={'text-align':'center','font-size':'12px','margin':'4px auto 10px'}) 月份： #{month}
+      p(style={'text-align':'center','font-size':'20px','margin':'0 auto','color':'#009688'}) 支出： #{out}
+      p(style={'text-align':'center','font-size':'12px','margin-top':'0'}) 收入： #{in1}
+      p
+        span 明细：
+        span(style={'color':'#009688','background':'rgba(156, 223, 244, 0.5)','border-radius':'5px','float':'right','font-size':'12px','padding':'5px 10px','margin-right':'5px'}) 支出
+        span(style={'color':'#2d2525','background':'rgba(170, 170, 170, 0.33)','border-radius':'5px','float':'right','font-size':'12px','padding':'5px 10px','margin-right':'5px'}) 收入
+      p
+        span 交通：
+        span(style={'float':'right'}) ￥ #{transport}
+      p
+        span 购物：
+        span(style={'float':'right'}) ￥ #{shopping}
+      p
+        span 医疗：
+        span(style={'float':'right'}) ￥#{medical}
+      p
+        span 其他：
+        span(style={'float':'right'}) ￥#{other}
+
+
+

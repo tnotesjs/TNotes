@@ -1,0 +1,22 @@
+form(class="form-horizontal",name="edit-post",method="post",action="/post/edit/#{blogPost._id}")
+  fieldset
+    legend 编辑日记 ##{blogPost._id}
+
+    div.control-group
+      label.control-label 标题:
+      div.controls
+        input(type="text",name="subject",class="input-xlarge span6",value="#{blogPost.subject}")
+
+    div.control-group
+      label.control-label 内容:
+      div.controls
+        textarea(name="body",rows="10",cols="30",class="span6") #{blogPost.body}
+ 
+    div.control-group
+      label.control-label 标签:
+      div.controls
+        input(type="text",name="tags",class="input-xlarge",value="#{blogPost.tags.join(',')}")
+
+    input(type="hidden",name="id",value="#{blogPost._id}")
+    div.form-actions
+      input(type="submit",value="修改",name="edit",class="btn btn-primary")

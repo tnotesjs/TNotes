@@ -1,0 +1,94 @@
+canvas {
+  display: block;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  margin: auto;
+  box-shadow: -2px -2px 2px #EFEFEF, 5px 5px 5px #B9B9B9;
+  cursor: grabbing;
+}
+h1 {
+	position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 80%;
+  margin: auto;
+  width: 120px;
+  height: 50px;
+  line-height: 50px;
+  text-align: center;
+}
+form#action {
+  display: block;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top:80%;
+  bottom: 0;
+  margin: auto;
+  width: 380px;
+  height: 50px;
+  text-align: center;
+}
+button {
+	background-color: #0066FF;
+	color: #ffffff;
+	line-height: 30px;
+}
+div#current {
+	/*float: left;*/
+  width: 300px;
+  position: absolute;
+  left: 10px;
+  top: 350px;
+	/*margin-top: 5%;*/
+	/*margin-right: 20%;*/
+}
+div.info {
+  /*position: absolute;*/
+  width: 250px;
+}
+div.info input {
+  width: 173px;
+}
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+button#enter {
+  float: right;
+  margin-top: -40px;
+}
+div.userInfo {
+  display: flex;
+  justify-content: center;
+  margin-top: 90px;
+  width: 250px;
+}
+div.userItem {
+  min-width: 60px;
+  height: 60px;
+  display: inline-block;
+  border-radius: 50%;
+  text-align: center;
+  margin-left: 6px;
+  margin-top: 10px;
+  /*vertical-align: middle;*/
+  line-height: 60px;
+}
+.waitingUser {
+  width: 250px;
+  text-align: center;
+  padding-bottom: 2px;
+  /*height: 100px;*/
+  /*line-height: 100px;*/
+}
+

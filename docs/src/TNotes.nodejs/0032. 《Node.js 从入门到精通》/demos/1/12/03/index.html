@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+<form action="">
+    <fieldset style="width: 200px;margin: 0 auto">
+        <legend>发布公告</legend>
+        <textarea id="text" cols="50" rows="10"></textarea><br>
+        <button id="btn">我写好了</button>
+    </fieldset>
+    <div id="box" style="color:red"></div>
+</form>
+<script>
+    var box=document.getElementById("box")
+    const socket = io.connect()
+    window.onload=function () {
+        socket.on("serverData", function (data) {
+            var html=data+"<br>"
+            box.innerHTML+=html    //将获取的信息添加到div中
+        })
+        document.getElementById("btn").onclick=function () {
+            var text = document.getElementById("text").value
+            socket.emit("receiveData", text)    //发送消息
+        }
+    }
+</script>
+</body>
+</html>

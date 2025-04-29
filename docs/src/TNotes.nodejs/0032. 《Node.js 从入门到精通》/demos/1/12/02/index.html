@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        .bold {
+            font-weight: bold;
+        }
+        ul {
+            list-style: none;
+        }
+    </style>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+<form action="">
+    <fieldset style="width: 360px;margin: 0 auto">
+        <legend>发布公告</legend>
+        <textarea id="text" style="width: 320px;height: 90px;margin-left: 10px"></textarea><br>
+        <div style="text-align: center">
+            <button id="btn" type="button">发送</button>
+        </div>
+    </fieldset>
+    <ul id="box"></ul>
+</form>
+<script>
+
+    window.onload = function () {
+        var nick = "";
+        var box = document.getElementById("box")
+        const socket = io.connect()
+        socket.on("serverData", function (data) {
+            console.log(data)
+            var html1 = "<span class='bold'>" + data + "</span>"
+            var li = document.createElement("li")
+            li.innerHTML += html1
+            box.append(li)
+        })
+        document.getElementById("btn").onclick = function () {
+            var text = document.getElementById("text").value
+            socket.emit("receiveData", text)
+        }
+    }
+</script>
+</body>
+</html>

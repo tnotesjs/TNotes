@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body onload="start()">
+<fieldset>
+    <legend>发送消息</legend>
+    <div><label for="text">发送内容：</label><input type="text" id="text"/></div>
+    <div><input type="button" id="button" value="确定"/></div>
+</fieldset>
+</body>
+<script>
+    // 生成socket对象
+    var socket = io.connect();
+    function start() {
+        // 监听服务器端的事件和数据
+        socket.on('serverData', function (data) {
+            alert("来自服务器端的消息"+"\n" + data);
+        });
+        //创建表单点击事件
+        document.getElementById('button').onclick = function () {
+            // 获取表单数据
+            var text = document.getElementById('text').value;
+            // 向服务器端发送事件clientData和数据
+            socket.emit('clientData', text);
+        };
+    };
+</script>
+</html>

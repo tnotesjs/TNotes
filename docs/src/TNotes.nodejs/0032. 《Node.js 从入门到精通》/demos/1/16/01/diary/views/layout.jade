@@ -1,0 +1,38 @@
+doctype
+html
+  head
+    title= title
+    link(rel='stylesheet', href='/stylesheets/bootstrap.min.css')
+    link(rel='stylesheet', href='/stylesheets/style.css')
+  body
+
+    div.navbar.navbar-fixed-top
+      div.navbar-inner
+        div.container
+          a(class="btn btn-navbar",data-toggle="collapse",data-target=".nav-collapse")
+            span.icon-bar
+            span.icon-bar
+            span.icon-bar
+          a(class="brand",href="/") 心情日记
+          div.nav-collapse
+            ul.nav
+              li.active
+                a(href="/") 主页
+              - if (user)
+                li
+                  a(href="/post/add") 添加日记
+              li
+                a(href="#") 联系我
+            p.navbar-text.pull-right
+              - if (user)
+                  span 退出
+                  a(href="/logout") #{user.user}
+              - else
+                a(href="/login") 登录
+
+
+    partial('alert', flash)
+    div.container!= body
+      hr
+      footer
+        p 明日科技

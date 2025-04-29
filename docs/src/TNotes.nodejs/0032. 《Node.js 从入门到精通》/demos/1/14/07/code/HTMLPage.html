@@ -1,0 +1,74 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>选座购票</title>
+    <style>
+        .line {  overflow: hidden;  }
+        .seat {  margin: 2px;  float: left;  width: 40px;  height: 35px; }
+        .seat img{
+            width: 40px;  height: 35px;
+        }
+    </style>
+    <script src="js/jQuery-v3.4.0.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <!-- 生成socket -->
+    <script>
+        // 链接socket
+        var socket = io.connect();
+        // 监听socket事件
+        socket.on('reserve', function (data) {
+            var $target = $('div[data-x = ' + data.x + '][data-y = ' + data.y + ']');
+            $target.removeClass('enable');
+            $target.addClass('disable');
+        });
+    </script>
+    <script>
+        $(document).ready(function () {
+            //声明变量
+            var onClickSeat = function () {
+                var x = $(this).attr('data-x');
+                var y = $(this).attr('data-y');
+                if (confirm('确定吗?')) {
+                    $(this).off('click');
+                    socket.emit('reserve', {
+                        x: x,
+                        y: y
+                    });
+
+                } else {
+                    alert('已取消！');
+                }
+            };
+            // 执行Ajax
+            $.getJSON('/seats', { dummy: new Date().getTime() }, function (data) {
+                // 生成座位
+                $.each(data, function (indexY, line) {
+                    // 生成HTML
+                    var $line = $('<div></div>').addClass('line');
+                    $.each(line, function (indexX, seat) {
+                        var $output1 = $('<div></div>', {
+                            'class': 'seat',
+                            'data-x': indexX,
+                            'data-y': indexY
+                        }).appendTo($line);
+                        var $output=$("<img src='image/yes.png' alt=''>")
+                        if (seat == 1) {
+                            $output1.addClass('enable').on('click', onClickSeat);
+                            $output.appendTo($output1)
+                        } else if (seat == 2) {
+                            $output1.addClass('disable');
+                            $output.appendTo($output1)
+                            $output.attr("src","image/no.png")
+                        }
+                    });
+                    $line.appendTo('body');
+                });
+            });
+        });
+    </script>
+</head>
+<body>
+<h2>惊奇队长</h2>
+<p>今天3月14日 16:00 英语3D</p>
+</body>
+</html>

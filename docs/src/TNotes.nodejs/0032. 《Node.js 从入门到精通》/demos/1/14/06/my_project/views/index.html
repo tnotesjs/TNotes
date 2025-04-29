@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>会话管理</title>
+</head>
+<body>
+<h2 style="text-align: center">会话管理</h2>
+<p id="loged">当前登录用户：<span style="color:red"><%= name %></span>，<a href="/logout" id="logout">退出登录</a></p>
+<fieldset style="width: 300px;text-align: center;margin: 10px auto;border:1px solid #4caf50" id="unlog">
+    <legend style="text-align: left">登录</legend>
+    <form method="POST" action="/login">
+        <label style="display: block;margin-top: 20px">用户名：<input type="text" id="name" name="name" value=""/></label>
+        <label style="display: block;margin: 20px auto">密&nbsp;&nbsp;码：<input type="password" id="password" name="password" value=""/></label>
+        <div style="text-align: center;margin-bottom: 10px"><input type="submit" value="登录" id="login" style="background: #cddc39;border:1px solid #ff9800"/>
+        </div>
+    </form>
+</fieldset>
+<script type="text/javascript" src="/jquery-3.1.0.min.js"></script>
+<script>
+    if (isLogined) {
+        $("#loged").css("display", "block")
+        $("#unlog").css("display", "none")
+    }
+    else {
+        $("#unlog").css("display", "block")
+        $("#loged").css("display", "none")
+    }
+</script>
+<script type="text/javascript">
+    $('#login').click(function (evt) {
+        evt.preventDefault();//当点击提交按钮时阻止对表单的提交
+        $.ajax({
+            url: '/login',
+            type: 'POST',
+            data: {
+                name: $('#name').val(),
+                password: $('#password').val()
+            },
+            success: function (data) {
+                if (data.ret_code === 0) {
+                    location.reload();//刷新当前页面
+                }
+            }
+        });
+    });
+</script>
+</body>
+</html>

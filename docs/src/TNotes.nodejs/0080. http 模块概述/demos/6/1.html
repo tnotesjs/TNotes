@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>用户登录</title>
+  </head>
+  <body>
+    <main>
+      <section role="form">
+        <header>
+          <h1>用户登录</h1>
+        </header>
+        <form method="post" aria-label="用户登录表单">
+          <div>
+            <input type="text" name="login" placeholder="用户名" required />
+          </div>
+          <div>
+            <input
+              type="password"
+              name="password"
+              placeholder="密码"
+              required
+            />
+          </div>
+          <div>
+            <label>
+              <input type="checkbox" name="remember_me" id="remember_me" />
+              记住密码
+            </label>
+          </div>
+          <div>
+            <button type="submit">登录</button>
+          </div>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,28 @@
+mixin blogPost(post)
+  div.span6
+    a(href="/post/#{post._id}")
+      h3 #{post.subject}
+    p #{post.body.substr(0, 250) + '...'}
+    p#info 
+      div.tags
+        for tag in post.tags
+          strong 
+            a(href="#") #{tag} 
+      div.post-time
+        em #{moment(post.created).format('YYYY-MM-DD HH:mm:ss')}
+    p
+      a(class="btn btn-small",href="/post/#{post._id}") 阅读更多 &raquo;
+
+
+div.hero-unit 
+  h1 心情日记
+  p 欢迎来到我的心情日记，这里有我最近的动态、想法和心情......
+
+!=partial('alert', flash)
+
+div
+  - for (var i = 0; i < postList.length; i++)
+    div.row
+      mixin blogPost(postList[i])
+      - if (i + 1 < postList.length)
+        mixin blogPost(postList[++i])

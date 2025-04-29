@@ -1,0 +1,37 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>轨道交通充值信息</title>
+    <style>
+    .info{
+        margin:0 auto;
+        width:300px;
+        border: solid  blue 1px;
+        color:blue
+    }
+    .info h3{
+        text-align: center;
+        border-bottom:dashed blue 1px
+    }
+    </style>
+</head>
+<body>
+<% var title='轨道交通充值信息'%>
+<% var A='东环城路'%>
+<% var B='02390704'%>
+<% var C='2023-03-03 11:32:15'%>
+<% var D='19.50元'%>
+<% var E='100.00元'%>
+<% var F='119.50元'%>
+<section class="info">
+    <h3><%=title%></h3>
+    <p>车站名称：<%=A%></p>
+    <p>设备编号：<%=B%></p>
+    <p>充值时间：<%=C%></p>
+    <p>交易前金额：<%=D%></p>
+    <p>充值金额：<%=E%></p>
+    <p>交易后金额：<%=F%></p>
+</section>
+</body>
+</html>
