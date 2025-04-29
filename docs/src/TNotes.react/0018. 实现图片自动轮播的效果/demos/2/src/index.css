@@ -1,0 +1,20 @@
+#root {
+  width: 800px;
+  margin: 0 auto;
+}
+
+#root .card-box {
+  width: 800px;
+  height: 600px;
+  border: 1px solid;
+}
+
+#root .card-box img {
+  width: 100%;
+  display: block;
+}
+
+#root .card-box p {
+  text-align: center;
+  font-size: 3rem;
+}

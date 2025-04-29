@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+</head>
+
+<body>
+  <!-- 这是接下来要渲染内容的容器 -->
+  <div id="root"></div>
+  <!-- React 的核心库，与宿主环境无关 -->
+  <script crossorigin src="https://unpkg.com/react@16/umd/react.development.js"></script>
+  <!-- 依赖核心库，将核心的功能与页面结合 -->
+  <script crossorigin src="https://unpkg.com/react-dom@16/umd/react-dom.development.js"></script>
+  <script>
+    // 创建一个 H1 元素
+    const h1 = React.createElement("h1", {}, "Hello World");
+    // 将 H1 元素渲染到 root 容器中
+    ReactDOM.render(h1, document.getElementById("root"));
+  </script>
+</body>
+
+</html>

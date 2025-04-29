@@ -16,6 +16,7 @@
 - [12. 🤖 为什么 type 必须是 string 类型，符号类型不行](#12--为什么-type-必须是-string-类型符号类型不行)
 
 <!-- endregion:toc -->
+
 - 理解 action 的本质
 - 编写 action 时的一些常见写法
 - action 的创建函数
@@ -68,16 +69,24 @@ const action = {
   type: 'increase',
 }
 
-console.log('打印 window.store.getState() 获取仓库当前状态 =>', window.store.getState())
+console.log(
+  '打印 window.store.getState() 获取仓库当前状态 =>',
+  window.store.getState()
+)
 
-console.log('执行 window.store.dispatch({ type: "increase" }) => 向仓库分发 action，改变仓库状态。')
+console.log(
+  '执行 window.store.dispatch({ type: "increase" }) => 向仓库分发 action，改变仓库状态。'
+)
 window.store.dispatch(action)
 
-console.log('打印 window.store.getState() 获取仓库当前状态 =>', window.store.getState())
+console.log(
+  '打印 window.store.getState() 获取仓库当前状态 =>',
+  window.store.getState()
+)
 ```
 
 - 最终输出结果：
-  - ![](md-imgs/2024-10-28-22-30-43.png)
+  - ![](assets/2024-10-28-22-30-43.png)
 - 通过这个 demo，能够发现 redux 和 react 没有直接关联，完全可以脱离 react 单独 redux 来管理状态数据。
 - 本节主要讲解的是 redux 内部的 action 的相关内容，同样的，这里介绍的 action 和 react 也是没有直接关联的。
 
@@ -168,7 +177,6 @@ function countReducer(state, action) {
 // 存到 window 对象上，以便测试
 window.store = redux.createStore(countReducer, 10) // for test
 
-
 // ✅ 正确的 action 创建方式
 const action = {
   type: 'increase',
@@ -185,14 +193,22 @@ console.log(action.__proto__ === Object.prototype) // => true 表示 action 是�
 // console.log(action.__proto__ === Object.prototype) // => false
 // console.log(action.__proto__ === MyAction.prototype)// => true 表示 action 是一个自定义的类 MyAction 的实例对象，而不是一个普通对象
 
-console.log('打印 window.store.getState() 获取仓库当前状态 =>', window.store.getState())
+console.log(
+  '打印 window.store.getState() 获取仓库当前状态 =>',
+  window.store.getState()
+)
 
-console.log('执行 window.store.dispatch({ type: "increase" }) => 向仓库分发 action，改变仓库状态。')
+console.log(
+  '执行 window.store.dispatch({ type: "increase" }) => 向仓库分发 action，改变仓库状态。'
+)
 window.store.dispatch(action)
 // 如果使用错误的方式来创建 action 会抛出以下错误：
 // createStore.ts:201 Uncaught Error: Actions must be plain objects. Instead, the actual type was: 'object'.
 
-console.log('打印 window.store.getState() 获取仓库当前状态 =>', window.store.getState())
+console.log(
+  '打印 window.store.getState() 获取仓库当前状态 =>',
+  window.store.getState()
+)
 
 // 如果使用正确的方式来创建 action，将会打印以下日志：
 // 打印 window.store.getState() 获取仓库当前状态 => 10
@@ -228,7 +244,7 @@ store.dispatch(action)
 // createStore.ts:207 Uncaught TypeError: Cannot convert a Symbol value to a string
 ```
 
-![](md-imgs/2024-10-30-07-14-35.png)
+![](assets/2024-10-30-07-14-35.png)
 
 ## 7. 📒 type 的硬编码问题
 
@@ -243,16 +259,16 @@ store.dispatch(action)
 // version: v4.0.41
 // from: https://github.com/scratchfoundation/scratch-gui/blob/develop/src/lib/drag-constants.js
 export default {
-    SOUND: 'SOUND',
-    COSTUME: 'COSTUME',
-    SPRITE: 'SPRITE',
-    CODE: 'CODE',
+  SOUND: 'SOUND',
+  COSTUME: 'COSTUME',
+  SPRITE: 'SPRITE',
+  CODE: 'CODE',
 
-    BACKPACK_SOUND: 'BACKPACK_SOUND',
-    BACKPACK_COSTUME: 'BACKPACK_COSTUME',
-    BACKPACK_SPRITE: 'BACKPACK_SPRITE',
-    BACKPACK_CODE: 'BACKPACK_CODE'
-};
+  BACKPACK_SOUND: 'BACKPACK_SOUND',
+  BACKPACK_COSTUME: 'BACKPACK_COSTUME',
+  BACKPACK_SPRITE: 'BACKPACK_SPRITE',
+  BACKPACK_CODE: 'BACKPACK_CODE',
+}
 ```
 
 ## 8. 📒 action 的创建函数
@@ -274,9 +290,9 @@ export default {
 /**
  * action/action-type.js
  */
-export const INCREASE = "INCREASE"
-export const DECREASE = "DECREASE"
-export const SET = "SET"
+export const INCREASE = 'INCREASE'
+export const DECREASE = 'DECREASE'
+export const SET = 'SET'
 ```
 
 ```js
@@ -340,7 +356,6 @@ import { createStore, bindActionCreators } from 'redux'
 import reducer from './reducer'
 import * as numberActions from './action/number-action'
 
-
 const store = createStore(reducer, 10)
 
 console.log('store.getState() =>', store.getState())
@@ -379,12 +394,15 @@ const {
   createDecreaseAction,
   createSetAction,
   // ...
-} = bindActionCreators({
-  createIncreaseAction: numberActions.createIncreaseAction,
-  createDecreaseAction: numberActions.createDecreaseAction,
-  createSetAction: numberActions.createSetAction,
-  // ...
-}, store.dispatch)
+} = bindActionCreators(
+  {
+    createIncreaseAction: numberActions.createIncreaseAction,
+    createDecreaseAction: numberActions.createDecreaseAction,
+    createSetAction: numberActions.createSetAction,
+    // ...
+  },
+  store.dispatch
+)
 createIncreaseAction()
 ```
 
@@ -397,7 +415,7 @@ import type { Dispatch } from './types/store'
 import type {
   ActionCreator,
   ActionCreatorsMapObject,
-  Action
+  Action,
 } from './types/actions'
 import { kindOf } from './utils/kindOf'
 
@@ -482,27 +500,31 @@ export default function bindActionCreators(
 
 ```js
 function bindActionCreator(actionCreator, dispatch) {
-    return function (...args) {
-        return dispatch(actionCreator.apply(this, args));
-    };
+  return function (...args) {
+    return dispatch(actionCreator.apply(this, args))
+  }
 }
 
 export default function bindActionCreators(actionCreators, dispatch) {
-    if (typeof actionCreators === 'function') {
-        return bindActionCreator(actionCreators, dispatch);
+  if (typeof actionCreators === 'function') {
+    return bindActionCreator(actionCreators, dispatch)
+  }
+  if (typeof actionCreators !== 'object' || actionCreators === null) {
+    throw new Error(
+      `bindActionCreators expected an object or a function, but instead received: '${kindOf(
+        actionCreators
+      )}'. ` +
+        `Did you write "import ActionCreators from" instead of "import * as ActionCreators from"?`
+    )
+  }
+  const boundActionCreators = {}
+  for (const key in actionCreators) {
+    const actionCreator = actionCreators[key]
+    if (typeof actionCreator === 'function') {
+      boundActionCreators[key] = bindActionCreator(actionCreator, dispatch)
     }
-    if (typeof actionCreators !== 'object' || actionCreators === null) {
-        throw new Error(`bindActionCreators expected an object or a function, but instead received: '${kindOf(actionCreators)}'. ` +
-            `Did you write "import ActionCreators from" instead of "import * as ActionCreators from"?`);
-    }
-    const boundActionCreators = {};
-    for (const key in actionCreators) {
-        const actionCreator = actionCreators[key];
-        if (typeof actionCreator === 'function') {
-            boundActionCreators[key] = bindActionCreator(actionCreator, dispatch);
-        }
-    }
-    return boundActionCreators;
+  }
+  return boundActionCreators
 }
 ```
 
@@ -510,20 +532,20 @@ export default function bindActionCreators(actionCreators, dispatch) {
 
 ```js
 function bindActionCreator(actionCreator, dispatch) {
-    return function (...args) {
-        return dispatch(actionCreator.apply(this, args));
-    };
+  return function (...args) {
+    return dispatch(actionCreator.apply(this, args))
+  }
 }
 
 function bindActionCreators(actionCreators, dispatch) {
-    const boundActionCreators = {};
-    for (const key in actionCreators) {
-        const actionCreator = actionCreators[key];
-        if (typeof actionCreator === 'function') {
-            boundActionCreators[key] = bindActionCreator(actionCreator, dispatch);
-        }
+  const boundActionCreators = {}
+  for (const key in actionCreators) {
+    const actionCreator = actionCreators[key]
+    if (typeof actionCreator === 'function') {
+      boundActionCreators[key] = bindActionCreator(actionCreator, dispatch)
     }
-    return boundActionCreators;
+  }
+  return boundActionCreators
 }
 ```
 
@@ -540,32 +562,32 @@ function bindActionCreators(actionCreators, dispatch) {
 
 ```javascript
 function isPlainObject(obj) {
-    // 检查输入是否为对象且不为 null
-    if (typeof obj !== 'object' || obj === null) {
-        return false;
-    }
+  // 检查输入是否为对象且不为 null
+  if (typeof obj !== 'object' || obj === null) {
+    return false
+  }
 
-    // 获取对象的原型
-    const proto = Object.getPrototypeOf(obj);
+  // 获取对象的原型
+  const proto = Object.getPrototypeOf(obj)
 
-    // 检查原型是否是 Object.prototype
-    return proto === Object.prototype || proto === null;
+  // 检查原型是否是 Object.prototype
+  return proto === Object.prototype || proto === null
 }
 
 // 测试示例
-const plainObj = { a: 1, b: 2, c: 3 };
-const arrayObj = [1, 2, 3];
-const dateObj = new Date();
-const functionObj = function() {};
-const nullValue = null;
-const undefinedValue = undefined;
+const plainObj = { a: 1, b: 2, c: 3 }
+const arrayObj = [1, 2, 3]
+const dateObj = new Date()
+const functionObj = function () {}
+const nullValue = null
+const undefinedValue = undefined
 
-console.log(isPlainObject(plainObj));       // 输出: true
-console.log(isPlainObject(arrayObj));       // 输出: false
-console.log(isPlainObject(dateObj));        // 输出: false
-console.log(isPlainObject(functionObj));    // 输出: false
-console.log(isPlainObject(nullValue));      // 输出: false
-console.log(isPlainObject(undefinedValue)); // 输出: false
+console.log(isPlainObject(plainObj)) // 输出: true
+console.log(isPlainObject(arrayObj)) // 输出: false
+console.log(isPlainObject(dateObj)) // 输出: false
+console.log(isPlainObject(functionObj)) // 输出: false
+console.log(isPlainObject(nullValue)) // 输出: false
+console.log(isPlainObject(undefinedValue)) // 输出: false
 ```
 
 在这个函数中：
@@ -579,17 +601,17 @@ console.log(isPlainObject(undefinedValue)); // 输出: false
 如果你需要更严格的检查，还可以使用 `lodash` 库中的 `_.isPlainObject` 函数，它提供了更全面的检查：
 
 ```javascript
-const _ = require('lodash');
+const _ = require('lodash')
 
-const plainObj = { a: 1, b: 2, c: 3 };
-const arrayObj = [1, 2, 3];
-const dateObj = new Date();
-const functionObj = function() {};
+const plainObj = { a: 1, b: 2, c: 3 }
+const arrayObj = [1, 2, 3]
+const dateObj = new Date()
+const functionObj = function () {}
 
-console.log(_.isPlainObject(plainObj));     // 输出: true
-console.log(_.isPlainObject(arrayObj));     // 输出: false
-console.log(_.isPlainObject(dateObj));      // 输出: false
-console.log(_.isPlainObject(functionObj));  // 输出: false
+console.log(_.isPlainObject(plainObj)) // 输出: true
+console.log(_.isPlainObject(arrayObj)) // 输出: false
+console.log(_.isPlainObject(dateObj)) // 输出: false
+console.log(_.isPlainObject(functionObj)) // 输出: false
 ```
 
 `lodash` 的 `_.isPlainObject` 函数会进行更复杂的检查，包括处理一些特殊情况，例如 `arguments` 对象等。如果你已经在项目中使用了 `lodash`，那么直接使用 `_.isPlainObject` 会更加方便和可靠。

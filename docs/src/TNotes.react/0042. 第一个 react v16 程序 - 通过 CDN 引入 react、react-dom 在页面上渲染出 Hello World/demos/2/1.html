@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Document</title>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script
+      crossorigin
+      src="https://unpkg.com/react@16/umd/react.development.js"
+    ></script>
+    <script
+      crossorigin
+      src="https://unpkg.com/react-dom@16/umd/react-dom.development.js"
+    ></script>
+    <script>
+      // 创建一个 span 元素
+      const span = React.createElement(
+        'span',
+        {
+          title: '这是一个 span 元素',
+        },
+        'this is a span element'
+      );
+
+      // 创建一个 img 元素
+      const img = React.createElement('img', {
+        src: 'https://avatars.githubusercontent.com/u/125541114?v=4',
+        width: '100px',
+      });
+
+      // 创建一个 div 元素
+      const div = React.createElement('div', {}, '123', img, span);
+      // 123、img、span 这些都会成为该 div 的子元素
+
+      ReactDOM.render(div, document.getElementById('root'));
+    </script>
+  </body>
+</html>

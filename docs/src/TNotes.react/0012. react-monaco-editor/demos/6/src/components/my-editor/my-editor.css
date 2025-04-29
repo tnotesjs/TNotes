@@ -1,0 +1,21 @@
+.my-editor {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: all 0.5s;
+  border: 1px solid #ccc;
+}
+
+.expand-button {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  margin-left: -2rem;
+  transform: translateY(-50%);
+}
+
+/* 隐藏样式 */
+.my-editor.collapsed {
+  width: 0 !important;
+}

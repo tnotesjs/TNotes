@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Document</title>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script
+      crossorigin
+      src="https://unpkg.com/react@16/umd/react.development.js"
+    ></script>
+    <script
+      crossorigin
+      src="https://unpkg.com/react-dom@16/umd/react-dom.development.js"
+    ></script>
+
+    <!-- 引入 babel，用于编译 JSX，最终效果跟 React.createElement 函数调用的效果是完全一致的。 -->
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+
+    <script type="text/babel">
+      // const span = React.createElement("span", {
+      //   title: '这是一个 span 元素'
+      // }, "this is a span element");
+      // const img = React.createElement('img', { src: 'https://avatars.githubusercontent.com/u/125541114?v=4', width: '100px' });
+      // const div = React.createElement("div", {}, "123", img, span);
+
+      // 最终要渲染的元素是由 React.createElement 创建的。
+      // 但是使用 React.createElement 创建的话，写起来不是很舒服，和传统的 html 写法不太一样。
+      // 因此，React 还给我们提供了 JSX 的语法。
+      // 比如上述结构，我们如果改用 JSX 的写法来改写，最终页面上渲染出来的效果是完全等效的。
+      // 在实际开发中，我们更多使用的也是 JSX 的语法来写我们的 React 组件。
+      const div = (
+        <div>
+          123
+          <img
+            src="https://avatars.githubusercontent.com/u/125541114?v=4"
+            width="100px"
+          />
+          <span title="这是一个 span 元素">this is a span element</span>
+        </div>
+      )
+
+      ReactDOM.render(div, document.getElementById('root'))
+    </script>
+  </body>
+</html>

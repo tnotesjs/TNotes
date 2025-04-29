@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Document</title>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <!-- DOC https://legacy.reactjs.org/docs/cdn-links.html -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- babel -->
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+
+    <script type="text/babel">
+      const jsx = (
+        // 下面是 JSX 语法
+        <div>
+          <h2>title</h2>
+          // <p>description</p> // [!code highlight]
+          {/* 这是 JSX 中的注释内容 */}
+        </div>
+      )
+
+      const root = ReactDOM.createRoot(document.getElementById('root'))
+
+      root.render(jsx)
+
+      // 在这个 .html 文件的 script 脚本中的 JSX 部分，如果你使用快捷方式 ctrl + / 来注释代码，默认生成的是错误的注释格式。
+    </script>
+  </body>
+</html>
