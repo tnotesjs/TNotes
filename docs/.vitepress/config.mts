@@ -4,7 +4,6 @@ import markdownItTaskLists from 'markdown-it-task-lists'
 import mila from 'markdown-it-link-attributes'
 import markdownItContainer from 'markdown-it-container'
 
-import sidebar__electron from '../src/notes/electron/sidebar.json'
 import sidebar__git from '../src/notes/git/sidebar.json'
 import sidebar__i18n from '../src/notes/i18n/sidebar.json'
 import sidebar__typescript from '../src/notes/typescript/sidebar.json'
@@ -17,6 +16,7 @@ import sidebar__c_cpp from '../src/TNotes.c-cpp/sidebar.json'
 import sidebar__canvas from '../src/TNotes.canvas/sidebar.json'
 import sidebar__cooking from '../src/TNotes.cooking/sidebar.json'
 import sidebar__egg from '../src/TNotes.egg/sidebar.json'
+import sidebar__electron from '../src/TNotes.electron/sidebar.json'
 import sidebar__en_notes from '../src/TNotes.en-notes/sidebar.json'
 import sidebar__footprints from '../src/TNotes.footprints/sidebar.json'
 import sidebar__html_css_js from '../src/TNotes.html-css-js/sidebar.json'
@@ -158,6 +158,12 @@ function sidebar() {
       items: [...sidebar__egg],
     },
     {
+      text: 'TNotes.electron',
+      link: 'https://tdahuyou.github.io/TNotes.electron/',
+      collapsed: true,
+      items: [...sidebar__electron],
+    },
+    {
       text: 'TNotes.en-notes',
       link: 'https://tdahuyou.github.io/TNotes.en-notes/',
       collapsed: true,
@@ -253,7 +259,6 @@ function sidebar() {
           text: '🌐 前端生态',
           collapsed: true,
           items: [
-            { ...sidebar__electron },
             { ...sidebar__vue },
             { ...sidebar__vite },
             { ...sidebar__webpack },
