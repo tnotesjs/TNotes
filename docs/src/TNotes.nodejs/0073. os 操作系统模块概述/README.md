@@ -110,7 +110,16 @@
 
 ::: code-group
 
-<<< ./demos/1/1.cjs {js}
+```js [1.cjs]
+const os = require('os')
+
+console.log(`操作系统平台: ${os.platform()}`)
+console.log(`操作系统类型: ${os.type()}`)
+
+// 输出：
+// 操作系统平台: darwin
+// 操作系统类型: Darwin
+```
 
 :::
 
@@ -118,7 +127,25 @@
 
 ::: code-group
 
-<<< ./demos/2/1.cjs {js}
+```js [1.cjs]
+const os = require('os')
+
+console.log(`CPU 核心数: ${os.cpus().length}`)
+console.log(`总内存: ${(os.totalmem() / 1024 / 1024 / 1024).toFixed(2)} GB`)
+console.log(`空闲内存: ${(os.freemem() / 1024 / 1024 / 1024).toFixed(2)} GB`)
+console.log(
+  `内存使用率：${(
+    ((os.totalmem() - os.freemem()) / os.totalmem()) *
+    100
+  ).toFixed(2)}%`
+)
+
+// 输出：
+// CPU 核心数: 12
+// 总内存: 32.00 GB
+// 空闲内存: 0.93 GB
+// 内存使用率：97.09%
+```
 
 :::
 
@@ -126,7 +153,24 @@
 
 ::: code-group
 
-<<< ./demos/3/1.cjs {js}
+```js [1.cjs]
+const os = require('os')
+
+const networkInterfaces = os.networkInterfaces()
+console.log(networkInterfaces)
+
+// 输出：
+// {
+//   lo0: [
+//     {
+//       address: '127.0.0.1',
+//       ...
+//     },
+//     ...
+//   ],
+//   ...
+// }
+```
 
 :::
 
@@ -168,7 +212,18 @@
 
 ::: code-group
 
-<<< ./demos/4/1.cjs {js}
+```js [1.cjs]
+const os = require('os')
+
+console.log(`主机名: ${os.hostname()}`) // 输出主机名
+console.log(`运行时间: ${os.uptime()} 秒`) // 输出操作系统的运行时间（秒）
+console.log(`运行天数：${(os.uptime() / 86400).toFixed(2)} 天`)
+
+// 输出：
+// 主机名: Mac-Studio.local
+// 运行时间: 1343431 秒
+// 运行天数：15.55 天
+```
 
 :::
 

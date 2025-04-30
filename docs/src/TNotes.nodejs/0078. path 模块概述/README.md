@@ -62,7 +62,23 @@
 
 ::: code-group
 
-<<< ./demos/1/1.cjs {js}
+```js [1.cjs]
+const path = require('path')
+
+console.log(process.platform) // darwin
+
+console.log(path.join('/foo', 'bar', 'baz/file.txt')) // => /foo/bar/baz/file.txt
+console.log(path.join('/foo', 'bar', '..')) // => /foo
+console.log(path.join('/foo', '../bar')) // => /bar
+
+console.log(path.win32.join('/foo', 'bar', 'baz/file.txt')) // => \foo\bar\baz\file.txt
+console.log(path.win32.join('/foo', 'bar', '..')) // => \foo
+console.log(path.win32.join('/foo', '../bar')) // => \bar
+
+// path.join()
+// 自动处理多余的分隔符（如多余的 / 或 \）。
+// 如果传入的路径片段包含 .. 或 .，会正确解析相对路径。
+```
 
 :::
 
@@ -73,7 +89,22 @@
 
 ::: code-group
 
-<<< ./demos/2/1.cjs {js}
+```js [1.cjs]
+const path = require('path')
+
+console.log(path.resolve())
+console.log(path.resolve('foo', 'bar', 'baz/file.txt'))
+console.log(path.resolve(__dirname))
+
+// 输出：
+// /Users/huyouda/zm/notes/TNotes.nodejs/notes/0078. path 模块概述
+// /Users/huyouda/zm/notes/TNotes.nodejs/notes/0078. path 模块概述/foo/bar/baz/file.txt
+// /Users/huyouda/zm/notes/TNotes.nodejs/notes/0078. path 模块概述/demos/2
+
+// path.resolve() 方法将路径或路径片段的序列解析为绝对路径。
+// 从右向左解析路径，直到生成一个绝对路径为止。
+// 如果所有路径片段都无法形成绝对路径，则默认使用当前工作目录。（也就是运行 node 命令的位置）
+```
 
 :::
 
@@ -85,7 +116,18 @@
 
 ::: code-group
 
-<<< ./demos/3/1.cjs {js}
+```js [1.cjs]
+const path = require('path')
+
+console.log(path.basename('/foo/bar/baz/file.txt')) // => file.txt
+console.log(path.basename('/foo/bar/baz/file.txt', '.txt')) // => file
+
+// path.basename('/foo/bar/baz/file.txt')
+// 表示的获取路径中的文件名部分。
+
+// path.basename('/foo/bar/baz/file.txt', '.txt')
+// 表示的获取路径中的文件名部分，并去除扩展名部分 .txt。
+```
 
 :::
 
@@ -93,7 +135,12 @@
 
 ::: code-group
 
-<<< ./demos/4/1.cjs {js}
+```js [1.cjs]
+const path = require('path')
+
+console.log(path.dirname('/foo/bar/baz/file.txt'))
+// => /foo/bar/baz
+```
 
 :::
 
@@ -101,9 +148,33 @@
 
 ::: code-group
 
-<<< ./demos/5/1.cjs {js}
+```js [1.cjs]
+const path = require('path')
 
-<<< ./demos/5/2.cjs {js}
+console.log(path.extname('/foo/bar/baz/file.txt'))
+// => .txt
+
+console.log(path.extname('/foo/bar/baz/file'))
+// => ''
+
+// 如果路径中没有扩展名，则返回空字符串 ''。
+```
+
+```js [2.cjs]
+const path = require('path')
+
+const filePath = '/foo/bar/baz/file.txt'
+
+console.log(
+  `获取路径 ${filePath} 中的文件名（不带后缀）：${path.basename(
+    filePath,
+    path.extname(filePath) // 将结尾的扩展名去除
+  )}`
+)
+
+// 输出：
+// 获取路径 /foo/bar/baz/file.txt 中的文件名（不带后缀）：file
+```
 
 :::
 
@@ -111,7 +182,36 @@
 
 ::: code-group
 
-<<< ./demos/6/1.cjs {js}
+```js [1.cjs]
+const path = require('path')
+
+console.log(path.isAbsolute('/foo/bar')) // => true
+console.log(path.posix.isAbsolute('/foo/bar')) // => true
+console.log(path.win32.isAbsolute('/foo/bar')) // => true
+
+console.log('----------------------------------------')
+
+console.log(path.isAbsolute('foo/bar')) // => false
+console.log(path.posix.isAbsolute('foo/bar')) // => false
+console.log(path.win32.isAbsolute('foo/bar')) // => false
+
+console.log('----------------------------------------')
+
+console.log(path.isAbsolute('D:\\Demo\\js.js')) // => false
+console.log(path.posix.isAbsolute('D:\\Demo\\js.js')) // => false
+console.log(path.win32.isAbsolute('D:\\Demo\\js.js')) // => true
+
+console.log('----------------------------------------')
+
+console.log(path.isAbsolute('..\\Demo\\js.js')) // => false
+console.log(path.posix.isAbsolute('..\\Demo\\js.js')) // => false
+console.log(path.win32.isAbsolute('..\\Demo\\js.js')) // => false
+
+console.log('----------------------------------------')
+
+// path.isAbsolute()
+// 判断给定路径是否为绝对路径格式。
+```
 
 :::
 
@@ -135,13 +235,135 @@
 
 ::: code-group
 
-<<< ./demos/7/1.cjs {js}
+```js [1.cjs]
+const path = require('path')
 
-<<< ./demos/7/2.cjs {js}
+// 解析路径
+const parsed = path.parse('/foo/bar/baz/file.txt')
+console.log(parsed)
+/* => {
+  root: '/',
+  dir: '/foo/bar/baz',
+  base: 'file.txt',
+  ext: '.txt',
+  name: 'file'
+}
+*/
 
-<<< ./demos/7/ParsedPath.ts {ts} [ParsedPath]
+// 格式化路径
+const formatted = path.format({
+  dir: '/foo/bar/baz',
+  base: 'file.txt',
+})
+console.log(formatted) // => /foo/bar/baz/file.txt
 
-<<< ./demos/7/FormatInputPathObject.ts {ts} [FormatInputPathObject]
+console.log(path.format(parsed)) // => /foo/bar/baz/file.txt
+
+// path.parse(path) 将路径解析为对象形式。
+// path.format(pathObject) 将路径对象重新格式化为字符串。
+
+// path.parse(path)
+// 返回一个 path.ParsedPath 对象
+
+// path.format(pathObject)
+// 传入的是一个 FormatInputPathObject 对象
+```
+
+```js [2.cjs]
+const path = require('path')
+
+console.log(
+  path.win32.resolve(
+    path.format({
+      root: 'C:\\',
+      dir: 'D:\\demo\\images',
+      base: 'a.png',
+      name: 'b',
+      ext: '.jpg',
+    })
+  )
+) // => D:\demo\images\a.png
+
+console.log(
+  path.win32.resolve(
+    path.format({
+      dir: 'D:\\demo\\images',
+      base: 'a.png',
+    })
+  )
+) // => D:\demo\images\a.png
+
+console.log(
+  path.format({
+    root: 'C:\\',
+    name: 'a',
+    ext: '.png',
+  })
+) // => C:\a.png
+
+// 优先级：
+// dir 属性高于 root 属性，所以同时出现 dir 属性和 root 属性时，忽略 root 属性。
+// base 属性高于 name 属性和 ext 属性，所以当 base 属性出现时，忽略 name 属性和 ext 属性。
+```
+
+```ts [ParsedPath]
+/**
+ * A parsed path object generated by path.parse() or consumed by path.format().
+ */
+interface ParsedPath {
+  /**
+   * The root of the path such as '/' or 'c:\'
+   */
+  root: string
+  /**
+   * The full directory path such as '/home/user/dir' or 'c:\path\dir'
+   */
+  dir: string
+  /**
+   * The file name including extension (if any) such as 'index.html'
+   */
+  base: string
+  /**
+   * The file extension (if any) such as '.html'
+   */
+  ext: string
+  /**
+   * The file name without extension (if any) such as 'index'
+   */
+  name: string
+}
+
+// root：路径所属的根盘符。
+// dir：路径所属的文件夹。
+// base：路径对应的文件名。
+// ext：路径对应文件的扩展名。
+// name：文件对应的文件名称（不包含扩展名）​。
+```
+
+```ts [FormatInputPathObject]
+interface FormatInputPathObject {
+  /**
+   * The root of the path such as '/' or 'c:\'
+   */
+  root?: string | undefined
+  /**
+   * The full directory path such as '/home/user/dir' or 'c:\path\dir'
+   */
+  dir?: string | undefined
+  /**
+   * The file name including extension (if any) such as 'index.html'
+   */
+  base?: string | undefined
+  /**
+   * The file extension (if any) such as '.html'
+   */
+  ext?: string | undefined
+  /**
+   * The file name without extension (if any) such as 'index'
+   */
+  name?: string | undefined
+}
+```
 
 :::
 
@@ -149,7 +371,59 @@
 
 ::: code-group
 
-<<< ./demos/8/1.cjs {js}
+```js [1.cjs]
+const path = require('path')
+
+const p1 = '/foo/bar//baz/../../file.txt'
+const p2 = 'D:/demo/11/js.js'
+const p3 = 'D:/\\demo\\/11/\\js.js'
+const p4 = 'D:\\demo\\11\\js.js'
+const p5 = '..\\demo\\a.mp4'
+const p6 = '.\\demo\\a.mp4'
+const p7 = '../demo/a.mp4'
+const p8 = './demo/a.mp4'
+
+console.log(p1, '👉', path.normalize(p1))
+console.log(p2, '👉', path.normalize(p2))
+console.log(p3, '👉', path.normalize(p3))
+console.log(p4, '👉', path.normalize(p4))
+console.log(p5, '👉', path.normalize(p5))
+console.log(p6, '👉', path.normalize(p6))
+console.log(p7, '👉', path.normalize(p7))
+console.log(p8, '👉', path.normalize(p8))
+
+console.log('---------------------------------------------')
+
+console.log(p1, '👉', path.win32.normalize(p1))
+console.log(p2, '👉', path.win32.normalize(p2))
+console.log(p3, '👉', path.win32.normalize(p3))
+console.log(p4, '👉', path.win32.normalize(p4))
+console.log(p5, '👉', path.win32.normalize(p5))
+console.log(p6, '👉', path.win32.normalize(p6))
+console.log(p7, '👉', path.win32.normalize(p7))
+console.log(p8, '👉', path.win32.normalize(p8))
+
+// 输出：
+// /foo/bar//baz/../../file.txt 👉 /foo/file.txt
+// D:/demo/11/js.js 👉 D:/demo/11/js.js
+// D:/\demo\/11/\js.js 👉 D:/\demo\/11/\js.js
+// D:\demo\11\js.js 👉 D:\demo\11\js.js
+// ..\demo\a.mp4 👉 ..\demo\a.mp4
+// .\demo\a.mp4 👉 .\demo\a.mp4
+// ../demo/a.mp4 👉 ../demo/a.mp4
+// ./demo/a.mp4 👉 demo/a.mp4
+// ---------------------------------------------
+// /foo/bar//baz/../../file.txt 👉 \foo\file.txt
+// D:/demo/11/js.js 👉 D:\demo\11\js.js
+// D:/\demo\/11/\js.js 👉 D:\demo\11\js.js
+// D:\demo\11\js.js 👉 D:\demo\11\js.js
+// ..\demo\a.mp4 👉 ..\demo\a.mp4
+// .\demo\a.mp4 👉 demo\a.mp4
+// ../demo/a.mp4 👉 ..\demo\a.mp4
+// ./demo/a.mp4 👉 demo\a.mp4
+
+// 规范化路径，去除多余的 .. 或 . 和重复的分隔符。
+```
 
 :::
 
@@ -160,7 +434,12 @@
 
 ::: code-group
 
-<<< ./demos/9/1.cjs {js}
+```js [1.cjs]
+const path = require('path')
+
+console.log(path.posix.join('foo', 'bar')) // => foo/bar
+console.log(path.win32.join('foo', 'bar')) // => foo\bar
+```
 
 :::
 
@@ -168,6 +447,45 @@
 
 ::: code-group
 
-<<< ./demos/10/1.cjs {js}
+```js [/1.cjs]
+const path = require('path')
+
+const pathList = [
+  'D:\\mydiro\\index.html',
+  '..\\images\\a.png',
+  'D:\\mydiro\\images\\b.jpg',
+  'D:\\mydiro\\js\\bootstrap.min.js',
+  '..\\js\\main.js',
+  'D:\\mydiro\\css\\bootstrap.min.css',
+  '..\\css\\main.css',
+]
+// 需求：以 pathList[0] 作为基准，将路径列表中的所有绝对路径转为相对路径。
+
+let log = ''
+const baseDir = pathList[0]
+
+pathList.forEach((filePath, i) => {
+  if (path.win32.isAbsolute(filePath)) {
+    const relativePath = path.win32.relative(baseDir, filePath)
+    pathList[i] = relativePath
+    log += `【${filePath}】为绝对路径\n相对【${baseDir}】的路径为：【${relativePath}】\n\n`
+  }
+})
+
+console.log(log)
+
+// 输出：
+// 【D:\mydiro\index.html】为绝对路径
+// 相对【D:\mydiro\index.html】的路径为：【】
+
+// 【D:\mydiro\images\b.jpg】为绝对路径
+// 相对【D:\mydiro\index.html】的路径为：【..\images\b.jpg】
+
+// 【D:\mydiro\js\bootstrap.min.js】为绝对路径
+// 相对【D:\mydiro\index.html】的路径为：【..\js\bootstrap.min.js】
+
+// 【D:\mydiro\css\bootstrap.min.css】为绝对路径
+// 相对【D:\mydiro\index.html】的路径为：【..\css\bootstrap.min.css】
+```
 
 :::

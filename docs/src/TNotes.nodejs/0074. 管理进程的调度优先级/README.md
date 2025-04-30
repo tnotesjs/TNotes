@@ -90,7 +90,20 @@ os.setPriority(10904, 10) // [!code highlight]
 
 ::: code-group
 
-<<< ./demos/1/1.cjs {js 4-5}
+```js [1.cjs] {4-5}
+const os = require('os')
+
+// 获取当前进程的优先级
+console.log(os.getPriority())
+console.log(os.getPriority(process.pid))
+
+// 输出：
+// 0
+// 0
+
+// os.getPriority() 等效于 os.getPriority(process.pid)
+// process.pid 表示当前进程的 PID
+```
 
 :::
 
@@ -98,13 +111,102 @@ os.setPriority(10904, 10) // [!code highlight]
 
 ::: code-group
 
-<<< ./demos/2/1.cjs {js 5}
+```js [1.cjs] {5}
+const os = require('os')
 
-<<< ./demos/2/2.cjs {js 5-6}
+// 设置当前进程的优先级
+try {
+  os.setPriority(process.pid, -10) // 尝试将当前进程优先级设置为 -10
+  console.log('优先级设置成功')
+} catch (err) {
+  console.error('设置优先级失败:', err.message) // [!code error]
+}
 
-<<< ./demos/2/3.cjs {js 5}
+// 输出：
+// 设置优先级失败: A system error occurred: uv_os_setpriority returned EACCES (permission denied)
 
-<<< ./demos/2/4.cjs {js 3-16}
+// 错误信息：EACCES (permission denied) 表示操作系统拒绝了权限请求。
+// 在尝试使用 os.setPriority() 设置进程优先级时，当前用户没有足够的权限来修改目标进程的优先级。
+
+// 可以尝试通过以【管理员权限运行 Node.js】来解决权限不足的报错问题。
+
+// 在 Linux/macOS 中，可以使用 sudo 提升权限：
+// sudo node 1.cjs
+
+// 在 Windows 中，可以通过管理员身份运行命令提示符或 PowerShell，然后执行 node 命令：
+// node 1.cjs
+```
+
+```js [2.cjs] {5-6}
+const os = require('os')
+
+// 设置当前进程的优先级
+try {
+  os.setPriority(process.pid, 5)
+  console.log('优先级设置成功')
+} catch (err) {
+  console.error('设置优先级失败:', err.message)
+}
+
+// 输出：
+// 设置优先级失败: 优先级设置成功
+
+// os.setPriority(process.pid, -10) 👈 这需要更高的权限
+// os.setPriority(process.pid, 5) 👈 普通用户权限可能就够了
+// 降低优先级调整的范围或许也能解决权限不足的报错。
+// 某些操作系统对普通用户允许的优先级范围有限制。
+// 例如，在 Linux 中，普通用户通常只能将优先级设置为正值（较低优先级），而负值（较高优先级）通常需要管理员权限。
+// 您可以尝试将优先级设置为一个正数（例如 5 或 10），而不是负数（例如 -10）。
+
+// 也可以自行设置操作系统的限制
+// 不同的操作系统对线程/进程优先级的支持范围和行为不同：
+// - Linux
+//   - 普通用户可以将优先级设置为 0 到 19（较低优先级）。
+//   - 设置负值（较高优先级）需要 CAP_SYS_NICE 权限（通常需要管理员权限）。
+// - Windows
+//   - Windows 的线程优先级分为多个级别（如 IDLE_PRIORITY_CLASS, BELOW_NORMAL_PRIORITY_CLASS, NORMAL_PRIORITY_CLASS 等）。
+//   - 修改其他进程的优先级可能需要管理员权限。
+// 可以查阅操作系统文档，了解具体的优先级范围和支持情况。
+```
+
+```js [3.cjs] {5}
+const os = require('os')
+
+// 设置不存在的进程会报错
+try {
+  os.setPriority(666666, 5)
+  console.log('优先级设置成功')
+} catch (err) {
+  console.error('设置优先级失败:', err.message) // [!code error]
+}
+
+// 输出：
+// 设置优先级失败: A system error occurred: uv_os_setpriority returned ESRCH (no such process)
+```
+
+```js [4.cjs] {3-16}
+const os = require('os')
+
+function setProcessPriority(pid, priority) {
+  try {
+    os.setPriority(pid, priority)
+    console.log(`优先级设置成功: PID=${pid}, Priority=${priority}`)
+  } catch (err) {
+    if (err.code === 'EACCES') {
+      console.error('权限不足，无法设置优先级。请尝试以管理员身份运行脚本。')
+    } else if (err.code === 'EINVAL') {
+      console.error('无效的优先级值。请检查优先级范围是否符合操作系统要求。')
+    } else {
+      console.error('设置优先级失败:', err.message)
+    }
+  }
+}
+
+// 尝试设置当前进程优先级
+setProcessPriority(process.pid, 5) // 使用正数优先级
+
+// 这是一个更安全的实现，避免因权限不足导致程序崩溃。
+```
 
 :::
 
@@ -112,7 +214,20 @@ os.setPriority(10904, 10) // [!code highlight]
 
 ::: code-group
 
-<<< ./demos/3/1.cjs {js 2}
+```js [1.cjs] {2}
+const os = require('os')
+console.log(os.constants.priority)
+
+// 输出：
+// [Object: null prototype] {
+//   PRIORITY_LOW: 19,
+//   PRIORITY_BELOW_NORMAL: 10,
+//   PRIORITY_NORMAL: 0,
+//   PRIORITY_ABOVE_NORMAL: -7,
+//   PRIORITY_HIGH: -14,
+//   PRIORITY_HIGHEST: -20
+// }
+```
 
 :::
 

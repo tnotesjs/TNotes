@@ -19,13 +19,54 @@
 
 ::: code-group
 
-<<< ./demos/1/1.cjs {9 js}
+```js [1.cjs] {9}
+const fs = require('fs')
+const path = require('path')
 
-<<< ./demos/1/1.txt {txt}
+const filePath = path.join(__dirname, '1.txt')
 
-<<< ./demos/1/2.cjs {9 js}
+const fileContentBeforeTruncate = fs.readFileSync(filePath)
+console.log(`截断之前：【${fileContentBeforeTruncate}】`)
 
-<<< ./demos/1/2.txt {txt}
+fs.truncateSync(filePath, 3)
+console.log('完成截断')
+
+const fileContentAfterTruncate = fs.readFileSync(filePath)
+console.log(`截断之后：【${fileContentAfterTruncate}】`)
+
+// 输出：
+// 截断之前：【123456
+// 】
+// 完成截断
+// 截断之后：【123】
+```
+
+```js [1.txt]
+123456
+```
+
+```js [2.cjs] {9}
+const fs = require('fs')
+const path = require('path')
+
+const filePath = path.join(__dirname, '2.txt')
+
+const fileContentBeforeTruncate = fs.readFileSync(filePath)
+console.log(`截断之前：【${fileContentBeforeTruncate}】`)
+
+fs.truncateSync(filePath, 10)
+console.log('完成截断')
+
+const fileContentAfterTruncate = fs.readFileSync(filePath)
+console.log(`截断之后：【${fileContentAfterTruncate}】`)
+
+// 输出：
+// 截断之前：【123456
+// 】
+// 完成截断
+// 截断之后：【123456
+// 乱码内容】
+```
 
 :::
 

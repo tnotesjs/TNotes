@@ -17,9 +17,41 @@
 
 ::: code-group
 
-<<< ./demos/1/1.cjs {js 10}
+```js [1.cjs] {10}
+const fs = require('fs')
+const path = require('path')
 
-<<< ./demos/1/1.txt {txt}
+// 定义目标文件和符号链接路径
+const targetPath = path.join(__dirname, '1.txt') // 目标文件
+const linkPath = path.join(__dirname, '1_link.txt') // 符号链接
+
+try {
+  // 创建符号链接
+  fs.symlinkSync(targetPath, linkPath)
+
+  console.log(`符号链接已成功创建: ${linkPath}`)
+} catch (err) {
+  console.error(`创建符号链接时出错: ${err.message}`)
+}
+```
+
+```txt [1.txt]
+test
+
+备注：
+当你尝试在 1_link.txt 中编辑内容
+将文件保存之后
+内容会自动同步到该符号链接对应的实际文件 1.txt 中
+```
+
+```txt [1_link.txt]
+test
+
+备注：
+当你尝试在 1_link.txt 中编辑内容
+将文件保存之后
+内容会自动同步到该符号链接对应的实际文件 1.txt 中
+```
 
 :::
 

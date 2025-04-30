@@ -38,9 +38,49 @@
 
 ::: code-group
 
-<<< ./demos/1/1.cjs {js 8,30} [parse、format]
+```js [1.cjs - parse、format] {8,30}
+const url = require('url')
 
-<<< ./demos/1/2.cjs {js} [resolve]
+// 定义一个 URL 字符串
+const urlString =
+  'https://example.com:8080/path/to/resource?name=John&age=30#section1'
+
+// 解析 URL 字符串为对象
+const parsedUrl = url.parse(urlString, true) // 第二个参数为 true 时，会将查询参数解析为对象
+console.log(parsedUrl)
+
+// 输出结果：是一个 URL 对象
+/*
+Url {
+  auth: null,
+  hash: '#section1',
+  host: 'example.com:8080',
+  hostname: 'example.com',
+  href: 'https://example.com:8080/path/to/resource?name=John&age=30#section1'
+  path: '/path/to/resource?name=John&age=30',
+  pathname: '/path/to/resource',
+  port: '8080',
+  protocol: 'https:',
+  query: [Object: null prototype] { name: 'John', age: '30' }, // 查询参数被解析为对象
+  search: '?name=John&age=30',
+  slashes: true,
+}
+*/
+
+// 将 URL 对象格式化为字符串
+const formattedUrl = url.format(parsedUrl)
+console.log(formattedUrl)
+// 输出：https://example.com:8080/path/to/resource?name=John&age=30#section1
+```
+
+```js [2.cjs - resolve]
+const url = require('url')
+
+const resolvedUrl = url.resolve('https://example.com/path/', '/newPath')
+
+console.log(resolvedUrl)
+// 输出：https://example.com/newPath
+```
 
 :::
 
@@ -83,9 +123,69 @@
 
 ::: code-group
 
-<<< ./demos/2/1.cjs {js} [解析 url]
+```js [1.cjs - 解析 url]
+const urlString =
+  'https://example.com:8080/path/to/resource?name=John&age=30#section1'
 
-<<< ./demos/2/2.cjs {js} [操作查询参数]
+const parsedUrl = new URL(urlString)
+console.log(parsedUrl)
+/* 
+URL {
+  hash: '#section1'
+  host: 'example.com:8080',
+  hostname: 'example.com',
+  href: 'https://example.com:8080/path/to/resource?name=John&age=30#section1',
+  origin: 'https://example.com:8080',
+  password: '',
+  pathname: '/path/to/resource',
+  port: '8080',
+  protocol: 'https:',
+  search: '?name=John&age=30',
+  searchParams: URLSearchParams { 'name' => 'John', 'age' => '30' },
+  username: '',
+}
+*/
+
+// 将解析后得到的 URL 对象重新转为字符串形式
+console.log(parsedUrl.toString())
+// 输出：https://example.com:8080/path/to/resource?name=John&age=30#section1
+
+// 获取查询参数
+console.log(parsedUrl.searchParams.get('name')) // 输出：John
+console.log(parsedUrl.searchParams.get('age')) // 输出：30
+
+// 修改查询参数
+parsedUrl.searchParams.set('age', 35)
+
+console.log(parsedUrl.toString())
+// 输出：https://example.com:8080/path/to/resource?name=John&age=35#section1
+// 会发现 age 的值已经被修改为 35 了
+```
+
+```js [2.cjs 操作查询参数]
+const myUrl = new URL('https://example.com/?name=John&age=30')
+const params = myUrl.searchParams
+
+// 获取参数
+console.log(params.get('name')) // 输出：John
+console.log(params.get('age')) // 输出：30
+
+// 添加参数
+params.append('city', 'New York')
+console.log(myUrl.toString()) // 输出：https://example.com/?name=John&age=30&city=New+York
+
+// 删除参数
+params.delete('age')
+console.log(myUrl.toString()) // 输出：https://example.com/?name=John&city=New+York
+
+// 遍历参数
+for (const [key, value] of params) {
+  console.log(`${key}: ${value}`)
+}
+// 输出：
+// name: John
+// city: New York
+```
 
 :::
 

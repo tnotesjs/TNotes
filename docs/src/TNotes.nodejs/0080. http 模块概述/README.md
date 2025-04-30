@@ -29,7 +29,43 @@
 
 ::: code-group
 
-<<< ./demos/1/1.cjs {js}
+```js [1.cjs]
+// 引入 http 模块并创建 server 对象
+const http = require('http')
+
+// 辅助函数：获取当前时间的格式化字符串（亚洲上海本地时间）
+const getCurrentTime = () => {
+  const now = new Date()
+  return now.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })
+}
+
+const server = http.createServer((req, res) => {
+  // 设置响应头，指定字符编码为 UTF-8，以防乱码
+  res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' })
+  // 返回中文消息
+  res.end('服务器正在运行中...\n')
+})
+
+// 启动服务器并监听指定端口
+const PORT = 23523
+server.listen(PORT, () => {
+  console.log(
+    `${getCurrentTime()} 服务器已启动，监听地址是 http://127.0.0.1:${PORT}`
+  )
+  console.log(`${getCurrentTime()} 服务器将在10秒后关闭...`)
+  // 定时关闭服务器
+  setTimeout(() => {
+    server.close(() => {
+      console.log(`${getCurrentTime()} 服务器已成功关闭`)
+    })
+  }, 10 * 1000)
+})
+
+// 输出：
+// 2025/4/24 20:57:50 服务器已启动，监听地址是 http://127.0.0.1:23523
+// 2025/4/24 20:57:50 服务器将在10秒后关闭...
+// 2025/4/24 20:58:00 服务器已成功关闭
+```
 
 :::
 
@@ -63,7 +99,18 @@
 
 ::: code-group
 
-<<< ./demos/2/1.cjs {js}
+```js [1.cjs]
+// 创建 Web 服务器，并监听 23523 端口
+require('http')
+  .createServer(function (request, response) {
+    // 返回响应内容
+    response.writeHead(200, { 'Content-Type': 'text/html' })
+    response.end('<h1>Hello,Node.js</h1>')
+  })
+  .listen(23523, function () {
+    console.log('服务器监听地址是 http://127.0.0.1:23523')
+  })
+```
 
 :::
 
@@ -73,9 +120,59 @@
 
 ::: code-group
 
-<<< ./demos/3/1.cjs {js}
+```js [1.cjs]
+const fs = require('fs')
+const http = require('http')
+const path = require('path')
+// 创建服务器
+http
+  .createServer(function (request, response) {
+    // 读取 HTML 文件内容
+    fs.readFile(path.resolve(__dirname, '1.html'), function (error, data) {
+      response.writeHead(200, { 'Content-Type': 'text/html' })
+      response.end(data)
+    })
+  })
+  .listen(23523, function () {
+    console.log('服务器监听地址是 http://127.0.0.1:23523')
+  })
+```
 
-<<< ./demos/3/1.html {html}
+```html [1.html]
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>特殊文字符号</title>
+    <style>
+      h1,
+      pre {
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>汪汪！你想找的页面让我吃喽！</h1>
+    <!--绘制可爱小狗的字符画-->
+    <pre>
+          .----.
+          _.'__    `.
+          .--($)($$)---/#\
+          .' @          /###\
+          :         ,   #####
+          `-..__.-' _.-\###/
+          `;_:    `"'
+          .'"""""`.
+          /,  hi ,\\
+          //  你好!  \\
+          `-._______.-'
+          ___`. | .'___
+          (______|______)
+     </pre
+    >
+  </body>
+</html>
+```
 
 :::
 
@@ -85,7 +182,65 @@
 
 ::: code-group
 
-<<< ./demos/4/1.cjs {js}
+```js [1.cjs]
+const fs = require('fs')
+const http = require('http')
+const path = require('path')
+
+const PORT = 23523
+
+http
+  .createServer(async (request, response) => {
+    let filePath
+    let contentType
+
+    if (request.url === '/image') {
+      filePath = path.join(__dirname, '1.png')
+      contentType = 'image/png'
+    } else if (request.url === '/video') {
+      filePath = path.join(__dirname, '1.mp4')
+      contentType = 'video/mp4'
+    } else {
+      response.writeHead(404, { 'Content-Type': 'text/plain' })
+      response.end('Not Found')
+      return
+    }
+
+    try {
+      // 获取文件元信息
+      const stat = await fs.promises.stat(filePath)
+      const fileSize = stat.size
+
+      // 设置响应头
+      response.writeHead(200, {
+        'Content-Length': fileSize,
+        'Content-Type': contentType,
+      })
+
+      // 创建文件流并将其管道传输到响应对象
+      const fileStream = fs.createReadStream(filePath)
+      fileStream.on('error', (err) => {
+        console.error('文件流读取错误:', err.message)
+        if (!response.headersSent) {
+          response.writeHead(500, { 'Content-Type': 'text/plain' })
+          response.end('Internal Server Error')
+        }
+      })
+      fileStream.pipe(response)
+    } catch (error) {
+      console.error('文件元信息获取错误:', error.message)
+      if (!response.headersSent) {
+        response.writeHead(500, { 'Content-Type': 'text/plain' })
+        response.end('Internal Server Error')
+      }
+    }
+  })
+  .listen(PORT, () => {
+    console.log(`服务器监听位置是 http://127.0.0.1:${PORT}`)
+  })
+
+// 写该 demo 的日期：2025年4月25日
+```
 
 :::
 
@@ -101,7 +256,24 @@
 
 ::: code-group
 
-<<< ./demos/5/1.cjs {js}
+```js [1.cjs]
+const http = require('http')
+
+const PORT = 23523
+const REDIRECT_URL = 'https://tdahuyou.github.io/notes/'
+
+// 创建服务器
+const server = http.createServer((request, response) => {
+  // 设置响应头：302 重定向
+  response.writeHead(302, { Location: REDIRECT_URL })
+  response.end() // 结束响应
+})
+
+// 启动服务器并监听端口
+server.listen(PORT, () => {
+  console.log(`服务器已启动，监听地址：http://127.0.0.1:${PORT}`)
+})
+```
 
 :::
 
@@ -133,9 +305,93 @@
 
 ::: code-group
 
-<<< ./demos/6/1.cjs {js 11,16-27}
+```js [1.cjs] {11,16-27}
+const http = require('http')
+const fs = require('fs').promises
+const path = require('path')
 
-<<< ./demos/6/1.html {html}
+const PORT = 23523
+const HTML_FILE_PATH = path.resolve(__dirname, '1.html') // 定义 HTML 文件路径
+
+// 创建服务器
+const server = http.createServer(async (request, response) => {
+  try {
+    if (request.method === 'GET') {
+      // 处理 GET 请求：返回 HTML 文件内容
+      const data = await fs.readFile(HTML_FILE_PATH, 'utf-8')
+      response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+      response.end(data)
+    } else if (request.method === 'POST') {
+      // 处理 POST 请求：接收数据并返回响应
+      let body = ''
+      request.on('data', (chunk) => {
+        body += chunk.toString() // 累积接收到的数据
+      })
+
+      request.on('end', () => {
+        // 数据接收完成后返回响应
+        response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+        response.end(`<h1>${body}</h1>`)
+      })
+    } else {
+      // 不支持的请求方法
+      response.writeHead(405, { 'Content-Type': 'text/plain; charset=utf-8' })
+      response.end('Method Not Allowed')
+    }
+  } catch (error) {
+    console.error('服务器错误:', error.message)
+    response.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' })
+    response.end('Internal Server Error')
+  }
+})
+
+// 启动服务器并监听端口
+server.listen(PORT, () => {
+  console.log(`服务器已启动，监听地址：http://127.0.0.1:${PORT}`)
+})
+```
+
+```html [1.html]
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>用户登录</title>
+  </head>
+  <body>
+    <main>
+      <section role="form">
+        <header>
+          <h1>用户登录</h1>
+        </header>
+        <form method="post" aria-label="用户登录表单">
+          <div>
+            <input type="text" name="login" placeholder="用户名" required />
+          </div>
+          <div>
+            <input
+              type="password"
+              name="password"
+              placeholder="密码"
+              required
+            />
+          </div>
+          <div>
+            <label>
+              <input type="checkbox" name="remember_me" id="remember_me" />
+              记住密码
+            </label>
+          </div>
+          <div>
+            <button type="submit">登录</button>
+          </div>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>
+```
 
 :::
 

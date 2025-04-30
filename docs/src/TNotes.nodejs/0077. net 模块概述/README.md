@@ -38,9 +38,61 @@
 
 ::: code-group
 
-<<< ./demos/1/client.cjs {js}
+```js [client.cjs]
+const net = require('net')
 
-<<< ./demos/1/server.cjs {js}
+// 创建客户端
+const client = net.createConnection(
+  {
+    port: 2155,
+    host: 'localhost',
+  },
+  () => {
+    console.log('成功连接服务端')
+  }
+)
+
+// 监听来自服务端的消息
+client.on('data', (chunk) => {
+  console.log('来自服务端的消息：', chunk.toString())
+  client.end() // 客户端主动关闭连接
+})
+
+// 向服务端发送请求
+client.write('你好，我是客户端')
+
+// 注册监听请求断开的事件
+client.on('end', () => {
+  console.log('连接断开了')
+})
+```
+
+```js [server.cjs]
+const net = require('net')
+
+const server = net.createServer()
+
+server.listen(2155, () => {
+  console.log('开始监听 2155 端口')
+})
+
+server.on('connection', (socket) => {
+  console.log('监听到有客户端连接该服务')
+
+  socket.on('data', (chunk) => {
+    console.log('接收到来自客户端的数据', '\n=> ', chunk.toString())
+
+    socket.write(
+      `你好，我是服务端，我已经收到了你发送来的数据 => ${chunk.toString()}`,
+      'utf-8'
+    )
+  })
+
+  socket.on('end', () => {
+    console.log('连接断开了')
+  })
+})
+```
 
 :::
 
@@ -61,7 +113,105 @@
 
 ::: code-group
 
-<<< ./demos/2/client.cjs {js}
+```js [client.cjs]
+const net = require('net')
+const responseData = {
+  line: null, // 响应行
+  header: null, // 响应头
+  body: '', // 响应体
+}
+const separator = '\r\n' // 分隔符
+
+// 创建客户端
+const client = net.createConnection(
+  {
+    port: 80, // HTTP 协议，默认端口 80
+    host: 'www.baidu.com', // default val => 'localhost'
+  },
+  () => {
+    // 连接成功之后的回调
+    console.log('连接成功~')
+  }
+)
+
+// 发送请求
+client.write(`GET / HTTP/1.1
+Connection: keep-alive
+Host: www.baidu.com
+
+`)
+
+// 监听响应
+client.on('data', (chunk) => {
+  console.log('chunk => ', chunk.toString('utf-8'))
+  if (!responseData.line) {
+    // 第一次收到的响应消息
+    // 解析第一次接收到的 chunk 获取到响应行、响应头以及响应体的部分信息
+    parseResponse(chunk.toString('utf-8'))
+  } else {
+    // 非第一次接收到的响应消息
+    responseData.body += chunk.toString('utf-8')
+  }
+  isOver()
+})
+
+// 监听断开
+client.on('close', () => {
+  console.log('连接断开~')
+})
+
+/**
+ * 解析响应消息
+ * @param {String} response 响应消息
+ */
+function parseResponse(response) {
+  const lineEndIndex = response.indexOf(separator) // => 响应行的结束位置
+  const headerEndIndex = response.indexOf(separator + separator) // => 响应头的结束位置
+
+  const lineStr = response.slice(0, lineEndIndex)
+  const headerStr = response.slice(lineEndIndex + 2, headerEndIndex)
+  const bodyStr = response.slice(headerEndIndex + 4)
+
+  const lineArr = lineStr.split(' ')
+  const headerArr = headerStr.split(separator)
+
+  // 响应行
+  responseData.line = {
+    HTTPVersion: lineArr[0], // => 协议版本
+    StatusCode: lineArr[1], // => 状态码
+    ReasonPhrase: lineArr[2], // => 状态码描述
+  }
+
+  // 响应头
+  responseData.header = headerArr
+    .map((it) => {
+      const keyEndIndex = it.indexOf(': '),
+        key = it.slice(0, keyEndIndex),
+        val = it.slice(keyEndIndex + 2)
+      return [key, val]
+    })
+    .reduce((a, b) => {
+      a[b[0]] = b[1]
+      return a
+    }, {})
+
+  // 响应体
+  responseData.body = bodyStr
+}
+
+/**
+ * 判断来自服务器的消息是否已经接收完毕
+ */
+function isOver() {
+  const contentLength = +responseData.header['Content-Length'],
+    curLen = Buffer.from(responseData.body).byteLength
+
+  // 消息接收完毕
+  if (curLen >= contentLength) {
+    client.end() // 关闭连接
+  }
+}
+```
 
 :::
 
@@ -116,7 +266,44 @@ Content-Type: image/jpeg
 
 ::: code-group
 
-<<< ./demos/3/server.cjs {js}
+```js [server.cjs]
+const net = require('net')
+const path = require('path')
+const fs = require('fs')
+const localServer = net.createServer()
+
+localServer.listen(2155, () => {
+  console.log('开始监听 2155 端口')
+}) // => 监听 2155 端口
+
+localServer.on('connection', (socket) => {
+  console.log('有客户端连接到该服务了')
+
+  socket.on('data', async (chunk) => {
+    console.log('接收到来自客户端的数据：', chunk.toString('utf-8'))
+
+    const headBuffer = Buffer.from(
+      `HTTP/1.1 200 OK
+Content-Type: image/jpeg
+
+`,
+      'utf-8'
+    )
+
+    // 读取本地头像文件 avatar.jpeg
+    const filename = path.resolve(__dirname, './avatar.jpeg')
+    // const filename = path.resolve(__dirname, "./index.html");
+    const bodyBuffer = await fs.promises.readFile(filename)
+
+    socket.write(Buffer.concat([headBuffer, bodyBuffer]))
+    socket.end()
+  })
+
+  socket.on('end', () => {
+    console.log('连接关闭了')
+  })
+})
+```
 
 :::
 

@@ -62,11 +62,89 @@ tree
 
 ::: code-group
 
-<<< ./demos/1/1.cjs {js 9,13}
+```js [1.cjs] {9,13}
+const fs = require('fs')
+const path = require('path')
 
-<<< ./demos/1/2.cjs {js 8,12}
+// 定义要删除的目录路径
+const dirPath = path.join(__dirname, './test')
 
-<<< ./demos/1/3.cjs {js 8,14}
+try {
+  // 使用 mkdirSync 创建目录
+  fs.mkdirSync(dirPath)
+  console.log(`目录创建成功: ${dirPath}`)
+
+  // 使用 rmdirSync 删除目录
+  fs.rmdirSync(dirPath)
+  console.log(`目录已成功删除: ${dirPath}`)
+} catch (err) {
+  if (err.code === 'ENOENT') {
+    console.log(`目录不存在: ${dirPath}`)
+  } else if (err.code === 'ENOTEMPTY') {
+    console.error(`目录非空，无法删除: ${dirPath}`)
+  } else {
+    console.error(`删除目录时出错: ${err.message}`)
+  }
+}
+
+// 输出：
+// 目录创建成功: /Users/huyouda/zm/notes/TNotes.nodejs/notes/0060. 目录操作/demos/3/test
+// 目录已成功删除: /Users/huyouda/zm/notes/TNotes.nodejs/notes/0060. 目录操作/demos/3/test
+```
+
+```js [2.cjs] {8,12}
+const fs = require('fs')
+const path = require('path')
+
+// 定义要删除的目录路径
+const dirPath = path.join(__dirname, './123')
+
+try {
+  fs.rmdirSync(dirPath)
+  console.log(`目录已成功删除: ${dirPath}`)
+} catch (err) {
+  if (err.code === 'ENOENT') {
+    console.log(`目录不存在: ${dirPath}`)
+  } else if (err.code === 'ENOTEMPTY') {
+    console.error(`目录非空，无法删除: ${dirPath}`)
+  } else {
+    console.error(`删除目录时出错: ${err.message}`)
+  }
+}
+
+// 输出：
+// 目录不存在: /Users/huyouda/zm/notes/TNotes.nodejs/notes/0060. 目录操作/demos/3/123
+
+// 注意：
+// 如果要删除的目录不存在，则会报错 ENOENT。
+```
+
+```js [3.cjs] {8,14}
+const fs = require('fs')
+const path = require('path')
+
+// 定义要删除的目录路径
+const dirPath = path.join(__dirname, './1')
+
+try {
+  fs.rmdirSync(dirPath)
+  console.log(`目录已成功删除: ${dirPath}`)
+} catch (err) {
+  if (err.code === 'ENOENT') {
+    console.log(`目录不存在: ${dirPath}`)
+  } else if (err.code === 'ENOTEMPTY') {
+    console.error(`目录非空，无法删除: ${dirPath}`)
+  } else {
+    console.error(`删除目录时出错: ${err.message}`)
+  }
+}
+
+// 输出：
+// 目录非空，无法删除: /Users/huyouda/zm/notes/TNotes.nodejs/notes/0060. 目录操作/demos/3/1
+
+// 注意：
+// 如果一个目录中还有内容（比如其它文件或目录），那么这个目录默认是无法被删除的。
+```
 
 :::
 
@@ -78,8 +156,85 @@ tree
 
 ::: code-group
 
-<<< ./demos/2/1.cjs {js 21}
+```js [1.cjs] {21}
+const fs = require('fs')
+const path = require('path')
 
-<<< ./demos/2/2.cjs {js 9}
+// 定义要递归创建的目录路径
+const dirPath = path.join(__dirname, 'a', 'b', 'c')
+
+// 递归要删除的目录的路径
+const rmDirPath = path.join(__dirname, 'a')
+
+try {
+  // 使用 mkdirSync 创建目录，并启用递归选项
+  const result = fs.mkdirSync(dirPath, { recursive: true })
+
+  if (result === undefined) {
+    console.log(`目录已存在: ${dirPath}`)
+  } else {
+    console.log(`目录已成功创建: ${dirPath}`)
+  }
+
+  // 使用 rm 删除目录，并启用递归选项
+  fs.rmSync(rmDirPath, { recursive: true })
+  // fs.rmdirSync(rmDirPath, { recursive: true })
+  console.log(`目录已成功删除: ${dirPath}`)
+} catch (err) {
+  console.error(`递归创建/删除目录时出错: ${err.message}`)
+}
+
+// 输出：
+// 目录已成功创建: /Users/huyouda/zm/notes/TNotes.nodejs/notes/0060. 目录操作/demos/4/a/b/c
+// 目录已成功删除: /Users/huyouda/zm/notes/TNotes.nodejs/notes/0060. 目录操作/demos/4/a/b/c
+
+// 环境记录：
+// $ node -v
+// v23.11.0
+
+// 如果使用 fs.rmdirSync(rmDirPath, { recursive: true }) 来递归删除 rmDirPath，可能会出现以下错误：
+// In future versions of Node.js, fs.rmdir(path, { recursive: true }) will be removed. Use fs.rm(path, { recursive: true }) instead
+```
+
+```js [2.cjs] {9}
+const fs = require('fs')
+const path = require('path')
+
+// 递归要删除的目录的路径
+const rmDirPath = path.join(__dirname, '1')
+
+try {
+  // 使用 rm 删除目录，并启用递归选项
+  fs.rmSync(rmDirPath, { recursive: true, force: true })
+  console.log(`目录已成功删除: ${rmDirPath}`)
+} catch (err) {
+  console.error(`递归删除目录时出错: ${err.message}`)
+}
+
+// 程序执行前的目录结构：
+// .
+// ├── 1
+// │   └── 2
+// │       └── test.md
+// ├── 1.cjs
+// └── 2.cjs
+
+// 程序执行后的目录结构：
+// .
+// ├── 1.cjs
+// └── 2.cjs
+
+// 官方描述：
+// To get a behavior similar to the rm -rf Unix command,
+// use fs.rmSync() with options { recursive: true, force: true }.
+
+// 如果你想要获取到跟 Unix 中的 rm -rf 命令一样的行为，可以使用 fs.rmSync() 方法，并设置选项 { recursive: true, force: true }。
+// 这将删除目录及其下的所有文件和子目录，并忽略任何可能存在的错误。
+
+// 如果不加 force 的话，那么在递归删除目录的过程中，可能会出现一些错误，比如：ENOENT 要删除的目录不存在，等错误。
+
+// 因此，在需要递归删除目录的时候，一般会同时配置 { recursive: true, force: true }
+// 以免出现一些不必要的报错，让目录清理操作更加健壮，适用于更多场景。
+```
 
 :::

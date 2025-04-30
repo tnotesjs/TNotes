@@ -1,8 +1,0 @@
-{
-  "name": "demo-project",
-  "version": "1.0.0",
-  "scripts": {
-    "start": "node 1.js",
-    "build": "echo 'Building project...' && node 1.js"
-  }
-}
