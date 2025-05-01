@@ -1,8 +1,17 @@
 # [0032. lake-editor 插件](https://github.com/Tdahuyou/TNotes.notes/tree/main/notes/0032.%20lake-editor%20%E6%8F%92%E4%BB%B6)
 
-- 一款在 vsocde 中编写语雀文档的插件。
+<!-- region:toc -->
 
-## 📒 lake-editor 插件简介
+- [1. 📝 概述](#1--概述)
+- [2. 📒 lake-editor 插件简介](#2--lake-editor-插件简介)
+
+<!-- endregion:toc -->
+
+## 1. 📝 概述
+
+- 介绍了一款在 vsocde 中编写语雀文档的插件。
+
+## 2. 📒 lake-editor 插件简介
 
 - lake-editor 插件
   - ![](https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/2024-11-17-22-15-01.png)

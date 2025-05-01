@@ -21,11 +21,17 @@
 - 5️⃣ 双击图标，打开应用。
 
 ::: swiper
+
 ![](https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/2025-02-07-22-46-50.png)
+
 ![](https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/2025-02-07-22-46-02.png)
+
 ![](https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/2025-02-07-22-48-18.png)
+
 ![](https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/2025-02-07-22-48-52.png)
+
 ![](https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/2025-02-07-22-49-28.png)
+
 :::
 
 > 实际上在手机或者 iPad 这些移动端设备上，打开浏览器访问网页时，你也可以在设置中找到类似“保存到桌面”的按钮，就好比将网页转为了你手机本地的一个应用程序。这样你下次就可以在桌面上直接点击图标打开对应的网页了。

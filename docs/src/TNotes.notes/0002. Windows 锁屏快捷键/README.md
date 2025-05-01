@@ -2,14 +2,11 @@
 
 <!-- region:toc -->
 
-- [1. ⏰ TODO - 可以汇总一下 Windows 上常用的快捷方式，重命名该笔记。](#1--todo---可以汇总一下-windows-上常用的快捷方式重命名该笔记)
-- [2. 📒 `win L`](#2--win-l)
+- [1. 📒 `win L`](#1--win-l)
 
 <!-- endregion:toc -->
 
-## 1. ⏰ TODO - 可以汇总一下 Windows 上常用的快捷方式，重命名该笔记。
-
-## 2. 📒 `win L`
+## 1. 📒 `win L`
 
 - **win + L**
   - 这是锁定屏幕的最快方式。

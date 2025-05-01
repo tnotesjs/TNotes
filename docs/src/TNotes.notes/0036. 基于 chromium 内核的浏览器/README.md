@@ -1,4 +1,4 @@
-# [0036. 使用 chromium 内核的浏览器](https://github.com/Tdahuyou/TNotes.notes/tree/main/notes/0036.%20%E4%BD%BF%E7%94%A8%20chromium%20%E5%86%85%E6%A0%B8%E7%9A%84%E6%B5%8F%E8%A7%88%E5%99%A8)
+# [0036. 基于 chromium 内核的浏览器](https://github.com/Tdahuyou/TNotes.notes/tree/main/notes/0036.%20%E5%9F%BA%E4%BA%8E%20chromium%20%E5%86%85%E6%A0%B8%E7%9A%84%E6%B5%8F%E8%A7%88%E5%99%A8)
 
 <!-- region:toc -->
 

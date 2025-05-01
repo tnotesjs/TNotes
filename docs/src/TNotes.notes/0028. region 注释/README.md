@@ -2,12 +2,17 @@
 
 <!-- region:toc -->
 
-- [1. 📒 region 注释的写法和作用](#1--region-注释的写法和作用)
-- [2. 💻 demos.1 - region 注释示例](#2--demos1---region-注释示例)
+- [1. 📝 概述](#1--概述)
+- [2. 📒 region 注释的写法和作用](#2--region-注释的写法和作用)
+- [3. 💻 demos.1 - region 注释示例](#3--demos1---region-注释示例)
 
 <!-- endregion:toc -->
 
-## 1. 📒 region 注释的写法和作用
+## 1. 📝 概述
+
+- 介绍了在 VSCode 中如何书写 region 注释，以及 region 注释的作用。
+
+## 2. 📒 region 注释的写法和作用
 
 - region 注释的格式非常简单，只需要在开始位置加上 region，结束位置加上 endregion 即可。
 - region 注释的作用：
@@ -21,19 +26,19 @@
 // #endregion 描述信息
 ```
 
-## 2. 💻 demos.1 - region 注释示例
+## 3. 💻 demos.1 - region 注释示例
 
 ::: code-group
 
 ```js {1,5,7,9,11,25,27,42,44,48}
 //#region Imports
-const express = require('express');
-const app = express();
-const PORT = 3000;
+const express = require('express')
+const app = express()
+const PORT = 3000
 //#endregion
 
 //#region Configurations
-app.use(express.json());
+app.use(express.json())
 //#endregion
 
 //#region Database Mock Functions
@@ -46,9 +51,12 @@ app.use(express.json());
 function fetchData() {
   return new Promise((resolve) => {
     setTimeout(() => {
-      resolve([{ id: 1, name: 'John Doe' }, { id: 2, name: 'Jane Doe' }]);
-    }, 1000);
-  });
+      resolve([
+        { id: 1, name: 'John Doe' },
+        { id: 2, name: 'Jane Doe' },
+      ])
+    }, 1000)
+  })
 }
 //#endregion
 
@@ -61,18 +69,18 @@ function fetchData() {
  */
 app.get('/users', async (req, res) => {
   try {
-    const data = await fetchData();
-    res.json(data);
+    const data = await fetchData()
+    res.json(data)
   } catch (error) {
-    res.status(500).send('Error fetching data');
+    res.status(500).send('Error fetching data')
   }
-});
+})
 //#endregion
 
 //#region Server Startup
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+  console.log(`Server running on http://localhost:${PORT}`)
+})
 //#endregion
 ```
 

@@ -1,23 +1,24 @@
 # [0025. mermaid 概述](https://github.com/Tdahuyou/TNotes.notes/tree/main/notes/0025.%20mermaid%20%E6%A6%82%E8%BF%B0)
 
-
 <!-- region:toc -->
 
-- [1. 🔗 github mermaid.js 源码仓库](#1--github-mermaidjs-源码仓库)
+- [1. 📝 概述](#1--概述)
 - [2. 📒 认识 mermaid](#2--认识-mermaid)
-- [3. 📒 npm 包](#3--npm-包)
-- [4. 📒 CLI 工具](#4--cli-工具)
+- [3. 💻 通过 npm 安装 mermaid](#3--通过-npm-安装-mermaid)
+- [4. 💻 通过 npm 安装 mermaid-cli](#4--通过-npm-安装-mermaid-cli)
 - [5. 💻 demos.1 - 在网页中引入 mermaid](#5--demos1---在网页中引入-mermaid)
+- [6. 🔗 References](#6--references)
 
 <!-- endregion:toc -->
-- 这篇笔记对 mermaid 做了一个简单的介绍，并在 markdown 中使用 mermaid 绘制了几张图，需要知道在 markdown 中，我们是可以通过 mermaid 语法来实现文本绘图的，在必要的时候，可以直接在自己的 markdown 文档中手写图表。
+
+## 1. 📝 概述
+
+- 概述
+  - 这篇笔记对 mermaid 做了一个简单的介绍，并在 markdown 中使用 mermaid 绘制了几张图，需要知道在 markdown 中，我们是可以通过 mermaid 语法来实现文本绘图的，在必要的时候，可以直接在自己的 markdown 文档中手写图表。
+- **Mermaid**
   - Mermaid 是一个用 JavaScript 编写的库，允许通过简单的文本语法生成多种图表（如流程图、甘特图、类图等）。
   - 它可集成于 Markdown、GitHub、GitLab、Confluence 等平台，且支持 CLI 工具将图表导出为图片文件。
   - 可通过 npm 安装到 Node.js 项目中，或直接嵌入网页以便实时渲染图表。
-
-## 1. 🔗 github mermaid.js 源码仓库
-
-- https://github.com/mermaid-js/mermaid
 
 ## 2. 📒 认识 mermaid
 
@@ -52,6 +53,7 @@ graph TD;
     D --> F[结束]
     E --> F
 ```
+
 ```mermaid
 graph TD;
     A[开始] --> B[步骤 1]
@@ -74,6 +76,7 @@ mindmap
   节点 2
   节点 3
 ```
+
 ```mermaid
 mindmap
 根节点
@@ -85,7 +88,7 @@ mindmap
   节点 3
 ```
 
-## 3. 📒 npm 包
+## 3. 💻 通过 npm 安装 mermaid
 
 - 如果使用的是 Node.js 项目，可以通过 npm 安装 Mermaid：
 
@@ -96,12 +99,12 @@ npm install mermaid
 - 然后在 JavaScript 文件中引入并初始化 Mermaid：
 
 ```javascript
-import mermaid from 'mermaid';
+import mermaid from 'mermaid'
 
-mermaid.initialize({ startOnLoad: true });
+mermaid.initialize({ startOnLoad: true })
 ```
 
-## 4. 📒 CLI 工具
+## 4. 💻 通过 npm 安装 mermaid-cli
 
 - Mermaid 还提供了一个 CLI 工具，可以将 Mermaid 代码转换为图片文件或其他格式。你可以通过 npm 安装 CLI 工具：
 
@@ -116,9 +119,6 @@ mmdc -i diagram.mmd -o diagram.png
 ```
 
 ## 5. 💻 demos.1 - 在网页中引入 mermaid
-
-- 最终效果：
-  - ![](https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/2024-10-11-17-52-40.png)
 
 ```html
 <!DOCTYPE html>
@@ -136,3 +136,20 @@ mmdc -i diagram.mmd -o diagram.png
   </body>
 </html>
 ```
+
+- 最终效果：
+  - ![](https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/2024-10-11-17-52-40.png)
+
+## 6. 🔗 References
+
+::: details
+
+- https://github.com/mermaid-js/mermaid
+  - github mermaid.js 源码仓库
+- https://mermaid.js.org/
+  - mermaid 官方文档。
+- https://github.com/mermaid-js
+  - github
+  - mermaid js 社区
+
+:::

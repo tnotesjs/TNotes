@@ -2,14 +2,19 @@
 
 <!-- region:toc -->
 
-- [1. 🔗 Writing on GitHub](#1--writing-on-github)
-- [2. 📒 github 对传统的 markdown 做了一些扩展](#2--github-对传统的-markdown-做了一些扩展)
-  - [2.1. 💻 demo - Using emojis](#21--demo---using-emojis)
-  - [2.2. 💻 demo - Alerts](#22--demo---alerts)
+- [1. 📝 概述](#1--概述)
+- [2. 🔗 Writing on GitHub](#2--writing-on-github)
+- [3. 📒 github 对传统的 markdown 做了一些扩展](#3--github-对传统的-markdown-做了一些扩展)
+  - [3.1. 💻 demo - Using emojis](#31--demo---using-emojis)
+  - [3.2. 💻 demo - Alerts](#32--demo---alerts)
 
 <!-- endregion:toc -->
 
-## 1. 🔗 Writing on GitHub
+## 1. 📝 概述
+
+- 介绍了 GitHub 对 Markdown 的扩展功能，包括使用 Emoji 和 Alerts 来增强文档的表达效果。
+
+## 2. 🔗 Writing on GitHub
 
 > - https://docs.github.com/en/get-started/writing-on-github
 >   - Writing on GitHub
@@ -24,7 +29,7 @@
 - 这篇笔记所记录的内容，其实就是 Github 对 markdown 的特殊语法支持，比如 `emoji`、`Alerts`。
 - 具体还有哪些其他特性，直接上官方文档 `Writing on GitHub` 查阅即可。
 
-## 2. 📒 github 对传统的 markdown 做了一些扩展
+## 3. 📒 github 对传统的 markdown 做了一些扩展
 
 - 以本节的俩 demo 为例，如果在本地展示的话，效果如下：
   - ![](https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/2024-10-16-15-20-36.png)
@@ -32,7 +37,7 @@
 - 如果上传到 github 上，展示效果如下：
   - ![](https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/2024-10-16-15-19-48.png)
 
-### 2.1. 💻 demo - Using emojis
+### 3.1. 💻 demo - Using emojis
 
 ::: code-group
 
@@ -46,42 +51,32 @@
 
 @octocat :+1: This PR looks great - it's ready to merge! :shipit:
 
-### 2.2. 💻 demo - Alerts
+### 3.2. 💻 demo - Alerts
 
 ::: code-group
 
 ```md [源码]
-> [!NOTE]
-> Useful information that users should know, even when skimming content.
+> [!NOTE] Useful information that users should know, even when skimming content.
 
-> [!TIP]
-> Helpful advice for doing things better or more easily.
+> [!TIP] Helpful advice for doing things better or more easily.
 
-> [!IMPORTANT]
-> Key information users need to know to achieve their goal.
+> [!IMPORTANT] Key information users need to know to achieve their goal.
 
-> [!WARNING]
-> Urgent info that needs immediate user attention to avoid problems.
+> [!WARNING] Urgent info that needs immediate user attention to avoid problems.
 
-> [!CAUTION]
-> Advises about risks or negative outcomes of certain actions.
+> [!CAUTION] Advises about risks or negative outcomes of certain actions.
 ```
 
 :::
 
 实际渲染效果：
 
-> [!NOTE]
-> Useful information that users should know, even when skimming content.
+> [!NOTE] Useful information that users should know, even when skimming content.
 
-> [!TIP]
-> Helpful advice for doing things better or more easily.
+> [!TIP] Helpful advice for doing things better or more easily.
 
-> [!IMPORTANT]
-> Key information users need to know to achieve their goal.
+> [!IMPORTANT] Key information users need to know to achieve their goal.
 
-> [!WARNING]
-> Urgent info that needs immediate user attention to avoid problems.
+> [!WARNING] Urgent info that needs immediate user attention to avoid problems.
 
-> [!CAUTION]
-> Advises about risks or negative outcomes of certain actions.
+> [!CAUTION] Advises about risks or negative outcomes of certain actions.
