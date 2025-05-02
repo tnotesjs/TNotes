@@ -143,6 +143,8 @@ hero:
 | [TNotes.notes](https://tdahuyou.github.io/TNotes.notes/) | ✅ | `⏰ pending` | `notes` 👉 早期在 B 站坐的工具分享系列内容，或者存储的一些没有明确分组的笔记集合。 |
 | [TNotes.react](https://tdahuyou.github.io/TNotes.react/) | ✅ | `⏰ pending` | `React` 笔记 👉 前端框架 |
 | [TNotes.svg](https://tdahuyou.github.io/TNotes.svg/) | ✅ | `⏰ pending` | `SVG` 笔记 👉 基本完成，还需要整理，目前记录的都是一些非常基础的内容。 |
+| [TNotes.typescript](https://tdahuyou.github.io/TNotes.typescript/) | ✅ | `⏰ pending` | `TS` 笔记 👉 待搬运 yuque 中的内容。 |
+| [TNotes.vitepress](https://tdahuyou.github.io/TNotes.vitepress/) | ✅ | `⏰ pending` | `vitepress` 笔记 👉 这是 TNotes 文档所用的框架。 |
 
 :::tip 🫧 状态说明
 

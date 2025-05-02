@@ -6,12 +6,11 @@ import markdownItContainer from 'markdown-it-container'
 
 import sidebar__git from '../src/notes/git/sidebar.json'
 import sidebar__i18n from '../src/notes/i18n/sidebar.json'
-import sidebar__typescript from '../src/notes/typescript/sidebar.json'
 import sidebar__vite from '../src/notes/vite/sidebar.json'
 // import sidebar__vitepress from '../src/notes/vitepress/sidebar.json'
 import sidebar__vue from '../src/notes/vue/sidebar.json'
 import sidebar__webpack from '../src/notes/webpack/sidebar.json'
-import sidebar__template from '../src/TNotes.template/sidebar.json'
+
 import sidebar__c_cpp from '../src/TNotes.c-cpp/sidebar.json'
 import sidebar__canvas from '../src/TNotes.canvas/sidebar.json'
 import sidebar__cooking from '../src/TNotes.cooking/sidebar.json'
@@ -26,6 +25,8 @@ import sidebar__nodejs from '../src/TNotes.nodejs/sidebar.json'
 import sidebar__notes from '../src/TNotes.notes/sidebar.json'
 import sidebar__react from '../src/TNotes.react/sidebar.json'
 import sidebar__svg from '../src/TNotes.svg/sidebar.json'
+import sidebar__template from '../src/TNotes.template/sidebar.json'
+import sidebar__typescript from '../src/TNotes.typescript/sidebar.json'
 import sidebar__vitepress from '../src/TNotes.vitepress/sidebar.json'
 
 const slugger = new GithubSlugger()
@@ -125,7 +126,7 @@ export default defineConfig({
 })
 
 function sidebar() {
-  const sidebar: DefaultTheme.Sidebar = [
+  const sidebar: DefaultTheme.SidebarItem[] = [
     { text: '👀 README', link: '/README' },
     {
       text: 'TNotes.template',
@@ -222,6 +223,12 @@ function sidebar() {
       items: [...sidebar__svg],
     },
     {
+      text: 'TNotes.typescript',
+      link: 'https://tdahuyou.github.io/TNotes.typescript/',
+      collapsed: true,
+      items: [...sidebar__typescript],
+    },
+    {
       text: 'TNotes.vitepress',
       link: 'https://tdahuyou.github.io/TNotes.vitepress/',
       collapsed: true,
@@ -250,11 +257,6 @@ function sidebar() {
       collapsed: true,
       items: [
         { text: '👀 README', link: '/notes/README' },
-        {
-          text: '📚 语言基础',
-          collapsed: true,
-          items: [{ ...sidebar__typescript }],
-        },
         {
           text: '🌐 前端生态',
           collapsed: true,
