@@ -19,8 +19,8 @@
 - ![图 0](https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/2025-04-04-01-50-21.png)
 - 示例代码：
   - 在当前笔记仓库中，主要在 `demos.1` 目录下记录了 `2. TM（实例源码+习题答案）.rar` 中的内容，以便在阅读书籍的时候能够在 github 上在线查阅相关示例的源代码。
-- **TNotes.assets**
-  - 视频、课件等资源，记录在 `TNotes.assets` 中，你可以通过笔记 ID `0032` 快速定位到相关资源。
+- **TNotes.yuque**
+  - 视频、课件等资源，记录在 `TNotes.yuque` 中，你可以通过笔记 ID `0032` 快速定位到相关资源。
   - ![图 0](https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/2025-04-06-09-11-05.png)
   - 如果要在线预览课程视频，可以直接在语雀文档中预览相关章节的视频。
 - **微信读书**

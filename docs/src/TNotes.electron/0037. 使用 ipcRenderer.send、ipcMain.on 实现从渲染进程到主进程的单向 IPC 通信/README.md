@@ -2,20 +2,24 @@
 
 <!-- region:toc -->
 
-- [1. 📺 视频](#1--视频)
-- [2. 💻 demos.1 - 使用 ipcRenderer.send、ipcMain.on 实现从渲染进程到主进程的单向 IPC 通信](#2--demos1---使用-ipcrenderersendipcmainon-实现从渲染进程到主进程的单向-ipc-通信)
+- [📺 bilibili 👉 TNotes 合集](https://space.bilibili.com/407241004)
+  - [bilibili.TNotes.electron.0037.1](https://www.bilibili.com/video/BV1CBFyeRErb)
+- [1. 📝 概述](#1--概述)
+- [2. 💻 demos.1 - 使用 `ipcRenderer.send`、`ipcMain.on` 实现从渲染进程到主进程的单向 IPC 通信](#2--demos1---使用-ipcrenderersendipcmainon-实现从渲染进程到主进程的单向-ipc-通信)
 
 <!-- endregion:toc -->
 
-## 1. 📺 视频
+## 1. 📝 概述
 
 <BilibiliOutsidePlayer id="BV1CBFyeRErb" />
 
-## 2. 💻 demos.1 - 使用 ipcRenderer.send、ipcMain.on 实现从渲染进程到主进程的单向 IPC 通信
+- 通过一个简单的 demo 来了解 `ipcRenderer.send`、`ipcMain.on` 的一种基本用法。
+
+## 2. 💻 demos.1 - 使用 `ipcRenderer.send`、`ipcMain.on` 实现从渲染进程到主进程的单向 IPC 通信
 
 ::: code-group
 
-```js [index.js]
+```js [index.js] {18-22}
 const { app, BrowserWindow, ipcMain } = require('electron')
 
 let win
@@ -46,26 +50,28 @@ app.on('ready', () => {
 })
 ```
 
-```html [index.html]
+```html [index.html] {18}
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>24.02.24</title>
-</head>
-<body>
-  <h1>renderer process</h1>
-  <button id="btn">ipcRenderer.send('message-from-renderer', 1, 2, 3)</button>
-  <script>
-    const { ipcRenderer } = require('electron')
-    document.getElementById('btn').addEventListener('click', () => {
-      console.log('按钮被点击了，向主进程发起 message-from-renderer 请求，并传入请求参数 1、2、3')
-      ipcRenderer.send('message-from-renderer', 1, 2, 3)
-    })
-  </script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>24.02.24</title>
+  </head>
+  <body>
+    <h1>renderer process</h1>
+    <button id="btn">ipcRenderer.send('message-from-renderer', 1, 2, 3)</button>
+    <script>
+      const { ipcRenderer } = require('electron')
+      document.getElementById('btn').addEventListener('click', () => {
+        console.log(
+          '按钮被点击了，向主进程发起 message-from-renderer 请求，并传入请求参数 1、2、3'
+        )
+        ipcRenderer.send('message-from-renderer', 1, 2, 3)
+      })
+    </script>
+  </body>
 </html>
 ```
 
@@ -73,4 +79,4 @@ app.on('ready', () => {
 
 - **最终效果**
   - 渲染进程使用 ipcRenderer.send 发送消息给主进程，主进程通过 ipcMain.on 对渲染进程发送过来的消息进行监听，实现【渲染进程】到【主进程】的【单向 IPC 通信】。
-  - ![](assets/2024-10-05-19-52-58.png)
+  - ![图 0](https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/2025-05-03-10-13-39.png)
