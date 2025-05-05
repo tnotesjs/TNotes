@@ -4,7 +4,7 @@ layout: home
 
 hero:
   name: 'TNotes'
-  text: 'Tdahuyou の Notes'
+  # text: 'Tdahuyou の Notes'
   tagline: '学点东西，做点贡献。'
   image:
     # src:  https://vitepress.dev/vitepress-logo-large.webp
