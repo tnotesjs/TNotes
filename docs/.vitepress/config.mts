@@ -4,12 +4,11 @@ import markdownItTaskLists from 'markdown-it-task-lists'
 import mila from 'markdown-it-link-attributes'
 import markdownItContainer from 'markdown-it-container'
 
-import sidebar__git from '../src/notes/git/sidebar.json'
-import sidebar__i18n from '../src/notes/i18n/sidebar.json'
-import sidebar__vite from '../src/notes/vite/sidebar.json'
-// import sidebar__vitepress from '../src/notes/vitepress/sidebar.json'
-import sidebar__vue from '../src/notes/vue/sidebar.json'
-import sidebar__webpack from '../src/notes/webpack/sidebar.json'
+import sidebar__git from '../src/TNotes.git-notes/sidebar.json'
+import sidebar__vite from '../src/TNotes.vite/sidebar.json'
+// import sidebar__vitepress from '../src/TNotes.vitepress/sidebar.json'
+import sidebar__vue from '../src/TNotes.vue/sidebar.json'
+import sidebar__webpack from '../src/TNotes.webpack/sidebar.json'
 
 import sidebar__c_cpp from '../src/TNotes.c-cpp/sidebar.json'
 import sidebar__canvas from '../src/TNotes.canvas/sidebar.json'
@@ -129,110 +128,134 @@ function sidebar() {
   const sidebar: DefaultTheme.SidebarItem[] = [
     { text: '👀 README', link: '/README' },
     {
-      text: 'TNotes.template',
+      text: 'template',
       link: 'https://tdahuyou.github.io/TNotes.template/',
       collapsed: true,
       items: [...sidebar__template],
     },
     {
-      text: 'TNotes.c-cpp',
+      text: 'c-cpp',
       link: 'https://tdahuyou.github.io/TNotes.c-cpp/',
       collapsed: true,
       items: [...sidebar__c_cpp],
     },
     {
-      text: 'TNotes.canvas',
+      text: 'canvas',
       link: 'https://tdahuyou.github.io/TNotes.canvas/',
       collapsed: true,
       items: [...sidebar__canvas],
     },
     {
-      text: 'TNotes.cooking',
+      text: 'cooking',
       link: 'https://tdahuyou.github.io/TNotes.cooking/',
       collapsed: true,
       items: [...sidebar__cooking],
     },
     {
-      text: 'TNotes.egg',
+      text: 'egg',
       link: 'https://tdahuyou.github.io/TNotes.egg/',
       collapsed: true,
       items: [...sidebar__egg],
     },
     {
-      text: 'TNotes.electron',
+      text: 'electron',
       link: 'https://tdahuyou.github.io/TNotes.electron/',
       collapsed: true,
       items: [...sidebar__electron],
     },
     {
-      text: 'TNotes.en-notes',
+      text: 'en-notes',
       link: 'https://tdahuyou.github.io/TNotes.en-notes/',
       collapsed: true,
       items: [...sidebar__en_notes],
     },
     {
-      text: 'TNotes.en-words',
+      text: 'en-words',
       link: 'https://github.com/Tdahuyou/TNotes.en-words',
     },
     {
-      text: 'TNotes.footprints',
+      text: 'footprints',
       link: 'https://tdahuyou.github.io/TNotes.footprints/',
       collapsed: true,
       items: [...sidebar__footprints],
     },
     {
-      text: 'TNotes.html-css-js',
+      text: 'git',
+      link: 'https://tdahuyou.github.io/TNotes.git-notes/',
+      collapsed: true,
+      items: [...sidebar__git],
+    },
+    {
+      text: 'html-css-js',
       link: 'https://tdahuyou.github.io/TNotes.html-css-js/',
       collapsed: true,
       items: [...sidebar__html_css_js],
     },
     {
-      text: 'TNotes.leetcode',
+      text: 'leetcode',
       link: 'https://tdahuyou.github.io/TNotes.leetcode/',
       collapsed: true,
       items: [...sidebar__leetcode],
     },
     {
-      text: 'TNotes.miniprogram',
+      text: 'miniprogram',
       link: 'https://tdahuyou.github.io/TNotes.miniprogram/',
       collapsed: true,
       items: [...sidebar__miniprogram],
     },
     {
-      text: 'TNotes.nodejs',
+      text: 'nodejs',
       link: 'https://tdahuyou.github.io/TNotes.nodejs/',
       collapsed: true,
       items: [...sidebar__nodejs],
     },
     {
-      text: 'TNotes.notes',
+      text: 'notes',
       link: 'https://tdahuyou.github.io/TNotes.notes/',
       collapsed: true,
       items: [...sidebar__notes],
     },
     {
-      text: 'TNotes.react',
+      text: 'react',
       link: 'https://tdahuyou.github.io/TNotes.react/',
       collapsed: true,
       items: [...sidebar__react],
     },
     {
-      text: 'TNotes.svg',
+      text: 'svg',
       link: 'https://tdahuyou.github.io/TNotes.svg/',
       collapsed: true,
       items: [...sidebar__svg],
     },
     {
-      text: 'TNotes.typescript',
+      text: 'typescript',
       link: 'https://tdahuyou.github.io/TNotes.typescript/',
       collapsed: true,
       items: [...sidebar__typescript],
     },
     {
-      text: 'TNotes.vitepress',
+      text: 'vite',
+      link: 'https://tdahuyou.github.io/TNotes.vite/',
+      collapsed: true,
+      items: [...sidebar__vite],
+    },
+    {
+      text: 'vitepress',
       link: 'https://tdahuyou.github.io/TNotes.vitepress/',
       collapsed: true,
       items: [...sidebar__vitepress],
+    },
+    {
+      text: 'vue',
+      link: 'https://tdahuyou.github.io/TNotes.vue/',
+      collapsed: true,
+      items: [...sidebar__vue],
+    },
+    {
+      text: 'webpack',
+      link: 'https://tdahuyou.github.io/TNotes.webpack/',
+      collapsed: true,
+      items: [...sidebar__webpack],
     },
     {
       text: '🚀 TNotes',
@@ -255,24 +278,7 @@ function sidebar() {
     {
       text: '📒 笔记',
       collapsed: true,
-      items: [
-        { text: '👀 README', link: '/notes/README' },
-        {
-          text: '🌐 前端生态',
-          collapsed: true,
-          items: [
-            { ...sidebar__vue },
-            { ...sidebar__vite },
-            { ...sidebar__webpack },
-            { ...sidebar__i18n },
-          ],
-        },
-        {
-          text: '💻 PC 工具软件',
-          collapsed: true,
-          items: [{ ...sidebar__git }],
-        },
-      ],
+      items: [{ text: '👀 README', link: '/notes/README' }],
     },
     {
       text: '🌍 开源',
@@ -281,14 +287,6 @@ function sidebar() {
         { text: '👀 README', link: '/open/README' },
         { text: '🧑🏻‍💻 m2mm', link: '/open/m2mm' },
       ],
-    },
-    {
-      text: '🗓 我的动态',
-      link: 'https://tdahuyou.github.io/TNotes.footprints/',
-    },
-    {
-      text: '👨‍🍳 做饭',
-      link: 'https://tdahuyou.github.io/TNotes.cooking/',
     },
     {
       text: '🧑🏻‍💻 关于我',
