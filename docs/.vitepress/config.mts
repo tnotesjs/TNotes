@@ -275,13 +275,13 @@ function sidebar() {
         { text: '🤔 Q&A', link: '/tnotes/Q&A' },
       ],
     },
+    // {
+    //   text: '📒 笔记',
+    //   collapsed: true,
+    //   items: [{ text: '👀 README', link: '/notes/README' }],
+    // },
     {
-      text: '📒 笔记',
-      collapsed: true,
-      items: [{ text: '👀 README', link: '/notes/README' }],
-    },
-    {
-      text: '🌍 开源',
+      text: '🌍 其他开源作品',
       collapsed: true,
       items: [
         { text: '👀 README', link: '/open/README' },
