@@ -59,6 +59,11 @@ features:
     details: 英语词库 - 每一个单词就是一个独立的 .md 文件。单词词库的来源说明，在 en-notes 中有详细说明。
     link: https://github.com/Tdahuyou/TNotes.en-words
   - icon:
+      src: https://tdahuyou.github.io/notes/cover-image-2.png
+    title: Footprints
+    details: 活着的一些动态 - 类似于一个在线版的微信朋友圈
+    link: https://tdahuyou.github.io/TNotes.footprints/
+  - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--html-css-js.png
     title: html-css-js（29）
     details: 前端三件套 - 记录跟前端相关的一系列内容。
@@ -108,6 +113,11 @@ features:
     title: vite（❌ 格式有问题，解析失败）
     details: Vite 笔记 - 前端构建工具
     link: https://tdahuyou.github.io/TNotes.vite/
+  - icon:
+      src: https://vitepress.dev/vitepress-logo-large.svg
+    title: vitepress（1）
+    details: VitePress 笔记 - SSG 静态站点生成器
+    link: https://tdahuyou.github.io/TNotes.vitepress/
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--webpack.svg
     title: webpack（0）
