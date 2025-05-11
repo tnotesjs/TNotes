@@ -12,6 +12,7 @@ import sidebar__webpack from '../src/TNotes.webpack/sidebar.json'
 
 import sidebar__c_cpp from '../src/TNotes.c-cpp/sidebar.json'
 import sidebar__canvas from '../src/TNotes.canvas/sidebar.json'
+import sidebar__change_log from '../src/TNotes.change-log/sidebar.json'
 import sidebar__cooking from '../src/TNotes.cooking/sidebar.json'
 import sidebar__egg from '../src/TNotes.egg/sidebar.json'
 import sidebar__electron from '../src/TNotes.electron/sidebar.json'
@@ -20,6 +21,8 @@ import sidebar__footprints from '../src/TNotes.footprints/sidebar.json'
 import sidebar__html_css_js from '../src/TNotes.html-css-js/sidebar.json'
 import sidebar__leetcode from '../src/TNotes.leetcode/sidebar.json'
 import sidebar__miniprogram from '../src/TNotes.miniprogram/sidebar.json'
+import sidebar__mysql from '../src/TNotes.mysql/sidebar.json'
+import sidebar__network from '../src/TNotes.network/sidebar.json'
 import sidebar__nodejs from '../src/TNotes.nodejs/sidebar.json'
 import sidebar__notes from '../src/TNotes.notes/sidebar.json'
 import sidebar__react from '../src/TNotes.react/sidebar.json'
@@ -146,6 +149,12 @@ function sidebar() {
       items: [...sidebar__canvas],
     },
     {
+      text: 'change-log',
+      link: 'https://tdahuyou.github.io/TNotes.change-log/',
+      collapsed: true,
+      items: [...sidebar__change_log],
+    },
+    {
       text: 'cooking',
       link: 'https://tdahuyou.github.io/TNotes.cooking/',
       collapsed: true,
@@ -202,6 +211,18 @@ function sidebar() {
       link: 'https://tdahuyou.github.io/TNotes.miniprogram/',
       collapsed: true,
       items: [...sidebar__miniprogram],
+    },
+    {
+      text: 'mysql',
+      link: 'https://tdahuyou.github.io/TNotes.mysql/',
+      collapsed: true,
+      items: [...sidebar__mysql],
+    },
+    {
+      text: 'network',
+      link: 'https://tdahuyou.github.io/TNotes.network/',
+      collapsed: true,
+      items: [...sidebar__network],
     },
     {
       text: 'nodejs',

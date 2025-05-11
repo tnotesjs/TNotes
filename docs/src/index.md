@@ -29,6 +29,10 @@ features:
     title: C、C++ 笔记（1）
     details: 公司产品涉及到这块知识，有时间再慢慢倒腾。
     link: https://tdahuyou.github.io/TNotes.c-cpp/
+  - icon: 📒
+    title: TNotes 更新日志（1）
+    details: 按照月份，记录 TNotes 更新的内容。
+    link: https://tdahuyou.github.io/TNotes.change-log/
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--canvas.svg
     title: Canvas 笔记（0）
@@ -83,6 +87,14 @@ features:
     title: 小程序（0）
     details: 前司需要做一个年会抽奖的微信小程序，当时看官方文档学了点儿皮毛，现公司目前无这方面的需求，因此目前基本没再更新。【占位仓库】
     link: https://tdahuyou.github.io/TNotes.miniprogram/
+  - icon: 📒
+    title: MySQL 笔记（6）
+    details: MySQL 学习笔记，正在刷《MySQL 8 从入门到精通》。
+    link: https://tdahuyou.github.io/TNotes.mysql/
+  - icon: 📒
+    title: 网络笔记（0）
+    details: 待搬运语雀上的笔记。（早期记录了一些 http、tcp 相关的内容）
+    link: https://tdahuyou.github.io/TNotes.network/
   - icon:
       src: https://raw.githubusercontent.com/Tdahuyou/notes/refs/heads/main/docs/src/assets/icon--nodejs.svg
     title: NodeJS 笔记（57）
