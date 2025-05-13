@@ -422,7 +422,7 @@ function themeConfig() {
         ],
       },
       {
-        text: '🧑🏻‍💻 关于我',
+        text: '🧑🏻‍💻 About Me',
         items: [
           { text: '👀 README', link: '/about-me/README' },
           {
