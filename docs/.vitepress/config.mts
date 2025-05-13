@@ -278,48 +278,6 @@ function sidebar() {
       collapsed: true,
       items: [...sidebar__webpack],
     },
-    {
-      text: '🚀 TNotes',
-      collapsed: true,
-      items: [
-        { text: '🔨 TNotes 基本架构', link: '/tnotes/architecture' },
-        {
-          text: '⚙️ TNotes 核心脚本功能简介',
-          link: '/tnotes/scripts-introduction',
-        },
-        { text: '💻 处理笨重的 git log 问题', link: '/tnotes/handle-git-log' },
-        {
-          text: '💭 TNotes 评论模块（Discussions）的技术实现',
-          link: '/tnotes/message-board',
-        },
-        { text: '🔍 TNotes 中的 emoji 规范', link: '/tnotes/emoji' },
-        { text: '🤔 Q&A', link: '/tnotes/Q&A' },
-      ],
-    },
-    // {
-    //   text: '📒 笔记',
-    //   collapsed: true,
-    //   items: [{ text: '👀 README', link: '/notes/README' }],
-    // },
-    {
-      text: '🌍 其他开源作品',
-      collapsed: true,
-      items: [
-        { text: '👀 README', link: '/open/README' },
-        { text: '🧑🏻‍💻 m2mm', link: '/open/m2mm' },
-      ],
-    },
-    {
-      text: '🧑🏻‍💻 关于我',
-      collapsed: true,
-      items: [
-        { text: '👀 README', link: '/about-me/README' },
-        { text: '🐱 神兽', link: '/about-me/we' },
-        { text: '✍️ 创作', link: '/about-me/creation' },
-      ],
-    },
-    { text: '💰 Donate', link: '/donate' },
-    { text: '💭 Discussions', link: '/message-board' },
   ]
 
   return sidebar
@@ -428,7 +386,55 @@ function themeConfig() {
     },
     search: { provider: 'local' },
 
-    nav: [{ text: '👀 README', link: '/README' }],
+    nav: [
+      { text: '👀 README', link: '/README' },
+      {
+        text: '🚀 TNotes',
+        items: [
+          { text: '🔨 TNotes 基本架构', link: '/tnotes/architecture' },
+          {
+            text: '⚙️ TNotes 核心脚本功能简介',
+            link: '/tnotes/scripts-introduction',
+          },
+          {
+            text: '💻 处理笨重的 git log 问题',
+            link: '/tnotes/handle-git-log',
+          },
+          {
+            text: '💭 TNotes 评论模块（Discussions）的技术实现',
+            link: '/tnotes/message-board',
+          },
+          { text: '🔍 TNotes 中的 emoji 规范', link: '/tnotes/emoji' },
+          { text: '🤔 Q&A', link: '/tnotes/Q&A' },
+          // {
+          //   text: '📒 笔记',
+          //   collapsed: true,
+          //   items: [{ text: '👀 README', link: '/notes/README' }],
+          // },
+          {
+            text: '🌍 其他开源作品',
+            items: [
+              { text: '👀 README', link: '/open/README' },
+              { text: '🧑🏻‍💻 m2mm', link: '/open/m2mm' },
+            ],
+          },
+          { text: '💭 Discussions', link: '/message-board' },
+        ],
+      },
+      {
+        text: '🧑🏻‍💻 关于我',
+        items: [
+          { text: '👀 README', link: '/about-me/README' },
+          {
+            text: '👣 我 の 动态',
+            link: 'https://tdahuyou.github.io/TNotes.footprints/',
+          },
+          { text: '🐱 我家 の 神兽', link: '/about-me/we' },
+          { text: '✍️ 关于创作', link: '/about-me/creation' },
+        ],
+      },
+      { text: '💰 Donate', link: '/donate' },
+    ],
 
     sidebar: sidebar(),
     socialLinks: socialLinks(),

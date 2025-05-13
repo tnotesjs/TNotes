@@ -8,6 +8,12 @@
 
 ## 1. ⚙️ EnWordList
 
+::: tip 提示
+
+右键菜单展示更多功能。
+
+:::
+
 <EnWordList :words="[
 'abandon',
 'abate',
