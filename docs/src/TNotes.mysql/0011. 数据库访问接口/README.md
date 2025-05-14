@@ -12,8 +12,6 @@
   - [4.4. ADO.NET](#44-adonet)
   - [4.5. DB-API（Python Database API）](#45-db-apipython-database-api)
   - [4.6. PDO（PHP Data Objects）](#46-pdophp-data-objects)
-- [5. 📒 现代趋势：ORM 框架](#5--现代趋势orm-框架)
-- [6. 📒 实际应用场景](#6--实际应用场景)
 
 <!-- endregion:toc -->
 
@@ -51,7 +49,13 @@ graph TB
     end
 ```
 
-- 数据库访问接口就好比翻译官，当你在跟不同类型的数据库通信时，翻译官会将你的程序语言翻译为这个数据库能够理解的 SQL 语句，然后再将数据库的执行结果返回，返回的时候也会转为程序语言能够理解的数据，比如数组、对象等。
+- 数据库访问接口就好比翻译官，当你在跟不同类型的数据库通信时，翻译官会将你的程序语言翻译为这个数据库能够理解的 SQL 语句，然后再将数据库的执行结果返回。
+- 补充：“ORM 技术”
+  - 虽然数据库访问接口很强大，但现代的很多项目会使用 **ORM（Object Relational Mapping）框架** 来进一步简化数据库操作。
+  - ORM 技术用于在面向对象语言中将对象模型与数据库表结构进行映射。
+  - 有了 ORM 会让我们和数据库之间的 IO 更加简化。
+  - ORM 是对数据访问接口的进一层封装。
+  - “ORM”和“数据访问接口”的层次很近，有时为了方便，也会直接将 ORM 视作数据访问接口层。
 
 ## 3. 📒 数据库访问接口的作用
 
@@ -211,35 +215,3 @@ try {
     echo 'Connection failed: ' . $e->getMessage();
 }
 ```
-
-## 5. 📒 现代趋势：ORM 框架
-
-- 虽然数据库访问接口很强大，但很多项目会使用 **ORM（Object Relational Mapping）框架** 来进一步简化数据库操作。
-- ORM 框架示例：
-
-| 框架名               | 语言    | 数据库支持                   |
-| -------------------- | ------- | ---------------------------- |
-| **Hibernate**        | Java    | 支持多种数据库               |
-| **MyBatis**          | Java    | SQL 映射为主                 |
-| **SQLAlchemy**       | Python  | 支持 MySQL、PostgreSQL 等    |
-| **Django ORM**       | Python  | 自带 ORM                     |
-| **Sequelize**        | Node.js | MySQL、PostgreSQL、SQLite 等 |
-| **ActiveRecord**     | Ruby    | 主要用于 Rails               |
-| **Entity Framework** | C#      | SQL Server、MySQL 等         |
-
-- ORM 的优势：
-  - 使用面向对象的方式操作数据库
-  - 自动处理 SQL 构造、连接池、事务等
-  - 更加安全（防止 SQL 注入）
-  - 可跨数据库迁移（部分）
-
-## 6. 📒 实际应用场景
-
-| 场景             | 推荐接口                      |
-| ---------------- | ----------------------------- |
-| Java Web 项目    | JDBC 或 Hibernate             |
-| Python 数据分析  | DB-API（如 pymysql、sqlite3） |
-| PHP 项目         | PDO 或 mysqli                 |
-| Windows 桌面软件 | ODBC                          |
-| Node.js 后端     | Sequelize / TypeORM           |
-| 跨平台桌面工具   | ADO.NET / Qt SQL              |
