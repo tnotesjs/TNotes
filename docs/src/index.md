@@ -14,7 +14,7 @@ hero:
 features:
   - icon:
       src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/footprints.png
-    title: TNotes（265）
+    title: TNotes（270）
     details: TNotes.xxx 所有知识库的根节点，汇总所有 TNotes 相关的笔记。
     link: https://tdahuyou.github.io/notes
 
@@ -67,12 +67,6 @@ features:
     link: https://tdahuyou.github.io/TNotes.en-notes/
 
   - icon:
-      src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--en-words.svg
-    title: 英语词库（2w+）
-    details: 每一个单词就是一个独立的 .md 文件。单词词库的来源说明，在 en-notes 中有详细说明。
-    link: https://github.com/Tdahuyou/TNotes.en-words
-
-  - icon:
       src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--footprints.svg
     title: 活着的一些动态（6）
     details: 类似于一个在线版的微信朋友圈
@@ -104,7 +98,7 @@ features:
 
   - icon:
       src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--mysql.svg
-    title: MySQL 笔记（11）
+    title: MySQL 笔记（16）
     details: MySQL 学习笔记，正在刷《MySQL 8 从入门到精通》。
     link: https://tdahuyou.github.io/TNotes.mysql/
 
