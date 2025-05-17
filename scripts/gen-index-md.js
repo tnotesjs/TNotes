@@ -27,7 +27,7 @@ const FEATURES_DISPLAY_ORDER = [
   'TNotes.egg',
   'TNotes.electron',
   'TNotes.en-notes',
-  'TNotes.en-words',
+  // 'TNotes.en-words',
   'TNotes.footprints',
   'TNotes.git-notes',
   'TNotes.html-css-js',
