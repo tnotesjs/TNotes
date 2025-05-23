@@ -20,6 +20,7 @@
   - 使用 `DESC` 和 `SHOW CREATE TABLE` 查看表结构
   - 使用 `ALTER TABLE` 修改表结构
   - 使用 `DROP TABLE` 删除数据表
+- 数据表属于数据库，在创建数据表之前，应该使用语句 `USE <数据库名>;` 指定操作是在哪个数据库中进行，如果没有选择数据库，可能会抛出 `No database selected` 的错误。
 
 ## 2. 💻 创建数据表
 

@@ -10,6 +10,8 @@
 
 ## 1. 📝 概述
 
+- 介绍在 macOS 上安装 mysql 的基本流程。
+
 ## 2. 💻 直接到官网下载 mysql 并安装
 
 - https://dev.mysql.com/downloads/
