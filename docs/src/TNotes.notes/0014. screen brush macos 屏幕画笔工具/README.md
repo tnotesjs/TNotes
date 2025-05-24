@@ -28,7 +28,7 @@
 
 ## 1. 📝 概述
 
-- 对 ScreenBrush 这款软件的简单介绍。
+- 对 ScreenBrush 这款 macOS 上的屏幕画笔工具做了一个简单的介绍。
 
 ## 2. 📒 ScreenBrush 简介
 

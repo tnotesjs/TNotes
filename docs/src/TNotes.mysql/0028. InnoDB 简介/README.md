@@ -3,6 +3,8 @@
 <!-- region:toc -->
 
 - [1. 📝 概述](#1--概述)
+- [2. 💻 创建使用 InnoDB 的表](#2--创建使用-innodb-的表)
+- [3. 📒 从 MySQL 8.0 开始，系统表全部换成事务型的 InnoDB 表](#3--从-mysql-80-开始系统表全部换成事务型的-innodb-表)
 
 <!-- endregion:toc -->
 
@@ -36,7 +38,8 @@
   - 需要事务和一致性保障的业务
   - 需要外键约束维护数据一致性的系统
   - 对崩溃恢复有要求的生产环境
-- 示例：创建使用 InnoDB 的表
+
+## 2. 💻 创建使用 InnoDB 的表
 
 ```sql
 CREATE TABLE users (
@@ -47,4 +50,39 @@ CREATE TABLE users (
 -- ENGINE=InnoDB
 -- 这一部分指定了使用的存储引擎为 InnoDB。
 -- 如果你没有显式指定 ENGINE=InnoDB，在 MySQL 5.5 及之后版本中也会默认使用 InnoDB。
+```
+
+## 3. 📒 从 MySQL 8.0 开始，系统表全部换成事务型的 InnoDB 表
+
+```sql {10}
+-- 从 MySQL 8.0 开始，系统表全部换成事务型的 InnoDB 表，默认的 MySQL 实例将不包含任何 MyISAM 表，除非手动创建 MyISAM 表。
+
+-- 在 MySQL 5.7 版本中查看系统表类型，结果如下：
+SELECT DISTINCT(ENGINE) FROM information_schema.tables;
+-- +--------------------+
+-- | ENGINE             |
+-- +--------------------+
+-- | MEMORY             |
+-- | InnoDB             |
+-- | MyISAM             |
+-- | CSV                |
+-- | PERFORMANCE_SCHEMA |
+-- | NULL               |
+-- +--------------------+
+
+-- 当前 25.05 所使用的 mysql 版本：
+-- mysql --version
+-- mysql  Ver 9.3.0-commercial for macos15 on arm64 (MySQL Enterprise Server - Commercial)
+
+-- 查看系统表类型，结果如下：
+SELECT DISTINCT(ENGINE) FROM information_schema.tables;
+-- +--------------------+
+-- | ENGINE             |
+-- +--------------------+
+-- | InnoDB             |
+-- | NULL               |
+-- | PERFORMANCE_SCHEMA |
+-- | CSV                |
+-- +--------------------+
+-- 4 rows in set (0.003 sec)
 ```
