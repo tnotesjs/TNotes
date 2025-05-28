@@ -24,7 +24,7 @@
         "title": "TNotes",
         "details": "TNotes.xxx 所有知识库的根节点，汇总所有 TNotes 相关的笔记。",
         "link": "https://tdahuyou.github.io/notes",
-        "completed_notes_count": "297"
+        "completed_notes_count": "327"
       },
       "TNotes.template": {
         "icon": {
@@ -258,6 +258,15 @@
         "completed_notes_count": 0,
         "details": "个人学习资料汇总，存储了一些不便公开的学习资料，从 0 到 1 嘛，0 是学习资料、1 就是这些公开的笔记了。",
         "link": "https://github.com/Tdahuyou/TNotes.0"
+      },
+      "TNotes.sql": {
+        "icon": {
+          "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--mysql.svg"
+        },
+        "title": "SQL 笔记",
+        "completed_notes_count": 30,
+        "details": "SQL 学习笔记，正在刷《MySQL 8 从入门到精通》。",
+        "link": "https://tdahuyou.github.io/TNotes.sql/"
       }
     }
   }

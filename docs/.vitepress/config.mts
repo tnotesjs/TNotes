@@ -1,8 +1,14 @@
-import { defineConfig, HeadConfig, DefaultTheme } from 'vitepress'
+import {
+  defineConfig,
+  HeadConfig,
+  DefaultTheme,
+  MarkdownOptions,
+} from 'vitepress'
 import GithubSlugger from 'github-slugger'
 import markdownItTaskLists from 'markdown-it-task-lists'
 import mila from 'markdown-it-link-attributes'
 import markdownItContainer from 'markdown-it-container'
+import { withMermaid } from 'vitepress-plugin-mermaid'
 
 import sidebar__git from '../src/TNotes.git-notes/sidebar.json'
 import sidebar__vite from '../src/TNotes.vite/sidebar.json'
@@ -21,7 +27,7 @@ import sidebar__footprints from '../src/TNotes.footprints/sidebar.json'
 import sidebar__html_css_js from '../src/TNotes.html-css-js/sidebar.json'
 import sidebar__leetcode from '../src/TNotes.leetcode/sidebar.json'
 import sidebar__miniprogram from '../src/TNotes.miniprogram/sidebar.json'
-import sidebar__mysql from '../src/TNotes.mysql/sidebar.json'
+import sidebar__sql from '../src/TNotes.sql/sidebar.json'
 import sidebar__network from '../src/TNotes.network/sidebar.json'
 import sidebar__nodejs from '../src/TNotes.nodejs/sidebar.json'
 import sidebar__notes from '../src/TNotes.notes/sidebar.json'
@@ -34,12 +40,11 @@ import sidebar__vitepress from '../src/TNotes.vitepress/sidebar.json'
 const slugger = new GithubSlugger()
 
 // doc => https://vitepress.dev/zh/reference/site-config
-export default defineConfig({
+const vpConfig = defineConfig({
   lang: 'zh-Hans',
   base: '/notes/',
   title: 'TNotes',
-  description:
-    'TNotes - 记录学习与开发过程中的笔记分享，涵盖前端开发、技术文档和个人心得等内容。',
+  description: 'TNotes',
   appearance: 'dark',
   srcDir: './src',
   lastUpdated: true,
@@ -53,79 +58,72 @@ export default defineConfig({
   // doc => https://vitepress.dev/reference/default-theme-config
   themeConfig: themeConfig(),
   // doc => https://vitepress.dev/zh/guide/markdown#image-lazy-loading
-  markdown: {
-    lineNumbers: true, // 启用代码块的行号
+  markdown: markdown(),
+  router: {
+    prefetchLinks: false, // 禁止预加载，确保每次加载内容是同步的
+  },
+})
+
+function markdown() {
+  const markdown: MarkdownOptions = {
+    lineNumbers: true,
+    math: true,
     config(md) {
-      md.use(markdownItTaskLists) // 启用 markdown-it-task-lists 插件来处理复选框的渲染问题。
-        .use(mila, {
-          // 启用 markdown-it-link-attributes 插件来处理超链接的跳转问题。
-          attrs: {
-            target: '_self', // 所有链接都将使用 _self，避免 _blank
-            rel: 'noopener', // 提供安全性 - 这是安全设置，防止新页面能够通过 JavaScript 访问当前页面的 window 对象，通常配合 target="_blank" 使用，但即便没有 target="_blank"，它也能增强安全性。
-          },
-        })
-        .use(markdownItContainer, 'swiper', {
-          render: (tokens, idx) => {
-            // 缓存默认的图片渲染规则，在 :::swiper ... ::: 内部使用自定义渲染规则，处理 Markdown 中的图片并转化为 Swiper Slide。
-            const defaultRenderRulesImage =
-              md.renderer.rules.image ||
-              ((tokens, idx, options, env, slf) =>
-                slf.renderToken(tokens, idx, options))
-            if (tokens[idx].nesting === 1) {
-              // console.log('tokens[idx].nesting', tokens[idx].nesting, '开始 swiper 容器 ::: swiper')
-              // 重新指定渲染规则
+      md.use(markdownItTaskLists)
 
-              // 禁用段落 <p>，以免在最终返回的图片容器 div.swiper-slide 的外层多出一个 <p> 标签。p 包裹 div 是不规范的。
-              md.renderer.rules.paragraph_open = () => ''
-              md.renderer.rules.paragraph_close = () => ''
-              // 将图片直接包裹到 `<div class="swiper-slide">` 中，具体元素格式，参照 Swiper.js 官方文档。
-              md.renderer.rules.image = (tokens, idx, options, env, slf) =>
-                `<div class="swiper-slide">${defaultRenderRulesImage(
-                  tokens,
-                  idx,
-                  options,
-                  env,
-                  slf
-                )
-                  .replaceAll('<div class="swiper-slide">', '')
-                  .replaceAll('</div>', '')}</div>`
+      md.use(mila, {
+        attrs: {
+          target: '_self',
+          rel: 'noopener',
+        },
+      })
 
-              // 开始标签，创建 swiper 容器和 wrapper
-              return `<div class="swiper-container"><div class="swiper-wrapper">\n`
-            } else {
-              // console.log('tokens[idx].nesting', tokens[idx].nesting, '结束 swiper 容器 :::')
+      md.use(markdownItContainer, 'swiper', {
+        render: (tokens, idx) => {
+          const defaultRenderRulesImage =
+            md.renderer.rules.image ||
+            ((tokens, idx, options, env, slf) =>
+              slf.renderToken(tokens, idx, options))
+          if (tokens[idx].nesting === 1) {
+            md.renderer.rules.paragraph_open = () => ''
+            md.renderer.rules.paragraph_close = () => ''
+            md.renderer.rules.image = (tokens, idx, options, env, slf) =>
+              `<div class="swiper-slide">${defaultRenderRulesImage(
+                tokens,
+                idx,
+                options,
+                env,
+                slf
+              )
+                .replaceAll('<div class="swiper-slide">', '')
+                .replaceAll('</div>', '')}</div>`
 
-              // reset renderer rules
-              md.renderer.rules.paragraph_open = undefined
-              md.renderer.rules.paragraph_close = undefined
-              md.renderer.rules.image = (tokens, idx, options, env, slf) =>
-                `${defaultRenderRulesImage(tokens, idx, options, env, slf)
-                  .replaceAll('<div class="swiper-slide">', '')
-                  .replaceAll('</div>', '')}`
-
-              // 结束标签，关闭 wrapper 和 container
-              return '</div><div class="swiper-button-next"></div><div class="swiper-button-prev"></div><div class="swiper-pagination"></div></div>\n'
-              // return '</div><div class="swiper-pagination"></div></div>\n'
-            }
-          },
-        })
+            return `<div class="swiper-container"><div class="swiper-wrapper">\n`
+          } else {
+            md.renderer.rules.paragraph_open = undefined
+            md.renderer.rules.paragraph_close = undefined
+            md.renderer.rules.image = (tokens, idx, options, env, slf) =>
+              `${defaultRenderRulesImage(tokens, idx, options, env, slf)
+                .replaceAll('<div class="swiper-slide">', '')
+                .replaceAll('</div>', '')}`
+            return '</div><div class="swiper-button-next"></div><div class="swiper-button-prev"></div><div class="swiper-pagination"></div></div>\n'
+          }
+        },
+      })
     },
     anchor: {
-      // !NOTE 需要跟和 \scripts\updateREADME.js 中的 markdown.anchor.slugify 的逻辑保持一致。
       slugify: (label: string) => {
         slugger.reset()
         return slugger.slug(label)
       },
     },
     image: {
-      // 默认禁用；设置为 true 可为所有图片启用懒加载。
       lazyLoading: true,
     },
-  },
-  router: {
-    prefetchLinks: false, // 禁止预加载，确保每次加载内容是同步的
-  },
-})
+  }
+
+  return markdown
+}
 
 function sidebar() {
   const sidebar: DefaultTheme.SidebarItem[] = [
@@ -213,12 +211,6 @@ function sidebar() {
       items: [...sidebar__miniprogram],
     },
     {
-      text: 'mysql',
-      link: 'https://tdahuyou.github.io/TNotes.mysql/',
-      collapsed: true,
-      items: [...sidebar__mysql],
-    },
-    {
       text: 'network',
       link: 'https://tdahuyou.github.io/TNotes.network/',
       collapsed: true,
@@ -241,6 +233,12 @@ function sidebar() {
       link: 'https://tdahuyou.github.io/TNotes.react/',
       collapsed: true,
       items: [...sidebar__react],
+    },
+    {
+      text: 'sql',
+      link: 'https://tdahuyou.github.io/TNotes.mysql/',
+      collapsed: true,
+      items: [...sidebar__sql],
     },
     {
       text: 'svg',
@@ -384,7 +382,72 @@ function themeConfig() {
       // level: [2, 3],
       label: '目录',
     },
-    search: { provider: 'local' },
+    search: {
+      // 使用本地搜索（不依赖远程服务器）
+      provider: 'local',
+      options: {
+        miniSearch: {
+          /**
+           * 控制如何对文档进行分词、字段提取等预处理
+           * @type {Pick<import('minisearch').Options, 'extractField' | 'tokenize' | 'processTerm'>}
+           */
+          options: {
+            // 自定义分词逻辑
+            tokenize: (text, language) => {
+              if (language === 'zh') {
+                return text.match(/[\u4e00-\u9fa5]+|\S+/g) || []
+              }
+              return text.split(/\s+/)
+            },
+            // 将所有词转为小写，确保大小写不敏感匹配
+            processTerm: (term) => term.toLowerCase(),
+          },
+          /**
+           * 控制搜索时的行为（如模糊匹配、权重）
+           * @type {import('minisearch').SearchOptions}
+           * @default
+           * { fuzzy: 0.2, prefix: true, boost: { title: 4, text: 2, titles: 1 } }
+           */
+          searchOptions: {
+            fuzzy: 0.2, // 模糊匹配阈值（0-1），允许拼写错误的阈值（数值越低越严格）
+            prefix: true, // 是否启用前缀匹配（输入“jav”可匹配“javascript”）
+            boost: {
+              title: 10, // 文件名作为 h1 标题，权重最高（这个 title 指的是 _render 返回结果 md.renderer html 中的第一个 h1，使用 folderName 作为第一个 h1，权重最高。）
+              headings: 5, // h2 - h6
+              text: 3, // 正文内容索引
+              code: 1, // 代码块索引权重
+            },
+          },
+        },
+        /**
+         * 控制哪些 Markdown 内容参与本地搜索引擎索引
+         * @param {string} src 当前 Markdown 文件的原始内容（即 .md 文件中的文本）
+         * @param {import('vitepress').MarkdownEnv} env 包含当前页面环境信息的对象，比如 frontmatter、路径等
+         * @param {import('markdown-it-async')} md 一个 Markdown 渲染器实例，用来将 Markdown 转换为 HTML
+         */
+        async _render(src, env, md) {
+          const filePath = env.relativePath
+          if (filePath.includes('TOC.md')) return ''
+
+          // 提取路径中 "notes/..." 后面的第一个目录名
+          const notesIndex = filePath.indexOf('notes/')
+          let folderName = ''
+
+          if (notesIndex !== -1) {
+            const pathAfterNotes = filePath.slice(notesIndex + 'notes/'.length)
+            folderName = pathAfterNotes.split('/')[0]
+          }
+
+          // 显式添加一个高权重字段，例如 "title"
+          const titleField = `# ${folderName}\n`
+          const html = md.render(titleField + '\n\n' + src, env)
+
+          // console.log('html:', html)
+
+          return html
+        },
+      },
+    },
 
     nav: [
       { text: '👀 README', link: '/README' },
@@ -455,3 +518,16 @@ function themeConfig() {
 
   return themeConfig
 }
+
+export default withMermaid({
+  // your existing vitepress config...
+  ...vpConfig,
+  // optionally, you can pass MermaidConfig
+  mermaid: {
+    // refer https://mermaid.js.org/config/setup/modules/mermaidAPI.html#mermaidapi-configuration-defaults for options
+  },
+  // optionally set additional config for plugin itself with MermaidPluginConfig
+  mermaidPlugin: {
+    class: 'mermaid my-class', // set additional css classes for parent container
+  },
+})
