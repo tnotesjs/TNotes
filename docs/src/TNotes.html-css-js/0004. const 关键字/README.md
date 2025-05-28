@@ -2,16 +2,20 @@
 
 <!-- region:toc -->
 
-- [1. 📒 const 关键字](#1--const-关键字)
-- [2. 📒 理解 const 的 “常量约束” 的本质](#2--理解-const-的-常量约束-的本质)
-- [3. 📒 栈内存、堆内存](#3--栈内存堆内存)
-- [4. 💻 demos.1 - 常量不允许重新赋值](#4--demos1---常量不允许重新赋值)
-- [5. 💻 demos.2 - 声明的同时完成初始化赋值](#5--demos2---声明的同时完成初始化赋值)
-- [6. 💻 demos.3 - 引用类型，确保地址不变](#6--demos3---引用类型确保地址不变)
-- [7. 💻 demos.4 - 对象冻结](#7--demos4---对象冻结)
-- [8. 💼 面试题.1 - 请谈谈 var、let、const](#8--面试题1---请谈谈-varletconst)
+- [1. 📝 概述](#1--概述)
+- [2. 📒 const 关键字](#2--const-关键字)
+- [3. 📒 理解 const 的 “常量约束” 的本质](#3--理解-const-的-常量约束-的本质)
+- [4. 📒 栈内存、堆内存](#4--栈内存堆内存)
+- [5. 💻 demos.1 - 常量不允许重新赋值](#5--demos1---常量不允许重新赋值)
+- [6. 💻 demos.2 - 声明的同时完成初始化赋值](#6--demos2---声明的同时完成初始化赋值)
+- [7. 💻 demos.3 - 引用类型，确保地址不变](#7--demos3---引用类型确保地址不变)
+- [8. 💻 demos.4 - 对象冻结](#8--demos4---对象冻结)
+- [9. 💼 面试题.1 - 请谈谈 var、let、const](#9--面试题1---请谈谈-varletconst)
 
 <!-- endregion:toc -->
+
+## 1. 📝 概述
+
 - 知识点：
   - const 关键字
   - const 的 “常量约束” 的本质
@@ -21,7 +25,7 @@
   - 对象深度冻结（递归）
 - const 和 let 非常类似，区别在于 let 定义的是变量，const 定义的是常量。定义变量时首选 const 关键字，其次 let 关键字，放弃 var 关键字。
 
-## 1. 📒 const 关键字
+## 2. 📒 const 关键字
 
 - const 声明一个只读的常量。一旦声明，常量的值就不能改变。
 - const 声明的变量，必须在声明的同时完成初始化赋值。
@@ -29,13 +33,13 @@
 - const 声明的变量具有暂时性死区。
 - const 不能重复声明同名变量。
 
-## 2. 📒 理解 const 的 “常量约束” 的本质
+## 3. 📒 理解 const 的 “常量约束” 的本质
 
 - const 实际上保证的，并不是变量的值不得改动，而是变量指向的那个内存地址所保存的数据不得改动。
 - 对于 **原始类型** 的数据（数值、字符串、布尔值），值就保存在变量指向的那个内存地址，因此等同于 **常量**。
 - 对于 **引用类型** 的数据（主要是对象和数组），变量指向的内存地址，保存的只是一个指向实际数据的指针，**const 只能保证这个指针是固定的**（即总是指向另一个固定的地址），至于它指向的数据结构是不是可变的，就完全不能控制了。
 
-## 3. 📒 栈内存、堆内存
+## 4. 📒 栈内存、堆内存
 
 - 数据分为 **基本数据类型** (String, Number, Boolean, Null, Undefined，Symbol) 和 **引用数据类型**。
 - **基本** 数据类型的特点：直接存储在 **栈** (stack) 中的数据。
@@ -43,7 +47,7 @@
 - 引用数据类型在 **栈中存储了指针**，该指针指向 **堆中该实体** 的起始地址。
 - ![](assets/2024-12-27-14-38-48.png)
 
-## 4. 💻 demos.1 - 常量不允许重新赋值
+## 5. 💻 demos.1 - 常量不允许重新赋值
 
 ```javascript
 const PI = 3.1415
@@ -54,7 +58,7 @@ PI = 3 // ❌ TypeError: Assignment to constant variable.
 // 上面代码表明改变常量的值会报错。
 ```
 
-## 5. 💻 demos.2 - 声明的同时完成初始化赋值
+## 6. 💻 demos.2 - 声明的同时完成初始化赋值
 
 ```javascript
 const foo // ❌ SyntaxError: Missing initializer in const declaration
@@ -67,7 +71,7 @@ const 声明的变量不得改变值
 */
 ```
 
-## 6. 💻 demos.3 - 引用类型，确保地址不变
+## 7. 💻 demos.3 - 引用类型，确保地址不变
 
 ```javascript
 const foo = {}
@@ -105,7 +109,7 @@ arr 数组本身是可写的，但是如果将另一个新数组赋值给 arr �
 */
 ```
 
-## 7. 💻 demos.4 - 对象冻结
+## 8. 💻 demos.4 - 对象冻结
 
 ```javascript
 // 'use strict'
@@ -148,7 +152,7 @@ var constantize = (obj) => {
 */
 ```
 
-## 8. 💼 面试题.1 - 请谈谈 var、let、const
+## 9. 💼 面试题.1 - 请谈谈 var、let、const
 
 - **相同点**
   - `var`、`let`、`const` 三者都可以声明变量。
@@ -168,13 +172,13 @@ var constantize = (obj) => {
 
 ```javascript
 function example() {
-    console.log(x); // undefined
-    var x = 10;
-    if (true) {
-        var x = 20; // 重新声明同一变量
-        console.log(x); // 20
-    }
-    console.log(x); // 20
+  console.log(x) // undefined
+  var x = 10
+  if (true) {
+    var x = 20 // 重新声明同一变量
+    console.log(x) // 20
+  }
+  console.log(x) // 20
 }
 
 example()

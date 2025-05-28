@@ -29,9 +29,12 @@ export default {
   enhanceApp({ app }) {
     // 注册自定义全局组件
     app.component('Footprints', Footprints)
+    app.component('F', Footprints)
     app.component('EnWordList', EnWordList)
+    app.component('E', EnWordList)
     app.component('MyGiscusComp', MyGiscusComp)
     app.component('BilibiliOutsidePlayer', BilibiliOutsidePlayer)
+    app.component('B', BilibiliOutsidePlayer)
     app.component('TNotesDir', TNotesDir)
   },
 } satisfies Theme

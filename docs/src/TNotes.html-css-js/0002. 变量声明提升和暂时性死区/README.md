@@ -1,20 +1,23 @@
 # [0002. 变量声明提升和暂时性死区](https://github.com/Tdahuyou/TNotes.html-css-js/tree/main/notes/0002.%20%E5%8F%98%E9%87%8F%E5%A3%B0%E6%98%8E%E6%8F%90%E5%8D%87%E5%92%8C%E6%9A%82%E6%97%B6%E6%80%A7%E6%AD%BB%E5%8C%BA)
 
-
 <!-- region:toc -->
 
-- [1. 🔗 links](#1--links)
-- [2. 📒 变量声明提升和暂时性死区](#2--变量声明提升和暂时性死区)
-- [3. 💻 demos.1 - var 声明](#3--demos1---var-声明)
-- [4. 💻 demos.2 - let 和 const 声明](#4--demos2---let-和-const-声明)
-- [5. 💻 demos.3 - 函数声明](#5--demos3---函数声明)
-- [6. 💻 demos.4 - 函数表达式](#6--demos4---函数表达式)
-- [7. 💼 面试题.1 - 下面的代码输出什么？](#7--面试题1---下面的代码输出什么)
-- [8. 💼 面试题.2 - 下面的代码输出的结果是什么？](#8--面试题2---下面的代码输出的结果是什么)
-- [9. 💼 面试题.3 - 请谈谈什么是变量声明提升？](#9--面试题3---请谈谈什么是变量声明提升)
-- [10. 🤔 思考 - let、const 真的有被提升吗？](#10--思考---letconst-真的有被提升吗)
+- [1. 📝 概述](#1--概述)
+- [2. 🔗 links](#2--links)
+- [3. 📒 变量声明提升和暂时性死区](#3--变量声明提升和暂时性死区)
+- [4. 💻 demos.1 - var 声明](#4--demos1---var-声明)
+- [5. 💻 demos.2 - let 和 const 声明](#5--demos2---let-和-const-声明)
+- [6. 💻 demos.3 - 函数声明](#6--demos3---函数声明)
+- [7. 💻 demos.4 - 函数表达式](#7--demos4---函数表达式)
+- [8. 💼 面试题.1 - 下面的代码输出什么？](#8--面试题1---下面的代码输出什么)
+- [9. 💼 面试题.2 - 下面的代码输出的结果是什么？](#9--面试题2---下面的代码输出的结果是什么)
+- [10. 💼 面试题.3 - 请谈谈什么是变量声明提升？](#10--面试题3---请谈谈什么是变量声明提升)
+- [11. 🤔 思考 - let、const 真的有被提升吗？](#11--思考---letconst-真的有被提升吗)
 
 <!-- endregion:toc -->
+
+## 1. 📝 概述
+
 - 知识点：
   - 变量声明提升
   - var、let、const 声明
@@ -24,21 +27,20 @@
 - 变量声明提升可以算是面试题常客，需要知道变量声明提升是什么。
 - 介绍了什么是变量声明提升、什么是暂时性死区，并通过一些示例，来了解在 JS 中不同类型的变量的声明和提升机制。
 
-## 1. 🔗 links
+## 2. 🔗 links
 
 - https://juejin.cn/post/6844903753015885831
-  - 掘金，《理解ES6中的TDZ（暂时性死区）》。
+  - 掘金，《理解 ES6 中的 TDZ（暂时性死区）》。
 - https://exploringjs.com/js/book/ch_variables-assignment.html
   - Variables and assignment • JavaScript for impatient programmers (ES2022 edition)
 - https://juejin.cn/post/6993676334635417614#heading-2
-  - 掘金，深究一下let、const到底有没有提升？
+  - 掘金，深究一下 let、const 到底有没有提升？
 - https://www.youtube.com/watch?v=VbHaL_J8Ex0
   - YouTube，Variable Hoisting with LET, CONST and VAR in JavaScript
 - https://tc39.es/ecma262/multipage/ecmascript-language-statements-and-declarations.html#sec-let-and-const-declarations
   - ECMA 官方文档，14.3.1 Let and Const Declarations
 
-## 2. 📒 变量声明提升和暂时性死区
-
+## 3. 📒 变量声明提升和暂时性死区
 
 - **变量声明提升是什么**
   - 在 JavaScript 中，**变量声明提升**（Hoisting）是一种行为，指的是 **变量和函数声明在代码执行之前被移动到它们各自作用域的顶部**。这意味着无论声明它们的代码在何处，都可以在声明之前访问这些变量和函数。
@@ -91,7 +93,7 @@ console.log(a) // => 5
   - **变量提前使用**：确保开发者不会在变量准备好之前就开始使用它，这有助于避免运行时错误。
   - **变量覆盖**：在较大的作用域中已有同名变量时，`let` 和 `const` 声明的局部变量会阻止提前访问全局变量或外部作用域的变量，从而避免可能的逻辑错误。
 
-## 3. 💻 demos.1 - var 声明
+## 4. 💻 demos.1 - var 声明
 
 ```javascript
 console.log(a) // => undefined
@@ -119,7 +121,7 @@ js 引擎的工作方式是：
 */
 ```
 
-## 4. 💻 demos.2 - let 和 const 声明
+## 5. 💻 demos.2 - let 和 const 声明
 
 ```javascript
 console.log(x) // ❌ ReferenceError
@@ -138,7 +140,7 @@ let 和 const 关键字声明的变量表现得就像它们没有被提升一样
 
 ![](assets/2024-12-27-13-13-02.png)
 
-## 5. 💻 demos.3 - 函数声明
+## 6. 💻 demos.3 - 函数声明
 
 ```javascript
 hello() // 输出：Hello, world!
@@ -152,7 +154,7 @@ function hello() {
 */
 ```
 
-## 6. 💻 demos.4 - 函数表达式
+## 7. 💻 demos.4 - 函数表达式
 
 ```javascript
 console.log(hello) // 输出：undefined
@@ -167,8 +169,7 @@ var hello = function () {
 */
 ```
 
-
-## 7. 💼 面试题.1 - 下面的代码输出什么？
+## 8. 💼 面试题.1 - 下面的代码输出什么？
 
 ```javascript
 // 问：下面的代码输出什么？
@@ -206,7 +207,7 @@ JavaScript 中，变量和函数声明会被提升（Hoisting）到其作用域�
 */
 ```
 
-## 8. 💼 面试题.2 - 下面的代码输出的结果是什么？
+## 9. 💼 面试题.2 - 下面的代码输出的结果是什么？
 
 ```javascript
 // 问：下面的代码输出的结果是什么？
@@ -231,7 +232,7 @@ function add(x) {
 // result1 60
 ```
 
-## 9. 💼 面试题.3 - 请谈谈什么是变量声明提升？
+## 10. 💼 面试题.3 - 请谈谈什么是变量声明提升？
 
 当 JavaScript 引擎执行代码时，创建了全局执行上下文，它有两个阶段：
 
@@ -242,7 +243,7 @@ function add(x) {
 
 `var` 和 `function` 声明的变量可以在声明前访问，这就是因为变量提升的缘故。
 
-## 10. 🤔 思考 - let、const 真的有被提升吗？
+## 11. 🤔 思考 - let、const 真的有被提升吗？
 
 > **先说答案：let、const 也被提升了。**
 >
@@ -257,7 +258,7 @@ function add(x) {
 > 看到有些人说 let、const 没有提升，有些人说有，就查阅了一下 ECMA 官方对此的描述。
 >
 > https://tc39.es/ecma262/multipage/ecmascript-language-statements-and-declarations.html#sec-let-and-const-declarations
-> 
+>
 > 这是 ECMA 官方文档，14.3.1 Let and Const Declarations
 
 - **ECMA 官方文档 - 原文**

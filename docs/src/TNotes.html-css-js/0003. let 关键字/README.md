@@ -2,17 +2,21 @@
 
 <!-- region:toc -->
 
-- [1. 📒 let 关键字](#1--let-关键字)
-- [2. 💻 demos.1 - 块级作用域](#2--demos1---块级作用域)
-- [3. 💻 demos.2 - 对比 for 循环的循环变量使用 var 和 let 来定义](#3--demos2---对比-for-循环的循环变量使用-var-和-let-来定义)
-- [4. 💻 demos.3 - let 暂时性死区](#4--demos3---let-暂时性死区)
-- [5. 💻 demos.4 - 函数参数默认值中的死区](#5--demos4---函数参数默认值中的死区)
-- [6. 💻 demos.5 - 其他奇怪的报错](#6--demos5---其他奇怪的报错)
-- [7. 💻 demos.6 - 同一作用域内不允许重复声明](#7--demos6---同一作用域内不允许重复声明)
-- [8. 💻 demos.7 - for 循环的特别之处](#8--demos7---for-循环的特别之处)
-- [9. 💻 demos.8 - let 出现之前的一些历史问题](#9--demos8---let-出现之前的一些历史问题)
+- [1. 📝 概述](#1--概述)
+- [2. 📒 let 关键字](#2--let-关键字)
+- [3. 💻 demos.1 - 块级作用域](#3--demos1---块级作用域)
+- [4. 💻 demos.2 - 对比 for 循环的循环变量使用 var 和 let 来定义](#4--demos2---对比-for-循环的循环变量使用-var-和-let-来定义)
+- [5. 💻 demos.3 - let 暂时性死区](#5--demos3---let-暂时性死区)
+- [6. 💻 demos.4 - 函数参数默认值中的死区](#6--demos4---函数参数默认值中的死区)
+- [7. 💻 demos.5 - 其他奇怪的报错](#7--demos5---其他奇怪的报错)
+- [8. 💻 demos.6 - 同一作用域内不允许重复声明](#8--demos6---同一作用域内不允许重复声明)
+- [9. 💻 demos.7 - for 循环的特别之处](#9--demos7---for-循环的特别之处)
+- [10. 💻 demos.8 - let 出现之前的一些历史问题](#10--demos8---let-出现之前的一些历史问题)
 
 <!-- endregion:toc -->
+
+## 1. 📝 概述
+
 - 知识点：
   - let 关键字
   - 块级作用域
@@ -20,14 +24,13 @@
   - 经典的“闭包陷阱”问题
 - let 关键字的规则不多，也比较好理解。在 let、const 关键字出现之前，定义变量只能使用 var 关键字，var 这玩意儿存在不少问题，有很多经典的历史问题在 let、const 出现之后都引刃而解了。
 
-## 1. 📒 let 关键字
+## 2. 📒 let 关键字
 
 - **let 具有块级作用域。**
 - **let 声明的变量有暂时性死区，虽然变量声明提升了，但无法在声明语句之前访问变量。**
 - **不允许使用 let 重复声明同名变量。**
 
-
-## 2. 💻 demos.1 - 块级作用域
+## 3. 💻 demos.1 - 块级作用域
 
 ```javascript
 {
@@ -48,7 +51,7 @@ console.log(b) // 1
 // 这表明，let 声明的变量只在它所在的代码块有效。
 ```
 
-## 3. 💻 demos.2 - 对比 for 循环的循环变量使用 var 和 let 来定义
+## 4. 💻 demos.2 - 对比 for 循环的循环变量使用 var 和 let 来定义
 
 ```javascript
 for (let i = 0; i < 10; i++) {
@@ -112,7 +115,7 @@ a[6]() // 6
 // 这里其实用到了 闭包。
 ```
 
-## 4. 💻 demos.3 - let 暂时性死区
+## 5. 💻 demos.3 - let 暂时性死区
 
 ```javascript
 // 写法 1：var 的情况
@@ -173,7 +176,7 @@ if (true) {
 // 但是在 “暂时性死区” 中，typeof 是会报错的。
 ```
 
-## 5. 💻 demos.4 - 函数参数默认值中的死区
+## 6. 💻 demos.4 - 函数参数默认值中的死区
 
 ```javascript
 function bar(x = y, y = 2) {
@@ -192,7 +195,7 @@ foo() // [2, 2]
 // 如果 y 的默认值是 x，就不会报错，因为此时 x 已经声明了。
 ```
 
-## 6. 💻 demos.5 - 其他奇怪的报错
+## 7. 💻 demos.5 - 其他奇怪的报错
 
 ```javascript
 var x1 = x1 // ok
@@ -203,7 +206,7 @@ let x2 = x2 // ❌ ReferenceError: x2 is not defined
 // 上面这行就属于这个情况，在变量 x2 的声明语句还没有执行完成前，就去取 x 的值，导致报错“x 未定义”。
 ```
 
-## 7. 💻 demos.6 - 同一作用域内不允许重复声明
+## 8. 💻 demos.6 - 同一作用域内不允许重复声明
 
 ```javascript
 // 写法 1 ❌ 执行前就会报错
@@ -228,7 +231,7 @@ let x2 = x2 // ❌ ReferenceError: x2 is not defined
 function func(arg) {
   // 这里相当于新开了一个块作用域
   {
-    let arg;
+    let arg
   }
 }
 func() // ok
@@ -237,7 +240,7 @@ func() // ok
 // 这也意味着不能在函数内部重新声明参数。
 ```
 
-## 8. 💻 demos.7 - for 循环的特别之处
+## 9. 💻 demos.7 - for 循环的特别之处
 
 ```javascript
 for (let i = 0; i < 3; i++) {
@@ -254,7 +257,7 @@ for (let i = 0; i < 3; i++) {
 // 同一个作用域不可使用 let 重复声明同一个变量，否则会报错。
 ```
 
-## 9. 💻 demos.8 - let 出现之前的一些历史问题
+## 10. 💻 demos.8 - let 出现之前的一些历史问题
 
 ```html
 <!DOCTYPE html>
@@ -279,14 +282,12 @@ for (let i = 0; i < 3; i++) {
         // listItems[i].addEventListener('click', function () {
         //   alert('Item ' + (i + 1) + ' clicked')
         // })
-
         // 正确写法1
         // ;(function (currentIndex) {
         //   listItems[currentIndex].addEventListener('click', function () {
         //     alert('Item ' + (currentIndex + 1) + ' clicked')
         //   })
         // })(i)
-
         // 正确写法还有很多种，这里介绍的是其中一种使用 IIFE 的方法
       }
     </script>

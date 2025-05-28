@@ -7,12 +7,10 @@
 - [3. 💻 题解.2 - 递归](#3--题解2---递归)
 
 <!-- endregion:toc -->
-- [leetcode](https://leetcode.cn/problems/remove-linked-list-elements/)
-
 
 ## 1. 📝 Description
 
-::: details [leetcode](https://leetcode.cn)
+::: details [leetcode](https://leetcode.cn/problems/remove-linked-list-elements/)
 
 给你一个链表的头节点 `head` 和一个整数 `val` ，请你删除链表中所有满足 `Node.val == val` 的节点，并返回 **新的头节点** 。
 
@@ -45,21 +43,25 @@
 - `1 <= Node.val <= 50`
 - `0 <= val <= 50`
 
+:::
+
 ## 2. 💻 题解.1 - 遍历
 
 ```js
 var removeElements = function (head, val) {
-  let root = cur = new ListNode(0, head);
+  let root = (cur = new ListNode(0, head))
   while (cur.next) {
     if (cur.next.val === val) {
-      cur.next = cur.next.next;
+      cur.next = cur.next.next
     } else {
-      cur = cur.next;
+      cur = cur.next
     }
-  };
-  return root.next;
-};
+  }
+  return root.next
+}
 ```
+
+::: details
 
 - 流程图：
 
@@ -96,6 +98,8 @@ flowchart TD
 实际输出：[7, 7, 7, 7]
 ```
 
+:::
+
 ## 3. 💻 题解.2 - 递归
 
 ```js
@@ -105,6 +109,8 @@ var removeElements = function (head, val) {
   return head.val === val ? head.next : head
 }
 ```
+
+::: details
 
 - 流程图：
 
@@ -132,3 +138,5 @@ flowchart TD
     - 归的过程，好比从后往前依次遍历各节点，对于遍历到的节点，需要判断是归并当前节点还是当前节点的下一个节点。
       - 若发现当前节点的 val 值与传入的 val 值相同，那么将当前节点的下一个节点归并；（意味着删除当前这个节点）
       - 若发现当前节点的 val 值与传入的 val 值不同，那么直接将当前节点归并；
+
+:::

@@ -6,13 +6,10 @@
 - [2. 💻 题解.1 - 递归](#2--题解1---递归)
 
 <!-- endregion:toc -->
-- [leetcode](https://leetcode.cn/problems/reverse-linked-list)
-
-
 
 ## 1. 📝 Description
 
-::: details [leetcode](https://leetcode.cn)
+::: details [leetcode](https://leetcode.cn/problems/reverse-linked-list)
 
 给你单链表的头节点 `head` ，请你反转链表，并返回反转后的链表。
 
@@ -42,6 +39,8 @@
 
 **进阶：**链表可以选用迭代或递归方式完成反转。你能否用两种方法解决这道题？
 
+:::
+
 ## 2. 💻 题解.1 - 递归
 
 ```javascript
@@ -56,7 +55,7 @@
  * @param {ListNode} head
  * @return {ListNode}
  */
-var reverseList = function(head) {
+var reverseList = function (head) {
   if (head === null || head.next === null) return head
 
   const newHead = reverseList(head.next)
@@ -65,8 +64,10 @@ var reverseList = function(head) {
   head.next = null
 
   return newHead
-};
+}
 ```
+
+::: details
 
 - 实现思路：
   - 若链表为空，或者只有一个成员，那么直接将原链表返回；
@@ -77,3 +78,5 @@ var reverseList = function(head) {
   - 归
     - 接收到原链表的尾节点，赋值给 newHead，newHead 将作为最终返回的新链表的表头节点；
     - 将当前节点的下一个节点的指针指向自身，同时将当前节点指向空；（不断地重复，直到原链表的首节点）
+
+:::
