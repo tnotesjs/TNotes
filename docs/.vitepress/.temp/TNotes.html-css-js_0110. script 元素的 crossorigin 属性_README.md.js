@@ -1,0 +1,19 @@
+import { ssrRenderAttrs } from "vue/server-renderer";
+import { useSSRContext } from "vue";
+import { _ as _export_sfc } from "./plugin-vue_export-helper.1tPrXgE0.js";
+const __pageData = JSON.parse('{"title":"0110. script 元素的 crossorigin 属性","description":"","frontmatter":{},"headers":[],"relativePath":"TNotes.html-css-js/0110. script 元素的 crossorigin 属性/README.md","filePath":"TNotes.html-css-js/0110. script 元素的 crossorigin 属性/README.md"}');
+const _sfc_main = { name: "TNotes.html-css-js/0110. script 元素的 crossorigin 属性/README.md" };
+function _sfc_ssrRender(_ctx, _push, _parent, _attrs, $props, $setup, $data, $options) {
+  _push(`<div${ssrRenderAttrs(_attrs)}><h1 id="0110-script-元素的-crossorigin-属性" tabindex="-1"><a href="https://github.com/Tdahuyou/TNotes.html-css-js/tree/main/notes/0110.%20script%20%E5%85%83%E7%B4%A0%E7%9A%84%20crossorigin%20%E5%B1%9E%E6%80%A7" target="_self" rel="noopener">0110. script 元素的 crossorigin 属性</a> <a class="header-anchor" href="#0110-script-元素的-crossorigin-属性" aria-label="Permalink to &quot;[0110. script 元素的 crossorigin 属性](https://github.com/Tdahuyou/TNotes.html-css-js/tree/main/notes/0110.%20script%20%E5%85%83%E7%B4%A0%E7%9A%84%20crossorigin%20%E5%B1%9E%E6%80%A7)&quot;" target="_self" rel="noopener">​</a></h1><ul><li><a href="#1--crossorigin-%E5%B1%9E%E6%80%A7" target="_self" rel="noopener">1. 📒 crossorigin 属性</a></li></ul><h2 id="1--crossorigin-属性" tabindex="-1">1. 📒 crossorigin 属性 <a class="header-anchor" href="#1--crossorigin-属性" aria-label="Permalink to &quot;1. 📒 crossorigin 属性&quot;" target="_self" rel="noopener">​</a></h2><p><strong>如果 script 标签引用的资源出现了问题，加上 crossorigin 属性可以让浏览器提供的错误报告更加详细，帮助开发者更好地调试问题。</strong></p><hr><ul><li><code>&lt;script&gt;</code> 标签上的 <code>crossorigin</code> 属性用于配置与跨域资源共享（CORS）相关的行为。</li><li>当你的网页加载第三方资源（如 JavaScript 脚本、字体或其他文件）时，这个属性控制浏览器如何处理跨域请求，特别是在涉及可能含有用户敏感数据的情况下。</li><li><code>crossorigin</code> 属性可以有两个值： <ul><li><code>anonymous</code><ul><li>例：<code>&lt;script src=&quot;https://example.com/script.js&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;</code><ul><li>不带凭证的跨域请求</li></ul></li><li>这是最常用的值。</li><li>设置此值时，浏览器在发起跨域请求时不会发送用户凭据（如 Cookies 和 HTTP 认证信息）。</li><li>如果请求的资源响应没有包含正确的 CORS 头部（<code>Access-Control-Allow-Origin</code>），浏览器将不加载这些资源。</li><li>即使设置了 <code>anonymous</code>，服务器也需要响应包含 <code>Access-Control-Allow-Origin</code> 头部，通常其值是 <code>*</code> 或者是请求的来源。</li></ul></li><li><code>use-credentials</code><ul><li>例：<code>&lt;script src=&quot;https://example.com/script.js&quot; crossorigin=&quot;use-credentials&quot;&gt;&lt;/script&gt;</code><ul><li>带凭证的跨域请求</li></ul></li><li>设置此值时，浏览器会在发起跨域请求时包含用户凭据。</li><li>这要求服务器的响应不仅包含 <code>Access-Control-Allow-Origin</code> 头部，并且其值不能为 <code>*</code>（必须指定明确的域名），还必须包含 <code>Access-Control-Allow-Credentials: true</code>。</li><li>这通常用于需要身份验证的场景，如加载用户特定的数据。</li></ul></li></ul></li><li>如果不设置 <code>crossorigin</code> 属性，浏览器会采取与 <code>anonymous</code> 相似的行为，但不会发送 <code>Origin</code> 头部，这可能会影响 CORS 请求的处理。</li><li>使用 <code>crossorigin</code> 属性的主要原因包括： <ul><li><strong>安全性和隐私</strong>：控制哪些跨域请求应该发送用户凭据。</li><li><strong>错误处理</strong>：对于带有 <code>crossorigin</code> 属性的 <code>&lt;script&gt;</code> 标签，如果脚本加载失败，浏览器提供的错误报告会更加详细，帮助开发者更好地调试问题。没有这个属性，出于安全考虑，跨域脚本的具体错误详情通常不会被暴露给前端。</li><li><strong>性能优化</strong>：某些情况下，正确配置 CORS 可以帮助利用 CDN 的缓存策略，避免不必要的数据重载。</li></ul></li><li><strong>实际应用</strong><ul><li>在实际应用中，<code>crossorigin</code> 属性的使用需要根据资源服务器的 CORS 策略和具体需求来配置。</li><li>正确使用可以增强应用的安全性，提高资源加载的灵活性和效率。</li></ul></li></ul></div>`);
+}
+const _sfc_setup = _sfc_main.setup;
+_sfc_main.setup = (props, ctx) => {
+  const ssrContext = useSSRContext();
+  (ssrContext.modules || (ssrContext.modules = /* @__PURE__ */ new Set())).add("TNotes.html-css-js/0110. script 元素的 crossorigin 属性/README.md");
+  return _sfc_setup ? _sfc_setup(props, ctx) : void 0;
+};
+const README = /* @__PURE__ */ _export_sfc(_sfc_main, [["ssrRender", _sfc_ssrRender]]);
+export {
+  __pageData,
+  README as default
+};

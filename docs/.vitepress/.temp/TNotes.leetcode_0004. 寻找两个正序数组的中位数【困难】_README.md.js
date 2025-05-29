@@ -1,0 +1,23 @@
+import { ssrRenderAttrs } from "vue/server-renderer";
+import { useSSRContext } from "vue";
+import { _ as _export_sfc } from "./plugin-vue_export-helper.1tPrXgE0.js";
+const __pageData = JSON.parse('{"title":"0004. 寻找两个正序数组的中位数【困难】","description":"","frontmatter":{},"headers":[],"relativePath":"TNotes.leetcode/0004. 寻找两个正序数组的中位数【困难】/README.md","filePath":"TNotes.leetcode/0004. 寻找两个正序数组的中位数【困难】/README.md"}');
+const _sfc_main = { name: "TNotes.leetcode/0004. 寻找两个正序数组的中位数【困难】/README.md" };
+function _sfc_ssrRender(_ctx, _push, _parent, _attrs, $props, $setup, $data, $options) {
+  _push(`<div${ssrRenderAttrs(_attrs)}><h1 id="0004-寻找两个正序数组的中位数困难" tabindex="-1"><a href="https://github.com/Tdahuyou/TNotes.leetcode/tree/main/notes/0004.%20%E5%AF%BB%E6%89%BE%E4%B8%A4%E4%B8%AA%E6%AD%A3%E5%BA%8F%E6%95%B0%E7%BB%84%E7%9A%84%E4%B8%AD%E4%BD%8D%E6%95%B0%E3%80%90%E5%9B%B0%E9%9A%BE%E3%80%91" target="_self" rel="noopener">0004. 寻找两个正序数组的中位数【困难】</a> <a class="header-anchor" href="#0004-寻找两个正序数组的中位数困难" aria-label="Permalink to &quot;[0004. 寻找两个正序数组的中位数【困难】](https://github.com/Tdahuyou/TNotes.leetcode/tree/main/notes/0004.%20%E5%AF%BB%E6%89%BE%E4%B8%A4%E4%B8%AA%E6%AD%A3%E5%BA%8F%E6%95%B0%E7%BB%84%E7%9A%84%E4%B8%AD%E4%BD%8D%E6%95%B0%E3%80%90%E5%9B%B0%E9%9A%BE%E3%80%91)&quot;" target="_self" rel="noopener">​</a></h1><ul><li><a href="#1--description" target="_self" rel="noopener">1. 📝 Description</a></li><li><a href="#2--%E9%A2%98%E8%A7%A3" target="_self" rel="noopener">2. 💻 题解</a></li></ul><h2 id="1--description" tabindex="-1">1. 📝 Description <a class="header-anchor" href="#1--description" aria-label="Permalink to &quot;1. 📝 Description&quot;" target="_self" rel="noopener">​</a></h2><details class="details custom-block"><summary><a href="https://leetcode.cn/problems/median-of-two-sorted-arrays" target="_self" rel="noopener">leetcode</a></summary><p>给定两个大小分别为 <code>m</code> 和 <code>n</code> 的正序（从小到大）数组  <code>nums1</code> 和  <code>nums2</code>。请你找出并返回这两个正序数组的 <strong>中位数</strong> 。</p><p>算法的时间复杂度应该为 <code>O(log (m+n))</code> 。</p><hr><ul><li><strong>示例 1：</strong></li></ul><div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0"><code><span class="line"><span>输入：nums1 = [1,3], nums2 = [2]</span></span>
+<span class="line"><span>输出：2.00000</span></span>
+<span class="line"><span>解释：合并数组 = [1,2,3] ，中位数 2</span></span></code></pre><div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br></div></div><ul><li><strong>示例 2：</strong></li></ul><div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0"><code><span class="line"><span>输入：nums1 = [1,2], nums2 = [3,4]</span></span>
+<span class="line"><span>输出：2.50000</span></span>
+<span class="line"><span>解释：合并数组 = [1,2,3,4] ，中位数 (2 + 3) / 2 = 2.5</span></span></code></pre><div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br></div></div><hr><p><strong>提示：</strong></p><ul><li><code>nums1.length == m</code></li><li><code>nums2.length == n</code></li><li><code>0 &lt;= m &lt;= 1000</code></li><li><code>0 &lt;= n &lt;= 1000</code></li><li><code>1 &lt;= m + n &lt;= 2000</code></li><li><code>-10^6 &lt;= nums1[i], nums2[i] &lt;= 10^6</code></li></ul></details><h2 id="2--题解" tabindex="-1">2. 💻 题解 <a class="header-anchor" href="#2--题解" aria-label="Permalink to &quot;2. 💻 题解&quot;" target="_self" rel="noopener">​</a></h2><div class="language- vp-adaptive-theme line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0"><code><span class="line"><span></span></span></code></pre><div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br></div></div></div>`);
+}
+const _sfc_setup = _sfc_main.setup;
+_sfc_main.setup = (props, ctx) => {
+  const ssrContext = useSSRContext();
+  (ssrContext.modules || (ssrContext.modules = /* @__PURE__ */ new Set())).add("TNotes.leetcode/0004. 寻找两个正序数组的中位数【困难】/README.md");
+  return _sfc_setup ? _sfc_setup(props, ctx) : void 0;
+};
+const README = /* @__PURE__ */ _export_sfc(_sfc_main, [["ssrRender", _sfc_ssrRender]]);
+export {
+  __pageData,
+  README as default
+};

@@ -1,0 +1,19 @@
+import { ssrRenderAttrs } from "vue/server-renderer";
+import { useSSRContext } from "vue";
+import { _ as _export_sfc } from "./plugin-vue_export-helper.1tPrXgE0.js";
+const __pageData = JSON.parse('{"title":"0003. egg-init vs. egg-bin","description":"","frontmatter":{},"headers":[],"relativePath":"TNotes.egg/0003. egg-init vs. egg-bin/README.md","filePath":"TNotes.egg/0003. egg-init vs. egg-bin/README.md"}');
+const _sfc_main = { name: "TNotes.egg/0003. egg-init vs. egg-bin/README.md" };
+function _sfc_ssrRender(_ctx, _push, _parent, _attrs, $props, $setup, $data, $options) {
+  _push(`<div${ssrRenderAttrs(_attrs)}><h1 id="0003-egg-init-vs-egg-bin" tabindex="-1"><a href="https://github.com/Tdahuyou/TNotes.egg/tree/main/notes/0003.%20egg-init%20vs.%20egg-bin" target="_self" rel="noopener">0003. egg-init vs. egg-bin</a> <a class="header-anchor" href="#0003-egg-init-vs-egg-bin" aria-label="Permalink to &quot;[0003. egg-init vs. egg-bin](https://github.com/Tdahuyou/TNotes.egg/tree/main/notes/0003.%20egg-init%20vs.%20egg-bin)&quot;" target="_self" rel="noopener">​</a></h1><ul><li><a href="#1--egg-initegg-bin-%E7%9A%84-github-%E4%BB%93%E5%BA%93%E9%93%BE%E6%8E%A5" target="_self" rel="noopener">1. 🔗 egg-init、egg-bin 的 Github 仓库链接</a></li><li><a href="#2--%E5%AF%B9%E6%AF%94-egg-init-%E5%92%8C-egg-bin" target="_self" rel="noopener">2. 📒 对比 <code>egg-init</code> 和 <code>egg-bin</code></a></li></ul><h2 id="1--egg-initegg-bin-的-github-仓库链接" tabindex="-1">1. 🔗 egg-init、egg-bin 的 Github 仓库链接 <a class="header-anchor" href="#1--egg-initegg-bin-的-github-仓库链接" aria-label="Permalink to &quot;1. 🔗 egg-init、egg-bin 的 Github 仓库链接&quot;" target="_self" rel="noopener">​</a></h2><ul><li><a href="https://github.com/eggjs/egg-init" target="_self" rel="noopener">https://github.com/eggjs/egg-init</a></li><li><a href="https://github.com/eggjs/bin" target="_self" rel="noopener">https://github.com/eggjs/bin</a></li></ul><h2 id="2--对比-egg-init-和-egg-bin" tabindex="-1">2. 📒 对比 <code>egg-init</code> 和 <code>egg-bin</code> <a class="header-anchor" href="#2--对比-egg-init-和-egg-bin" aria-label="Permalink to &quot;2. 📒 对比 \`egg-init\` 和 \`egg-bin\`&quot;" target="_self" rel="noopener">​</a></h2><table tabindex="0"><thead><tr><th>特性</th><th><code>egg-init</code></th><th><code>egg-bin</code></th></tr></thead><tbody><tr><td><strong>功能定位</strong></td><td>项目初始化工具</td><td>开发、调试和测试工具</td></tr><tr><td><strong>安装方式</strong></td><td>通常会全局安装 (<code>npm install egg-init -g</code>)</td><td>通常会项目本地安装 (<code>npm install egg-bin --save-dev</code>)</td></tr><tr><td><strong>使用场景</strong></td><td>创建新项目</td><td>开发、调试、测试现有项目</td></tr><tr><td><strong>是否依赖项目</strong></td><td>不依赖具体项目</td><td>必须在 Egg.js 项目中使用</td></tr><tr><td><strong>主要命令</strong></td><td><code>egg-init &lt;project-name&gt;</code> 根据提示完成项目初始化工作</td><td><code>egg-bin dev</code>, <code>egg-bin test</code>, <code>egg-bin debug</code> 等</td></tr><tr><td><strong>生命周期阶段</strong></td><td>项目启动阶段</td><td>项目开发和测试阶段</td></tr></tbody></table><ul><li><code>egg-init</code> 👉 <strong>项目的初始化阶段</strong><ul><li>如果你需要从零开始创建一个 Egg.js 项目，请使用 <code>egg-init</code>。</li><li>使用 <code>egg-init</code> 初始化项目后，项目中会自动包含 <code>egg-bin</code> 的配置，它们是相辅相成的，都是 egg 工作流的重要工具。</li></ul></li><li><code>egg-bin</code> 👉 <strong>项目的开发阶段</strong><ul><li>如果你已经有一个 Egg.js 项目，并希望进行开发、调试或测试，请使用 <code>egg-bin</code>。</li><li>在开发过程中，使用 <code>egg-bin</code> 提供的命令进行开发、调试和测试。</li></ul></li></ul></div>`);
+}
+const _sfc_setup = _sfc_main.setup;
+_sfc_main.setup = (props, ctx) => {
+  const ssrContext = useSSRContext();
+  (ssrContext.modules || (ssrContext.modules = /* @__PURE__ */ new Set())).add("TNotes.egg/0003. egg-init vs. egg-bin/README.md");
+  return _sfc_setup ? _sfc_setup(props, ctx) : void 0;
+};
+const README = /* @__PURE__ */ _export_sfc(_sfc_main, [["ssrRender", _sfc_ssrRender]]);
+export {
+  __pageData,
+  README as default
+};

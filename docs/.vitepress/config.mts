@@ -10,33 +10,6 @@ import mila from 'markdown-it-link-attributes'
 import markdownItContainer from 'markdown-it-container'
 import { withMermaid } from 'vitepress-plugin-mermaid'
 
-import sidebar__git from '../src/TNotes.git-notes/sidebar.json'
-import sidebar__vite from '../src/TNotes.vite/sidebar.json'
-// import sidebar__vitepress from '../src/TNotes.vitepress/sidebar.json'
-import sidebar__vue from '../src/TNotes.vue/sidebar.json'
-import sidebar__webpack from '../src/TNotes.webpack/sidebar.json'
-
-import sidebar__c_cpp from '../src/TNotes.c-cpp/sidebar.json'
-import sidebar__canvas from '../src/TNotes.canvas/sidebar.json'
-import sidebar__change_log from '../src/TNotes.change-log/sidebar.json'
-import sidebar__cooking from '../src/TNotes.cooking/sidebar.json'
-import sidebar__egg from '../src/TNotes.egg/sidebar.json'
-import sidebar__electron from '../src/TNotes.electron/sidebar.json'
-import sidebar__en_notes from '../src/TNotes.en-notes/sidebar.json'
-import sidebar__footprints from '../src/TNotes.footprints/sidebar.json'
-import sidebar__html_css_js from '../src/TNotes.html-css-js/sidebar.json'
-import sidebar__leetcode from '../src/TNotes.leetcode/sidebar.json'
-import sidebar__miniprogram from '../src/TNotes.miniprogram/sidebar.json'
-import sidebar__sql from '../src/TNotes.sql/sidebar.json'
-import sidebar__network from '../src/TNotes.network/sidebar.json'
-import sidebar__nodejs from '../src/TNotes.nodejs/sidebar.json'
-import sidebar__notes from '../src/TNotes.notes/sidebar.json'
-import sidebar__react from '../src/TNotes.react/sidebar.json'
-import sidebar__svg from '../src/TNotes.svg/sidebar.json'
-import sidebar__template from '../src/TNotes.template/sidebar.json'
-import sidebar__typescript from '../src/TNotes.typescript/sidebar.json'
-import sidebar__vitepress from '../src/TNotes.vitepress/sidebar.json'
-
 const slugger = new GithubSlugger()
 
 // doc => https://vitepress.dev/zh/reference/site-config
@@ -129,152 +102,110 @@ function sidebar() {
   const sidebar: DefaultTheme.SidebarItem[] = [
     { text: '👀 README', link: '/README' },
     {
-      text: 'template',
-      link: 'https://tdahuyou.github.io/TNotes.template/',
-      collapsed: true,
-      items: [...sidebar__template],
-    },
-    {
-      text: 'c-cpp',
-      link: 'https://tdahuyou.github.io/TNotes.c-cpp/',
-      collapsed: true,
-      items: [...sidebar__c_cpp],
-    },
-    {
-      text: 'canvas',
-      link: 'https://tdahuyou.github.io/TNotes.canvas/',
-      collapsed: true,
-      items: [...sidebar__canvas],
-    },
-    {
-      text: 'change-log',
-      link: 'https://tdahuyou.github.io/TNotes.change-log/',
-      collapsed: true,
-      items: [...sidebar__change_log],
-    },
-    {
-      text: 'cooking',
-      link: 'https://tdahuyou.github.io/TNotes.cooking/',
-      collapsed: true,
-      items: [...sidebar__cooking],
-    },
-    {
-      text: 'egg',
-      link: 'https://tdahuyou.github.io/TNotes.egg/',
-      collapsed: true,
-      items: [...sidebar__egg],
-    },
-    {
-      text: 'electron',
-      link: 'https://tdahuyou.github.io/TNotes.electron/',
-      collapsed: true,
-      items: [...sidebar__electron],
-    },
-    {
-      text: 'en-notes',
-      link: 'https://tdahuyou.github.io/TNotes.en-notes/',
-      collapsed: true,
-      items: [...sidebar__en_notes],
-    },
-    {
-      text: 'en-words',
-      link: 'https://github.com/Tdahuyou/TNotes.en-words',
-    },
-    {
-      text: 'footprints',
-      link: 'https://tdahuyou.github.io/TNotes.footprints/',
-      collapsed: true,
-      items: [...sidebar__footprints],
-    },
-    {
-      text: 'git',
-      link: 'https://tdahuyou.github.io/TNotes.git-notes/',
-      collapsed: true,
-      items: [...sidebar__git],
-    },
-    {
-      text: 'html-css-js',
-      link: 'https://tdahuyou.github.io/TNotes.html-css-js/',
-      collapsed: true,
-      items: [...sidebar__html_css_js],
-    },
-    {
-      text: 'leetcode',
-      link: 'https://tdahuyou.github.io/TNotes.leetcode/',
-      collapsed: true,
-      items: [...sidebar__leetcode],
-    },
-    {
-      text: 'miniprogram',
-      link: 'https://tdahuyou.github.io/TNotes.miniprogram/',
-      collapsed: true,
-      items: [...sidebar__miniprogram],
-    },
-    {
-      text: 'network',
-      link: 'https://tdahuyou.github.io/TNotes.network/',
-      collapsed: true,
-      items: [...sidebar__network],
-    },
-    {
-      text: 'nodejs',
-      link: 'https://tdahuyou.github.io/TNotes.nodejs/',
-      collapsed: true,
-      items: [...sidebar__nodejs],
-    },
-    {
-      text: 'notes',
-      link: 'https://tdahuyou.github.io/TNotes.notes/',
-      collapsed: true,
-      items: [...sidebar__notes],
-    },
-    {
-      text: 'react',
-      link: 'https://tdahuyou.github.io/TNotes.react/',
-      collapsed: true,
-      items: [...sidebar__react],
-    },
-    {
-      text: 'sql',
-      link: 'https://tdahuyou.github.io/TNotes.mysql/',
-      collapsed: true,
-      items: [...sidebar__sql],
-    },
-    {
-      text: 'svg',
-      link: 'https://tdahuyou.github.io/TNotes.svg/',
-      collapsed: true,
-      items: [...sidebar__svg],
-    },
-    {
-      text: 'typescript',
-      link: 'https://tdahuyou.github.io/TNotes.typescript/',
-      collapsed: true,
-      items: [...sidebar__typescript],
-    },
-    {
-      text: 'vite',
-      link: 'https://tdahuyou.github.io/TNotes.vite/',
-      collapsed: true,
-      items: [...sidebar__vite],
-    },
-    {
-      text: 'vitepress',
-      link: 'https://tdahuyou.github.io/TNotes.vitepress/',
-      collapsed: true,
-      items: [...sidebar__vitepress],
-    },
-    {
-      text: 'vue',
-      link: 'https://tdahuyou.github.io/TNotes.vue/',
-      collapsed: true,
-      items: [...sidebar__vue],
-    },
-    {
-      text: 'webpack',
-      link: 'https://tdahuyou.github.io/TNotes.webpack/',
-      collapsed: true,
-      items: [...sidebar__webpack],
+      text: '🔍 TOC',
+      items: [
+        {
+          text: 'template',
+          link: '/TNotes.template/TOC',
+        },
+        {
+          text: 'c-cpp',
+          link: '/TNotes.c-cpp/TOC',
+        },
+        {
+          text: 'canvas',
+          link: '/TNotes.canvas/TOC',
+        },
+        {
+          text: 'change-log',
+          link: '/TNotes.change-log/TOC',
+        },
+        {
+          text: 'cooking',
+          link: '/TNotes.cooking/TOC',
+        },
+        {
+          text: 'egg',
+          link: '/TNotes.egg/TOC',
+        },
+        {
+          text: 'electron',
+          link: '/TNotes.electron/TOC',
+        },
+        {
+          text: 'en-notes',
+          link: '/TNotes.en-notes/TOC',
+        },
+        {
+          text: 'en-words',
+          link: 'https://github.com/Tdahuyou/TNotes.en-words',
+        },
+        {
+          text: 'footprints',
+          link: '/TNotes.footprints/TOC',
+        },
+        {
+          text: 'git-notes',
+          link: '/TNotes.git-notes/TOC',
+        },
+        {
+          text: 'html-css-js',
+          link: '/TNotes.html-css-js/TOC',
+        },
+        {
+          text: 'leetcode',
+          link: '/TNotes.leetcode/TOC',
+        },
+        {
+          text: 'miniprogram',
+          link: '/TNotes.miniprogram/TOC',
+        },
+        {
+          text: 'network',
+          link: '/TNotes.network/TOC',
+        },
+        {
+          text: 'nodejs',
+          link: '/TNotes.nodejs/TOC',
+        },
+        {
+          text: 'notes',
+          link: '/TNotes.notes/TOC',
+        },
+        {
+          text: 'react',
+          link: '/TNotes.react/TOC',
+        },
+        {
+          text: 'sql',
+          link: '/TNotes.sql/TOC',
+        },
+        {
+          text: 'svg',
+          link: '/TNotes.svg/TOC',
+        },
+        {
+          text: 'typescript',
+          link: '/TNotes.typescript/TOC',
+        },
+        {
+          text: 'vite',
+          link: '/TNotes.vite/TOC',
+        },
+        {
+          text: 'vitepress',
+          link: '/TNotes.vitepress/TOC',
+        },
+        {
+          text: 'vue',
+          link: '/TNotes.vue/TOC',
+        },
+        {
+          text: 'webpack',
+          link: '/TNotes.webpack/TOC',
+        },
+      ],
+      collapsed: false,
     },
   ]
 
@@ -412,10 +343,10 @@ function themeConfig() {
             fuzzy: 0.2, // 模糊匹配阈值（0-1），允许拼写错误的阈值（数值越低越严格）
             prefix: true, // 是否启用前缀匹配（输入“jav”可匹配“javascript”）
             boost: {
-              title: 10, // 文件名作为 h1 标题，权重最高（这个 title 指的是 _render 返回结果 md.renderer html 中的第一个 h1，使用 folderName 作为第一个 h1，权重最高。）
-              headings: 5, // h2 - h6
-              text: 3, // 正文内容索引
-              code: 1, // 代码块索引权重
+              title: 5,
+              headings: 5,
+              text: 5,
+              code: 1,
             },
           },
         },
@@ -427,7 +358,7 @@ function themeConfig() {
          */
         async _render(src, env, md) {
           const filePath = env.relativePath
-          if (filePath.includes('TOC.md')) return ''
+          // if (filePath.includes('TOC.md')) return ''
 
           // 提取路径中 "notes/..." 后面的第一个目录名
           const notesIndex = filePath.indexOf('notes/')

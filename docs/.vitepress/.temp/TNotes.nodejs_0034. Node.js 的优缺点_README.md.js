@@ -1,0 +1,19 @@
+import { ssrRenderAttrs } from "vue/server-renderer";
+import { useSSRContext } from "vue";
+import { _ as _export_sfc } from "./plugin-vue_export-helper.1tPrXgE0.js";
+const __pageData = JSON.parse('{"title":"0034. Node.js 的优缺点","description":"","frontmatter":{},"headers":[],"relativePath":"TNotes.nodejs/0034. Node.js 的优缺点/README.md","filePath":"TNotes.nodejs/0034. Node.js 的优缺点/README.md"}');
+const _sfc_main = { name: "TNotes.nodejs/0034. Node.js 的优缺点/README.md" };
+function _sfc_ssrRender(_ctx, _push, _parent, _attrs, $props, $setup, $data, $options) {
+  _push(`<div${ssrRenderAttrs(_attrs)}><h1 id="0034-nodejs-的优缺点" tabindex="-1"><a href="https://github.com/Tdahuyou/TNotes.nodejs/tree/main/notes/0034.%20Node.js%20%E7%9A%84%E4%BC%98%E7%BC%BA%E7%82%B9" target="_self" rel="noopener">0034. Node.js 的优缺点</a> <a class="header-anchor" href="#0034-nodejs-的优缺点" aria-label="Permalink to &quot;[0034. Node.js 的优缺点](https://github.com/Tdahuyou/TNotes.nodejs/tree/main/notes/0034.%20Node.js%20%E7%9A%84%E4%BC%98%E7%BC%BA%E7%82%B9)&quot;" target="_self" rel="noopener">​</a></h1><ul><li><a href="#1--%E6%A6%82%E8%BF%B0" target="_self" rel="noopener">1. 📒 概述</a></li><li><a href="#2--%E4%BC%98%E7%82%B9" target="_self" rel="noopener">2. 📒 优点</a></li><li><a href="#3--%E7%BC%BA%E7%82%B9" target="_self" rel="noopener">3. 📒 缺点</a></li></ul><h2 id="1--概述" tabindex="-1">1. 📒 概述 <a class="header-anchor" href="#1--概述" aria-label="Permalink to &quot;1. 📒 概述&quot;" target="_self" rel="noopener">​</a></h2><ul><li>Node.js 是一种基于 JavaScript 的运行时环境，广泛应用于构建高性能的服务器端应用程序。它的设计特点使得它在某些场景下表现出色，但也存在一些局限性。本篇笔记简单记录了一些 Node.js 的优缺点： <ul><li><strong>优点</strong>：包括前后端一体化开发、丰富的模块库、轻量级与模块化设计以及易部署等特点，使其成为现代 Web 开发中的热门选择。</li><li><strong>缺点</strong>：如缺少严格的类型检查、相对年轻导致的可靠性和稳定性问题，以及在 CPU 密集型任务中的性能瓶颈，也限制了其在某些场景下的应用。</li></ul></li><li>通过全面了解 Node.js 的优势和不足，开发者可以更好地评估其适用性，并结合具体需求采取相应的解决方案（如集成 TypeScript 或将 CPU 密集型任务交给其他服务处理）。</li></ul><h2 id="2--优点" tabindex="-1">2. 📒 优点 <a class="header-anchor" href="#2--优点" aria-label="Permalink to &quot;2. 📒 优点&quot;" target="_self" rel="noopener">​</a></h2><ul><li><strong>前后端一体化开发</strong><ul><li>Node.js 使用 JavaScript 作为开发语言，使得前端和后端可以使用同一种语言进行开发。</li><li>这种一致性不仅提高了开发效率，还增强了代码的可维护性。</li></ul></li><li><strong>丰富的模块库</strong><ul><li>Node.js 拥有一个庞大且活跃的生态系统（如 npm 和 yarn），提供了大量高质量的第三方模块。</li><li>开发者可以快速构建各种类型的应用程序，而无需从零开始。</li></ul></li><li><strong>轻量级与模块化设计</strong><ul><li>Node.js 采用模块化开发方式，允许将应用程序分解为多个小模块。</li><li>这种方式不仅提高了代码的可维护性，还增强了应用的可扩展性。</li></ul></li><li><strong>易部署</strong><ul><li>使用 Node.js 开发的应用程序可以轻松部署到各种云端平台（如 AWS、Azure、Heroku 等），简化了发布流程，降低了运维成本。</li></ul></li></ul><h2 id="3--缺点" tabindex="-1">3. 📒 缺点 <a class="header-anchor" href="#3--缺点" aria-label="Permalink to &quot;3. 📒 缺点&quot;" target="_self" rel="noopener">​</a></h2><ul><li><strong>弱类型</strong><ul><li>缺少严格的类型检查。</li><li>Node.js 基于 JavaScript，缺乏内置的严格类型检查。这虽然赋予了开发者更高的自由度，但也增加了调试的难度，尤其是在大型项目中。</li><li><strong>解决方案</strong>：可以通过集成 TypeScript 来解决类型检查的问题，提升代码的可靠性和可维护性。</li></ul></li><li><strong>CPU 密集型任务表现不佳</strong><ul><li>Node.js 的单线程模型在处理 I/O 密集型任务时表现出色，但在面对 CPU 密集型任务（如复杂计算、图像处理等）时可能会出现性能瓶颈，导致运行效率下降。</li><li><strong>解决方案</strong>：对于 CPU 密集型任务，可以将其转发给专门的服务来处理，例如使用 Java 或 Python 编写的服务，从而弥补 Node.js 的不足。</li></ul></li><li><strong>年轻</strong><ul><li>相较于 Java、C# 等传统后端语言，Node.js 的历史较短。</li><li>因此，在某些场景下，其可靠性和稳定性可能不如这些成熟的技术栈。</li><li><strong>解决方案</strong>：这估计只能交给时间了，慢慢迭代，不断优化。同时，也可以多去了解一些大厂的成功实践，学习学习相关经验。</li></ul></li></ul></div>`);
+}
+const _sfc_setup = _sfc_main.setup;
+_sfc_main.setup = (props, ctx) => {
+  const ssrContext = useSSRContext();
+  (ssrContext.modules || (ssrContext.modules = /* @__PURE__ */ new Set())).add("TNotes.nodejs/0034. Node.js 的优缺点/README.md");
+  return _sfc_setup ? _sfc_setup(props, ctx) : void 0;
+};
+const README = /* @__PURE__ */ _export_sfc(_sfc_main, [["ssrRender", _sfc_ssrRender]]);
+export {
+  __pageData,
+  README as default
+};

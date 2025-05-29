@@ -1,0 +1,19 @@
+import { ssrRenderAttrs } from "vue/server-renderer";
+import { useSSRContext } from "vue";
+import { _ as _export_sfc } from "./plugin-vue_export-helper.1tPrXgE0.js";
+const __pageData = JSON.parse('{"title":"0032. 《Node.js 从入门到精通》","description":"","frontmatter":{},"headers":[],"relativePath":"TNotes.nodejs/0032. 《Node.js 从入门到精通》/README.md","filePath":"TNotes.nodejs/0032. 《Node.js 从入门到精通》/README.md"}');
+const _sfc_main = { name: "TNotes.nodejs/0032. 《Node.js 从入门到精通》/README.md" };
+function _sfc_ssrRender(_ctx, _push, _parent, _attrs, $props, $setup, $data, $options) {
+  _push(`<div${ssrRenderAttrs(_attrs)}><h1 id="0032-nodejs-从入门到精通" tabindex="-1"><a href="https://github.com/Tdahuyou/TNotes.nodejs/tree/main/notes/0032.%20%E3%80%8ANode.js%20%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E7%B2%BE%E9%80%9A%E3%80%8B" target="_self" rel="noopener">0032. 《Node.js 从入门到精通》</a> <a class="header-anchor" href="#0032-nodejs-从入门到精通" aria-label="Permalink to &quot;[0032. 《Node.js 从入门到精通》](https://github.com/Tdahuyou/TNotes.nodejs/tree/main/notes/0032.%20%E3%80%8ANode.js%20%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E7%B2%BE%E9%80%9A%E3%80%8B)&quot;" target="_self" rel="noopener">​</a></h1><ul><li><a href="#1--%E6%A6%82%E8%BF%B0" target="_self" rel="noopener">1. 📒 概述</a></li><li><a href="#2--%E6%9C%AC%E4%B9%A6%E5%AF%B9%E5%BA%94%E5%AD%A6%E4%B9%A0%E8%B5%84%E6%BA%90" target="_self" rel="noopener">2. 📂 本书对应学习资源</a></li></ul><h2 id="1--概述" tabindex="-1">1. 📒 概述 <a class="header-anchor" href="#1--概述" aria-label="Permalink to &quot;1. 📒 概述&quot;" target="_self" rel="noopener">​</a></h2><ul><li>书籍封面： <ul><li><img src="https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/2025-04-04-02-10-12.png" alt="图 0" loading="lazy"></li></ul></li><li>内容简介： <ul><li>《Node.js 从入门到精通》从初学者角度出发，通过通俗易懂的语言、丰富多彩的实例，详细介绍了使用 Node.js 进行 Web 应用开发需要掌握的各方面技术。全书分为 4 篇，共 18 章，包括 Node.js 环境搭建、第一个 Node.js 服务器程序、npm 包管理器的使用、Node.js 基础、事件的监听与触发、util 工具模块、fs 文件系统模块、os 操作系统模块、异步编程与回调、I/O 流操作、Web 应用构建基础、WebSocket 网络编程、Web 模板引擎、Express 框架、数据存储之 MySQL 数据库、数据存储之 MongoDB 数据库、程序调试与异常处理、在线五子棋游戏等内容。本书知识点结合具体实例进行介绍，涉及的程序代码给出了详细的注释，可以使读者轻松领会使用 Node.js 进行 Web 应用开发的精髓，快速提高开发技能。</li></ul></li></ul><h2 id="2--本书对应学习资源" tabindex="-1">2. 📂 本书对应学习资源 <a class="header-anchor" href="#2--本书对应学习资源" aria-label="Permalink to &quot;2. 📂 本书对应学习资源&quot;" target="_self" rel="noopener">​</a></h2><ul><li><img src="https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/2025-04-04-01-50-21.png" alt="图 0" loading="lazy"></li><li>示例代码： <ul><li>在当前笔记仓库中，主要在 <code>demos.1</code> 目录下记录了 <code>2. TM（实例源码+习题答案）.rar</code> 中的内容，以便在阅读书籍的时候能够在 github 上在线查阅相关示例的源代码。</li></ul></li><li><strong>TNotes.yuque</strong><ul><li>视频、课件等资源，记录在 <code>TNotes.yuque</code> 中，你可以通过笔记 ID <code>0032</code> 快速定位到相关资源。</li><li><img src="https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/2025-04-06-09-11-05.png" alt="图 0" loading="lazy"></li><li>如果要在线预览课程视频，可以直接在语雀文档中预览相关章节的视频。</li></ul></li><li><strong>微信读书</strong><ul><li>这本书在微信读书上可以搜索到，扫描书中的二维码即可获取相关学习资源。</li><li><a href="https://weread.qq.com/web/reader/7e432350813ab8316g018368" target="_self" rel="noopener">《Node.js 从入门到精通》</a> - 微信读书</li></ul></li></ul><div class="tip custom-block"><p class="custom-block-title">扫码获取资源</p><p>读者扫描图书下方的“文泉云盘”二维码，或登录清华大学出版社网站(www.tup.com.cn)，可在对应图书页面下查阅各类学习资源的获取方式。</p><p><img src="https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/2025-04-06-09-12-25.png" alt="图 1" loading="lazy"></p></div></div>`);
+}
+const _sfc_setup = _sfc_main.setup;
+_sfc_main.setup = (props, ctx) => {
+  const ssrContext = useSSRContext();
+  (ssrContext.modules || (ssrContext.modules = /* @__PURE__ */ new Set())).add("TNotes.nodejs/0032. 《Node.js 从入门到精通》/README.md");
+  return _sfc_setup ? _sfc_setup(props, ctx) : void 0;
+};
+const README = /* @__PURE__ */ _export_sfc(_sfc_main, [["ssrRender", _sfc_ssrRender]]);
+export {
+  __pageData,
+  README as default
+};

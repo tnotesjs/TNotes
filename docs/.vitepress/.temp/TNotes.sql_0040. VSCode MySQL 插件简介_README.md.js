@@ -1,0 +1,19 @@
+import { ssrRenderAttrs } from "vue/server-renderer";
+import { useSSRContext } from "vue";
+import { _ as _export_sfc } from "./plugin-vue_export-helper.1tPrXgE0.js";
+const __pageData = JSON.parse('{"title":"0040. VSCode MySQL 插件简介","description":"","frontmatter":{},"headers":[],"relativePath":"TNotes.sql/0040. VSCode MySQL 插件简介/README.md","filePath":"TNotes.sql/0040. VSCode MySQL 插件简介/README.md"}');
+const _sfc_main = { name: "TNotes.sql/0040. VSCode MySQL 插件简介/README.md" };
+function _sfc_ssrRender(_ctx, _push, _parent, _attrs, $props, $setup, $data, $options) {
+  _push(`<div${ssrRenderAttrs(_attrs)}><h1 id="0040-vscode-mysql-插件简介" tabindex="-1"><a href="https://github.com/Tdahuyou/TNotes.sql/tree/main/notes/0040.%20VSCode%20MySQL%20%E6%8F%92%E4%BB%B6%E7%AE%80%E4%BB%8B" target="_self" rel="noopener">0040. VSCode MySQL 插件简介</a> <a class="header-anchor" href="#0040-vscode-mysql-插件简介" aria-label="Permalink to &quot;[0040. VSCode MySQL 插件简介](https://github.com/Tdahuyou/TNotes.sql/tree/main/notes/0040.%20VSCode%20MySQL%20%E6%8F%92%E4%BB%B6%E7%AE%80%E4%BB%8B)&quot;" target="_self" rel="noopener">​</a></h1><ul><li><a href="#1--%E6%A6%82%E8%BF%B0" target="_self" rel="noopener">1. 📝 概述</a></li><li><a href="#2--vscode-mysql-%E6%8F%92%E4%BB%B6%E7%9B%B8%E5%85%B3%E9%93%BE%E6%8E%A5" target="_self" rel="noopener">2. 🔗 VSCode MySQL 插件相关链接</a></li></ul><h2 id="1--概述" tabindex="-1">1. 📝 概述 <a class="header-anchor" href="#1--概述" aria-label="Permalink to &quot;1. 📝 概述&quot;" target="_self" rel="noopener">​</a></h2><ul><li>直接在 VSCode 的插件面板中搜索 <code>MySQL</code> 即可安装该插件。 <ul><li>会发现和 MySQL 相关的插件非常多。</li><li>图片中安装的这一款是试用的第一款 VSCode MySQL 插件，就目前 <code>25.05</code> 需求而言，其基本功能基本够用。</li><li><img src="https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/2025-05-21-20-41-59.png" alt="图 3" loading="lazy"></li><li><img src="https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/2025-05-21-20-32-01.png" alt="图 0" loading="lazy"></li></ul></li><li>安装完插件之后，输入用户名和密码完成数据库的连接。 <ul><li>如果没有对端口号做修改，直接使用默认的 <code>3306</code> 端口号即可。</li><li><img src="https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/2025-05-21-20-32-37.png" alt="图 1" loading="lazy"></li></ul></li></ul><h2 id="2--vscode-mysql-插件相关链接" tabindex="-1">2. 🔗 VSCode MySQL 插件相关链接 <a class="header-anchor" href="#2--vscode-mysql-插件相关链接" aria-label="Permalink to &quot;2. 🔗 VSCode MySQL 插件相关链接&quot;" target="_self" rel="noopener">​</a></h2><ul><li>有关该插件的详细使用说明，直接查阅官方文档即可。</li><li><a href="https://database-client.com/" target="_self" rel="noopener">https://database-client.com/</a><ul><li>默认的官方链接。</li></ul></li><li><a href="https://github.com/cweijan/vscode-database-client" target="_self" rel="noopener">https://github.com/cweijan/vscode-database-client</a><ul><li>github 仓库地址 - <code>2.7k Star</code></li><li><img src="https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/2025-05-21-20-49-03.png" alt="图 4" loading="lazy"></li></ul></li><li><a href="https://github.com/cweijan/vscode-database-client/blob/HEAD/README_CN.md" target="_self" rel="noopener">https://github.com/cweijan/vscode-database-client/blob/HEAD/README_CN.md</a><ul><li>官方提供的中文文档。</li><li><img src="https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/2025-05-21-20-40-26.png" alt="图 2" loading="lazy"></li></ul></li><li><a href="https://marketplace.visualstudio.com/items?itemName=cweijan.vscode-mysql-client2" target="_self" rel="noopener">https://marketplace.visualstudio.com/items?itemName=cweijan.vscode-mysql-client2</a><ul><li>VSCode marketplace 链接。</li></ul></li></ul></div>`);
+}
+const _sfc_setup = _sfc_main.setup;
+_sfc_main.setup = (props, ctx) => {
+  const ssrContext = useSSRContext();
+  (ssrContext.modules || (ssrContext.modules = /* @__PURE__ */ new Set())).add("TNotes.sql/0040. VSCode MySQL 插件简介/README.md");
+  return _sfc_setup ? _sfc_setup(props, ctx) : void 0;
+};
+const README = /* @__PURE__ */ _export_sfc(_sfc_main, [["ssrRender", _sfc_ssrRender]]);
+export {
+  __pageData,
+  README as default
+};
