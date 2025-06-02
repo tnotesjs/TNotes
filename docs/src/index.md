@@ -14,13 +14,13 @@ hero:
 features:
   - icon:
       src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/footprints.png
-    title: TNotes（338）
+    title: TNotes（330）
     details: TNotes.xxx 所有知识库的根节点，汇总所有 TNotes 相关的笔记。
     link: https://tdahuyou.github.io/notes
 
   - icon:
       src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--introduction.svg
-    title: TNotes 说明文档（8）
+    title: TNotes 说明文档（0）
     details: 这是一个基于 TNotes 实现的一个知识库，记录了对 TNotes 的相关介绍，比如基本架构和使用方法等内容。
     link: https://tdahuyou.github.io/TNotes.introduction/
 
