@@ -102,7 +102,7 @@ function sidebar() {
   const sidebar: DefaultTheme.SidebarItem[] = [
     { text: '👀 README', link: '/README' },
     {
-      text: '🔍 TOC',
+      text: '🔍 知识库目录',
       items: [
         {
           text: 'introduction',
@@ -115,10 +115,6 @@ function sidebar() {
         {
           text: 'canvas',
           link: '/TNotes.canvas/TOC',
-        },
-        {
-          text: 'change-log',
-          link: '/TNotes.change-log/TOC',
         },
         {
           text: 'cooking',
@@ -380,55 +376,7 @@ function themeConfig() {
       },
     },
 
-    nav: [
-      { text: '👀 README', link: '/README' },
-      {
-        text: '🚀 TNotes',
-        items: [
-          { text: '🔨 TNotes 基本架构', link: '/tnotes/architecture' },
-          {
-            text: '⚙️ TNotes 核心脚本功能简介',
-            link: '/tnotes/scripts-introduction',
-          },
-          {
-            text: '💻 处理笨重的 git log 问题',
-            link: '/tnotes/handle-git-log',
-          },
-          {
-            text: '💭 TNotes 评论模块（Discussions）的技术实现',
-            link: '/tnotes/message-board',
-          },
-          { text: '🔍 TNotes 中的 emoji 规范', link: '/tnotes/emoji' },
-          { text: '🤔 Q&A', link: '/tnotes/Q&A' },
-          // {
-          //   text: '📒 笔记',
-          //   collapsed: true,
-          //   items: [{ text: '👀 README', link: '/notes/README' }],
-          // },
-          {
-            text: '🌍 其他开源作品',
-            items: [
-              { text: '👀 README', link: '/open/README' },
-              { text: '🧑🏻‍💻 m2mm', link: '/open/m2mm' },
-            ],
-          },
-          { text: '💭 Discussions', link: '/message-board' },
-        ],
-      },
-      {
-        text: '🧑🏻‍💻 About Me',
-        items: [
-          { text: '👀 README', link: '/about-me/README' },
-          {
-            text: '👣 我 の 动态',
-            link: 'https://tdahuyou.github.io/TNotes.footprints/',
-          },
-          { text: '🐱 我家 の 神兽', link: '/about-me/we' },
-          { text: '✍️ 关于创作', link: '/about-me/creation' },
-        ],
-      },
-      { text: '💰 Donate', link: '/donate' },
-    ],
+    nav: [{ text: '👀 README', link: '/README' }],
 
     sidebar: sidebar(),
     socialLinks: socialLinks(),
