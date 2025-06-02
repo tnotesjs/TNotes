@@ -14,7 +14,7 @@ hero:
 features:
   - icon:
       src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/footprints.png
-    title: TNotes（330）
+    title: TNotes（334）
     details: TNotes.xxx 所有知识库的根节点，汇总所有 TNotes 相关的笔记。
     link: https://tdahuyou.github.io/notes
 
@@ -116,7 +116,7 @@ features:
 
   - icon:
       src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--mysql.svg
-    title: SQL 笔记（30）
+    title: SQL 笔记（34）
     details: SQL 学习笔记，正在刷《MySQL 8 从入门到精通》。
     link: https://tdahuyou.github.io/TNotes.sql/
 
