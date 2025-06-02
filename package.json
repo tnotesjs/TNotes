@@ -12,7 +12,7 @@
   "scripts": {
     "docs:dev": "         npm run update-home && vitepress dev docs --host --port 0629 --open",
     "update-home": "      node scripts/gen-index-md.js",
-    "docs:publish": "     node scripts/docs-publish.js",
+    "docs:publish": "     npm run update-home && node scripts/docs-publish.js",
     "docs:build": "       vitepress build docs",
     "docs:preview": "     vitepress preview docs",
     "updateAll": "        npm-run-all --parallel update:*",
