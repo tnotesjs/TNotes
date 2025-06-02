@@ -19,10 +19,10 @@ const MD_OUTPUT_PATH = path.resolve(__dirname, '..', 'docs', 'src', 'index.md')
 // 排序顺序
 const FEATURES_DISPLAY_ORDER = [
   ROOT_KNOWLEDGE_KEY,
-  'TNotes.template',
+  'TNotes.introduction',
   'TNotes.c-cpp',
   'TNotes.canvas',
-  'TNotes.change-log',
+  // 'TNotes.change-log',
   'TNotes.cooking',
   'TNotes.egg',
   'TNotes.electron',

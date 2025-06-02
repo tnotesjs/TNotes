@@ -18,17 +18,29 @@
 ### 1.3. Node.js 书籍
 
 - [x] [0032. 《Node.js 从入门到精通》](https://tdahuyou.github.io/TNotes.nodejs/notes/0032.%20%E3%80%8ANode.js%20%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E7%B2%BE%E9%80%9A%E3%80%8B/README)
+  - [📂 TNotes.yuque](https://www.yuque.com/tdahuyou/tnotes.yuque/)
+    - [TNotes.yuque.nodejs.0032](https://www.yuque.com/tdahuyou/tnotes.yuque/nodejs.0032)
   - [1. 📒 概述](https://tdahuyou.github.io/TNotes.nodejs/notes/0032.%20%E3%80%8ANode.js%20%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E7%B2%BE%E9%80%9A%E3%80%8B/README#1--概述)
   - [2. 📂 本书对应学习资源](https://tdahuyou.github.io/TNotes.nodejs/notes/0032.%20%E3%80%8ANode.js%20%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E7%B2%BE%E9%80%9A%E3%80%8B/README#2--本书对应学习资源)
 - [x] [0015. 《深入浅出 Node.js》](https://tdahuyou.github.io/TNotes.nodejs/notes/0015.%20%E3%80%8A%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%20Node.js%E3%80%8B/README)
+  - [📂 TNotes.yuque](https://www.yuque.com/tdahuyou/tnotes.yuque/)
+    - [TNotes.yuque.nodejs.0015](https://www.yuque.com/tdahuyou/tnotes.yuque/nodejs.0015)
   - [1. 📒 概述](https://tdahuyou.github.io/TNotes.nodejs/notes/0015.%20%E3%80%8A%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%20Node.js%E3%80%8B/README#1--概述)
 - [x] [0016. 《Node.js来一打C++扩展》](https://tdahuyou.github.io/TNotes.nodejs/notes/0016.%20%E3%80%8ANode.js%E6%9D%A5%E4%B8%80%E6%89%93C%2B%2B%E6%89%A9%E5%B1%95%E3%80%8B/README)
+  - [📂 TNotes.yuque](https://www.yuque.com/tdahuyou/tnotes.yuque/)
+    - [TNotes.yuque.nodejs.0016](https://www.yuque.com/tdahuyou/tnotes.yuque/nodejs.0016)
   - [1. 📒 概述](https://tdahuyou.github.io/TNotes.nodejs/notes/0016.%20%E3%80%8ANode.js%E6%9D%A5%E4%B8%80%E6%89%93C%2B%2B%E6%89%A9%E5%B1%95%E3%80%8B/README#1--概述)
 - [x] [0017. 《Node与Express开发》](https://tdahuyou.github.io/TNotes.nodejs/notes/0017.%20%E3%80%8ANode%E4%B8%8EExpress%E5%BC%80%E5%8F%91%E3%80%8B/README)
+  - [📂 TNotes.yuque](https://www.yuque.com/tdahuyou/tnotes.yuque/)
+    - [TNotes.yuque.nodejs.0017](https://www.yuque.com/tdahuyou/tnotes.yuque/nodejs.0017)
   - [1. 📒 概述](https://tdahuyou.github.io/TNotes.nodejs/notes/0017.%20%E3%80%8ANode%E4%B8%8EExpress%E5%BC%80%E5%8F%91%E3%80%8B/README#1--概述)
 - [x] [0018. 《Node.js开发指南》](https://tdahuyou.github.io/TNotes.nodejs/notes/0018.%20%E3%80%8ANode.js%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97%E3%80%8B/README)
+  - [📂 TNotes.yuque](https://www.yuque.com/tdahuyou/tnotes.yuque/)
+    - [TNotes.yuque.nodejs.0018](https://www.yuque.com/tdahuyou/tnotes.yuque/nodejs.0018)
   - [1. 📒 概述](https://tdahuyou.github.io/TNotes.nodejs/notes/0018.%20%E3%80%8ANode.js%E5%BC%80%E5%8F%91%E6%8C%87%E5%8D%97%E3%80%8B/README#1--概述)
 - [x] [0019. 《了不起的Node js 将JavaScript进行到底》](https://tdahuyou.github.io/TNotes.nodejs/notes/0019.%20%E3%80%8A%E4%BA%86%E4%B8%8D%E8%B5%B7%E7%9A%84Node%20js%20%E5%B0%86JavaScript%E8%BF%9B%E8%A1%8C%E5%88%B0%E5%BA%95%E3%80%8B/README)
+  - [📂 TNotes.yuque](https://www.yuque.com/tdahuyou/tnotes.yuque/)
+    - [TNotes.yuque.nodejs.0019](https://www.yuque.com/tdahuyou/tnotes.yuque/nodejs.0019)
   - [1. 📒 概述](https://tdahuyou.github.io/TNotes.nodejs/notes/0019.%20%E3%80%8A%E4%BA%86%E4%B8%8D%E8%B5%B7%E7%9A%84Node%20js%20%E5%B0%86JavaScript%E8%BF%9B%E8%A1%8C%E5%88%B0%E5%BA%95%E3%80%8B/README#1--概述)
 
 ### 1.4. Node.js 掘金小册
@@ -456,6 +468,8 @@
 ## 15. 核心原理
 
 - [x] [0050. Node.js 生命周期](https://tdahuyou.github.io/TNotes.nodejs/notes/0050.%20Node.js%20%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F/README)
+  - [📂 TNotes.yuque](https://www.yuque.com/tdahuyou/tnotes.yuque/)
+    - [TNotes.yuque.nodejs.0050](https://www.yuque.com/tdahuyou/tnotes.yuque/nodejs.0050)
   - [1. 📒 概述](https://tdahuyou.github.io/TNotes.nodejs/notes/0050.%20Node.js%20%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F/README#1--概述)
   - [2. 📒 `timers、poll、check` 队列中分别存放哪些回调任务](https://tdahuyou.github.io/TNotes.nodejs/notes/0050.%20Node.js%20%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F/README#2--timerspollcheck-队列中分别存放哪些回调任务)
   - [3. 📒 宏队列、微队列](https://tdahuyou.github.io/TNotes.nodejs/notes/0050.%20Node.js%20%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F/README#3--宏队列微队列)

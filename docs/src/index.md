@@ -14,15 +14,15 @@ hero:
 features:
   - icon:
       src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/footprints.png
-    title: TNotes（328）
+    title: TNotes（338）
     details: TNotes.xxx 所有知识库的根节点，汇总所有 TNotes 相关的笔记。
     link: https://tdahuyou.github.io/notes
 
   - icon:
-      src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--template.svg
-    title: TNotes 笔记模板（5）
-    details: 25.03 正在测试、优化中。
-    link: https://tdahuyou.github.io/TNotes.template/
+      src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--introduction.svg
+    title: TNotes 说明文档（8）
+    details: 这是一个基于 TNotes 实现的一个知识库，记录了对 TNotes 的相关介绍，比如基本架构和使用方法等内容。
+    link: https://tdahuyou.github.io/TNotes.introduction/
 
   - icon:
       src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--c-cpp.svg
@@ -35,12 +35,6 @@ features:
     title: Canvas 笔记（0）
     details: 基本完成，还需要整理，目前记录的都是一些非常基础的内容。
     link: https://tdahuyou.github.io/TNotes.canvas/
-
-  - icon:
-      src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--change-log.svg
-    title: TNotes 更新日志（1）
-    details: 按照月份，记录 TNotes 更新的内容。
-    link: https://tdahuyou.github.io/TNotes.change-log/
 
   - icon:
       src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--cooking.svg
@@ -86,7 +80,7 @@ features:
 
   - icon:
       src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--leetcode.svg
-    title: Leetcode 刷题笔记（3）
+    title: Leetcode 刷题笔记（5）
     details: 数据结构与算法
     link: https://tdahuyou.github.io/TNotes.leetcode/
 

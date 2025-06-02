@@ -24,7 +24,7 @@
         "title": "TNotes",
         "details": "TNotes.xxx 所有知识库的根节点，汇总所有 TNotes 相关的笔记。",
         "link": "https://tdahuyou.github.io/notes",
-        "completed_notes_count": "328"
+        "completed_notes_count": "338"
       },
       "TNotes.template": {
         "icon": {
@@ -138,7 +138,7 @@
           "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--leetcode.svg"
         },
         "title": "Leetcode 刷题笔记",
-        "completed_notes_count": 3,
+        "completed_notes_count": 5,
         "details": "数据结构与算法",
         "link": "https://tdahuyou.github.io/TNotes.leetcode/"
       },
@@ -267,6 +267,15 @@
         "completed_notes_count": 30,
         "details": "SQL 学习笔记，正在刷《MySQL 8 从入门到精通》。",
         "link": "https://tdahuyou.github.io/TNotes.sql/"
+      },
+      "TNotes.introduction": {
+        "icon": {
+          "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--introduction.svg"
+        },
+        "title": "TNotes 说明文档",
+        "completed_notes_count": 8,
+        "details": "这是一个基于 TNotes 实现的一个知识库，记录了对 TNotes 的相关介绍，比如基本架构和使用方法等内容。",
+        "link": "https://tdahuyou.github.io/TNotes.introduction/"
       }
     }
   }

@@ -105,8 +105,8 @@ function sidebar() {
       text: '🔍 TOC',
       items: [
         {
-          text: 'template',
-          link: '/TNotes.template/TOC',
+          text: 'introduction',
+          link: '/TNotes.introduction/TOC',
         },
         {
           text: 'c-cpp',
