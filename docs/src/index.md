@@ -14,7 +14,7 @@ hero:
 features:
   - icon:
       src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/footprints.png
-    title: TNotes（334）
+    title: TNotes（337）
     details: TNotes.xxx 所有知识库的根节点，汇总所有 TNotes 相关的笔记。
     link: https://tdahuyou.github.io/notes
 
@@ -56,7 +56,7 @@ features:
 
   - icon:
       src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--en-notes.svg
-    title: 英语学习笔记（5）
+    title: 英语学习笔记（8）
     details: 记单词工具、后续也可以将学口语、练听力的功能也加上。
     link: https://tdahuyou.github.io/TNotes.en-notes/
 

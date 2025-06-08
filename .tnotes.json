@@ -24,7 +24,7 @@
         "title": "TNotes",
         "details": "TNotes.xxx 所有知识库的根节点，汇总所有 TNotes 相关的笔记。",
         "link": "https://tdahuyou.github.io/notes",
-        "completed_notes_count": "334"
+        "completed_notes_count": "337"
       },
       "TNotes.template": {
         "icon": {
@@ -94,7 +94,7 @@
           "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--en-notes.svg"
         },
         "title": "英语学习笔记",
-        "completed_notes_count": 5,
+        "completed_notes_count": 8,
         "details": "记单词工具、后续也可以将学口语、练听力的功能也加上。",
         "link": "https://tdahuyou.github.io/TNotes.en-notes/"
       },
