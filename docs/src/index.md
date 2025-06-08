@@ -14,7 +14,7 @@ hero:
 features:
   - icon:
       src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/footprints.png
-    title: TNotes（340）
+    title: TNotes（345）
     details: TNotes.xxx 所有知识库的根节点，汇总所有 TNotes 相关的笔记。
     link: https://tdahuyou.github.io/notes
 
@@ -62,7 +62,7 @@ features:
 
   - icon:
       src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--footprints.svg
-    title: 活着的一些动态（6）
+    title: 活着的一些动态（11）
     details: 类似于一个在线版的微信朋友圈
     link: https://tdahuyou.github.io/TNotes.footprints/
 

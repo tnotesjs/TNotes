@@ -24,7 +24,7 @@
         "title": "TNotes",
         "details": "TNotes.xxx 所有知识库的根节点，汇总所有 TNotes 相关的笔记。",
         "link": "https://tdahuyou.github.io/notes",
-        "completed_notes_count": "340"
+        "completed_notes_count": "345"
       },
       "TNotes.template": {
         "icon": {
@@ -111,7 +111,7 @@
           "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--footprints.svg"
         },
         "title": "活着的一些动态",
-        "completed_notes_count": 6,
+        "completed_notes_count": 11,
         "details": "类似于一个在线版的微信朋友圈",
         "link": "https://tdahuyou.github.io/TNotes.footprints/"
       },
