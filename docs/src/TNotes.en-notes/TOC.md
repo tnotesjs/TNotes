@@ -1,7 +1,114 @@
 # en-notes
 
 
-## 1. QWERTY-LEARNER 大学英语 CET-4
+## 1. 名著
+
+- [x] [0006. 《老人与海》（英+中+词）](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README)
+  - [📂 TNotes.yuque](https://www.yuque.com/tdahuyou/tnotes.yuque/)
+    - [TNotes.yuque.en-notes.0006](https://www.yuque.com/tdahuyou/tnotes.yuque/en-notes.0006)
+  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#1--概述)
+  - [2. 📚 《老人与海》原文](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#2--老人与海原文)
+    - [2.1. Part 1](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#21-part-1)
+    - [2.2. Part 2](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#22-part-2)
+    - [2.3. Part 3](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#23-part-3)
+    - [2.4. Part 4](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#24-part-4)
+    - [2.5. Part 5](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#25-part-5)
+    - [2.6. Part 6](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#26-part-6)
+    - [2.7. Part 7](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#27-part-7)
+    - [2.8. Part 8](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#28-part-8)
+    - [2.9. Part 9](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#29-part-9)
+    - [2.10. Part 10](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#210-part-10)
+    - [2.11. Part 11](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#211-part-11)
+    - [2.12. Part 12](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#212-part-12)
+    - [2.13. Part 13](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#213-part-13)
+    - [2.14. Part 14](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#214-part-14)
+    - [2.15. Part 15](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#215-part-15)
+    - [2.16. Part 16](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#216-part-16)
+    - [2.17. Part 17](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#217-part-17)
+    - [2.18. Part 18](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#218-part-18)
+    - [2.19. Part 19](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#219-part-19)
+    - [2.20. Part 20](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#220-part-20)
+    - [2.21. Part 21](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#221-part-21)
+    - [2.22. Part 22](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#222-part-22)
+    - [2.23. Part 23](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#223-part-23)
+    - [2.24. Part 24](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#224-part-24)
+    - [2.25. Part 25](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#225-part-25)
+    - [2.26. Part 26](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#226-part-26)
+    - [2.27. Part 27](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#227-part-27)
+    - [2.28. Part 28](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#228-part-28)
+    - [2.29. Part 29](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#229-part-29)
+    - [2.30. Part 30](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#230-part-30)
+    - [2.31. Part 31](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%2B%E8%AF%8D%EF%BC%89/README#231-part-31)
+- [x] [0015. 《老人与海》（英+中）](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README)
+  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#1--概述)
+  - [2. 📚 《老人与海》原文](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#2--老人与海原文)
+    - [2.1. Part 1](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#21-part-1)
+    - [2.2. Part 2](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#22-part-2)
+    - [2.3. Part 3](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#23-part-3)
+    - [2.4. Part 4](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#24-part-4)
+    - [2.5. Part 5](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#25-part-5)
+    - [2.6. Part 6](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#26-part-6)
+    - [2.7. Part 7](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#27-part-7)
+    - [2.8. Part 8](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#28-part-8)
+    - [2.9. Part 9](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#29-part-9)
+    - [2.10. Part 10](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#210-part-10)
+    - [2.11. Part 11](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#211-part-11)
+    - [2.12. Part 12](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#212-part-12)
+    - [2.13. Part 13](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#213-part-13)
+    - [2.14. Part 14](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#214-part-14)
+    - [2.15. Part 15](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#215-part-15)
+    - [2.16. Part 16](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#216-part-16)
+    - [2.17. Part 17](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#217-part-17)
+    - [2.18. Part 18](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#218-part-18)
+    - [2.19. Part 19](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#219-part-19)
+    - [2.20. Part 20](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#220-part-20)
+    - [2.21. Part 21](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#221-part-21)
+    - [2.22. Part 22](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#222-part-22)
+    - [2.23. Part 23](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#223-part-23)
+    - [2.24. Part 24](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#224-part-24)
+    - [2.25. Part 25](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#225-part-25)
+    - [2.26. Part 26](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#226-part-26)
+    - [2.27. Part 27](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#227-part-27)
+    - [2.28. Part 28](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#228-part-28)
+    - [2.29. Part 29](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#229-part-29)
+    - [2.30. Part 30](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#230-part-30)
+    - [2.31. Part 31](https://tdahuyou.github.io/TNotes.en-notes/notes/0015.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%2B%E4%B8%AD%EF%BC%89/README#231-part-31)
+- [x] [0016. 《老人与海》（英）](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README)
+  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#1--概述)
+  - [2. 📚 《老人与海》原文](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#2--老人与海原文)
+    - [2.1. Part 1](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#21-part-1)
+    - [2.2. Part 2](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#22-part-2)
+    - [2.3. Part 3](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#23-part-3)
+    - [2.4. Part 4](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#24-part-4)
+    - [2.5. Part 5](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#25-part-5)
+    - [2.6. Part 6](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#26-part-6)
+    - [2.7. Part 7](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#27-part-7)
+    - [2.8. Part 8](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#28-part-8)
+    - [2.9. Part 9](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#29-part-9)
+    - [2.10. Part 10](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#210-part-10)
+    - [2.11. Part 11](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#211-part-11)
+    - [2.12. Part 12](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#212-part-12)
+    - [2.13. Part 13](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#213-part-13)
+    - [2.14. Part 14](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#214-part-14)
+    - [2.15. Part 15](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#215-part-15)
+    - [2.16. Part 16](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#216-part-16)
+    - [2.17. Part 17](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#217-part-17)
+    - [2.18. Part 18](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#218-part-18)
+    - [2.19. Part 19](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#219-part-19)
+    - [2.20. Part 20](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#220-part-20)
+    - [2.21. Part 21](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#221-part-21)
+    - [2.22. Part 22](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#222-part-22)
+    - [2.23. Part 23](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#223-part-23)
+    - [2.24. Part 24](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#224-part-24)
+    - [2.25. Part 25](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#225-part-25)
+    - [2.26. Part 26](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#226-part-26)
+    - [2.27. Part 27](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#227-part-27)
+    - [2.28. Part 28](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#228-part-28)
+    - [2.29. Part 29](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#229-part-29)
+    - [2.30. Part 30](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#230-part-30)
+    - [2.31. Part 31](https://tdahuyou.github.io/TNotes.en-notes/notes/0016.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B%EF%BC%88%E8%8B%B1%EF%BC%89/README#231-part-31)
+
+## 2. CET-4
 
 - [x] [0010. cet-4 checklist](https://tdahuyou.github.io/TNotes.en-notes/notes/0010.%20cet-4%20checklist/README)
   - [📂 TNotes.yuque](https://www.yuque.com/tdahuyou/tnotes.yuque/)
@@ -414,7 +521,7 @@
     - [3.130. 🎯 Chapter 130](https://tdahuyou.github.io/TNotes.en-notes/notes/0012.%20cet-4%20tts-2/README#3130--chapter-130)
     - [3.131. 🎯 Chapter 131](https://tdahuyou.github.io/TNotes.en-notes/notes/0012.%20cet-4%20tts-2/README#3131--chapter-131)
 
-## 2. Word Books
+## 3. 单词本
 
 - [ ] [0009. 单词本概述](https://tdahuyou.github.io/TNotes.en-notes/notes/0009.%20%E5%8D%95%E8%AF%8D%E6%9C%AC%E6%A6%82%E8%BF%B0/README)
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.en-notes/notes/0009.%20%E5%8D%95%E8%AF%8D%E6%9C%AC%E6%A6%82%E8%BF%B0/README#1--概述)
@@ -425,7 +532,7 @@
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.en-notes/notes/0008.%20wordbook-2/README#1--概述)
   - [2. 📒 词汇列表](https://tdahuyou.github.io/TNotes.en-notes/notes/0008.%20wordbook-2/README#2--词汇列表)
 
-## 3. 词库
+## 4. 词库
 
 - [x] [0001. en-words 仓库简介](https://tdahuyou.github.io/TNotes.en-notes/notes/0001.%20en-words%20%E4%BB%93%E5%BA%93%E7%AE%80%E4%BB%8B/README)
   - [1. 🔗 github 开源仓库 - 英语字典 - kajweb/dict](https://tdahuyou.github.io/TNotes.en-notes/notes/0001.%20en-words%20%E4%BB%93%E5%BA%93%E7%AE%80%E4%BB%8B/README#1--github-开源仓库---英语字典---kajwebdict)
@@ -435,13 +542,13 @@
   - [5. 🤔 如何往 en-words 中新增词汇？](https://tdahuyou.github.io/TNotes.en-notes/notes/0001.%20en-words%20%E4%BB%93%E5%BA%93%E7%AE%80%E4%BB%8B/README#5--如何往-en-words-中新增词汇)
   - [6. 💻 demos.1 - 提取所有词汇的脚本](https://tdahuyou.github.io/TNotes.en-notes/notes/0001.%20en-words%20%E4%BB%93%E5%BA%93%E7%AE%80%E4%BB%8B/README#6--demos1---提取所有词汇的脚本)
 
-## 4. 自定义组件
+## 5. 自定义组件
 
 - [x] [0014. EnWordList 基本功能介绍](https://tdahuyou.github.io/TNotes.en-notes/notes/0014.%20EnWordList%20%E5%9F%BA%E6%9C%AC%E5%8A%9F%E8%83%BD%E4%BB%8B%E7%BB%8D/README)
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.en-notes/notes/0014.%20EnWordList%20%E5%9F%BA%E6%9C%AC%E5%8A%9F%E8%83%BD%E4%BB%8B%E7%BB%8D/README#1--概述)
   - [2. 📒 单词本组件 `EnWordList.vue` 功能介绍](https://tdahuyou.github.io/TNotes.en-notes/notes/0014.%20EnWordList%20%E5%9F%BA%E6%9C%AC%E5%8A%9F%E8%83%BD%E4%BB%8B%E7%BB%8D/README#2--单词本组件-enwordlistvue-功能介绍)
 
-## 5. tts
+## 6. tts
 
 - [x] [0013. fish-speech tts 体验](https://tdahuyou.github.io/TNotes.en-notes/notes/0013.%20fish-speech%20tts%20%E4%BD%93%E9%AA%8C/README)
   - [📂 TNotes.yuque](https://www.yuque.com/tdahuyou/tnotes.yuque/)
@@ -449,14 +556,6 @@
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.en-notes/notes/0013.%20fish-speech%20tts%20%E4%BD%93%E9%AA%8C/README#1--概述)
   - [2. 💻 免费方案 - fish-speech tts 体验](https://tdahuyou.github.io/TNotes.en-notes/notes/0013.%20fish-speech%20tts%20%E4%BD%93%E9%AA%8C/README#2--免费方案---fish-speech-tts-体验)
   - [3. 📒 收费方案评价](https://tdahuyou.github.io/TNotes.en-notes/notes/0013.%20fish-speech%20tts%20%E4%BD%93%E9%AA%8C/README#3--收费方案评价)
-
-## 6. 经典名著
-
-- [ ] [0006. 《老人与海》](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B/README)
-  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B/README#1--概述)
-  - [2. 🔗 tts 在线转换工具 - tts maker](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B/README#2--tts-在线转换工具---tts-maker)
-  - [3. 📂 《老人与海》原文 txt 版](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B/README#3--老人与海原文-txt-版)
-  - [4. 📒 TTS 在线转换](https://tdahuyou.github.io/TNotes.en-notes/notes/0006.%20%E3%80%8A%E8%80%81%E4%BA%BA%E4%B8%8E%E6%B5%B7%E3%80%8B/README#4--tts-在线转换)
 
 ## 7. 语雀 SDK
 

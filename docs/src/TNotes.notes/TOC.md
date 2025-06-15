@@ -411,23 +411,23 @@
     - [bilibili.TNotes.notes.0048.1](https://www.bilibili.com/video/BV1XwjozKEcb)
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0048.%20%E4%BD%93%E9%AA%8C%20claude%204/README#1--概述)
   - [2. 🤖 AI - 请给我一个连连看的 Web 程序](https://tdahuyou.github.io/TNotes.notes/notes/0048.%20%E4%BD%93%E9%AA%8C%20claude%204/README#2--ai---请给我一个连连看的-web-程序)
-
-### 22.1. 视频
-
 - [x] [0049. AI 绘图教程](https://tdahuyou.github.io/TNotes.notes/notes/0049.%20AI%20%E7%BB%98%E5%9B%BE%E6%95%99%E7%A8%8B/README)
   - [📺 bilibili 👉 TNotes 合集](https://space.bilibili.com/407241004)
     - [bilibili.TNotes.notes.0049.1](https://www.bilibili.com/video/BV1DP7JzAE7k)
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0049.%20AI%20%E7%BB%98%E5%9B%BE%E6%95%99%E7%A8%8B/README#1--概述)
   - [2. 🔗 1 分钟生成架构图？程序员 AI 绘图保姆级教程](https://tdahuyou.github.io/TNotes.notes/notes/0049.%20AI%20%E7%BB%98%E5%9B%BE%E6%95%99%E7%A8%8B/README#2--1-分钟生成架构图程序员-ai-绘图保姆级教程)
 
-## 23. ⏰ project graph
+## 23. 音频在线编辑器
+
+- [x] [0050. vocalremover](https://tdahuyou.github.io/TNotes.notes/notes/0050.%20vocalremover/README)
+  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0050.%20vocalremover/README#1--概述)
+
+## 24. ⏰ project graph
 
 - [ ] [0026. project graph](https://tdahuyou.github.io/TNotes.notes/notes/0026.%20project%20graph/README)
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0026.%20project%20graph/README#1--概述)
 
-## 24. ⏰ pending
+## 25. ⏰ pending
 
-- [ ] [0050. xxx](https://tdahuyou.github.io/TNotes.notes/notes/0050.%20xxx/README)
-  - [1. 📒 notes_title](https://tdahuyou.github.io/TNotes.notes/notes/0050.%20xxx/README#1--notes_title)
 - [ ] [0051. xxx](https://tdahuyou.github.io/TNotes.notes/notes/0051.%20xxx/README)
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0051.%20xxx/README#1--概述)
