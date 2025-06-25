@@ -14,7 +14,7 @@ hero:
 features:
   - icon:
       src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/footprints.png
-    title: TNotes（393）
+    title: TNotes（402）
     details: TNotes.xxx 所有知识库的根节点，汇总所有 TNotes 相关的笔记。
     link: https://tdahuyou.github.io/notes
 
@@ -110,14 +110,14 @@ features:
 
   - icon:
       src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--react.svg
-    title: React 笔记（37）
-    details: 待搬运语雀上的笔记。
+    title: react（44）
+    details: React 笔记
     link: https://tdahuyou.github.io/TNotes.react/
 
   - icon:
       src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--mysql.svg
-    title: SQL 笔记（46）
-    details: SQL 学习笔记，正在刷《MySQL 8 从入门到精通》。
+    title: TNotes.sql（48）
+    details: 数据库笔记
     link: https://tdahuyou.github.io/TNotes.sql/
 
   - icon:
