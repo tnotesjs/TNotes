@@ -201,109 +201,14 @@
 - [x] [0042. twinkletray](https://tdahuyou.github.io/TNotes.notes/notes/0042.%20twinkletray/README)
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0042.%20twinkletray/README#1--概述)
 
-## 14. Chrome
-
-- [x] [0004. chrome 上的 Scripty 插件介绍](https://tdahuyou.github.io/TNotes.notes/notes/0004.%20chrome%20%E4%B8%8A%E7%9A%84%20Scripty%20%E6%8F%92%E4%BB%B6%E4%BB%8B%E7%BB%8D/README)
-  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0004.%20chrome%20%E4%B8%8A%E7%9A%84%20Scripty%20%E6%8F%92%E4%BB%B6%E4%BB%8B%E7%BB%8D/README#1--概述)
-  - [2. 💻 Scripty 在线配置](https://tdahuyou.github.io/TNotes.notes/notes/0004.%20chrome%20%E4%B8%8A%E7%9A%84%20Scripty%20%E6%8F%92%E4%BB%B6%E4%BB%8B%E7%BB%8D/README#2--scripty-在线配置)
-  - [3. 📒 使用说明](https://tdahuyou.github.io/TNotes.notes/notes/0004.%20chrome%20%E4%B8%8A%E7%9A%84%20Scripty%20%E6%8F%92%E4%BB%B6%E4%BB%8B%E7%BB%8D/README#3--使用说明)
-  - [4. 📒 Scripty vs. Tampermonkey](https://tdahuyou.github.io/TNotes.notes/notes/0004.%20chrome%20%E4%B8%8A%E7%9A%84%20Scripty%20%E6%8F%92%E4%BB%B6%E4%BB%8B%E7%BB%8D/README#4--scripty-vs-tampermonkey)
-  - [5. References](https://tdahuyou.github.io/TNotes.notes/notes/0004.%20chrome%20%E4%B8%8A%E7%9A%84%20Scripty%20%E6%8F%92%E4%BB%B6%E4%BB%8B%E7%BB%8D/README#5-references)
-- [x] [0022. Video Speed Controller](https://tdahuyou.github.io/TNotes.notes/notes/0022.%20Video%20Speed%20Controller/README)
-  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0022.%20Video%20Speed%20Controller/README#1--概述)
-- [x] [0003. 在 GitHub 上预览自己的笔记时处理一些默认样式](https://tdahuyou.github.io/TNotes.notes/notes/0003.%20%E5%9C%A8%20GitHub%20%E4%B8%8A%E9%A2%84%E8%A7%88%E8%87%AA%E5%B7%B1%E7%9A%84%E7%AC%94%E8%AE%B0%E6%97%B6%E5%A4%84%E7%90%86%E4%B8%80%E4%BA%9B%E9%BB%98%E8%AE%A4%E6%A0%B7%E5%BC%8F/README)
-  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0003.%20%E5%9C%A8%20GitHub%20%E4%B8%8A%E9%A2%84%E8%A7%88%E8%87%AA%E5%B7%B1%E7%9A%84%E7%AC%94%E8%AE%B0%E6%97%B6%E5%A4%84%E7%90%86%E4%B8%80%E4%BA%9B%E9%BB%98%E8%AE%A4%E6%A0%B7%E5%BC%8F/README#1--概述)
-  - [2. 💻 js 实现脚本](https://tdahuyou.github.io/TNotes.notes/notes/0003.%20%E5%9C%A8%20GitHub%20%E4%B8%8A%E9%A2%84%E8%A7%88%E8%87%AA%E5%B7%B1%E7%9A%84%E7%AC%94%E8%AE%B0%E6%97%B6%E5%A4%84%E7%90%86%E4%B8%80%E4%BA%9B%E9%BB%98%E8%AE%A4%E6%A0%B7%E5%BC%8F/README#2--js-实现脚本)
-- [x] [0015. chrome for developers 站点简介](https://tdahuyou.github.io/TNotes.notes/notes/0015.%20chrome%20for%20developers%20%E7%AB%99%E7%82%B9%E7%AE%80%E4%BB%8B/README)
-  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0015.%20chrome%20for%20developers%20%E7%AB%99%E7%82%B9%E7%AE%80%E4%BB%8B/README#1--概述)
-  - [2. 🤖 AI - Chrome for Developers 站点简介](https://tdahuyou.github.io/TNotes.notes/notes/0015.%20chrome%20for%20developers%20%E7%AB%99%E7%82%B9%E7%AE%80%E4%BB%8B/README#2--ai---chrome-for-developers-站点简介)
-    - [2.1. 🔗 Chrome for Developers 官网](https://tdahuyou.github.io/TNotes.notes/notes/0015.%20chrome%20for%20developers%20%E7%AB%99%E7%82%B9%E7%AE%80%E4%BB%8B/README#21--chrome-for-developers-官网)
-    - [2.2. 📚 主要内容与功能模块](https://tdahuyou.github.io/TNotes.notes/notes/0015.%20chrome%20for%20developers%20%E7%AB%99%E7%82%B9%E7%AE%80%E4%BB%8B/README#22--主要内容与功能模块)
-    - [2.3. 💡 核心资源推荐](https://tdahuyou.github.io/TNotes.notes/notes/0015.%20chrome%20for%20developers%20%E7%AB%99%E7%82%B9%E7%AE%80%E4%BB%8B/README#23--核心资源推荐)
-    - [2.4. 🧪 新特性追踪](https://tdahuyou.github.io/TNotes.notes/notes/0015.%20chrome%20for%20developers%20%E7%AB%99%E7%82%B9%E7%AE%80%E4%BB%8B/README#24--新特性追踪)
-    - [2.5. 📢 适用人群](https://tdahuyou.github.io/TNotes.notes/notes/0015.%20chrome%20for%20developers%20%E7%AB%99%E7%82%B9%E7%AE%80%E4%BB%8B/README#25--适用人群)
-    - [2.6. ✅ 总结](https://tdahuyou.github.io/TNotes.notes/notes/0015.%20chrome%20for%20developers%20%E7%AB%99%E7%82%B9%E7%AE%80%E4%BB%8B/README#26--总结)
-- [x] [0034. chrome 插件发布流程](https://tdahuyou.github.io/TNotes.notes/notes/0034.%20chrome%20%E6%8F%92%E4%BB%B6%E5%8F%91%E5%B8%83%E6%B5%81%E7%A8%8B/README)
-  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0034.%20chrome%20%E6%8F%92%E4%BB%B6%E5%8F%91%E5%B8%83%E6%B5%81%E7%A8%8B/README#1--概述)
-  - [2. 🔗 注册成为 chrome 开发者](https://tdahuyou.github.io/TNotes.notes/notes/0034.%20chrome%20%E6%8F%92%E4%BB%B6%E5%8F%91%E5%B8%83%E6%B5%81%E7%A8%8B/README#2--注册成为-chrome-开发者)
-  - [3. 🔗 查看 Chrome 官方对开发者发布的插件的一些规范要求](https://tdahuyou.github.io/TNotes.notes/notes/0034.%20chrome%20%E6%8F%92%E4%BB%B6%E5%8F%91%E5%B8%83%E6%B5%81%E7%A8%8B/README#3--查看-chrome-官方对开发者发布的插件的一些规范要求)
-  - [4. 🔗 查看 chrome 插件开发文档 - API reference](https://tdahuyou.github.io/TNotes.notes/notes/0034.%20chrome%20%E6%8F%92%E4%BB%B6%E5%8F%91%E5%B8%83%E6%B5%81%E7%A8%8B/README#4--查看-chrome-插件开发文档---api-reference)
-  - [5. 📒 Chrome 插件发布的前提条件](https://tdahuyou.github.io/TNotes.notes/notes/0034.%20chrome%20%E6%8F%92%E4%BB%B6%E5%8F%91%E5%B8%83%E6%B5%81%E7%A8%8B/README#5--chrome-插件发布的前提条件)
-  - [6. 📒 Chrome 插件的发布步骤](https://tdahuyou.github.io/TNotes.notes/notes/0034.%20chrome%20%E6%8F%92%E4%BB%B6%E5%8F%91%E5%B8%83%E6%B5%81%E7%A8%8B/README#6--chrome-插件的发布步骤)
-  - [7. ⚠️ Chrome 插件发布的一些注意事项](https://tdahuyou.github.io/TNotes.notes/notes/0034.%20chrome%20%E6%8F%92%E4%BB%B6%E5%8F%91%E5%B8%83%E6%B5%81%E7%A8%8B/README#7-️-chrome-插件发布的一些注意事项)
-- [x] [0035. 将网页转为本地应用](https://tdahuyou.github.io/TNotes.notes/notes/0035.%20%E5%B0%86%E7%BD%91%E9%A1%B5%E8%BD%AC%E4%B8%BA%E6%9C%AC%E5%9C%B0%E5%BA%94%E7%94%A8/README)
-  - [1. 📒 保存为本地应用的作用](https://tdahuyou.github.io/TNotes.notes/notes/0035.%20%E5%B0%86%E7%BD%91%E9%A1%B5%E8%BD%AC%E4%B8%BA%E6%9C%AC%E5%9C%B0%E5%BA%94%E7%94%A8/README#1--保存为本地应用的作用)
-  - [2. 📒 基本步骤说明](https://tdahuyou.github.io/TNotes.notes/notes/0035.%20%E5%B0%86%E7%BD%91%E9%A1%B5%E8%BD%AC%E4%B8%BA%E6%9C%AC%E5%9C%B0%E5%BA%94%E7%94%A8/README#2--基本步骤说明)
-- [x] [0036. 基于 chromium 内核的浏览器](https://tdahuyou.github.io/TNotes.notes/notes/0036.%20%E5%9F%BA%E4%BA%8E%20chromium%20%E5%86%85%E6%A0%B8%E7%9A%84%E6%B5%8F%E8%A7%88%E5%99%A8/README)
-  - [1. 🤔 chromium 是什么？](https://tdahuyou.github.io/TNotes.notes/notes/0036.%20%E5%9F%BA%E4%BA%8E%20chromium%20%E5%86%85%E6%A0%B8%E7%9A%84%E6%B5%8F%E8%A7%88%E5%99%A8/README#1--chromium-是什么)
-  - [2. 📒 基于 chromium 内核的浏览器](https://tdahuyou.github.io/TNotes.notes/notes/0036.%20%E5%9F%BA%E4%BA%8E%20chromium%20%E5%86%85%E6%A0%B8%E7%9A%84%E6%B5%8F%E8%A7%88%E5%99%A8/README#2--基于-chromium-内核的浏览器)
-- [x] [0039. 语雀网页脚本](https://tdahuyou.github.io/TNotes.notes/notes/0039.%20%E8%AF%AD%E9%9B%80%E7%BD%91%E9%A1%B5%E8%84%9A%E6%9C%AC/README)
-  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0039.%20%E8%AF%AD%E9%9B%80%E7%BD%91%E9%A1%B5%E8%84%9A%E6%9C%AC/README#1--概述)
-  - [2. 💻 简化语雀 Web 端编辑窗口的脚本](https://tdahuyou.github.io/TNotes.notes/notes/0039.%20%E8%AF%AD%E9%9B%80%E7%BD%91%E9%A1%B5%E8%84%9A%E6%9C%AC/README#2--简化语雀-web-端编辑窗口的脚本)
-  - [3. 💻 小记全屏切换](https://tdahuyou.github.io/TNotes.notes/notes/0039.%20%E8%AF%AD%E9%9B%80%E7%BD%91%E9%A1%B5%E8%84%9A%E6%9C%AC/README#3--小记全屏切换)
-  - [4. 💻 code block 批操作（❌ Deprecated）](https://tdahuyou.github.io/TNotes.notes/notes/0039.%20%E8%AF%AD%E9%9B%80%E7%BD%91%E9%A1%B5%E8%84%9A%E6%9C%AC/README#4--code-block-批操作-deprecated)
-- [x] [0018. 3ts](https://tdahuyou.github.io/TNotes.notes/notes/0018.%203ts/README)
-  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0018.%203ts/README#1--概述)
-  - [2. 📺 TNotes.yuque](https://tdahuyou.github.io/TNotes.notes/notes/0018.%203ts/README#2--tnotesyuque)
-  - [3. 📒 3ts 简介](https://tdahuyou.github.io/TNotes.notes/notes/0018.%203ts/README#3--3ts-简介)
-  - [4. 📝 日志 - chrome 应用商店注册成为开发者需要付费 5 美元](https://tdahuyou.github.io/TNotes.notes/notes/0018.%203ts/README#4--日志---chrome-应用商店注册成为开发者需要付费-5-美元)
-  - [5. 💻 3ts 实现源码](https://tdahuyou.github.io/TNotes.notes/notes/0018.%203ts/README#5--3ts-实现源码)
-
-## 15. VS Code
-
-- [x] [0038. VSCode 简介](https://tdahuyou.github.io/TNotes.notes/notes/0038.%20VSCode%20%E7%AE%80%E4%BB%8B/README)
-  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0038.%20VSCode%20%E7%AE%80%E4%BB%8B/README#1--概述)
-- [x] [0031. explorer.confirmDelete](https://tdahuyou.github.io/TNotes.notes/notes/0031.%20explorer.confirmDelete/README)
-  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0031.%20explorer.confirmDelete/README#1--概述)
-  - [2. 📒 `explorer.confirmDelete` 配置简介](https://tdahuyou.github.io/TNotes.notes/notes/0031.%20explorer.confirmDelete/README#2--explorerconfirmdelete-配置简介)
-- [x] [0029. 固定的标签换行展示](https://tdahuyou.github.io/TNotes.notes/notes/0029.%20%E5%9B%BA%E5%AE%9A%E7%9A%84%E6%A0%87%E7%AD%BE%E6%8D%A2%E8%A1%8C%E5%B1%95%E7%A4%BA/README)
-  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0029.%20%E5%9B%BA%E5%AE%9A%E7%9A%84%E6%A0%87%E7%AD%BE%E6%8D%A2%E8%A1%8C%E5%B1%95%E7%A4%BA/README#1--概述)
-  - [2. 📒 固定的标签换行展示](https://tdahuyou.github.io/TNotes.notes/notes/0029.%20%E5%9B%BA%E5%AE%9A%E7%9A%84%E6%A0%87%E7%AD%BE%E6%8D%A2%E8%A1%8C%E5%B1%95%E7%A4%BA/README#2--固定的标签换行展示)
-- [x] [0028. region 注释](https://tdahuyou.github.io/TNotes.notes/notes/0028.%20region%20%E6%B3%A8%E9%87%8A/README)
-  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0028.%20region%20%E6%B3%A8%E9%87%8A/README#1--概述)
-  - [2. 📒 region 注释的写法和作用](https://tdahuyou.github.io/TNotes.notes/notes/0028.%20region%20%E6%B3%A8%E9%87%8A/README#2--region-注释的写法和作用)
-  - [3. 💻 demos.1 - region 注释示例](https://tdahuyou.github.io/TNotes.notes/notes/0028.%20region%20%E6%B3%A8%E9%87%8A/README#3--demos1---region-注释示例)
-- [x] [0030. 修改编辑器的字体为 Fira Code](https://tdahuyou.github.io/TNotes.notes/notes/0030.%20%E4%BF%AE%E6%94%B9%E7%BC%96%E8%BE%91%E5%99%A8%E7%9A%84%E5%AD%97%E4%BD%93%E4%B8%BA%20Fira%20Code/README)
-  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0030.%20%E4%BF%AE%E6%94%B9%E7%BC%96%E8%BE%91%E5%99%A8%E7%9A%84%E5%AD%97%E4%BD%93%E4%B8%BA%20Fira%20Code/README#1--概述)
-  - [2. 📒 配置步骤](https://tdahuyou.github.io/TNotes.notes/notes/0030.%20%E4%BF%AE%E6%94%B9%E7%BC%96%E8%BE%91%E5%99%A8%E7%9A%84%E5%AD%97%E4%BD%93%E4%B8%BA%20Fira%20Code/README#2--配置步骤)
-  - [3. 📒 Windows 设备，查看本地已经安装的字体](https://tdahuyou.github.io/TNotes.notes/notes/0030.%20%E4%BF%AE%E6%94%B9%E7%BC%96%E8%BE%91%E5%99%A8%E7%9A%84%E5%AD%97%E4%BD%93%E4%B8%BA%20Fira%20Code/README#3--windows-设备查看本地已经安装的字体)
-  - [4. 📒 Windows - firacode 下载 + 安装步骤](https://tdahuyou.github.io/TNotes.notes/notes/0030.%20%E4%BF%AE%E6%94%B9%E7%BC%96%E8%BE%91%E5%99%A8%E7%9A%84%E5%AD%97%E4%BD%93%E4%B8%BA%20Fira%20Code/README#4--windows---firacode-下载--安装步骤)
-  - [5. 💻 测试](https://tdahuyou.github.io/TNotes.notes/notes/0030.%20%E4%BF%AE%E6%94%B9%E7%BC%96%E8%BE%91%E5%99%A8%E7%9A%84%E5%AD%97%E4%BD%93%E4%B8%BA%20Fira%20Code/README#5--测试)
-  - [6. 🤖 Windows 设备，如何检查 fira code 是否已经安装？](https://tdahuyou.github.io/TNotes.notes/notes/0030.%20%E4%BF%AE%E6%94%B9%E7%BC%96%E8%BE%91%E5%99%A8%E7%9A%84%E5%AD%97%E4%BD%93%E4%B8%BA%20Fira%20Code/README#6--windows-设备如何检查-fira-code-是否已经安装)
-    - [6.1. 方法 1: 使用控制面板](https://tdahuyou.github.io/TNotes.notes/notes/0030.%20%E4%BF%AE%E6%94%B9%E7%BC%96%E8%BE%91%E5%99%A8%E7%9A%84%E5%AD%97%E4%BD%93%E4%B8%BA%20Fira%20Code/README#61-方法-1-使用控制面板)
-    - [6.2. 方法 2: 使用文件资源管理器](https://tdahuyou.github.io/TNotes.notes/notes/0030.%20%E4%BF%AE%E6%94%B9%E7%BC%96%E8%BE%91%E5%99%A8%E7%9A%84%E5%AD%97%E4%BD%93%E4%B8%BA%20Fira%20Code/README#62-方法-2-使用文件资源管理器)
-    - [6.3. 方法 3: 使用命令提示符](https://tdahuyou.github.io/TNotes.notes/notes/0030.%20%E4%BF%AE%E6%94%B9%E7%BC%96%E8%BE%91%E5%99%A8%E7%9A%84%E5%AD%97%E4%BD%93%E4%B8%BA%20Fira%20Code/README#63-方法-3-使用命令提示符)
-    - [6.4. 方法 4: 使用 PowerShell](https://tdahuyou.github.io/TNotes.notes/notes/0030.%20%E4%BF%AE%E6%94%B9%E7%BC%96%E8%BE%91%E5%99%A8%E7%9A%84%E5%AD%97%E4%BD%93%E4%B8%BA%20Fira%20Code/README#64-方法-4-使用-powershell)
-    - [6.5. 安装 Fira Code 字体](https://tdahuyou.github.io/TNotes.notes/notes/0030.%20%E4%BF%AE%E6%94%B9%E7%BC%96%E8%BE%91%E5%99%A8%E7%9A%84%E5%AD%97%E4%BD%93%E4%B8%BA%20Fira%20Code/README#65-安装-fira-code-字体)
-    - [6.6. 检查 VSCode 设置](https://tdahuyou.github.io/TNotes.notes/notes/0030.%20%E4%BF%AE%E6%94%B9%E7%BC%96%E8%BE%91%E5%99%A8%E7%9A%84%E5%AD%97%E4%BD%93%E4%B8%BA%20Fira%20Code/README#66-检查-vscode-设置)
-  - [7. 🔗 References](https://tdahuyou.github.io/TNotes.notes/notes/0030.%20%E4%BF%AE%E6%94%B9%E7%BC%96%E8%BE%91%E5%99%A8%E7%9A%84%E5%AD%97%E4%BD%93%E4%B8%BA%20Fira%20Code/README#7--references)
-- [x] [0032. lake-editor 插件](https://tdahuyou.github.io/TNotes.notes/notes/0032.%20lake-editor%20%E6%8F%92%E4%BB%B6/README)
-  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0032.%20lake-editor%20%E6%8F%92%E4%BB%B6/README#1--概述)
-  - [2. 📒 lake-editor 插件简介](https://tdahuyou.github.io/TNotes.notes/notes/0032.%20lake-editor%20%E6%8F%92%E4%BB%B6/README#2--lake-editor-插件简介)
-- [x] [0033. 解决“在 VSCode 中修改文件、目录时，VSCode 卡死的问题”](https://tdahuyou.github.io/TNotes.notes/notes/0033.%20%E8%A7%A3%E5%86%B3%E2%80%9C%E5%9C%A8%20VSCode%20%E4%B8%AD%E4%BF%AE%E6%94%B9%E6%96%87%E4%BB%B6%E3%80%81%E7%9B%AE%E5%BD%95%E6%97%B6%EF%BC%8CVSCode%20%E5%8D%A1%E6%AD%BB%E7%9A%84%E9%97%AE%E9%A2%98%E2%80%9D/README)
-  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0033.%20%E8%A7%A3%E5%86%B3%E2%80%9C%E5%9C%A8%20VSCode%20%E4%B8%AD%E4%BF%AE%E6%94%B9%E6%96%87%E4%BB%B6%E3%80%81%E7%9B%AE%E5%BD%95%E6%97%B6%EF%BC%8CVSCode%20%E5%8D%A1%E6%AD%BB%E7%9A%84%E9%97%AE%E9%A2%98%E2%80%9D/README#1--概述)
-  - [2. 📒 文件重命名卡死的解决方案 - 将 Files Participants Timeout 配置为 0 即可](https://tdahuyou.github.io/TNotes.notes/notes/0033.%20%E8%A7%A3%E5%86%B3%E2%80%9C%E5%9C%A8%20VSCode%20%E4%B8%AD%E4%BF%AE%E6%94%B9%E6%96%87%E4%BB%B6%E3%80%81%E7%9B%AE%E5%BD%95%E6%97%B6%EF%BC%8CVSCode%20%E5%8D%A1%E6%AD%BB%E7%9A%84%E9%97%AE%E9%A2%98%E2%80%9D/README#2--文件重命名卡死的解决方案---将-files-participants-timeout-配置为-0-即可)
-  - [3. 📒 目录重命名卡死的解决方案 - Unlock with File Locksmith](https://tdahuyou.github.io/TNotes.notes/notes/0033.%20%E8%A7%A3%E5%86%B3%E2%80%9C%E5%9C%A8%20VSCode%20%E4%B8%AD%E4%BF%AE%E6%94%B9%E6%96%87%E4%BB%B6%E3%80%81%E7%9B%AE%E5%BD%95%E6%97%B6%EF%BC%8CVSCode%20%E5%8D%A1%E6%AD%BB%E7%9A%84%E9%97%AE%E9%A2%98%E2%80%9D/README#3--目录重命名卡死的解决方案---unlock-with-file-locksmith)
-- [ ] [0037. TNotes 的 VSCode 配置项](https://tdahuyou.github.io/TNotes.notes/notes/0037.%20TNotes%20%E7%9A%84%20VSCode%20%E9%85%8D%E7%BD%AE%E9%A1%B9/README)
-  - [1. 📂 .vscode/settings.json](https://tdahuyou.github.io/TNotes.notes/notes/0037.%20TNotes%20%E7%9A%84%20VSCode%20%E9%85%8D%E7%BD%AE%E9%A1%B9/README#1--vscodesettingsjson)
-  - [2. ⚙️ Workbench（工作台相关配置）](https://tdahuyou.github.io/TNotes.notes/notes/0037.%20TNotes%20%E7%9A%84%20VSCode%20%E9%85%8D%E7%BD%AE%E9%A1%B9/README#2-️-workbench工作台相关配置)
-  - [3. ⚙️ Editor（编辑器相关配置）](https://tdahuyou.github.io/TNotes.notes/notes/0037.%20TNotes%20%E7%9A%84%20VSCode%20%E9%85%8D%E7%BD%AE%E9%A1%B9/README#3-️-editor编辑器相关配置)
-  - [4. ⚙️ Extensions（扩展相关配置）](https://tdahuyou.github.io/TNotes.notes/notes/0037.%20TNotes%20%E7%9A%84%20VSCode%20%E9%85%8D%E7%BD%AE%E9%A1%B9/README#4-️-extensions扩展相关配置)
-  - [5. ⚙️ Terminal（终端相关配置）](https://tdahuyou.github.io/TNotes.notes/notes/0037.%20TNotes%20%E7%9A%84%20VSCode%20%E9%85%8D%E7%BD%AE%E9%A1%B9/README#5-️-terminal终端相关配置)
-  - [6. ⚙️ Files（文件相关配置）](https://tdahuyou.github.io/TNotes.notes/notes/0037.%20TNotes%20%E7%9A%84%20VSCode%20%E9%85%8D%E7%BD%AE%E9%A1%B9/README#6-️-files文件相关配置)
-  - [7. ⚙️ Search（搜索相关配置）](https://tdahuyou.github.io/TNotes.notes/notes/0037.%20TNotes%20%E7%9A%84%20VSCode%20%E9%85%8D%E7%BD%AE%E9%A1%B9/README#7-️-search搜索相关配置)
-  - [8. ⚙️ Explorer（资源管理器相关配置）](https://tdahuyou.github.io/TNotes.notes/notes/0037.%20TNotes%20%E7%9A%84%20VSCode%20%E9%85%8D%E7%BD%AE%E9%A1%B9/README#8-️-explorer资源管理器相关配置)
-  - [9. ⚙️ Others（其他内置配置）](https://tdahuyou.github.io/TNotes.notes/notes/0037.%20TNotes%20%E7%9A%84%20VSCode%20%E9%85%8D%E7%BD%AE%E9%A1%B9/README#9-️-others其他内置配置)
-  - [10. ⚙️ VSCode 第三方插件配置](https://tdahuyou.github.io/TNotes.notes/notes/0037.%20TNotes%20%E7%9A%84%20VSCode%20%E9%85%8D%E7%BD%AE%E9%A1%B9/README#10-️-vscode-第三方插件配置)
-
-## 16. Windows
+## 14. Windows
 
 - [x] [0002. Windows 锁屏快捷键](https://tdahuyou.github.io/TNotes.notes/notes/0002.%20Windows%20%E9%94%81%E5%B1%8F%E5%BF%AB%E6%8D%B7%E9%94%AE/README)
   - [1. 📒 `win L`](https://tdahuyou.github.io/TNotes.notes/notes/0002.%20Windows%20%E9%94%81%E5%B1%8F%E5%BF%AB%E6%8D%B7%E9%94%AE/README#1--win-l)
 - [x] [0020. 30年前的技术债引发win11离奇bug，微软不敢修！](https://tdahuyou.github.io/TNotes.notes/notes/0020.%2030%E5%B9%B4%E5%89%8D%E7%9A%84%E6%8A%80%E6%9C%AF%E5%80%BA%E5%BC%95%E5%8F%91win11%E7%A6%BB%E5%A5%87bug%EF%BC%8C%E5%BE%AE%E8%BD%AF%E4%B8%8D%E6%95%A2%E4%BF%AE%EF%BC%81/README)
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0020.%2030%E5%B9%B4%E5%89%8D%E7%9A%84%E6%8A%80%E6%9C%AF%E5%80%BA%E5%BC%95%E5%8F%91win11%E7%A6%BB%E5%A5%87bug%EF%BC%8C%E5%BE%AE%E8%BD%AF%E4%B8%8D%E6%95%A2%E4%BF%AE%EF%BC%81/README#1--概述)
 
-## 17. markdown
+## 15. markdown
 
 - [x] [0023. Writing on GitHub](https://tdahuyou.github.io/TNotes.notes/notes/0023.%20Writing%20on%20GitHub/README)
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0023.%20Writing%20on%20GitHub/README#1--概述)
@@ -339,7 +244,7 @@
   - [14. 💻 绘制思维导图测试](https://tdahuyou.github.io/TNotes.notes/notes/0027.%20%E4%BD%BF%E7%94%A8%20mermaid%20%E6%9D%A5%E7%BB%98%E5%88%B6%E6%80%9D%E7%BB%B4%E5%AF%BC%E5%9B%BE/README#14--绘制思维导图测试)
   - [15. 🔗 References](https://tdahuyou.github.io/TNotes.notes/notes/0027.%20%E4%BD%BF%E7%94%A8%20mermaid%20%E6%9D%A5%E7%BB%98%E5%88%B6%E6%80%9D%E7%BB%B4%E5%AF%BC%E5%9B%BE/README#15--references)
 
-## 18. 猫
+## 16. 猫
 
 - [x] [0040. 猫咪一天的活动时间](https://tdahuyou.github.io/TNotes.notes/notes/0040.%20%E7%8C%AB%E5%92%AA%E4%B8%80%E5%A4%A9%E7%9A%84%E6%B4%BB%E5%8A%A8%E6%97%B6%E9%97%B4/README)
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0040.%20%E7%8C%AB%E5%92%AA%E4%B8%80%E5%A4%A9%E7%9A%84%E6%B4%BB%E5%8A%A8%E6%97%B6%E9%97%B4/README#1--概述)
@@ -368,12 +273,12 @@
     - [2.10. 📸 金吉拉 vs 银渐层（British Shorthair Chinchilla）](https://tdahuyou.github.io/TNotes.notes/notes/0047.%20%E9%87%91%E5%90%89%E6%8B%89/README#210--金吉拉-vs-银渐层british-shorthair-chinchilla)
     - [2.11. 🧡 总结一句话：](https://tdahuyou.github.io/TNotes.notes/notes/0047.%20%E9%87%91%E5%90%89%E6%8B%89/README#211--总结一句话)
 
-## 19. 蜡笔小新
+## 17. 蜡笔小新
 
 - [x] [0043. 蜡笔小新女明星录](https://tdahuyou.github.io/TNotes.notes/notes/0043.%20%E8%9C%A1%E7%AC%94%E5%B0%8F%E6%96%B0%E5%A5%B3%E6%98%8E%E6%98%9F%E5%BD%95/README)
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0043.%20%E8%9C%A1%E7%AC%94%E5%B0%8F%E6%96%B0%E5%A5%B3%E6%98%8E%E6%98%9F%E5%BD%95/README#1--概述)
 
-## 20. 百科
+## 18. 百科
 
 - [x] [0021. 下载开源软件还要付钱？论国内搜索引擎中的广告究竟有多不要脸？](https://tdahuyou.github.io/TNotes.notes/notes/0021.%20%E4%B8%8B%E8%BD%BD%E5%BC%80%E6%BA%90%E8%BD%AF%E4%BB%B6%E8%BF%98%E8%A6%81%E4%BB%98%E9%92%B1%EF%BC%9F%E8%AE%BA%E5%9B%BD%E5%86%85%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8E%E4%B8%AD%E7%9A%84%E5%B9%BF%E5%91%8A%E7%A9%B6%E7%AB%9F%E6%9C%89%E5%A4%9A%E4%B8%8D%E8%A6%81%E8%84%B8%EF%BC%9F/README)
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0021.%20%E4%B8%8B%E8%BD%BD%E5%BC%80%E6%BA%90%E8%BD%AF%E4%BB%B6%E8%BF%98%E8%A6%81%E4%BB%98%E9%92%B1%EF%BC%9F%E8%AE%BA%E5%9B%BD%E5%86%85%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8E%E4%B8%AD%E7%9A%84%E5%B9%BF%E5%91%8A%E7%A9%B6%E7%AB%9F%E6%9C%89%E5%A4%9A%E4%B8%8D%E8%A6%81%E8%84%B8%EF%BC%9F/README#1--概述)
@@ -398,13 +303,13 @@
     - [2.5. 如何选择合适的设备？](https://tdahuyou.github.io/TNotes.notes/notes/0045.%20%E8%B7%AF%E7%94%B1%E5%99%A8%E5%92%8C%E5%85%89%E7%8C%AB%E7%9A%84%E5%8A%9F%E8%83%BD%E4%B8%8E%E5%8C%BA%E5%88%AB/README#25-如何选择合适的设备)
     - [2.6. 总结](https://tdahuyou.github.io/TNotes.notes/notes/0045.%20%E8%B7%AF%E7%94%B1%E5%99%A8%E5%92%8C%E5%85%89%E7%8C%AB%E7%9A%84%E5%8A%9F%E8%83%BD%E4%B8%8E%E5%8C%BA%E5%88%AB/README#26-总结)
 
-## 21. 语雀
+## 19. 语雀
 
 - [x] [0013. 语雀浏览器插件](https://tdahuyou.github.io/TNotes.notes/notes/0013.%20%E8%AF%AD%E9%9B%80%E6%B5%8F%E8%A7%88%E5%99%A8%E6%8F%92%E4%BB%B6/README)
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0013.%20%E8%AF%AD%E9%9B%80%E6%B5%8F%E8%A7%88%E5%99%A8%E6%8F%92%E4%BB%B6/README#1--概述)
   - [2. 💻 使用语雀浏览器插件来搬运在线文章](https://tdahuyou.github.io/TNotes.notes/notes/0013.%20%E8%AF%AD%E9%9B%80%E6%B5%8F%E8%A7%88%E5%99%A8%E6%8F%92%E4%BB%B6/README#2--使用语雀浏览器插件来搬运在线文章)
 
-## 22. AI
+## 20. AI
 
 - [x] [0048. 体验 claude 4](https://tdahuyou.github.io/TNotes.notes/notes/0048.%20%E4%BD%93%E9%AA%8C%20claude%204/README)
   - [📺 bilibili 👉 TNotes 合集](https://space.bilibili.com/407241004)
@@ -417,17 +322,17 @@
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0049.%20AI%20%E7%BB%98%E5%9B%BE%E6%95%99%E7%A8%8B/README#1--概述)
   - [2. 🔗 1 分钟生成架构图？程序员 AI 绘图保姆级教程](https://tdahuyou.github.io/TNotes.notes/notes/0049.%20AI%20%E7%BB%98%E5%9B%BE%E6%95%99%E7%A8%8B/README#2--1-分钟生成架构图程序员-ai-绘图保姆级教程)
 
-## 23. 音频在线编辑器
+## 21. 音频在线编辑器
 
 - [x] [0050. vocalremover](https://tdahuyou.github.io/TNotes.notes/notes/0050.%20vocalremover/README)
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0050.%20vocalremover/README#1--概述)
 
-## 24. ⏰ project graph
+## 22. ⏰ project graph
 
 - [ ] [0026. project graph](https://tdahuyou.github.io/TNotes.notes/notes/0026.%20project%20graph/README)
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0026.%20project%20graph/README#1--概述)
 
-## 25. ⏰ pending
+## 23. ⏰ pending
 
 - [ ] [0051. xxx](https://tdahuyou.github.io/TNotes.notes/notes/0051.%20xxx/README)
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0051.%20xxx/README#1--概述)

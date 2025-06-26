@@ -12,12 +12,11 @@ const __dirname = path.dirname(__filename)
 // npm i
 // npm run tn:update
 // npm run tn:push
-const CMD = 'npm run tn:update'
+const CMD = 'npm run tn:push'
 
 const SUB_KNOWLEDGE_DIR = [
   'TNotes.c-cpp',
   'TNotes.canvas',
-  'TNotes.change-log',
   'TNotes.cooking',
   'TNotes.egg',
   'TNotes.electron',
@@ -25,6 +24,7 @@ const SUB_KNOWLEDGE_DIR = [
   'TNotes.footprints',
   'TNotes.git-notes',
   'TNotes.html-css-js',
+  'TNotes.introduction',
   'TNotes.leetcode',
   'TNotes.miniprogram',
   'TNotes.network',
@@ -33,7 +33,6 @@ const SUB_KNOWLEDGE_DIR = [
   'TNotes.react',
   'TNotes.sql',
   'TNotes.svg',
-  'TNotes.template',
   'TNotes.typescript',
   'TNotes.vite',
   'TNotes.vitepress',

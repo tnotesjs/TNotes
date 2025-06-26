@@ -194,21 +194,18 @@
   - [1. 🔍 查看 react 官方对组件名的命名规则的描述](https://tdahuyou.github.io/TNotes.react/notes/0002.%20react%20%E7%BB%84%E4%BB%B6%E5%90%8D%E7%9A%84%E5%91%BD%E5%90%8D%E8%A7%84%E5%88%99/README#1--查看-react-官方对组件名的命名规则的描述)
   - [2. 💻 demos.1 - react 组件名的命名规则](https://tdahuyou.github.io/TNotes.react/notes/0002.%20react%20%E7%BB%84%E4%BB%B6%E5%90%8D%E7%9A%84%E5%91%BD%E5%90%8D%E8%A7%84%E5%88%99/README#2--demos1---react-组件名的命名规则)
 - [x] [0022. 函数组件概述](https://tdahuyou.github.io/TNotes.react/notes/0022.%20%E5%87%BD%E6%95%B0%E7%BB%84%E4%BB%B6%E6%A6%82%E8%BF%B0/README)
-  - [1. 📒 函数组件的基本形式](https://tdahuyou.github.io/TNotes.react/notes/0022.%20%E5%87%BD%E6%95%B0%E7%BB%84%E4%BB%B6%E6%A6%82%E8%BF%B0/README#1--函数组件的基本形式)
-  - [2. 📒 可以使用 ES6 的箭头函数来定义函数组件](https://tdahuyou.github.io/TNotes.react/notes/0022.%20%E5%87%BD%E6%95%B0%E7%BB%84%E4%BB%B6%E6%A6%82%E8%BF%B0/README#2--可以使用-es6-的箭头函数来定义函数组件)
-  - [3. 📒 可以为函数组件设置默认的 props 值](https://tdahuyou.github.io/TNotes.react/notes/0022.%20%E5%87%BD%E6%95%B0%E7%BB%84%E4%BB%B6%E6%A6%82%E8%BF%B0/README#3--可以为函数组件设置默认的-props-值)
-  - [4. 📒 在函数组件中可以使用 Hooks](https://tdahuyou.github.io/TNotes.react/notes/0022.%20%E5%87%BD%E6%95%B0%E7%BB%84%E4%BB%B6%E6%A6%82%E8%BF%B0/README#4--在函数组件中可以使用-hooks)
-  - 函数组件是 React 中定义组件的一种方式，它 **使用 JavaScript 函数来创建**。
-  - 与类组件不同，**函数组件通常更简洁**，并且在某些情况下性能更好。
-  - 自从 React 16.8 引入 Hooks 以来，函数组件的功能得到了极大的增强，现在 **它们可以拥有 state 和生命周期方法**，这使得函数组件成为了许多新项目的首选。
-  - **函数组件提供了简洁的方式来定义 React 组件，结合 Hooks，它们现在几乎可以做类组件所能做的所有事情**。由于其简单性和性能优势，函数组件已经成为现代 React 开发中的主流选择。
+  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.react/notes/0022.%20%E5%87%BD%E6%95%B0%E7%BB%84%E4%BB%B6%E6%A6%82%E8%BF%B0/README#1--概述)
+  - [2. 📒 函数组件](https://tdahuyou.github.io/TNotes.react/notes/0022.%20%E5%87%BD%E6%95%B0%E7%BB%84%E4%BB%B6%E6%A6%82%E8%BF%B0/README#2--函数组件)
+  - [3. 💻 使用 ES6 的箭头函数来定义函数组件](https://tdahuyou.github.io/TNotes.react/notes/0022.%20%E5%87%BD%E6%95%B0%E7%BB%84%E4%BB%B6%E6%A6%82%E8%BF%B0/README#3--使用-es6-的箭头函数来定义函数组件)
+  - [4. 💻 为函数组件设置默认的 props 值](https://tdahuyou.github.io/TNotes.react/notes/0022.%20%E5%87%BD%E6%95%B0%E7%BB%84%E4%BB%B6%E6%A6%82%E8%BF%B0/README#4--为函数组件设置默认的-props-值)
+  - [5. 💻 在函数组件中使用 Hooks](https://tdahuyou.github.io/TNotes.react/notes/0022.%20%E5%87%BD%E6%95%B0%E7%BB%84%E4%BB%B6%E6%A6%82%E8%BF%B0/README#5--在函数组件中使用-hooks)
 - [x] [0023. 类组件概述](https://tdahuyou.github.io/TNotes.react/notes/0023.%20%E7%B1%BB%E7%BB%84%E4%BB%B6%E6%A6%82%E8%BF%B0/README)
-  - [1. 📒 类组件是什么](https://tdahuyou.github.io/TNotes.react/notes/0023.%20%E7%B1%BB%E7%BB%84%E4%BB%B6%E6%A6%82%E8%BF%B0/README#1--类组件是什么)
-  - [2. 📒 类组件的基本形式](https://tdahuyou.github.io/TNotes.react/notes/0023.%20%E7%B1%BB%E7%BB%84%E4%BB%B6%E6%A6%82%E8%BF%B0/README#2--类组件的基本形式)
-  - [3. 📒 类组件的状态（State）](https://tdahuyou.github.io/TNotes.react/notes/0023.%20%E7%B1%BB%E7%BB%84%E4%BB%B6%E6%A6%82%E8%BF%B0/README#3--类组件的状态state)
-  - [4. 📒 类组件的生命周期方法](https://tdahuyou.github.io/TNotes.react/notes/0023.%20%E7%B1%BB%E7%BB%84%E4%BB%B6%E6%A6%82%E8%BF%B0/README#4--类组件的生命周期方法)
-  - [5. 📒 给类组件设置默认的 Props](https://tdahuyou.github.io/TNotes.react/notes/0023.%20%E7%B1%BB%E7%BB%84%E4%BB%B6%E6%A6%82%E8%BF%B0/README#5--给类组件设置默认的-props)
-  - 随着 React Hooks 的引入，许多原本只能在类组件中完成的任务现在也可以在函数组件中实现，这使得函数组件成为了新的标准。话虽如此，了解类组件仍然是蛮重要的，因为它们在很多现有的 React 旧项目中仍然广泛使用，咱们在看一些开源项目（比如目前 2025 年 1 月 21 日的 [scratch-gui](https://github.com/scratchfoundation/scratch-gui)）的时候，你依旧会看到不少的类组件的使用。
+  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.react/notes/0023.%20%E7%B1%BB%E7%BB%84%E4%BB%B6%E6%A6%82%E8%BF%B0/README#1--概述)
+  - [2. 📒 类组件](https://tdahuyou.github.io/TNotes.react/notes/0023.%20%E7%B1%BB%E7%BB%84%E4%BB%B6%E6%A6%82%E8%BF%B0/README#2--类组件)
+  - [3. 📒 类组件的基本形式](https://tdahuyou.github.io/TNotes.react/notes/0023.%20%E7%B1%BB%E7%BB%84%E4%BB%B6%E6%A6%82%E8%BF%B0/README#3--类组件的基本形式)
+  - [4. 📒 类组件的状态（State）](https://tdahuyou.github.io/TNotes.react/notes/0023.%20%E7%B1%BB%E7%BB%84%E4%BB%B6%E6%A6%82%E8%BF%B0/README#4--类组件的状态state)
+  - [5. 📒 类组件的生命周期方法](https://tdahuyou.github.io/TNotes.react/notes/0023.%20%E7%B1%BB%E7%BB%84%E4%BB%B6%E6%A6%82%E8%BF%B0/README#5--类组件的生命周期方法)
+  - [6. 💻 给类组件设置默认的 Props](https://tdahuyou.github.io/TNotes.react/notes/0023.%20%E7%B1%BB%E7%BB%84%E4%BB%B6%E6%A6%82%E8%BF%B0/README#6--给类组件设置默认的-props)
 - [ ] [0024. 单向数据流是什么](https://tdahuyou.github.io/TNotes.react/notes/0024.%20%E5%8D%95%E5%90%91%E6%95%B0%E6%8D%AE%E6%B5%81%E6%98%AF%E4%BB%80%E4%B9%88/README)
   - [1. 🤖 什么是单向数据流](https://tdahuyou.github.io/TNotes.react/notes/0024.%20%E5%8D%95%E5%90%91%E6%95%B0%E6%8D%AE%E6%B5%81%E6%98%AF%E4%BB%80%E4%B9%88/README#1--什么是单向数据流)
     - [1.1. 单向数据流的优点](https://tdahuyou.github.io/TNotes.react/notes/0024.%20%E5%8D%95%E5%90%91%E6%95%B0%E6%8D%AE%E6%B5%81%E6%98%AF%E4%BB%80%E4%B9%88/README#11-单向数据流的优点)
