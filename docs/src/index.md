@@ -37,7 +37,7 @@ features:
     link: https://tdahuyou.github.io/TNotes.canvas/
 
   - icon:
-      src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--chrome.svg
+      src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--chrome.png
     title: chrome（9）
     details: chrome 笔记
     link: https://tdahuyou.github.io/TNotes.chrome/
