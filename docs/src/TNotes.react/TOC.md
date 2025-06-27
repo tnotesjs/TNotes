@@ -212,8 +212,9 @@
 
 ## 7. 组件调用
 
-- [x] [0049. React 组件调用方式对比：JSX 渲染 vs 直接函数调用](https://tdahuyou.github.io/TNotes.react/notes/0049.%20React%20%E7%BB%84%E4%BB%B6%E8%B0%83%E7%94%A8%E6%96%B9%E5%BC%8F%E5%AF%B9%E6%AF%94%EF%BC%9AJSX%20%E6%B8%B2%E6%9F%93%20vs%20%E7%9B%B4%E6%8E%A5%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8/README)
-  - [1. 💻 demos.1 - JSX 渲染 vs 直接函数调用](https://tdahuyou.github.io/TNotes.react/notes/0049.%20React%20%E7%BB%84%E4%BB%B6%E8%B0%83%E7%94%A8%E6%96%B9%E5%BC%8F%E5%AF%B9%E6%AF%94%EF%BC%9AJSX%20%E6%B8%B2%E6%9F%93%20vs%20%E7%9B%B4%E6%8E%A5%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8/README#1--demos1---jsx-渲染-vs-直接函数调用)
+- [x] [0049. 函数组件不同调用方式对比：组件式调用 vs. 函数式调用](https://tdahuyou.github.io/TNotes.react/notes/0049.%20%E5%87%BD%E6%95%B0%E7%BB%84%E4%BB%B6%E4%B8%8D%E5%90%8C%E8%B0%83%E7%94%A8%E6%96%B9%E5%BC%8F%E5%AF%B9%E6%AF%94%EF%BC%9A%E7%BB%84%E4%BB%B6%E5%BC%8F%E8%B0%83%E7%94%A8%20vs.%20%E5%87%BD%E6%95%B0%E5%BC%8F%E8%B0%83%E7%94%A8/README)
+  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.react/notes/0049.%20%E5%87%BD%E6%95%B0%E7%BB%84%E4%BB%B6%E4%B8%8D%E5%90%8C%E8%B0%83%E7%94%A8%E6%96%B9%E5%BC%8F%E5%AF%B9%E6%AF%94%EF%BC%9A%E7%BB%84%E4%BB%B6%E5%BC%8F%E8%B0%83%E7%94%A8%20vs.%20%E5%87%BD%E6%95%B0%E5%BC%8F%E8%B0%83%E7%94%A8/README#1--概述)
+  - [2. 💻 demos.1 - 组件式调用 `<Com />` vs. 函数式调用 `{Comp()}`](https://tdahuyou.github.io/TNotes.react/notes/0049.%20%E5%87%BD%E6%95%B0%E7%BB%84%E4%BB%B6%E4%B8%8D%E5%90%8C%E8%B0%83%E7%94%A8%E6%96%B9%E5%BC%8F%E5%AF%B9%E6%AF%94%EF%BC%9A%E7%BB%84%E4%BB%B6%E5%BC%8F%E8%B0%83%E7%94%A8%20vs.%20%E5%87%BD%E6%95%B0%E5%BC%8F%E8%B0%83%E7%94%A8/README#2--demos1---组件式调用-com--vs-函数式调用-comp)
 
 ## 8. 组件属性
 
@@ -222,16 +223,14 @@
   - [2. 💻 函数组件设置属性默认值](https://tdahuyou.github.io/TNotes.react/notes/0026.%20%E5%B1%9E%E6%80%A7%E9%BB%98%E8%AE%A4%E5%80%BC/README#2--函数组件设置属性默认值)
   - [3. 💻 给类组件设置属性默认值](https://tdahuyou.github.io/TNotes.react/notes/0026.%20%E5%B1%9E%E6%80%A7%E9%BB%98%E8%AE%A4%E5%80%BC/README#3--给类组件设置属性默认值)
 - [x] [0019. 组件属性的传递和接收](https://tdahuyou.github.io/TNotes.react/notes/0019.%20%E7%BB%84%E4%BB%B6%E5%B1%9E%E6%80%A7%E7%9A%84%E4%BC%A0%E9%80%92%E5%92%8C%E6%8E%A5%E6%94%B6/README)
-  - [1. 📒 props 传递概述](https://tdahuyou.github.io/TNotes.react/notes/0019.%20%E7%BB%84%E4%BB%B6%E5%B1%9E%E6%80%A7%E7%9A%84%E4%BC%A0%E9%80%92%E5%92%8C%E6%8E%A5%E6%94%B6/README#1--props-传递概述)
+  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.react/notes/0019.%20%E7%BB%84%E4%BB%B6%E5%B1%9E%E6%80%A7%E7%9A%84%E4%BC%A0%E9%80%92%E5%92%8C%E6%8E%A5%E6%94%B6/README#1--概述)
   - [2. 💻 demos.1 - 组件属性的传递和接收](https://tdahuyou.github.io/TNotes.react/notes/0019.%20%E7%BB%84%E4%BB%B6%E5%B1%9E%E6%80%A7%E7%9A%84%E4%BC%A0%E9%80%92%E5%92%8C%E6%8E%A5%E6%94%B6/README#2--demos1---组件属性的传递和接收)
   - [3. 💻 demos.2 - 不同数据类型的属性传递](https://tdahuyou.github.io/TNotes.react/notes/0019.%20%E7%BB%84%E4%BB%B6%E5%B1%9E%E6%80%A7%E7%9A%84%E4%BC%A0%E9%80%92%E5%92%8C%E6%8E%A5%E6%94%B6/README#3--demos2---不同数据类型的属性传递)
 - [x] [0005. 通过 props 和 children 来传递元素内容](https://tdahuyou.github.io/TNotes.react/notes/0005.%20%E9%80%9A%E8%BF%87%20props%20%E5%92%8C%20children%20%E6%9D%A5%E4%BC%A0%E9%80%92%E5%85%83%E7%B4%A0%E5%86%85%E5%AE%B9/README)
-  - [1. 📒 react 组件中的 props.children 相当于 vue 组件中的 slot 插槽](https://tdahuyou.github.io/TNotes.react/notes/0005.%20%E9%80%9A%E8%BF%87%20props%20%E5%92%8C%20children%20%E6%9D%A5%E4%BC%A0%E9%80%92%E5%85%83%E7%B4%A0%E5%86%85%E5%AE%B9/README#1--react-组件中的-propschildren-相当于-vue-组件中的-slot-插槽)
-  - [2. 📒 传递元素内容](https://tdahuyou.github.io/TNotes.react/notes/0005.%20%E9%80%9A%E8%BF%87%20props%20%E5%92%8C%20children%20%E6%9D%A5%E4%BC%A0%E9%80%92%E5%85%83%E7%B4%A0%E5%86%85%E5%AE%B9/README#2--传递元素内容)
-  - [3. 💻 demos.1 - 传递元素内容的简单示例](https://tdahuyou.github.io/TNotes.react/notes/0005.%20%E9%80%9A%E8%BF%87%20props%20%E5%92%8C%20children%20%E6%9D%A5%E4%BC%A0%E9%80%92%E5%85%83%E7%B4%A0%E5%86%85%E5%AE%B9/README#3--demos1---传递元素内容的简单示例)
-  - 在 React 中，可以通过 `props.children` 传递默认插槽内容，类似于 Vue 中的默认插槽；也可以通过 `props.propName` 属性传递具名插槽内容，其中 `propName` 是我们自定义的属性名，类似于 Vue 中的具名插槽。
-    - `props.children` 可以接收任何可渲染的 React 元素，并且可以通过检查其是否存在来提供默认内容。
-    - 除了 `children`，还可以使用其他 `props`（如 `content1` 和 `content2`）来传递特定的内容，并为这些 `props` 定义默认值。
+  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.react/notes/0005.%20%E9%80%9A%E8%BF%87%20props%20%E5%92%8C%20children%20%E6%9D%A5%E4%BC%A0%E9%80%92%E5%85%83%E7%B4%A0%E5%86%85%E5%AE%B9/README#1--概述)
+  - [2. 📒 react 组件中的 props.children 相当于 vue 组件中的 slot 插槽](https://tdahuyou.github.io/TNotes.react/notes/0005.%20%E9%80%9A%E8%BF%87%20props%20%E5%92%8C%20children%20%E6%9D%A5%E4%BC%A0%E9%80%92%E5%85%83%E7%B4%A0%E5%86%85%E5%AE%B9/README#2--react-组件中的-propschildren-相当于-vue-组件中的-slot-插槽)
+  - [3. 📒 传递元素内容](https://tdahuyou.github.io/TNotes.react/notes/0005.%20%E9%80%9A%E8%BF%87%20props%20%E5%92%8C%20children%20%E6%9D%A5%E4%BC%A0%E9%80%92%E5%85%83%E7%B4%A0%E5%86%85%E5%AE%B9/README#3--传递元素内容)
+  - [4. 💻 demos.1 - 传递元素内容的简单示例](https://tdahuyou.github.io/TNotes.react/notes/0005.%20%E9%80%9A%E8%BF%87%20props%20%E5%92%8C%20children%20%E6%9D%A5%E4%BC%A0%E9%80%92%E5%85%83%E7%B4%A0%E5%86%85%E5%AE%B9/README#4--demos1---传递元素内容的简单示例)
 - [x] [0025. 布尔属性](https://tdahuyou.github.io/TNotes.react/notes/0025.%20%E5%B8%83%E5%B0%94%E5%B1%9E%E6%80%A7/README)
   - [1. 📒 布尔属性概述](https://tdahuyou.github.io/TNotes.react/notes/0025.%20%E5%B8%83%E5%B0%94%E5%B1%9E%E6%80%A7/README#1--布尔属性概述)
   - [2. 💻 demos.1 - 布尔属性在 React 中的应用示例](https://tdahuyou.github.io/TNotes.react/notes/0025.%20%E5%B8%83%E5%B0%94%E5%B1%9E%E6%80%A7/README#2--demos1---布尔属性在-react-中的应用示例)
