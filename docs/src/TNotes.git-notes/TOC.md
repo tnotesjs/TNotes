@@ -4,9 +4,6 @@
 ## 1. GitHub 工具
 
 - [x] [0010. deepwiki](https://tdahuyou.github.io/TNotes.git-notes/notes/0010.%20deepwiki/README)
-  - [📺 bilibili 👉 TNotes 合集](https://space.bilibili.com/407241004)
-    - [bilibili.TNotes.git-notes.0010.1](https://www.bilibili.com/video/BV1K8G9z1ECk)
-    - [bilibili.TNotes.git-notes.0010.2](https://www.bilibili.com/video/BV1M3G1zdEgc)
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.git-notes/notes/0010.%20deepwiki/README#1--概述)
   - [2. 📺 Github 的超级百科，一键可视化，光速读懂开源代码](https://tdahuyou.github.io/TNotes.git-notes/notes/0010.%20deepwiki/README#2--github-的超级百科一键可视化光速读懂开源代码)
   - [3. 📺 DeepWiki 上线即爆火：专为 GitHub 打造的免费百科全书](https://tdahuyou.github.io/TNotes.git-notes/notes/0010.%20deepwiki/README#3--deepwiki-上线即爆火专为-github-打造的免费百科全书)
@@ -35,6 +32,10 @@
   - [3. 💻 demos.1 - share](https://tdahuyou.github.io/TNotes.git-notes/notes/0015.%20excalidraw/README#3--demos1---share)
   - [4. 💻 demos.2 - mermaid](https://tdahuyou.github.io/TNotes.git-notes/notes/0015.%20excalidraw/README#4--demos2---mermaid)
   - [5. 🔗 References](https://tdahuyou.github.io/TNotes.git-notes/notes/0015.%20excalidraw/README#5--references)
+- [x] [0016. musicxx](https://tdahuyou.github.io/TNotes.git-notes/notes/0016.%20musicxx/README)
+  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.git-notes/notes/0016.%20musicxx/README#1--概述)
+  - [2. 📺 又是 GitHub 精选 App!我愿称之为 2025 最好用听歌神器!](https://tdahuyou.github.io/TNotes.git-notes/notes/0016.%20musicxx/README#2--又是-github-精选-app我愿称之为-2025-最好用听歌神器)
+  - [3. 🔗 References](https://tdahuyou.github.io/TNotes.git-notes/notes/0016.%20musicxx/README#3--references)
 
 ## 3. 分支
 
@@ -107,10 +108,3 @@
   - [4. 📒 `git status` 的适用场景](https://tdahuyou.github.io/TNotes.git-notes/notes/0009.%20git%20status/README#4--git-status-的适用场景)
   - [5. 📒 `git status` 命令列表](https://tdahuyou.github.io/TNotes.git-notes/notes/0009.%20git%20status/README#5--git-status-命令列表)
   - `git status` 用于检查当前仓库的状态，确保提交前的变更正确！
-- [x] [0010. deepwiki](https://tdahuyou.github.io/TNotes.git-notes/notes/0010.%20deepwiki/README)
-  - [📺 bilibili 👉 TNotes 合集](https://space.bilibili.com/407241004)
-    - [bilibili.TNotes.git-notes.0010.1](https://www.bilibili.com/video/BV1K8G9z1ECk)
-    - [bilibili.TNotes.git-notes.0010.2](https://www.bilibili.com/video/BV1M3G1zdEgc)
-  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.git-notes/notes/0010.%20deepwiki/README#1--概述)
-  - [2. 📺 Github 的超级百科，一键可视化，光速读懂开源代码](https://tdahuyou.github.io/TNotes.git-notes/notes/0010.%20deepwiki/README#2--github-的超级百科一键可视化光速读懂开源代码)
-  - [3. 📺 DeepWiki 上线即爆火：专为 GitHub 打造的免费百科全书](https://tdahuyou.github.io/TNotes.git-notes/notes/0010.%20deepwiki/README#3--deepwiki-上线即爆火专为-github-打造的免费百科全书)

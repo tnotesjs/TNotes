@@ -36,6 +36,7 @@ const FEATURES_DISPLAY_ORDER = [
   'TNotes.nodejs',
   'TNotes.notes',
   'TNotes.react',
+  'TNotes.redis',
   'TNotes.sql',
   'TNotes.svg',
   'TNotes.typescript',
