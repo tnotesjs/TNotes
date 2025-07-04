@@ -14,7 +14,7 @@ hero:
 features:
   - icon:
       src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/footprints.png
-    title: TNotes（422）
+    title: TNotes（430）
     details: TNotes.xxx 所有知识库的根节点，汇总所有 TNotes 相关的笔记。
     link: https://tdahuyou.github.io/notes
 
@@ -122,7 +122,7 @@ features:
 
   - icon:
       src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--redis.svg
-    title: redis（10）
+    title: redis（18）
     details: redis 笔记
     link: https://tdahuyou.github.io/TNotes.redis/
 
