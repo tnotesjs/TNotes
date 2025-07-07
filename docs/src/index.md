@@ -14,7 +14,7 @@ hero:
 features:
   - icon:
       src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/footprints.png
-    title: TNotes（435）
+    title: TNotes（436）
     details: TNotes.xxx 所有知识库的根节点，汇总所有 TNotes 相关的笔记。
     link: https://tdahuyou.github.io/notes
 
@@ -110,7 +110,7 @@ features:
 
   - icon:
       src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--pc.svg
-    title: notes（31）
+    title: notes（32）
     details: 早期在 B 站坐的工具分享系列内容，或者存储的一些没有明确分组的笔记的集合。
     link: https://tdahuyou.github.io/TNotes.notes/
 

@@ -313,10 +313,17 @@
 
 - [x] [0048. 体验 claude 4](https://tdahuyou.github.io/TNotes.notes/notes/0048.%20%E4%BD%93%E9%AA%8C%20claude%204/README)
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0048.%20%E4%BD%93%E9%AA%8C%20claude%204/README#1--概述)
-  - [2. 🤖 AI - 请给我一个连连看的 Web 程序](https://tdahuyou.github.io/TNotes.notes/notes/0048.%20%E4%BD%93%E9%AA%8C%20claude%204/README#2--ai---请给我一个连连看的-web-程序)
+  - [2. 📺 Claude4 炸裂发布！一句话生成整个网站？程序员慌了](https://tdahuyou.github.io/TNotes.notes/notes/0048.%20%E4%BD%93%E9%AA%8C%20claude%204/README#2--claude4-炸裂发布一句话生成整个网站程序员慌了)
+  - [3. 🤖 AI - 请给我一个连连看的 Web 程序](https://tdahuyou.github.io/TNotes.notes/notes/0048.%20%E4%BD%93%E9%AA%8C%20claude%204/README#3--ai---请给我一个连连看的-web-程序)
 - [x] [0049. AI 绘图教程](https://tdahuyou.github.io/TNotes.notes/notes/0049.%20AI%20%E7%BB%98%E5%9B%BE%E6%95%99%E7%A8%8B/README)
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0049.%20AI%20%E7%BB%98%E5%9B%BE%E6%95%99%E7%A8%8B/README#1--概述)
   - [2. 🔗 1 分钟生成架构图？程序员 AI 绘图保姆级教程](https://tdahuyou.github.io/TNotes.notes/notes/0049.%20AI%20%E7%BB%98%E5%9B%BE%E6%95%99%E7%A8%8B/README#2--1-分钟生成架构图程序员-ai-绘图保姆级教程)
+- [x] [0051. Video Tutor](https://tdahuyou.github.io/TNotes.notes/notes/0051.%20Video%20Tutor/README)
+  - [📂 TNotes.yuque](https://www.yuque.com/tdahuyou/tnotes.yuque/)
+    - [TNotes.yuque.notes.0051](https://www.yuque.com/tdahuyou/tnotes.yuque/notes.0051)
+  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0051.%20Video%20Tutor/README#1--概述)
+  - [2. 💻 测试：生成英语词汇介绍的视频](https://tdahuyou.github.io/TNotes.notes/notes/0051.%20Video%20Tutor/README#2--测试生成英语词汇介绍的视频)
+  - [3. 🔗 References](https://tdahuyou.github.io/TNotes.notes/notes/0051.%20Video%20Tutor/README#3--references)
 
 ## 21. 音频在线编辑器
 
@@ -330,5 +337,9 @@
 
 ## 23. ⏰ pending
 
-- [ ] [0051. xxx](https://tdahuyou.github.io/TNotes.notes/notes/0051.%20xxx/README)
-  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0051.%20xxx/README#1--概述)
+- [x] [0051. Video Tutor](https://tdahuyou.github.io/TNotes.notes/notes/0051.%20Video%20Tutor/README)
+  - [📂 TNotes.yuque](https://www.yuque.com/tdahuyou/tnotes.yuque/)
+    - [TNotes.yuque.notes.0051](https://www.yuque.com/tdahuyou/tnotes.yuque/notes.0051)
+  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.notes/notes/0051.%20Video%20Tutor/README#1--概述)
+  - [2. 💻 测试：生成英语词汇介绍的视频](https://tdahuyou.github.io/TNotes.notes/notes/0051.%20Video%20Tutor/README#2--测试生成英语词汇介绍的视频)
+  - [3. 🔗 References](https://tdahuyou.github.io/TNotes.notes/notes/0051.%20Video%20Tutor/README#3--references)
