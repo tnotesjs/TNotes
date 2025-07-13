@@ -151,8 +151,19 @@
   - [6. 💻 `georadius`、`georadiusbymember`](https://tdahuyou.github.io/TNotes.redis/notes/0020.%20Redis%20GEO/README#6--georadiusgeoradiusbymember)
   - [7. 💻 `geohash`](https://tdahuyou.github.io/TNotes.redis/notes/0020.%20Redis%20GEO/README#7--geohash)
   - [8. 🔗 References](https://tdahuyou.github.io/TNotes.redis/notes/0020.%20Redis%20GEO/README#8--references)
-- [ ] [0021. Redis Stream](https://tdahuyou.github.io/TNotes.redis/notes/0021.%20Redis%20Stream/README)
+- [x] [0021. Redis Stream](https://tdahuyou.github.io/TNotes.redis/notes/0021.%20Redis%20Stream/README)
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.redis/notes/0021.%20Redis%20Stream/README#1--概述)
+  - [2. 📒 Redis Stream](https://tdahuyou.github.io/TNotes.redis/notes/0021.%20Redis%20Stream/README#2--redis-stream)
+  - [3. 📒 消息队列相关命令](https://tdahuyou.github.io/TNotes.redis/notes/0021.%20Redis%20Stream/README#3--消息队列相关命令)
+  - [4. 💻 XADD](https://tdahuyou.github.io/TNotes.redis/notes/0021.%20Redis%20Stream/README#4--xadd)
+  - [5. 💻 XTRIM](https://tdahuyou.github.io/TNotes.redis/notes/0021.%20Redis%20Stream/README#5--xtrim)
+  - [6. 💻 XDEL](https://tdahuyou.github.io/TNotes.redis/notes/0021.%20Redis%20Stream/README#6--xdel)
+  - [7. 💻 清空 Redis Stream 中的某个流](https://tdahuyou.github.io/TNotes.redis/notes/0021.%20Redis%20Stream/README#7--清空-redis-stream-中的某个流)
+  - [8. 💻 XLEN](https://tdahuyou.github.io/TNotes.redis/notes/0021.%20Redis%20Stream/README#8--xlen)
+  - [9. 💻 XRANGE](https://tdahuyou.github.io/TNotes.redis/notes/0021.%20Redis%20Stream/README#9--xrange)
+  - [10. 💻 XREAD](https://tdahuyou.github.io/TNotes.redis/notes/0021.%20Redis%20Stream/README#10--xread)
+  - [11. 🆚 `XREAD` 与 `XRANGE` 的区别](https://tdahuyou.github.io/TNotes.redis/notes/0021.%20Redis%20Stream/README#11--xread-与-xrange-的区别)
+  - [12. 📒 消费者组相关命令](https://tdahuyou.github.io/TNotes.redis/notes/0021.%20Redis%20Stream/README#12--消费者组相关命令)
 
 ## 7. en-words
 

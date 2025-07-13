@@ -31,7 +31,8 @@
   - [2. 📒 个人最喜欢的几个核心亮点](https://tdahuyou.github.io/TNotes.git-notes/notes/0015.%20excalidraw/README#2--个人最喜欢的几个核心亮点)
   - [3. 💻 demos.1 - share](https://tdahuyou.github.io/TNotes.git-notes/notes/0015.%20excalidraw/README#3--demos1---share)
   - [4. 💻 demos.2 - mermaid](https://tdahuyou.github.io/TNotes.git-notes/notes/0015.%20excalidraw/README#4--demos2---mermaid)
-  - [5. 🔗 References](https://tdahuyou.github.io/TNotes.git-notes/notes/0015.%20excalidraw/README#5--references)
+  - [5. 🤔 为什么叫 excalidraw 这个名字呢？](https://tdahuyou.github.io/TNotes.git-notes/notes/0015.%20excalidraw/README#5--为什么叫-excalidraw-这个名字呢)
+  - [6. 🔗 References](https://tdahuyou.github.io/TNotes.git-notes/notes/0015.%20excalidraw/README#6--references)
 - [x] [0016. musicxx](https://tdahuyou.github.io/TNotes.git-notes/notes/0016.%20musicxx/README)
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.git-notes/notes/0016.%20musicxx/README#1--概述)
   - [2. 📺 又是 GitHub 精选 App!我愿称之为 2025 最好用听歌神器!](https://tdahuyou.github.io/TNotes.git-notes/notes/0016.%20musicxx/README#2--又是-github-精选-app我愿称之为-2025-最好用听歌神器)
@@ -108,3 +109,14 @@
   - [4. 📒 `git status` 的适用场景](https://tdahuyou.github.io/TNotes.git-notes/notes/0009.%20git%20status/README#4--git-status-的适用场景)
   - [5. 📒 `git status` 命令列表](https://tdahuyou.github.io/TNotes.git-notes/notes/0009.%20git%20status/README#5--git-status-命令列表)
   - `git status` 用于检查当前仓库的状态，确保提交前的变更正确！
+
+## 8. 🎯 en-words
+
+- [ ] [0017. en-words](https://tdahuyou.github.io/TNotes.git-notes/notes/0017.%20en-words/README)
+  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.git-notes/notes/0017.%20en-words/README#1--概述)
+  - [2. 🎯 git-notes 单词本](https://tdahuyou.github.io/TNotes.git-notes/notes/0017.%20en-words/README#2--git-notes-单词本)
+
+## 9. empty
+
+- [ ] [0018. xxx](https://tdahuyou.github.io/TNotes.git-notes/notes/0018.%20xxx/README)
+  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.git-notes/notes/0018.%20xxx/README#1--概述)

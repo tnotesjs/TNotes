@@ -24,7 +24,7 @@
         "title": "TNotes",
         "details": "TNotes.xxx 所有知识库的根节点，汇总所有 TNotes 相关的笔记。",
         "link": "https://tdahuyou.github.io/notes",
-        "completed_notes_count": "436"
+        "completed_notes_count": "440"
       },
       "TNotes.template": {
         "icon": {
@@ -192,7 +192,7 @@
           "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--react.svg"
         },
         "title": "react",
-        "completed_notes_count": 45,
+        "completed_notes_count": 44,
         "details": "React 笔记",
         "link": "https://tdahuyou.github.io/TNotes.react/"
       },
@@ -291,7 +291,7 @@
           "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--vscode.svg"
         },
         "title": "vscode",
-        "completed_notes_count": 7,
+        "completed_notes_count": 11,
         "details": "vscode 笔记",
         "link": "https://tdahuyou.github.io/TNotes.vscode/"
       },
@@ -300,7 +300,7 @@
           "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--redis.svg"
         },
         "title": "redis",
-        "completed_notes_count": 23,
+        "completed_notes_count": 24,
         "details": "redis 笔记",
         "link": "https://tdahuyou.github.io/TNotes.redis/"
       }
