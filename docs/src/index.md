@@ -14,7 +14,7 @@ hero:
 features:
   - icon:
       src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/footprints.png
-    title: TNotes（441）
+    title: TNotes（442）
     details: TNotes.xxx 所有知识库的根节点，汇总所有 TNotes 相关的笔记。
     link: https://tdahuyou.github.io/notes
 
@@ -158,7 +158,7 @@ features:
 
   - icon:
       src: https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--vscode.svg
-    title: vscode（12）
+    title: vscode（13）
     details: vscode 笔记
     link: https://tdahuyou.github.io/TNotes.vscode/
 
