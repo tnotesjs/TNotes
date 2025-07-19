@@ -46,7 +46,7 @@
     - [2.6. 🎯 第 6 章 进阶应用](https://tdahuyou.github.io/TNotes.vscode/notes/0005.%20%E3%80%8AVisual%20Studio%20Code%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97%E3%80%8B%E7%AC%94%E8%AE%B0/README#26--第-6-章-进阶应用)
       - [2.6.1. 命令行](https://tdahuyou.github.io/TNotes.vscode/notes/0005.%20%E3%80%8AVisual%20Studio%20Code%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97%E3%80%8B%E7%AC%94%E8%AE%B0/README#261-命令行)
       - [2.6.2. IntelliSense](https://tdahuyou.github.io/TNotes.vscode/notes/0005.%20%E3%80%8AVisual%20Studio%20Code%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97%E3%80%8B%E7%AC%94%E8%AE%B0/README#262-intellisense)
-      - [2.6.3. 代码导航](https://tdahuyou.github.io/TNotes.vscode/notes/0005.%20%E3%80%8AVisual%20Studio%20Code%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97%E3%80%8B%E7%AC%94%E8%AE%B0/README#263-代码导航)
+      - [2.6.3. Code Navigation 代码导航](https://tdahuyou.github.io/TNotes.vscode/notes/0005.%20%E3%80%8AVisual%20Studio%20Code%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97%E3%80%8B%E7%AC%94%E8%AE%B0/README#263-code-navigation-代码导航)
       - [2.6.4. 玩转 Git](https://tdahuyou.github.io/TNotes.vscode/notes/0005.%20%E3%80%8AVisual%20Studio%20Code%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97%E3%80%8B%E7%AC%94%E8%AE%B0/README#264-玩转-git)
       - [2.6.5. 打造自己的主题](https://tdahuyou.github.io/TNotes.vscode/notes/0005.%20%E3%80%8AVisual%20Studio%20Code%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97%E3%80%8B%E7%AC%94%E8%AE%B0/README#265-打造自己的主题)
       - [2.6.6. 快速创建可复用的代码片段](https://tdahuyou.github.io/TNotes.vscode/notes/0005.%20%E3%80%8AVisual%20Studio%20Code%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97%E3%80%8B%E7%AC%94%E8%AE%B0/README#266-快速创建可复用的代码片段)
@@ -63,7 +63,7 @@
       - [2.8.3. JavaScript](https://tdahuyou.github.io/TNotes.vscode/notes/0005.%20%E3%80%8AVisual%20Studio%20Code%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97%E3%80%8B%E7%AC%94%E8%AE%B0/README#283-javascript)
       - [2.8.4. TypeScript](https://tdahuyou.github.io/TNotes.vscode/notes/0005.%20%E3%80%8AVisual%20Studio%20Code%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97%E3%80%8B%E7%AC%94%E8%AE%B0/README#284-typescript)
       - [2.8.5. Java](https://tdahuyou.github.io/TNotes.vscode/notes/0005.%20%E3%80%8AVisual%20Studio%20Code%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97%E3%80%8B%E7%AC%94%E8%AE%B0/README#285-java)
-      - [2.8.6. C#](https://tdahuyou.github.io/TNotes.vscode/notes/0005.%20%E3%80%8AVisual%20Studio%20Code%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97%E3%80%8B%E7%AC%94%E8%AE%B0/README#286-c)
+      - [2.8.6. C\#](https://tdahuyou.github.io/TNotes.vscode/notes/0005.%20%E3%80%8AVisual%20Studio%20Code%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97%E3%80%8B%E7%AC%94%E8%AE%B0/README#286-c)
       - [2.8.7. C/C++](https://tdahuyou.github.io/TNotes.vscode/notes/0005.%20%E3%80%8AVisual%20Studio%20Code%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97%E3%80%8B%E7%AC%94%E8%AE%B0/README#287-cc)
       - [2.8.8. Go](https://tdahuyou.github.io/TNotes.vscode/notes/0005.%20%E3%80%8AVisual%20Studio%20Code%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97%E3%80%8B%E7%AC%94%E8%AE%B0/README#288-go)
       - [2.8.9. 更多语言支持](https://tdahuyou.github.io/TNotes.vscode/notes/0005.%20%E3%80%8AVisual%20Studio%20Code%20%E6%9D%83%E5%A8%81%E6%8C%87%E5%8D%97%E3%80%8B%E7%AC%94%E8%AE%B0/README#289-更多语言支持)
@@ -158,7 +158,34 @@
   - [2. 🔍 查看快捷键大全](https://tdahuyou.github.io/TNotes.vscode/notes/0007.%20VS%20Code%20%E5%BF%AB%E6%8D%B7%E9%94%AE%E5%A4%A7%E5%85%A8/README#2--查看快捷键大全)
   - [3. 🔗 References](https://tdahuyou.github.io/TNotes.vscode/notes/0007.%20VS%20Code%20%E5%BF%AB%E6%8D%B7%E9%94%AE%E5%A4%A7%E5%85%A8/README#3--references)
 
-## 6. Others
+## 6. `code` 命令
+
+- [x] [0010. code 命令](https://tdahuyou.github.io/TNotes.vscode/notes/0010.%20code%20%E5%91%BD%E4%BB%A4/README)
+  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.vscode/notes/0010.%20code%20%E5%91%BD%E4%BB%A4/README#1--概述)
+  - [2. 💻 `code --help`](https://tdahuyou.github.io/TNotes.vscode/notes/0010.%20code%20%E5%91%BD%E4%BB%A4/README#2--code---help)
+  - [3. 📒 code 命令选项](https://tdahuyou.github.io/TNotes.vscode/notes/0010.%20code%20%E5%91%BD%E4%BB%A4/README#3--code-命令选项)
+    - [3.1. 选项大全](https://tdahuyou.github.io/TNotes.vscode/notes/0010.%20code%20%E5%91%BD%E4%BB%A4/README#31-选项大全)
+    - [3.2. 常用的一些选项](https://tdahuyou.github.io/TNotes.vscode/notes/0010.%20code%20%E5%91%BD%E4%BB%A4/README#32-常用的一些选项)
+    - [3.3. 插件相关选项](https://tdahuyou.github.io/TNotes.vscode/notes/0010.%20code%20%E5%91%BD%E4%BB%A4/README#33-插件相关选项)
+  - [4. 💻 通过命令启动 VS Code 打开指定文件夹](https://tdahuyou.github.io/TNotes.vscode/notes/0010.%20code%20%E5%91%BD%E4%BB%A4/README#4--通过命令启动-vs-code-打开指定文件夹)
+
+## 7. `vscode://` 协议
+
+- [x] [0011. 通过 URLs 打开 VS Code](https://tdahuyou.github.io/TNotes.vscode/notes/0011.%20%E9%80%9A%E8%BF%87%20URLs%20%E6%89%93%E5%BC%80%20VS%20Code/README)
+  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.vscode/notes/0011.%20%E9%80%9A%E8%BF%87%20URLs%20%E6%89%93%E5%BC%80%20VS%20Code/README#1--概述)
+  - [2. 💻 通过 URL 链接打开 VS Code](https://tdahuyou.github.io/TNotes.vscode/notes/0011.%20%E9%80%9A%E8%BF%87%20URLs%20%E6%89%93%E5%BC%80%20VS%20Code/README#2--通过-url-链接打开-vs-code)
+  - [3. 📒 `vscode://` 协议](https://tdahuyou.github.io/TNotes.vscode/notes/0011.%20%E9%80%9A%E8%BF%87%20URLs%20%E6%89%93%E5%BC%80%20VS%20Code/README#3--vscode-协议)
+  - [4. 💻 通过浏览器快速打开 VS Code](https://tdahuyou.github.io/TNotes.vscode/notes/0011.%20%E9%80%9A%E8%BF%87%20URLs%20%E6%89%93%E5%BC%80%20VS%20Code/README#4--通过浏览器快速打开-vs-code)
+  - [5. 🔗 References](https://tdahuyou.github.io/TNotes.vscode/notes/0011.%20%E9%80%9A%E8%BF%87%20URLs%20%E6%89%93%E5%BC%80%20VS%20Code/README#5--references)
+
+## 8. Peek
+
+- [x] [0012. Peek 窥视](https://tdahuyou.github.io/TNotes.vscode/notes/0012.%20Peek%20%E7%AA%A5%E8%A7%86/README)
+  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.vscode/notes/0012.%20Peek%20%E7%AA%A5%E8%A7%86/README#1--概述)
+  - [2. 📒 Peek 窥视](https://tdahuyou.github.io/TNotes.vscode/notes/0012.%20Peek%20%E7%AA%A5%E8%A7%86/README#2--peek-窥视)
+  - [3. 💻 demos.1 - 体验 Peek 的使用](https://tdahuyou.github.io/TNotes.vscode/notes/0012.%20Peek%20%E7%AA%A5%E8%A7%86/README#3--demos1---体验-peek-的使用)
+
+## 9. Others
 
 - [x] [0031. explorer.confirmDelete](https://tdahuyou.github.io/TNotes.vscode/notes/0031.%20explorer.confirmDelete/README)
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.vscode/notes/0031.%20explorer.confirmDelete/README#1--概述)
@@ -206,14 +233,10 @@
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.vscode/notes/0006.%20VS%20Code%20%E5%AE%98%E7%BD%91/README#1--概述)
   - [2. 🫧 评价](https://tdahuyou.github.io/TNotes.vscode/notes/0006.%20VS%20Code%20%E5%AE%98%E7%BD%91/README#2--评价)
   - [3. 🔗 References](https://tdahuyou.github.io/TNotes.vscode/notes/0006.%20VS%20Code%20%E5%AE%98%E7%BD%91/README#3--references)
-- [ ] [0009. xxx](https://tdahuyou.github.io/TNotes.vscode/notes/0009.%20xxx/README)
-  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.vscode/notes/0009.%20xxx/README#1--概述)
-- [ ] [0010. xxx](https://tdahuyou.github.io/TNotes.vscode/notes/0010.%20xxx/README)
-  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.vscode/notes/0010.%20xxx/README#1--概述)
-- [ ] [0011. xxx](https://tdahuyou.github.io/TNotes.vscode/notes/0011.%20xxx/README)
-  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.vscode/notes/0011.%20xxx/README#1--概述)
-- [ ] [0012. xxx](https://tdahuyou.github.io/TNotes.vscode/notes/0012.%20xxx/README)
-  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.vscode/notes/0012.%20xxx/README#1--概述)
+- [ ] [0009. VS Code 菜鸟教程](https://tdahuyou.github.io/TNotes.vscode/notes/0009.%20VS%20Code%20%E8%8F%9C%E9%B8%9F%E6%95%99%E7%A8%8B/README)
+  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.vscode/notes/0009.%20VS%20Code%20%E8%8F%9C%E9%B8%9F%E6%95%99%E7%A8%8B/README#1--概述)
+  - [2. 📒 教程大纲](https://tdahuyou.github.io/TNotes.vscode/notes/0009.%20VS%20Code%20%E8%8F%9C%E9%B8%9F%E6%95%99%E7%A8%8B/README#2--教程大纲)
+  - [3. 🔗 References](https://tdahuyou.github.io/TNotes.vscode/notes/0009.%20VS%20Code%20%E8%8F%9C%E9%B8%9F%E6%95%99%E7%A8%8B/README#3--references)
 - [ ] [0013. xxx](https://tdahuyou.github.io/TNotes.vscode/notes/0013.%20xxx/README)
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.vscode/notes/0013.%20xxx/README#1--概述)
 - [ ] [0014. xxx](https://tdahuyou.github.io/TNotes.vscode/notes/0014.%20xxx/README)
