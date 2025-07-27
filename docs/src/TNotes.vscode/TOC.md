@@ -178,18 +178,27 @@
 
 ## 8. Tasks
 
+- [x] [0014. Tasks](https://tdahuyou.github.io/TNotes.vscode/notes/0014.%20Tasks/README)
+  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.vscode/notes/0014.%20Tasks/README#1--概述)
+  - [2. 🤔 Tasks 是什么？](https://tdahuyou.github.io/TNotes.vscode/notes/0014.%20Tasks/README#2--tasks-是什么)
+  - [3. 🤔 运行任务和直接运行命令有什么区别？](https://tdahuyou.github.io/TNotes.vscode/notes/0014.%20Tasks/README#3--运行任务和直接运行命令有什么区别)
+  - [4. 🤔 任务的常见配置字段都有哪些？](https://tdahuyou.github.io/TNotes.vscode/notes/0014.%20Tasks/README#4--任务的常见配置字段都有哪些)
+  - [5. 📒 Tasks 自动检测](https://tdahuyou.github.io/TNotes.vscode/notes/0014.%20Tasks/README#5--tasks-自动检测)
+  - [6. 🤔 problemMatcher 是什么？](https://tdahuyou.github.io/TNotes.vscode/notes/0014.%20Tasks/README#6--problemmatcher-是什么)
+  - [7. 🤔 problemMatcher 有什么用？](https://tdahuyou.github.io/TNotes.vscode/notes/0014.%20Tasks/README#7--problemmatcher-有什么用)
+  - [8. 🤔 problemMatcher 都有那些类型？](https://tdahuyou.github.io/TNotes.vscode/notes/0014.%20Tasks/README#8--problemmatcher-都有那些类型)
+  - [9. 🤔 预定义的问题匹配器都有哪些？](https://tdahuyou.github.io/TNotes.vscode/notes/0014.%20Tasks/README#9--预定义的问题匹配器都有哪些)
+  - [10. 🤔 什么时候用内置的？什么时候需要自定义？](https://tdahuyou.github.io/TNotes.vscode/notes/0014.%20Tasks/README#10--什么时候用内置的什么时候需要自定义)
+  - [11. 🤔 如何选择内置的 `problemMatcher`？判断流程是？](https://tdahuyou.github.io/TNotes.vscode/notes/0014.%20Tasks/README#11--如何选择内置的-problemmatcher判断流程是)
+  - [12. 💻 demos.2 - 实现一个简单的 echo hello world 任务](https://tdahuyou.github.io/TNotes.vscode/notes/0014.%20Tasks/README#12--demos2---实现一个简单的-echo-hello-world-任务)
+  - [13. 💻 demos.3 - 开发流程自动化 - `…… -> Lint -> Compile -> Bundle -> ……`](https://tdahuyou.github.io/TNotes.vscode/notes/0014.%20Tasks/README#13--demos3---开发流程自动化------lint---compile---bundle---)
+  - [14. 💻 demos.1 - 实现一个简单的 gcc 编译任务](https://tdahuyou.github.io/TNotes.vscode/notes/0014.%20Tasks/README#14--demos1---实现一个简单的-gcc-编译任务)
+  - [15. 🔗 References](https://tdahuyou.github.io/TNotes.vscode/notes/0014.%20Tasks/README#15--references)
 - [x] [0015. Tasks Schema](https://tdahuyou.github.io/TNotes.vscode/notes/0015.%20Tasks%20Schema/README)
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.vscode/notes/0015.%20Tasks%20Schema/README#1--概述)
   - [2. 🤔 如何查看 tasks 配置字段都有哪些？](https://tdahuyou.github.io/TNotes.vscode/notes/0015.%20Tasks%20Schema/README#2--如何查看-tasks-配置字段都有哪些)
   - [3. ⚙️ Schema for tasks.json](https://tdahuyou.github.io/TNotes.vscode/notes/0015.%20Tasks%20Schema/README#3-️-schema-for-tasksjson)
   - [4. 🔗 References](https://tdahuyou.github.io/TNotes.vscode/notes/0015.%20Tasks%20Schema/README#4--references)
-- [ ] [0014. problemMatcher 问题适配器](https://tdahuyou.github.io/TNotes.vscode/notes/0014.%20problemMatcher%20%E9%97%AE%E9%A2%98%E9%80%82%E9%85%8D%E5%99%A8/README)
-  - [1. 📝 概述](https://tdahuyou.github.io/TNotes.vscode/notes/0014.%20problemMatcher%20%E9%97%AE%E9%A2%98%E9%80%82%E9%85%8D%E5%99%A8/README#1--概述)
-  - [2. 📒 problemMatcher](https://tdahuyou.github.io/TNotes.vscode/notes/0014.%20problemMatcher%20%E9%97%AE%E9%A2%98%E9%80%82%E9%85%8D%E5%99%A8/README#2--problemmatcher)
-  - [3. 📒 预定义的问题匹配器](https://tdahuyou.github.io/TNotes.vscode/notes/0014.%20problemMatcher%20%E9%97%AE%E9%A2%98%E9%80%82%E9%85%8D%E5%99%A8/README#3--预定义的问题匹配器)
-  - [4. 💻 `"problemMatcher": []`](https://tdahuyou.github.io/TNotes.vscode/notes/0014.%20problemMatcher%20%E9%97%AE%E9%A2%98%E9%80%82%E9%85%8D%E5%99%A8/README#4--problemmatcher-)
-  - [5. 💻 `"problemMatcher": ["$tsc"]`](https://tdahuyou.github.io/TNotes.vscode/notes/0014.%20problemMatcher%20%E9%97%AE%E9%A2%98%E9%80%82%E9%85%8D%E5%99%A8/README#5--problemmatcher-tsc)
-  - [6. 🔗 References](https://tdahuyou.github.io/TNotes.vscode/notes/0014.%20problemMatcher%20%E9%97%AE%E9%A2%98%E9%80%82%E9%85%8D%E5%99%A8/README#6--references)
 
 ## 9. Peek
 
@@ -259,7 +268,7 @@
 - [ ] [0019. xxx](https://tdahuyou.github.io/TNotes.vscode/notes/0019.%20xxx/README)
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.vscode/notes/0019.%20xxx/README#1--概述)
 
-## 11. 🎯 en-words
+## 11. ⏰ pending
 
 - [ ] [0020. xxx](https://tdahuyou.github.io/TNotes.vscode/notes/0020.%20xxx/README)
   - [1. 📝 概述](https://tdahuyou.github.io/TNotes.vscode/notes/0020.%20xxx/README#1--概述)
