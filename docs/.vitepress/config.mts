@@ -1,13 +1,13 @@
+import GithubSlugger from 'github-slugger'
+import markdownItContainer from 'markdown-it-container'
+import mila from 'markdown-it-link-attributes'
+import markdownItTaskLists from 'markdown-it-task-lists'
 import {
+  DefaultTheme,
   defineConfig,
   HeadConfig,
-  DefaultTheme,
   MarkdownOptions,
 } from 'vitepress'
-import GithubSlugger from 'github-slugger'
-import markdownItTaskLists from 'markdown-it-task-lists'
-import mila from 'markdown-it-link-attributes'
-import markdownItContainer from 'markdown-it-container'
 import { withMermaid } from 'vitepress-plugin-mermaid'
 
 const slugger = new GithubSlugger()
@@ -96,116 +96,6 @@ function markdown() {
   }
 
   return markdown
-}
-
-function sidebar() {
-  const sidebar: DefaultTheme.SidebarItem[] = [
-    { text: '👀 README', link: '/README' },
-    {
-      text: '🔍 知识库目录',
-      items: [
-        {
-          text: 'introduction',
-          link: '/TNotes.introduction/TOC',
-        },
-        {
-          text: 'c-cpp',
-          link: '/TNotes.c-cpp/TOC',
-        },
-        {
-          text: 'canvas',
-          link: '/TNotes.canvas/TOC',
-        },
-        {
-          text: 'cooking',
-          link: '/TNotes.cooking/TOC',
-        },
-        {
-          text: 'egg',
-          link: '/TNotes.egg/TOC',
-        },
-        {
-          text: 'electron',
-          link: '/TNotes.electron/TOC',
-        },
-        {
-          text: 'en-notes',
-          link: '/TNotes.en-notes/TOC',
-        },
-        {
-          text: 'en-words',
-          link: 'https://github.com/Tdahuyou/TNotes.en-words',
-        },
-        {
-          text: 'footprints',
-          link: '/TNotes.footprints/TOC',
-        },
-        {
-          text: 'git-notes',
-          link: '/TNotes.git-notes/TOC',
-        },
-        {
-          text: 'html-css-js',
-          link: '/TNotes.html-css-js/TOC',
-        },
-        {
-          text: 'leetcode',
-          link: '/TNotes.leetcode/TOC',
-        },
-        {
-          text: 'miniprogram',
-          link: '/TNotes.miniprogram/TOC',
-        },
-        {
-          text: 'network',
-          link: '/TNotes.network/TOC',
-        },
-        {
-          text: 'nodejs',
-          link: '/TNotes.nodejs/TOC',
-        },
-        {
-          text: 'notes',
-          link: '/TNotes.notes/TOC',
-        },
-        {
-          text: 'react',
-          link: '/TNotes.react/TOC',
-        },
-        {
-          text: 'sql',
-          link: '/TNotes.sql/TOC',
-        },
-        {
-          text: 'svg',
-          link: '/TNotes.svg/TOC',
-        },
-        {
-          text: 'typescript',
-          link: '/TNotes.typescript/TOC',
-        },
-        {
-          text: 'vite',
-          link: '/TNotes.vite/TOC',
-        },
-        {
-          text: 'vitepress',
-          link: '/TNotes.vitepress/TOC',
-        },
-        {
-          text: 'vue',
-          link: '/TNotes.vue/TOC',
-        },
-        {
-          text: 'webpack',
-          link: '/TNotes.webpack/TOC',
-        },
-      ],
-      collapsed: false,
-    },
-  ]
-
-  return sidebar
 }
 
 function socialLinks() {
@@ -378,7 +268,6 @@ function themeConfig() {
 
     nav: [{ text: '👀 README', link: '/README' }],
 
-    sidebar: sidebar(),
     socialLinks: socialLinks(),
 
     docFooter: {
