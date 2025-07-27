@@ -53,6 +53,7 @@
             <a
               v-if="tnotesDir !== ''"
               title="打开知识库文件夹"
+              target="_blank"
               :href="
                 'vscode://file/' +
                 tnotesDir +
@@ -66,6 +67,7 @@
 
             <a
               title="打开知识库仓库"
+              target="_blank"
               :href="
                 'https://github.com/Tdahuyou/TNotes.' + activeSidebarItem.title
               "
@@ -102,7 +104,9 @@
             >
               <!-- 第一级项目 -->
               <div class="level-1">
-                <a :href="item.link" class="item-link">{{ item.text }}</a>
+                <a :href="item.link" target="_blank" class="item-link">{{
+                  item.text
+                }}</a>
                 <a
                   v-if="item.link && tnotesDir"
                   title="打开笔记文件夹"
@@ -114,6 +118,7 @@
                       .replace('https://tdahuyou.github.io/', '')
                       .replace('/README', '')
                   "
+                  target="_blank"
                 >
                   <img
                     :src="icon__vscode"
@@ -134,7 +139,7 @@
                   class="level-2"
                 >
                   <div class="level-2-content">
-                    <a :href="subItem.link" class="item-link">{{
+                    <a :href="subItem.link" target="_blank" class="item-link">{{
                       subItem.text
                     }}</a>
                     <a
@@ -148,6 +153,7 @@
                           .replace('https://tdahuyou.github.io/', '')
                           .replace('/README', '')
                       "
+                      target="_blank"
                     >
                       <img
                         :src="icon__vscode"
@@ -168,9 +174,12 @@
                       class="level-3"
                     >
                       <div class="level-3-content">
-                        <a :href="subSubItem.link" class="item-link">{{
-                          subSubItem.text
-                        }}</a>
+                        <a
+                          :href="subSubItem.link"
+                          class="item-link"
+                          target="_blank"
+                          >{{ subSubItem.text }}</a
+                        >
                         <a
                           v-if="subSubItem.link && tnotesDir"
                           title="打开笔记文件夹"
@@ -182,6 +191,7 @@
                               .replace('https://tdahuyou.github.io/', '')
                               .replace('/README', '')
                           "
+                          target="_blank"
                         >
                           <img
                             :src="icon__vscode"
