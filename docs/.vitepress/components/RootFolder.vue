@@ -206,6 +206,7 @@
     <div class="resize-handle" @mousedown="startResize">
       <div class="left-area">
         <input
+          v-if="!isCompact"
           type="text"
           v-model="tnotesDir"
           class="dir-input"
@@ -227,10 +228,10 @@
           class="date-info"
           v-if="activeSidebarItem && activeSidebarItem.created_at"
         >
-          <span class="resize-meta-item">
+          <span class="resize-meta-item" v-if="!isCompact">
             创建: {{ formatTimestamp(activeSidebarItem.created_at) }}
           </span>
-          <span class="resize-meta-item">
+          <span class="resize-meta-item" v-if="!isCompact">
             更新: {{ formatTimestamp(activeSidebarItem.updated_at) }}
           </span>
         </div>
@@ -628,11 +629,13 @@ const stopResize = () => {
 }
 
 .sidebar-item:hover {
-  background-color: var(--vp-c-bg-elv);
+  /* background-color: var(--vp-c-brand-2); */
+  background-color: #646cff22;
 }
 
 .sidebar-item.active {
-  background-color: var(--vp-c-brand);
+  /* background-color: var(--vp-c-brand); */
+  background-color: #646cff88;
   color: white;
 }
 
