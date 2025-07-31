@@ -1,6 +1,6 @@
 {
   "statistic": {
-    "completed_notes_count": 436
+    "completed_notes_count": 437
   },
   "sub_knowledge_list": [
     "TNotes.introduction",
@@ -345,7 +345,7 @@
         "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--introduction.svg"
       },
       "title": "introduction",
-      "completed_notes_count": 0,
+      "completed_notes_count": 1,
       "details": "TNotes 说明文档",
       "link": "https://tdahuyou.github.io/TNotes.introduction/",
       "created_at": 1740850835000,
