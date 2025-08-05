@@ -1,6 +1,6 @@
 {
   "statistic": {
-    "completed_notes_count": 449
+    "completed_notes_count": 463
   },
   "sub_knowledge_list": [
     "TNotes.introduction",
@@ -163,7 +163,7 @@
         "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--leetcode.svg"
       },
       "title": "leetcode",
-      "completed_notes_count": 31,
+      "completed_notes_count": 45,
       "details": "Leetcode 刷题笔记",
       "link": "https://tdahuyou.github.io/TNotes.leetcode/",
       "created_at": 1741793958000,
