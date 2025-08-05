@@ -1,6 +1,6 @@
 {
   "statistic": {
-    "completed_notes_count": 463
+    "completed_notes_count": 465
   },
   "sub_knowledge_list": [
     "TNotes.introduction",
@@ -124,7 +124,7 @@
         "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--footprints.svg"
       },
       "title": "footprints",
-      "completed_notes_count": 43,
+      "completed_notes_count": 44,
       "details": "记录活着的一些动态 - 在线版的微信朋友圈",
       "link": "https://tdahuyou.github.io/TNotes.footprints/",
       "created_at": 1741009521000,
@@ -163,7 +163,7 @@
         "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--leetcode.svg"
       },
       "title": "leetcode",
-      "completed_notes_count": 45,
+      "completed_notes_count": 46,
       "details": "Leetcode 刷题笔记",
       "link": "https://tdahuyou.github.io/TNotes.leetcode/",
       "created_at": 1741793958000,
