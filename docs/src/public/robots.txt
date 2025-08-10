@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://tdahuyou.github.io/notes/sitemap.xml
+Sitemap: https://tnotesjs.github.io/TNotes/sitemap.xml
