@@ -1,6 +1,6 @@
 {
   "statistic": {
-    "completed_notes_count": 467
+    "completed_notes_count": 477
   },
   "sub_knowledge_list": [
     "TNotes.introduction",
@@ -50,11 +50,11 @@
         "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--canvas.svg"
       },
       "title": "canvas",
-      "completed_notes_count": 6,
+      "completed_notes_count": 13,
       "details": "Canvas 笔记",
       "link": "https://tdahuyou.github.io/TNotes.canvas/",
       "created_at": 1741007058000,
-      "updated_at": 1754627895323,
+      "updated_at": 1754836681729,
       "days_since_birth": 9380,
       "is_visible_in_root_folder": true
     },
@@ -202,11 +202,11 @@
         "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--nodejs.svg"
       },
       "title": "nodejs",
-      "completed_notes_count": 57,
+      "completed_notes_count": 60,
       "details": "NodeJS 笔记",
       "link": "https://tdahuyou.github.io/TNotes.nodejs/",
       "created_at": 1740924081000,
-      "updated_at": 1754494584798,
+      "updated_at": 1754815910361,
       "days_since_birth": 9379,
       "is_visible_in_root_folder": true
     },
