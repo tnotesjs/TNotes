@@ -1,6 +1,6 @@
 {
   "statistic": {
-    "completed_notes_count": 477
+    "completed_notes_count": 481
   },
   "sub_knowledge_list": [
     "TNotes.introduction",
@@ -50,11 +50,11 @@
         "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--canvas.svg"
       },
       "title": "canvas",
-      "completed_notes_count": 13,
+      "completed_notes_count": 17,
       "details": "Canvas 笔记",
       "link": "https://tdahuyou.github.io/TNotes.canvas/",
       "created_at": 1741007058000,
-      "updated_at": 1754836681729,
+      "updated_at": 1754872615397,
       "days_since_birth": 9380,
       "is_visible_in_root_folder": true
     },
