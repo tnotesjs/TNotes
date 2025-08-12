@@ -10,3 +10,4 @@
 ## ✅ DONE
 
 - [x] 在 github 上创建 tnotesjs 组织
+- [ ] 初始化 TNotes.python
