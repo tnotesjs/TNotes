@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://tnotesjs.github.io/TNotes/sitemap.xml

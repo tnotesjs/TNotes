@@ -1,0 +1,410 @@
+{
+  "statistic": {
+    "completed_notes_count": 533
+  },
+  "sub_knowledge_list": [
+    "TNotes.introduction",
+    "TNotes.c-cpp",
+    "TNotes.canvas",
+    "TNotes.chrome",
+    "TNotes.cooking",
+    "TNotes.egg",
+    "TNotes.electron",
+    "TNotes.en-notes",
+    "TNotes.footprints",
+    "TNotes.git-notes",
+    "TNotes.html-css-js",
+    "TNotes.leetcode",
+    "TNotes.miniprogram",
+    "TNotes.network",
+    "TNotes.nodejs",
+    "TNotes.notes",
+    "TNotes.python",
+    "TNotes.react",
+    "TNotes.redis",
+    "TNotes.sql",
+    "TNotes.svg",
+    "TNotes.typescript",
+    "TNotes.vite",
+    "TNotes.vitepress",
+    "TNotes.vscode",
+    "TNotes.vue",
+    "TNotes.webpack",
+    "TNotes.0"
+  ],
+  "root_items": {
+    "TNotes.c-cpp": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--c-cpp.svg"
+      },
+      "title": "c-cpp",
+      "completed_notes_count": 1,
+      "details": "C、C++ 笔记",
+      "link": "https://tdahuyou.github.io/TNotes.c-cpp/",
+      "created_at": 1737437192000,
+      "updated_at": 1754494579503,
+      "days_since_birth": 9339,
+      "is_visible_in_root_folder": true
+    },
+    "TNotes.canvas": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--canvas.svg"
+      },
+      "title": "canvas",
+      "completed_notes_count": 57,
+      "details": "Canvas 笔记",
+      "link": "https://tdahuyou.github.io/TNotes.canvas/",
+      "created_at": 1741007058000,
+      "updated_at": 1756820956333,
+      "days_since_birth": 9380,
+      "is_visible_in_root_folder": true
+    },
+    "TNotes.cooking": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--cooking.svg"
+      },
+      "title": "cooking",
+      "completed_notes_count": 5,
+      "details": "做饭笔记",
+      "link": "https://tdahuyou.github.io/TNotes.cooking/",
+      "created_at": 1742093975000,
+      "updated_at": 1754494580291,
+      "days_since_birth": 9393,
+      "is_visible_in_root_folder": true
+    },
+    "TNotes.egg": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--eggjs.png"
+      },
+      "title": "egg",
+      "completed_notes_count": 19,
+      "details": "Egg.js 笔记",
+      "link": "https://tdahuyou.github.io/TNotes.egg/",
+      "created_at": 1741248153000,
+      "updated_at": 1754494580538,
+      "days_since_birth": 9383,
+      "is_visible_in_root_folder": true
+    },
+    "TNotes.electron": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--electron.svg"
+      },
+      "title": "electron",
+      "completed_notes_count": 20,
+      "details": "Electron 笔记",
+      "link": "https://tdahuyou.github.io/TNotes.electron/",
+      "created_at": 1726304357000,
+      "updated_at": 1754494580828,
+      "days_since_birth": 9210,
+      "is_visible_in_root_folder": true
+    },
+    "TNotes.en-notes": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--en-notes.svg"
+      },
+      "title": "en-notes",
+      "completed_notes_count": 14,
+      "details": "英语学习笔记",
+      "link": "https://tdahuyou.github.io/TNotes.en-notes/",
+      "created_at": 1740846170000,
+      "updated_at": 1754494968170,
+      "days_since_birth": 9379,
+      "is_visible_in_root_folder": true
+    },
+    "TNotes.en-words": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--en-words.svg"
+      },
+      "title": "en-words",
+      "details": "每一个单词就是一个独立的 .md 文件。单词词库的来源说明，在 en-notes 中有详细说明。",
+      "link": "https://github.com/Tdahuyou/TNotes.en-words",
+      "is_visible_in_root_folder": false
+    },
+    "TNotes.footprints": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--footprints.svg"
+      },
+      "title": "footprints",
+      "completed_notes_count": 44,
+      "details": "记录活着的一些动态 - 在线版的微信朋友圈",
+      "link": "https://tdahuyou.github.io/TNotes.footprints/",
+      "created_at": 1741009521000,
+      "updated_at": 1754494581366,
+      "days_since_birth": 9380,
+      "is_visible_in_root_folder": true
+    },
+    "TNotes.git-notes": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--git.svg"
+      },
+      "title": "git-notes",
+      "completed_notes_count": 16,
+      "details": "Git 笔记",
+      "link": "https://tdahuyou.github.io/TNotes.git-notes/",
+      "created_at": 1727172590000,
+      "updated_at": 1756996267475,
+      "days_since_birth": 9220,
+      "is_visible_in_root_folder": true
+    },
+    "TNotes.html-css-js": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--html-css-js.png"
+      },
+      "title": "html-css-js",
+      "completed_notes_count": 30,
+      "details": "前端三件套及跟前端相关的其它内容",
+      "link": "https://tdahuyou.github.io/TNotes.html-css-js/",
+      "created_at": 1740924811000,
+      "updated_at": 1756909523957,
+      "days_since_birth": 9379,
+      "is_visible_in_root_folder": true
+    },
+    "TNotes.leetcode": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--leetcode.svg"
+      },
+      "title": "leetcode",
+      "completed_notes_count": 55,
+      "details": "Leetcode 刷题笔记",
+      "link": "https://tdahuyou.github.io/TNotes.leetcode/",
+      "created_at": 1741793958000,
+      "updated_at": 1755751215959,
+      "days_since_birth": 9389,
+      "is_visible_in_root_folder": true
+    },
+    "TNotes.miniprogram": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--miniprogram-wechat.svg"
+      },
+      "title": "miniprogram",
+      "completed_notes_count": 0,
+      "details": "小程序",
+      "link": "https://tdahuyou.github.io/TNotes.miniprogram/",
+      "created_at": 1740922620000,
+      "updated_at": 1754494584269,
+      "days_since_birth": 9379,
+      "is_visible_in_root_folder": true
+    },
+    "TNotes.network": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--network.svg"
+      },
+      "title": "network",
+      "completed_notes_count": 0,
+      "details": "网络笔记",
+      "link": "https://tdahuyou.github.io/TNotes.network/",
+      "created_at": 1746575572000,
+      "updated_at": 1754494584508,
+      "days_since_birth": 9445,
+      "is_visible_in_root_folder": true
+    },
+    "TNotes.nodejs": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--nodejs.svg"
+      },
+      "title": "nodejs",
+      "completed_notes_count": 60,
+      "details": "NodeJS 笔记",
+      "link": "https://tdahuyou.github.io/TNotes.nodejs/",
+      "created_at": 1740924081000,
+      "updated_at": 1756992191385,
+      "days_since_birth": 9379,
+      "is_visible_in_root_folder": true
+    },
+    "TNotes.notes": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--pc.svg"
+      },
+      "title": "notes",
+      "completed_notes_count": 32,
+      "details": "早期在 B 站坐的工具分享系列内容，或者存储的一些没有明确分组的笔记的集合。",
+      "link": "https://tdahuyou.github.io/TNotes.notes/",
+      "created_at": 1740883219000,
+      "updated_at": 1754494585068,
+      "days_since_birth": 9379,
+      "is_visible_in_root_folder": true
+    },
+    "TNotes.python": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--python.svg"
+      },
+      "title": "python",
+      "completed_notes_count": 0,
+      "details": "python 笔记",
+      "link": "https://tdahuyou.github.io/TNotes.python/",
+      "created_at": 1754971781000,
+      "updated_at": 1754992384159,
+      "days_since_birth": 9542,
+      "is_visible_in_root_folder": true
+    },
+    "TNotes.react": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--react.svg"
+      },
+      "title": "react",
+      "completed_notes_count": 44,
+      "details": "React 笔记",
+      "link": "https://tdahuyou.github.io/TNotes.react/",
+      "created_at": 1740305655000,
+      "updated_at": 1754494585402,
+      "days_since_birth": 9372,
+      "is_visible_in_root_folder": true
+    },
+    "TNotes.svg": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--svg.png"
+      },
+      "title": "svg",
+      "completed_notes_count": 34,
+      "details": "SVG 笔记",
+      "link": "https://tdahuyou.github.io/TNotes.svg/",
+      "created_at": 1741007859000,
+      "updated_at": 1754494586355,
+      "days_since_birth": 9380,
+      "is_visible_in_root_folder": true
+    },
+    "TNotes.typescript": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--typescript.svg"
+      },
+      "title": "typescript",
+      "completed_notes_count": 0,
+      "details": "TS 笔记",
+      "link": "https://tdahuyou.github.io/TNotes.typescript/",
+      "created_at": 1727046787000,
+      "updated_at": 1754494586829,
+      "days_since_birth": 9219,
+      "is_visible_in_root_folder": true
+    },
+    "TNotes.vite": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--vite.svg"
+      },
+      "title": "vite",
+      "completed_notes_count": 0,
+      "details": "Vite 笔记",
+      "link": "https://tdahuyou.github.io/TNotes.vite/",
+      "created_at": 1727046902000,
+      "updated_at": 1754494587210,
+      "days_since_birth": 9219,
+      "is_visible_in_root_folder": true
+    },
+    "TNotes.vitepress": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--vitepress.svg"
+      },
+      "title": "vitepress",
+      "completed_notes_count": 1,
+      "details": "VitePress 笔记",
+      "link": "https://tdahuyou.github.io/TNotes.vitepress/",
+      "created_at": 1743699452000,
+      "updated_at": 1754494587462,
+      "days_since_birth": 9412,
+      "is_visible_in_root_folder": true
+    },
+    "TNotes.vue": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--vue.svg"
+      },
+      "title": "vue",
+      "completed_notes_count": 0,
+      "details": "Vue.js 笔记",
+      "link": "https://tdahuyou.github.io/TNotes.vue/",
+      "created_at": 1727047134000,
+      "updated_at": 1754494587960,
+      "days_since_birth": 9219,
+      "is_visible_in_root_folder": true
+    },
+    "TNotes.webpack": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--webpack.svg"
+      },
+      "title": "webpack",
+      "completed_notes_count": 0,
+      "details": "Webpack 笔记",
+      "link": "https://tdahuyou.github.io/TNotes.webpack/",
+      "created_at": 1727133907000,
+      "updated_at": 1754494588208,
+      "days_since_birth": 9220,
+      "is_visible_in_root_folder": true
+    },
+    "TNotes.0": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--0.svg"
+      },
+      "title": "0",
+      "completed_notes_count": 0,
+      "details": "个人学习资料汇总，存储了一些不便公开的学习资料，从 0 到 1 嘛，0 是学习资料、1 就是这些公开的笔记了。",
+      "link": "https://github.com/Tdahuyou/TNotes.0",
+      "created_at": 1741094027000,
+      "updated_at": 1754494588473,
+      "days_since_birth": 9381,
+      "is_visible_in_root_folder": false
+    },
+    "TNotes.sql": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--mysql.svg"
+      },
+      "title": "sql",
+      "completed_notes_count": 48,
+      "details": "数据库笔记",
+      "link": "https://tdahuyou.github.io/TNotes.sql/",
+      "created_at": 1746873077000,
+      "updated_at": 1754494585987,
+      "days_since_birth": 9448,
+      "is_visible_in_root_folder": true
+    },
+    "TNotes.introduction": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--introduction.svg"
+      },
+      "title": "introduction",
+      "completed_notes_count": 1,
+      "details": "TNotes 说明文档",
+      "link": "https://tdahuyou.github.io/TNotes.introduction/",
+      "created_at": 1740850835000,
+      "updated_at": 1754494579254,
+      "days_since_birth": 9379,
+      "is_visible_in_root_folder": true
+    },
+    "TNotes.chrome": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--chrome.png"
+      },
+      "title": "chrome",
+      "completed_notes_count": 10,
+      "details": "chrome 笔记",
+      "link": "https://tdahuyou.github.io/TNotes.chrome/",
+      "created_at": 1750939210000,
+      "updated_at": 1754494580022,
+      "days_since_birth": 9495,
+      "is_visible_in_root_folder": true
+    },
+    "TNotes.vscode": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--vscode.svg"
+      },
+      "title": "vscode",
+      "completed_notes_count": 18,
+      "details": "vscode 笔记",
+      "link": "https://tdahuyou.github.io/TNotes.vscode/",
+      "created_at": 1750939332000,
+      "updated_at": 1754494587714,
+      "days_since_birth": 9495,
+      "is_visible_in_root_folder": true
+    },
+    "TNotes.redis": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--redis.svg"
+      },
+      "title": "redis",
+      "completed_notes_count": 24,
+      "details": "redis 笔记",
+      "link": "https://tdahuyou.github.io/TNotes.redis/",
+      "created_at": 1751462200000,
+      "updated_at": 1754494585683,
+      "days_since_birth": 9501,
+      "is_visible_in_root_folder": true
+    }
+  }
+}
