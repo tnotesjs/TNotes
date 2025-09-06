@@ -69,7 +69,7 @@
               title="打开知识库仓库"
               target="_blank"
               :href="
-                'https://github.com/Tdahuyou/TNotes.' + activeSidebarItem.title
+                'https://github.com/tnotesjs/TNotes.' + activeSidebarItem.title
               "
               ><img :src="icon__github" alt="GitHub" class="repo-action-icon"
             /></a>
@@ -115,7 +115,7 @@
                     tnotesDir +
                     '/' +
                     item.link
-                      .replace('https://tdahuyou.github.io/', '')
+                      .replace('https://tnotesjs.github.io/', '')
                       .replace('/README', '')
                   "
                   target="_blank"
@@ -150,7 +150,7 @@
                         tnotesDir +
                         '/' +
                         subItem.link
-                          .replace('https://tdahuyou.github.io/', '')
+                          .replace('https://tnotesjs.github.io/', '')
                           .replace('/README', '')
                       "
                       target="_blank"
@@ -188,7 +188,7 @@
                             tnotesDir +
                             '/' +
                             subSubItem.link
-                              .replace('https://tdahuyou.github.io/', '')
+                              .replace('https://tnotesjs.github.io/', '')
                               .replace('/README', '')
                           "
                           target="_blank"
@@ -223,10 +223,10 @@
           placeholder="知识库所在目录路径"
         />
         <select v-model="sortOption" class="sort-select">
+          <option value="count-desc">按笔记完成数量降序</option>
+          <option value="count-asc">按笔记完成数量升序</option>
           <option value="name-asc">按名称升序</option>
           <option value="name-desc">按名称降序</option>
-          <option value="count-asc">按笔记完成数量升序</option>
-          <option value="count-desc">按笔记完成数量降序</option>
           <option value="updated-asc">按更新时间升序</option>
           <option value="updated-desc">按更新时间降序</option>
           <option value="created-asc">按创建时间升序</option>
@@ -267,8 +267,8 @@ import { data as rootData } from './root.data.js'
 // 当前选中的知识库key
 const activeKey = ref(null)
 
-// 排序选项
-const sortOption = ref('name-asc')
+// 排序选项 - 默认按照笔记完成数量降序
+const sortOption = ref('count-desc')
 
 // 知识库所在目录
 const tnotesDir = ref('')
