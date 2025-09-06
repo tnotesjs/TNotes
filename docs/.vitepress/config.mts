@@ -157,7 +157,7 @@ function head() {
     // ['link', { rel: 'icon', href: '/notes/favicon.ico' }],
     [
       'link',
-      { rel: 'icon', href: 'https://tdahuyou.github.io/notes/favicon.ico' },
+      { rel: 'icon', href: 'https://tnotesjs.github.io/TNotes/favicon.ico' },
     ],
     ['link', { rel: 'preconnect', href: 'https://fonts.googleapis.com' }],
     [
