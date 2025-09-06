@@ -407,14 +407,14 @@
     },
     "TNotes.javascript": {
       "icon": {
-        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--html-css-js.png"
+        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--javascript.png"
       },
-      "title": "html-css-js",
+      "title": "javascript",
       "completed_notes_count": 30,
       "details": "前端三件套及跟前端相关的其它内容",
-      "link": "https://tdahuyou.github.io/TNotes.html-css-js/",
+      "link": "https://tdahuyou.github.io/TNotes.javascript/",
       "created_at": 1740924811000,
-      "updated_at": 1757163547461,
+      "updated_at": 1757164227509,
       "days_since_birth": 9379
     }
   }
