@@ -8,12 +8,11 @@ import {
   HeadConfig,
   MarkdownOptions,
 } from 'vitepress'
-import { withMermaid } from 'vitepress-plugin-mermaid'
 
 const slugger = new GithubSlugger()
 
 // doc => https://vitepress.dev/zh/reference/site-config
-const vpConfig = defineConfig({
+export default defineConfig({
   lang: 'zh-Hans',
   base: '/notes/',
   title: 'TNotes',
@@ -286,16 +285,3 @@ function themeConfig() {
 
   return themeConfig
 }
-
-export default withMermaid({
-  // your existing vitepress config...
-  ...vpConfig,
-  // optionally, you can pass MermaidConfig
-  mermaid: {
-    // refer https://mermaid.js.org/config/setup/modules/mermaidAPI.html#mermaidapi-configuration-defaults for options
-  },
-  // optionally set additional config for plugin itself with MermaidPluginConfig
-  mermaidPlugin: {
-    class: 'mermaid my-class', // set additional css classes for parent container
-  },
-})

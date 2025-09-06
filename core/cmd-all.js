@@ -11,7 +11,7 @@ const rootConfig = readJSON(ROOT_CONFIG_PATH)
 // npm i
 // npm run tn:update
 // npm run tn:push
-const CMD = 'npm run tn:push'
+const CMD = 'pnpm tn:push'
 
 console.log(`✅ 正在批量执行命令: ${CMD}`)
 console.log('----------------------------------------')
