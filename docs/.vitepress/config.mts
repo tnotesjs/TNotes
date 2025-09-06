@@ -14,7 +14,7 @@ const slugger = new GithubSlugger()
 // doc => https://vitepress.dev/zh/reference/site-config
 export default defineConfig({
   lang: 'zh-Hans',
-  base: '/notes/',
+  base: '/TNotes/',
   title: 'TNotes',
   description: 'TNotes',
   appearance: 'dark',
