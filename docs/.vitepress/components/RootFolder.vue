@@ -223,10 +223,10 @@
           placeholder="知识库所在目录路径"
         />
         <select v-model="sortOption" class="sort-select">
-          <option value="count-desc">按笔记完成数量降序</option>
-          <option value="count-asc">按笔记完成数量升序</option>
           <option value="name-asc">按名称升序</option>
           <option value="name-desc">按名称降序</option>
+          <option value="count-asc">按笔记完成数量升序</option>
+          <option value="count-desc">按笔记完成数量降序</option>
           <option value="updated-asc">按更新时间升序</option>
           <option value="updated-desc">按更新时间降序</option>
           <option value="created-asc">按创建时间升序</option>
@@ -267,8 +267,8 @@ import { data as rootData } from './root.data.js'
 // 当前选中的知识库key
 const activeKey = ref(null)
 
-// 排序选项 - 默认按照笔记完成数量降序
-const sortOption = ref('count-desc')
+// 排序选项 - 默认按照更新时间降序排序
+const sortOption = ref('updated-desc')
 
 // 知识库所在目录
 const tnotesDir = ref('')
