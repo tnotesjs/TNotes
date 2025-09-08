@@ -9,12 +9,12 @@
 - ⏰ 评论迁移到 tnotesjs 组织下无法使用的问题
   - ![图 0](https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/2025-09-06-21-48-54.png)
   - 将 discussions 仓库迁移到 tnotesjs 组织下之后，发现无法接入 giscus 评论功能，暂且将 discussions 迁回 Tdahuyou 中。
-- ⏰ **TNotes.canvas 笔记快速过一遍**
-  - 检查是否有格式错误
-  - 将所有 `🔗 References` 改为 `🔗 引用`
 
 ## ✅ DONE
 
+- ✅ TNotes.canvas 笔记快速过一遍
+  - 检查是否有格式错误
+  - 将所有 `🔗 References` 改为 `🔗 引用`
 - ✅ TNotes.xxx 实现侧边栏可折叠功能
 - ✅ TNotes.xxx 实现全屏专注模式功能
 - ✅ 对含有大量笔记的知识库的服务启动和更新进行优化
