@@ -1,6 +1,6 @@
 {
   "statistic": {
-    "completed_notes_count": 566
+    "completed_notes_count": 570
   },
   "sub_knowledge_list": [
     "TNotes.introduction",
@@ -164,11 +164,11 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--leetcode.svg"
       },
       "title": "leetcode",
-      "completed_notes_count": 84,
+      "completed_notes_count": 88,
       "details": "Leetcode 刷题笔记",
       "link": "https://tnotesjs.github.io/TNotes.leetcode/",
       "created_at": 1741793958000,
-      "updated_at": 1757781935595,
+      "updated_at": 1757802810800,
       "days_since_birth": 9389,
       "is_visible_in_root_folder": true
     },
