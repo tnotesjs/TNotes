@@ -1,6 +1,6 @@
 {
   "statistic": {
-    "completed_notes_count": 555
+    "completed_notes_count": 566
   },
   "sub_knowledge_list": [
     "TNotes.introduction",
@@ -38,11 +38,11 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--algorithms.svg"
       },
       "title": "algorithms",
-      "completed_notes_count": 2,
+      "completed_notes_count": 3,
       "details": "算法与数据结构 笔记",
       "link": "https://tnotesjs.github.io/TNotes.algorithms/",
       "created_at": 1757555213000,
-      "updated_at": 1757558380565,
+      "updated_at": 1757766165704,
       "days_since_birth": 9572,
       "is_visible_in_root_folder": true
     },
@@ -164,11 +164,11 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--leetcode.svg"
       },
       "title": "leetcode",
-      "completed_notes_count": 74,
+      "completed_notes_count": 84,
       "details": "Leetcode 刷题笔记",
       "link": "https://tnotesjs.github.io/TNotes.leetcode/",
       "created_at": 1741793958000,
-      "updated_at": 1757560333399,
+      "updated_at": 1757781935595,
       "days_since_birth": 9389,
       "is_visible_in_root_folder": true
     },
@@ -343,25 +343,25 @@
     },
     "TNotes.sql": {
       "icon": {
-        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--mysql.svg"
+        "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--mysql.svg"
       },
       "title": "sql",
       "completed_notes_count": 48,
       "details": "数据库笔记",
-      "link": "https://tdahuyou.github.io/TNotes.sql/",
+      "link": "https://tnotesjs.github.io/TNotes.sql/",
       "created_at": 1746873077000,
-      "updated_at": 1757554130677,
+      "updated_at": 1757733812814,
       "days_since_birth": 9448,
       "is_visible_in_root_folder": true
     },
     "TNotes.introduction": {
       "icon": {
-        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--introduction.svg"
+        "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--introduction.svg"
       },
       "title": "introduction",
       "completed_notes_count": 1,
       "details": "TNotes 说明文档",
-      "link": "https://tdahuyou.github.io/TNotes.introduction/",
+      "link": "https://tnotesjs.github.io/TNotes.introduction/",
       "created_at": 1740850835000,
       "updated_at": 1757553988219,
       "days_since_birth": 9379,
