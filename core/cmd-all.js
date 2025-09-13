@@ -11,7 +11,7 @@ const rootConfig = readJSON(ROOT_CONFIG_PATH)
 // npm i
 // npm run tn:update
 // npm run tn:push
-const CMD = 'pnpm tn:push'
+const CMD = 'git pull origin main'
 
 console.log(`✅ 正在批量执行命令: ${CMD}`)
 console.log('----------------------------------------')
