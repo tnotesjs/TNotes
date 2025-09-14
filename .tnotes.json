@@ -1,6 +1,6 @@
 {
   "statistic": {
-    "completed_notes_count": 577
+    "completed_notes_count": 580
   },
   "sub_knowledge_list": [
     "TNotes.introduction",
@@ -411,11 +411,11 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--javascript.svg"
       },
       "title": "javascript",
-      "completed_notes_count": 31,
+      "completed_notes_count": 34,
       "details": "前端三件套及跟前端相关的其它内容",
       "link": "https://tnotesjs.github.io/TNotes.javascript/",
       "created_at": 1740924811000,
-      "updated_at": 1757554043669,
+      "updated_at": 1757864502245,
       "days_since_birth": 9379
     }
   }
