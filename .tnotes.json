@@ -1,6 +1,6 @@
 {
   "statistic": {
-    "completed_notes_count": 586
+    "completed_notes_count": 587
   },
   "sub_knowledge_list": [
     "TNotes.introduction",
@@ -168,7 +168,7 @@
       "details": "Leetcode 刷题笔记",
       "link": "https://tnotesjs.github.io/TNotes.leetcode/",
       "created_at": 1741793958000,
-      "updated_at": 1758195701415,
+      "updated_at": 1758234696945,
       "days_since_birth": 9389,
       "is_visible_in_root_folder": true
     },
@@ -411,11 +411,11 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--javascript.svg"
       },
       "title": "javascript",
-      "completed_notes_count": 40,
+      "completed_notes_count": 41,
       "details": "前端三件套及跟前端相关的其它内容",
       "link": "https://tnotesjs.github.io/TNotes.javascript/",
       "created_at": 1740924811000,
-      "updated_at": 1758201685558,
+      "updated_at": 1758254617948,
       "days_since_birth": 9379
     }
   }
