@@ -1,6 +1,6 @@
 {
   "statistic": {
-    "completed_notes_count": 599
+    "completed_notes_count": 603
   },
   "sub_knowledge_list": [
     "TNotes.introduction",
@@ -38,11 +38,11 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--algorithms.svg"
       },
       "title": "algorithms",
-      "completed_notes_count": 5,
+      "completed_notes_count": 6,
       "details": "算法与数据结构 笔记",
       "link": "https://tnotesjs.github.io/TNotes.algorithms/",
       "created_at": 1757555213000,
-      "updated_at": 1758172020864,
+      "updated_at": 1758429154198,
       "days_since_birth": 9572,
       "is_visible_in_root_folder": true
     },
@@ -164,11 +164,11 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--leetcode.svg"
       },
       "title": "leetcode",
-      "completed_notes_count": 104,
+      "completed_notes_count": 107,
       "details": "Leetcode 刷题笔记",
       "link": "https://tnotesjs.github.io/TNotes.leetcode/",
       "created_at": 1741793958000,
-      "updated_at": 1758381112814,
+      "updated_at": 1758429368556,
       "days_since_birth": 9389,
       "is_visible_in_root_folder": true
     },
