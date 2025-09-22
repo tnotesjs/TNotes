@@ -8,10 +8,11 @@ const readJSON = (filePath) => JSON.parse(fs.readFileSync(filePath, 'utf8'))
 
 const rootConfig = readJSON(ROOT_CONFIG_PATH)
 
-// npm i
-// npm run tn:update
-// npm run tn:push
-const CMD = 'git pull origin main'
+// pnpm i
+// pnpm tn:update
+// pnpm tn:push
+// git clean -df && git restore . && git pull origin main
+const CMD = 'git clean -df && git restore . && git pull origin main'
 
 console.log(`✅ 正在批量执行命令: ${CMD}`)
 console.log('----------------------------------------')
