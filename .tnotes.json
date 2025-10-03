@@ -1,6 +1,6 @@
 {
   "statistic": {
-    "completed_notes_count": 659
+    "completed_notes_count": 667
   },
   "sub_knowledge_list": [
     "TNotes.introduction",
@@ -155,7 +155,7 @@
       "details": "Git 笔记",
       "link": "https://tnotesjs.github.io/TNotes.git-notes/",
       "created_at": 1727172590000,
-      "updated_at": 1758871581803,
+      "updated_at": 1759506318235,
       "days_since_birth": 9220,
       "is_visible_in_root_folder": true
     },
@@ -359,11 +359,11 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--introduction.svg"
       },
       "title": "introduction",
-      "completed_notes_count": 1,
+      "completed_notes_count": 9,
       "details": "TNotes 说明文档",
       "link": "https://tnotesjs.github.io/TNotes.introduction/",
       "created_at": 1740850835000,
-      "updated_at": 1758172019660,
+      "updated_at": 1759507342362,
       "days_since_birth": 9379,
       "is_visible_in_root_folder": true
     },

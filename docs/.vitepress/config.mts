@@ -117,8 +117,8 @@ function socialLinks() {
       },
     },
     {
-      ariaLabel: 'Tdahuyou github 主页链接',
-      link: 'https://github.com/Tdahuyou',
+      ariaLabel: 'TNotes 仓库列表',
+      link: 'https://github.com/orgs/tnotesjs/repositories',
       icon: 'github',
     },
   ]
