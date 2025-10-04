@@ -12,7 +12,7 @@ const rootConfig = readJSON(ROOT_CONFIG_PATH)
 // pnpm tn:update
 // pnpm tn:push
 // git clean -df && git restore . && git pull origin main
-const CMD = 'git clean -df && git restore . && git pull origin main'
+const CMD = 'pnpm tn:push'
 
 console.log(`✅ 正在批量执行命令: ${CMD}`)
 console.log('----------------------------------------')
