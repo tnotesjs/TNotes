@@ -1,6 +1,6 @@
 {
   "statistic": {
-    "completed_notes_count": 677
+    "completed_notes_count": 682
   },
   "sub_knowledge_list": [
     "TNotes.introduction",
@@ -268,11 +268,11 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--typescript.svg"
       },
       "title": "typescript",
-      "completed_notes_count": 0,
+      "completed_notes_count": 4,
       "details": "TS 笔记",
       "link": "https://tnotesjs.github.io/TNotes.typescript/",
       "created_at": 1727046787000,
-      "updated_at": 1759581965603,
+      "updated_at": 1759845833577,
       "days_since_birth": 9219,
       "is_visible_in_root_folder": true
     },
@@ -281,11 +281,11 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--vite.svg"
       },
       "title": "vite",
-      "completed_notes_count": 8,
+      "completed_notes_count": 9,
       "details": "Vite 笔记",
       "link": "https://tnotesjs.github.io/TNotes.vite/",
       "created_at": 1727046902000,
-      "updated_at": 1759591806662,
+      "updated_at": 1759665871980,
       "days_since_birth": 9219,
       "is_visible_in_root_folder": true
     },
