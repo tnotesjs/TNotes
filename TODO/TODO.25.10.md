@@ -3,6 +3,7 @@
 ## ⏰ PENDING
 
 - ⏰ 搬运 TNotes.vite 笔记
+- ⏰ 搬运 TNotes.typescript 笔记
 - ⏰ 根知识库 TNotes 添加搜索功能
   - 支持对笔记名称、笔记 ID、笔记目录的模糊搜索
   - 知识库区分
