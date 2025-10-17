@@ -1,6 +1,6 @@
 {
   "statistic": {
-    "completed_notes_count": 696
+    "completed_notes_count": 701
   },
   "sub_knowledge_list": [
     "TNotes.introduction",
@@ -242,11 +242,11 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--react.svg"
       },
       "title": "react",
-      "completed_notes_count": 46,
+      "completed_notes_count": 50,
       "details": "React 笔记",
       "link": "https://tnotesjs.github.io/TNotes.react/",
       "created_at": 1740305655000,
-      "updated_at": 1760471417138,
+      "updated_at": 1760712328279,
       "days_since_birth": 9372,
       "is_visible_in_root_folder": true
     },
@@ -268,11 +268,11 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--typescript.svg"
       },
       "title": "typescript",
-      "completed_notes_count": 12,
+      "completed_notes_count": 13,
       "details": "TS 笔记",
       "link": "https://tnotesjs.github.io/TNotes.typescript/",
       "created_at": 1727046787000,
-      "updated_at": 1760589540057,
+      "updated_at": 1760712434283,
       "days_since_birth": 9219,
       "is_visible_in_root_folder": true
     },
