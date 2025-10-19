@@ -1,6 +1,6 @@
 {
   "statistic": {
-    "completed_notes_count": 701
+    "completed_notes_count": 715
   },
   "sub_knowledge_list": [
     "TNotes.introduction",
@@ -268,11 +268,11 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--typescript.svg"
       },
       "title": "typescript",
-      "completed_notes_count": 13,
+      "completed_notes_count": 27,
       "details": "TS 笔记",
       "link": "https://tnotesjs.github.io/TNotes.typescript/",
       "created_at": 1727046787000,
-      "updated_at": 1760712434283,
+      "updated_at": 1760879878501,
       "days_since_birth": 9219,
       "is_visible_in_root_folder": true
     },
