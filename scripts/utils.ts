@@ -1,156 +1,282 @@
 import { exec } from 'child_process'
-import fs from 'fs'
 import path from 'path'
 
-async function runCommand(command: string, dir: string): Promise<string> {
+/**
+ * 执行 shell 命令
+ * @param command 要执行的命令
+ * @param dir 工作目录
+ * @param silent 是否静默执行(不输出错误)
+ */
+async function runCommand(
+  command: string,
+  dir: string,
+  silent = false
+): Promise<string> {
   return new Promise((resolve, reject) => {
     exec(command, { cwd: dir }, (error, stdout, stderr) => {
       if (error) {
-        console.error(`处理 ${dir} 时出错：${stderr}`)
+        if (!silent) {
+          console.error(`❌ 命令执行失败: ${command}`)
+          console.error(`   错误信息: ${stderr}`)
+        }
         reject(error)
       } else {
-        // console.log(stdout.trim());
         resolve(stdout.trim())
       }
     })
   })
 }
 
-async function syncLocalAndRemote(dir: string): Promise<void> {
+/**
+ * 检查是否是 Git 仓库
+ */
+async function isGitRepository(dir: string): Promise<boolean> {
   try {
-    // 确保是 Git 仓库
-    const isGitRepo = await runCommand(
-      'git rev-parse --is-inside-work-tree',
-      dir
-    ).catch(() => false)
-    if (!isGitRepo) {
-      throw new Error(`${dir} 不是一个有效的 Git 仓库。`)
-    }
+    await runCommand('git rev-parse --is-inside-work-tree', dir, true)
+    return true
+  } catch {
+    return false
+  }
+}
 
-    // #region pull 之前的预处理 - 策略一 stash
-    // 处理未暂存更改
-    const statusOutput = await runCommand('git status --porcelain', dir)
-    if (statusOutput) {
-      console.log(`${dir} 存在未暂存的更改，先 stash...`)
-      await runCommand('git stash', dir)
-    }
+/**
+ * 检查是否有未提交的更改
+ */
+async function hasUncommittedChanges(dir: string): Promise<boolean> {
+  const status = await runCommand('git status --porcelain', dir)
+  return status.length > 0
+}
 
-    // 拉取远程更新
-    await runCommand('git pull --rebase', dir)
+/**
+ * 检查是否有 stash
+ */
+async function hasStash(dir: string): Promise<boolean> {
+  try {
+    const stashList = await runCommand('git stash list', dir, true)
+    return stashList.length > 0
+  } catch {
+    return false
+  }
+}
 
-    // 恢复 stash 的更改
-    if (statusOutput) {
-      console.log(`${dir} 取回之前的更改`)
-      await runCommand('git stash pop', dir)
-    }
-    // #endregion pull 之前的预处理 - 策略一 stash
+/**
+ * 同步本地和远程仓库
+ *
+ * 工作流程:
+ * 1. 检查是否是 Git 仓库
+ * 2. Stash 本地未提交的更改
+ * 3. Pull 远程更新 (使用 rebase)
+ * 4. Pop stash 恢复本地更改
+ * 5. 如果有新的更改,提交并推送
+ *
+ * @param dir 仓库目录
+ */
+async function syncLocalAndRemote(dir: string): Promise<void> {
+  const repoName = path.basename(dir)
 
-    // #region pull 之前的预处理 - 策略二 commit
-    // 在 git pull 之前先暂存并提交未提交的更改
-    // 弊端：每次一旦有变更，都会预先 commit 一次。策略一则是先 stash，git stash 不会创建新的提交记录，只是临时保存更改，适用你不想立即提交更改的情况。
-    // await runCommand("git add .", dir);
-    // await runCommand('git commit -m "auto commit before pull"', dir);
-    // await runCommand("git pull --rebase", dir);
-    // #region pull 之前的预处理 - 策略二 commit
-
-    // 再次检查是否有未提交的更改
-    const newStatus = await runCommand('git status --porcelain', dir)
-    if (!newStatus) {
-      console.log(`${dir} 没有新的更改，跳过提交`)
+  try {
+    // 1. 验证是否是 Git 仓库
+    if (!(await isGitRepository(dir))) {
+      console.warn(`⚠️  [${repoName}] 不是 Git 仓库,跳过同步`)
       return
     }
 
-    // 提交并推送
-    await runCommand('git add .', dir)
-    const changedFiles = newStatus.split('\n').length
-    await runCommand(
-      `git commit -m "update: ${changedFiles} files modified"`,
-      dir
-    )
-    await runCommand('git push', dir)
-
-    // 获取远程 URL
-    const url = await runCommand('git remote -v', dir)
-    const remoteMatch = url.match(/https:\/\/[^\s]+|git@[^:\s]+:[^\s]+/)
-    console.log(
-      `✅ 笔记同步完成 ${remoteMatch ? remoteMatch[0] : '（无法解析远程 URL）'}`
-    )
-  } catch (error: any) {
-    console.error(`处理 ${dir} 时出错：${error.message}`)
-  }
-}
-
-async function initPkg(baseDir: string, repoName: string): Promise<any> {
-  // 检查 package.json 是否存在
-  const pkgPath = path.resolve(baseDir, 'package.json')
-  if (fs.existsSync(pkgPath)) {
-    try {
-      const pkgContent = fs.readFileSync(pkgPath, { encoding: 'utf8' })
-      let pkg = JSON.parse(pkgContent)
-      pkg = sortObjectKeys(pkg)
-      fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2))
-      return pkg
-    } catch (error: any) {
-      console.error(
-        `❌ Error reading or parsing package.json: ${error.message}`
-      )
-      return {}
+    // 2. 保存本地更改
+    let hasStashed = false
+    if (await hasUncommittedChanges(dir)) {
+      console.log(`💾 [${repoName}] 保存本地更改...`)
+      await runCommand('git stash push -u -m "auto-stash before sync"', dir)
+      hasStashed = true
     }
-  }
 
-  // 将默认配置写入 package.json
-  const defaultPkg = {
-    scripts: {
-      sync: `            node ./node_modules/tnotes   --syncREADME          --repoName=${repoName}`,
-      update: `          node ./node_modules/tnotes   --updateREADME        --repoName=${repoName}`,
-      merge: `           node ./node_modules/tnotes   --mergeREADME         --repoName=${repoName}`,
-      distribute: `      node ./node_modules/tnotes   --distributeREADME    --repoName=${repoName}`,
-      'docs:publish': `    node ./node_modules/tnotes/scripts/docs-publish.js`,
-    },
-    tnotesConfig: {
-      dirList: {},
-    },
-  }
-  fs.writeFileSync(pkgPath, JSON.stringify(defaultPkg, null, 2))
-  await runCommand('npm link tnotes', baseDir) // 链接 tnotes 库到当前笔记目录
-  return defaultPkg
-}
-
-function sortObjectKeys(obj: any): any {
-  if (typeof obj !== 'object' || obj === null) return obj
-
-  if (Array.isArray(obj)) return obj.map(sortObjectKeys)
-
-  const sortedKeys = Object.keys(obj).sort()
-  const sortedObj: Record<string, any> = {}
-  for (const key of sortedKeys) sortedObj[key] = sortObjectKeys(obj[key])
-
-  return sortedObj
-}
-
-function parseTnotesConfig(pkg: any) {
-  const dirListEntries = Object.entries(pkg.tnotesConfig.dirList || {})
-  const ignoreDirs = dirListEntries
-    .map(([ID, config]: [string, any]) => (config.ignore ? ID : ''))
-    .filter((id) => !!id)
-  const doneNoteIds = dirListEntries
-    .map(([ID, config]: [string, any]) => (config.done ? ID : ''))
-    .filter((id) => !!id)
-  const bilibiliMap = dirListEntries
-    .map(([ID, config]: [string, any]) => {
-      if (config.bilibili && config.bilibili.length > 0) {
-        return { id: ID, bilibili: config.bilibili }
-      } else {
-        return null
+    // 3. 拉取远程更新
+    try {
+      console.log(`⬇️  [${repoName}] 拉取远程更新...`)
+      await runCommand('git pull --rebase', dir)
+    } catch (error: any) {
+      // 如果 pull 失败,尝试恢复 stash
+      if (hasStashed) {
+        console.log(`🔄 [${repoName}] Pull 失败,恢复本地更改...`)
+        try {
+          await runCommand('git stash pop', dir)
+        } catch {
+          console.error(`❌ [${repoName}] 无法恢复 stash,请手动处理`)
+        }
       }
-    })
-    .filter((item) => !!item)
+      throw error
+    }
 
-  return {
-    ignoreDirs,
-    doneNoteIds,
-    bilibiliMap,
+    // 4. 恢复本地更改
+    if (hasStashed) {
+      console.log(`📤 [${repoName}] 恢复本地更改...`)
+      try {
+        await runCommand('git stash pop', dir)
+      } catch (error: any) {
+        // Stash pop 失败通常是因为冲突
+        if (error.message.includes('CONFLICT')) {
+          console.error(`⚠️  [${repoName}] 检测到合并冲突,请手动解决`)
+          console.error(`   运行: cd ${dir} && git status`)
+        }
+        throw error
+      }
+    }
+
+    // 5. 提交并推送新的更改
+    if (await hasUncommittedChanges(dir)) {
+      console.log(`📝 [${repoName}] 提交更改...`)
+
+      await runCommand('git add .', dir)
+
+      // 获取更改的文件列表
+      const status = await runCommand('git status --porcelain', dir)
+      const files = status.split('\n').filter((line) => line.trim())
+      const changedCount = files.length
+
+      // 生成提交信息
+      const timestamp = new Date().toISOString().split('T')[0]
+      const commitMsg = `chore: update ${changedCount} file${
+        changedCount > 1 ? 's' : ''
+      } (${timestamp})`
+
+      await runCommand(`git commit -m "${commitMsg}"`, dir)
+
+      console.log(`⬆️  [${repoName}] 推送到远程...`)
+      await runCommand('git push', dir)
+
+      console.log(`✅ [${repoName}] 同步完成`)
+    } else {
+      console.log(`✅ [${repoName}] 已是最新,无需提交`)
+    }
+  } catch (error: any) {
+    console.error(`❌ [${repoName}] 同步失败: ${error.message}`)
+
+    // 提供恢复建议
+    if (await hasStash(dir)) {
+      console.log(`💡 提示: 可能有未恢复的 stash,运行以下命令查看:`)
+      console.log(`   cd ${dir} && git stash list`)
+    }
+
+    throw error
   }
 }
 
-export { initPkg, parseTnotesConfig, syncLocalAndRemote }
+/**
+ * 同步配置选项
+ */
+interface SyncOptions {
+  /** 是否跳过自动提交 */
+  skipCommit?: boolean
+  /** 自定义提交信息 */
+  commitMessage?: string
+  /** 是否静默模式(减少日志输出) */
+  silent?: boolean
+  /** 是否跳过推送 */
+  skipPush?: boolean
+}
+
+/**
+ * 同步本地和远程仓库(带配置选项)
+ */
+async function syncLocalAndRemoteWithOptions(
+  dir: string,
+  options: SyncOptions = {}
+): Promise<void> {
+  const {
+    skipCommit = false,
+    commitMessage,
+    silent = false,
+    skipPush = false,
+  } = options
+  const repoName = path.basename(dir)
+
+  const log = (msg: string) => {
+    if (!silent) console.log(msg)
+  }
+
+  try {
+    if (!(await isGitRepository(dir))) {
+      log(`⚠️  [${repoName}] 不是 Git 仓库,跳过同步`)
+      return
+    }
+
+    let hasStashed = false
+    if (await hasUncommittedChanges(dir)) {
+      log(`💾 [${repoName}] 保存本地更改...`)
+      await runCommand('git stash push -u -m "auto-stash before sync"', dir)
+      hasStashed = true
+    }
+
+    try {
+      log(`⬇️  [${repoName}] 拉取远程更新...`)
+      await runCommand('git pull --rebase', dir)
+    } catch (error: any) {
+      if (hasStashed) {
+        log(`🔄 [${repoName}] Pull 失败,恢复本地更改...`)
+        try {
+          await runCommand('git stash pop', dir)
+        } catch {
+          console.error(`❌ [${repoName}] 无法恢复 stash,请手动处理`)
+        }
+      }
+      throw error
+    }
+
+    if (hasStashed) {
+      log(`📤 [${repoName}] 恢复本地更改...`)
+      try {
+        await runCommand('git stash pop', dir)
+      } catch (error: any) {
+        if (error.message.includes('CONFLICT')) {
+          console.error(`⚠️  [${repoName}] 检测到合并冲突,请手动解决`)
+          console.error(`   运行: cd ${dir} && git status`)
+        }
+        throw error
+      }
+    }
+
+    // 检查是否跳过提交
+    if (skipCommit) {
+      log(`⏭️  [${repoName}] 跳过自动提交`)
+      return
+    }
+
+    if (await hasUncommittedChanges(dir)) {
+      log(`📝 [${repoName}] 提交更改...`)
+
+      await runCommand('git add .', dir)
+
+      const status = await runCommand('git status --porcelain', dir)
+      const files = status.split('\n').filter((line) => line.trim())
+      const changedCount = files.length
+
+      const timestamp = new Date().toISOString().split('T')[0]
+      const msg =
+        commitMessage ||
+        `chore: update ${changedCount} file${
+          changedCount > 1 ? 's' : ''
+        } (${timestamp})`
+
+      await runCommand(`git commit -m "${msg}"`, dir)
+
+      if (!skipPush) {
+        log(`⬆️  [${repoName}] 推送到远程...`)
+        await runCommand('git push', dir)
+      }
+
+      log(`✅ [${repoName}] 同步完成`)
+    } else {
+      log(`✅ [${repoName}] 已是最新,无需提交`)
+    }
+  } catch (error: any) {
+    console.error(`❌ [${repoName}] 同步失败: ${error.message}`)
+
+    if (await hasStash(dir)) {
+      console.log(`💡 提示: 可能有未恢复的 stash,运行以下命令查看:`)
+      console.log(`   cd ${dir} && git stash list`)
+    }
+
+    throw error
+  }
+}
+
+export { syncLocalAndRemote, syncLocalAndRemoteWithOptions, type SyncOptions }
