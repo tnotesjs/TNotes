@@ -9,12 +9,6 @@
       </div>
     </div>
 
-    <!-- 搜索框 -->
-    <SearchBar
-      :model-value="searchQuery"
-      @update:model-value="$emit('update:searchQuery', $event)"
-    />
-
     <!-- 知识库列表 -->
     <div class="sidebar-items-container">
       <SidebarItem
@@ -36,7 +30,6 @@
 
 <script setup lang="ts">
 import type { RootItem } from './composables/useNavigator'
-import SearchBar from './SearchBar.vue'
 import SidebarItem from './SidebarItem.vue'
 
 defineProps<{
@@ -44,12 +37,10 @@ defineProps<{
   activeKey: string | null
   isCompact: boolean
   totalCount: number
-  searchQuery: string
 }>()
 
 const emit = defineEmits<{
   select: [key: string]
-  'update:searchQuery': [value: string]
 }>()
 </script>
 

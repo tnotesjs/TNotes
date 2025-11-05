@@ -4,7 +4,7 @@
       v-model="modelValue"
       type="text"
       class="search-input"
-      placeholder="🔍 搜索知识库..."
+      :placeholder="placeholder"
       @input="onInput"
     />
     <span v-if="modelValue" class="clear-btn" @click="clear">✕</span>
@@ -14,9 +14,15 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 
-const props = defineProps<{
-  modelValue: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    modelValue: string
+    placeholder?: string
+  }>(),
+  {
+    placeholder: '🔍 搜索当前知识库...',
+  }
+)
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]

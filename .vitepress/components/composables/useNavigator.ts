@@ -21,6 +21,8 @@ export type SortOption =
   | 'created-asc'
   | 'created-desc'
 
+export type ViewMode = 'folder' | 'search' | 'mindmap'
+
 export function useNavigator(rootData: any) {
   // 状态
   const activeKey = ref<string | null>(null)
@@ -28,27 +30,16 @@ export function useNavigator(rootData: any) {
   const tnotesDir = ref('')
   const searchQuery = ref('')
   const sectionStates = ref<Record<number, boolean>>({})
+  const viewMode = ref<ViewMode>('folder')
 
-  // 计算属性：过滤和排序后的知识库列表
+  // 计算属性：排序后的知识库列表（不再处理搜索）
   const sortedRootItems = computed(() => {
     const visibleItems = Object.entries(
       rootData.config.root_items as Record<string, RootItem>
     ).filter(([_, item]) => item.is_visible_in_root_folder !== false)
 
-    // 搜索过滤
-    const filteredItems = searchQuery.value
-      ? visibleItems.filter(([key, item]) => {
-          const searchLower = searchQuery.value.toLowerCase()
-          return (
-            key.toLowerCase().includes(searchLower) ||
-            item.title?.toLowerCase().includes(searchLower) ||
-            item.details?.toLowerCase().includes(searchLower)
-          )
-        })
-      : visibleItems
-
     // 排序
-    return filteredItems.sort((a, b) => {
+    return visibleItems.sort((a, b) => {
       switch (sortOption.value) {
         case 'name-asc':
           return (a[1].title || a[0]).localeCompare(b[1].title || b[0])
@@ -78,10 +69,45 @@ export function useNavigator(rootData: any) {
     })
   })
 
-  // 当前选中的侧边栏数据
+  // 递归搜索侧边栏项
+  const filterSidebarItems = (items: any[], query: string): any[] => {
+    if (!query) return items
+
+    const searchLower = query.toLowerCase()
+    const results: any[] = []
+
+    for (const item of items) {
+      // 检查当前项是否匹配
+      const textMatch = item.text?.toLowerCase().includes(searchLower)
+
+      // 递归搜索子项
+      const filteredChildren = item.items
+        ? filterSidebarItems(item.items, query)
+        : []
+
+      // 如果当前项匹配或有匹配的子项，则包含此项
+      if (textMatch || filteredChildren.length > 0) {
+        results.push({
+          ...item,
+          items: filteredChildren.length > 0 ? filteredChildren : item.items,
+        })
+      }
+    }
+
+    return results
+  }
+
+  // 当前选中的侧边栏数据（根据搜索过滤）
   const activeSidebar = computed(() => {
     if (!activeKey.value) return null
-    return rootData.sidebars[activeKey.value]
+    const sidebar = rootData.sidebars[activeKey.value]
+
+    // 只在文件夹视图且有搜索内容时过滤
+    if (viewMode.value === 'folder' && searchQuery.value && sidebar) {
+      return filterSidebarItems(sidebar, searchQuery.value)
+    }
+
+    return sidebar
   })
 
   // 当前选中的知识库信息
@@ -147,12 +173,21 @@ export function useNavigator(rootData: any) {
     }
   })
 
+  watch(viewMode, (newVal) => {
+    localStorage.setItem('knowledge-navigator-view-mode', newVal)
+    // 切换到文件夹或思维导图视图时清空搜索
+    if (newVal === 'folder' || newVal === 'mindmap') {
+      searchQuery.value = ''
+    }
+  })
+
   return {
     activeKey,
     sortOption,
     tnotesDir,
     searchQuery,
     sectionStates,
+    viewMode,
     sortedRootItems,
     activeSidebar,
     activeSidebarItem,
