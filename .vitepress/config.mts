@@ -1,15 +1,9 @@
-import GithubSlugger from 'github-slugger'
-import markdownItContainer from 'markdown-it-container'
-import mila from 'markdown-it-link-attributes'
-import markdownItTaskLists from 'markdown-it-task-lists'
 import {
   DefaultTheme,
   defineConfig,
   HeadConfig,
   MarkdownOptions,
 } from 'vitepress'
-
-const slugger = new GithubSlugger()
 
 // doc => https://vitepress.dev/zh/reference/site-config
 export default defineConfig({
@@ -18,7 +12,6 @@ export default defineConfig({
   title: 'TNotes',
   description: 'TNotes',
   appearance: 'dark',
-  srcDir: './src',
   lastUpdated: true,
   ignoreDeadLinks: true,
   // doc: https://vitepress.dev/zh/guide/sitemap-generation#sitemap-generation
@@ -40,55 +33,8 @@ function markdown() {
   const markdown: MarkdownOptions = {
     lineNumbers: true,
     math: true,
-    config(md) {
-      md.use(markdownItTaskLists)
-
-      md.use(mila, {
-        attrs: {
-          target: '_self',
-          rel: 'noopener',
-        },
-      })
-
-      md.use(markdownItContainer, 'swiper', {
-        render: (tokens, idx) => {
-          const defaultRenderRulesImage =
-            md.renderer.rules.image ||
-            ((tokens, idx, options, env, slf) =>
-              slf.renderToken(tokens, idx, options))
-          if (tokens[idx].nesting === 1) {
-            md.renderer.rules.paragraph_open = () => ''
-            md.renderer.rules.paragraph_close = () => ''
-            md.renderer.rules.image = (tokens, idx, options, env, slf) =>
-              `<div class="swiper-slide">${defaultRenderRulesImage(
-                tokens,
-                idx,
-                options,
-                env,
-                slf
-              )
-                .replaceAll('<div class="swiper-slide">', '')
-                .replaceAll('</div>', '')}</div>`
-
-            return `<div class="swiper-container"><div class="swiper-wrapper">\n`
-          } else {
-            md.renderer.rules.paragraph_open = undefined
-            md.renderer.rules.paragraph_close = undefined
-            md.renderer.rules.image = (tokens, idx, options, env, slf) =>
-              `${defaultRenderRulesImage(tokens, idx, options, env, slf)
-                .replaceAll('<div class="swiper-slide">', '')
-                .replaceAll('</div>', '')}`
-            return '</div><div class="swiper-button-next"></div><div class="swiper-button-prev"></div><div class="swiper-pagination"></div></div>\n'
-          }
-        },
-      })
-    },
-    anchor: {
-      slugify: (label: string) => {
-        slugger.reset()
-        return slugger.slug(label)
-      },
-    },
+    config(md) {},
+    anchor: {},
     image: {
       lazyLoading: true,
     },

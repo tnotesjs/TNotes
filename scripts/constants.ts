@@ -2,7 +2,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 
 /**
- * 当前 core/xxx.js 文件所在位置
+ * 当前 scripts/xxx.ts 文件所在位置
  */
 export const __dirname = path.dirname(fileURLToPath(import.meta.url))
 

@@ -1,16 +1,19 @@
 import fs from 'fs'
 import path from 'path'
-import { __dirname, ROOT_CONFIG_PATH } from './constants.js'
+import { __dirname, ROOT_CONFIG_PATH } from './constants.ts'
 
-const readJSON = (filePath) => JSON.parse(fs.readFileSync(filePath, 'utf8'))
+const readJSON = (filePath: string): any =>
+  JSON.parse(fs.readFileSync(filePath, 'utf8'))
 
 const rootConfig = readJSON(ROOT_CONFIG_PATH)
 
-let totalCompletedNotes = 0
+let totalCompletedNotes: number = 0
 
 rootConfig.sub_knowledge_list
-  .map((key) => path.resolve(__dirname, '..', '..', key, '.tnotes.json'))
-  .forEach((configPath) => {
+  .map((key: string) =>
+    path.resolve(__dirname, '..', '..', key, '.tnotes.json')
+  )
+  .forEach((configPath: string) => {
     if (!fs.existsSync(configPath)) {
       console.warn(`⚠️ 配置文件不存在，跳过: ${configPath}`)
       return

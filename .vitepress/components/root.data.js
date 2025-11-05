@@ -1,8 +1,8 @@
 import fs from 'fs'
-import { ROOT_CONFIG_PATH } from '../../../core/constants.js'
+import { ROOT_CONFIG_PATH } from '../../scripts/constants.ts'
 
 export default {
-  watch: ['../../../sidebars/**/sidebar.json'],
+  watch: ['../../sidebars/**/sidebar.json'],
   load(watchedFiles) {
     const rootData = {
       sidebars: {},
