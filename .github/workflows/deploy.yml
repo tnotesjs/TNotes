@@ -46,7 +46,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install
       - name: Build with VitePress
-        run: vitepress build
+        run: pnpm vitepress build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
