@@ -71,6 +71,8 @@ credentials.json
 
 # 忽略OSX中的锁文件
 *.lock
+# 但保留 pnpm-lock.yaml (pnpm 的依赖锁定文件)
+!pnpm-lock.yaml
 
 # 忽略自动生成的文档
 docs/api-docs/
