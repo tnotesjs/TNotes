@@ -2,43 +2,90 @@ import fs from 'fs'
 import path from 'path'
 import { __dirname, ROOT_CONFIG_PATH } from './constants.ts'
 
+/**
+ * 读取 JSON 文件
+ */
 const readJSON = (filePath: string): any =>
   JSON.parse(fs.readFileSync(filePath, 'utf8'))
 
-const rootConfig = readJSON(ROOT_CONFIG_PATH)
+/**
+ * 收集子知识库配置信息
+ */
+function collectSubRepoConfigs(): void {
+  console.log('📊 开始收集子知识库配置...\n')
 
-let totalCompletedNotes: number = 0
+  const rootConfig = readJSON(ROOT_CONFIG_PATH)
+  let totalCompletedNotes = 0
+  let successCount = 0
+  let failCount = 0
 
-rootConfig.sub_knowledge_list
-  .map((key: string) =>
-    path.resolve(__dirname, '..', '..', key, '.tnotes.json')
-  )
-  .forEach((configPath: string) => {
+  // 遍历所有子知识库
+  rootConfig.sub_knowledge_list.forEach((repoName: string) => {
+    const configPath = path.resolve(
+      __dirname,
+      '..',
+      '..',
+      repoName,
+      '.tnotes.json'
+    )
+
+    // 检查配置文件是否存在
     if (!fs.existsSync(configPath)) {
-      console.warn(`⚠️ 配置文件不存在，跳过: ${configPath}`)
+      console.warn(`⚠️  [${repoName}] 配置文件不存在`)
+      failCount++
       return
     }
 
-    const subConfig = readJSON(configPath)
-    if (!subConfig.root_item) return
+    try {
+      const subConfig = readJSON(configPath)
 
-    const folderName = path.basename(path.dirname(configPath))
+      // 检查是否有 root_item
+      if (!subConfig.root_item) {
+        console.warn(`⚠️  [${repoName}] 缺少 root_item 字段`)
+        failCount++
+        return
+      }
 
-    rootConfig.root_items[folderName] = {
-      ...rootConfig.root_items[folderName],
-      ...subConfig.root_item,
-    }
+      // 更新 root_items
+      rootConfig.root_items[repoName] = {
+        ...rootConfig.root_items[repoName],
+        ...subConfig.root_item,
+      }
 
-    // 累加已完成笔记数量
-    if (subConfig.root_item.completed_notes_count !== undefined) {
-      totalCompletedNotes += subConfig.root_item.completed_notes_count
+      // 累加笔记数量
+      if (subConfig.root_item.completed_notes_count !== undefined) {
+        totalCompletedNotes += subConfig.root_item.completed_notes_count
+      }
+
+      console.log(
+        `✅ [${repoName}] 已收集 (笔记: ${
+          subConfig.root_item.completed_notes_count || 0
+        })`
+      )
+      successCount++
+    } catch (error: any) {
+      console.error(`❌ [${repoName}] 收集失败: ${error.message}`)
+      failCount++
     }
   })
 
-rootConfig.statistic = {
-  completed_notes_count: totalCompletedNotes,
+  // 更新统计信息
+  rootConfig.statistic = {
+    completed_notes_count: totalCompletedNotes,
+  }
+
+  // 写入根配置
+  fs.writeFileSync(
+    ROOT_CONFIG_PATH,
+    JSON.stringify(rootConfig, null, 2),
+    'utf8'
+  )
+
+  console.log('\n📊 收集完成统计:')
+  console.log(`   ✅ 成功: ${successCount}`)
+  console.log(`   ❌ 失败: ${failCount}`)
+  console.log(`   � 笔记总数: ${totalCompletedNotes}`)
+  console.log(`   📁 配置文件: ${ROOT_CONFIG_PATH}`)
 }
 
-fs.writeFileSync(ROOT_CONFIG_PATH, JSON.stringify(rootConfig, null, 2), 'utf8')
-console.log(`✅ 根知识库配置已更新: ${ROOT_CONFIG_PATH}`)
-console.log(`📊 已完成笔记总数: ${totalCompletedNotes}`)
+collectSubRepoConfigs()
