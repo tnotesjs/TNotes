@@ -209,7 +209,7 @@ async function syncLocalAndRemoteWithOptions(
     try {
       log(`⬇️  [${repoName}] 拉取远程更新...`)
       await runCommand('git pull --rebase', dir)
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (hasStashed) {
         log(`🔄 [${repoName}] Pull 失败,恢复本地更改...`)
         try {
@@ -225,8 +225,9 @@ async function syncLocalAndRemoteWithOptions(
       log(`📤 [${repoName}] 恢复本地更改...`)
       try {
         await runCommand('git stash pop', dir)
-      } catch (error: any) {
-        if (error.message.includes('CONFLICT')) {
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error)
+        if (message.includes('CONFLICT')) {
           console.error(`⚠️  [${repoName}] 检测到合并冲突,请手动解决`)
           console.error(`   运行: cd ${dir} && git status`)
         }

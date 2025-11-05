@@ -20,8 +20,9 @@ async function runScript(
     })
     if (stdout) console.log(stdout)
     if (stderr) console.error(stderr)
-  } catch (error: any) {
-    console.error(`❌ ${description}失败: ${error.message}`)
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.error(`❌ ${description}失败: ${message}`)
     throw error
   }
 }
@@ -47,8 +48,9 @@ async function deploy(): Promise<void> {
     await syncLocalAndRemote(path.join(__dirname, '..'))
 
     console.log('\n✅ 部署完成!')
-  } catch (error) {
-    console.error('\n❌ 部署失败!')
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.error(`\n❌ 部署失败: ${message}`)
     process.exit(1)
   }
 }

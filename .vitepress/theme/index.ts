@@ -6,8 +6,7 @@
 
 import type { Theme } from 'vitepress'
 import DefaultTheme from 'vitepress/theme'
-import RootFolder from '../components/RootFolder.vue'
-import './custom.css'
+import KnowledgeNavigator from '../components/KnowledgeNavigator.vue'
 
 export default {
   extends: DefaultTheme,
@@ -15,6 +14,6 @@ export default {
   // doc: https://vitepress.dev/zh/guide/extending-default-theme#registering-global-components
   enhanceApp({ app }) {
     // 注册自定义全局组件
-    app.component('RootFolder', RootFolder)
+    app.component('KnowledgeNavigator', KnowledgeNavigator)
   },
 } satisfies Theme

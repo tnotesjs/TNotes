@@ -2,10 +2,25 @@ import fs from 'fs'
 import path from 'path'
 import { __dirname, ROOT_CONFIG_PATH } from './constants.ts'
 
+interface RootConfig {
+  statistic: {
+    completed_notes_count: number
+  }
+  sub_knowledge_list: string[]
+  root_items: Record<string, any>
+}
+
+interface SubConfig {
+  root_item: {
+    completed_notes_count?: number
+    [key: string]: any
+  }
+}
+
 /**
  * 读取 JSON 文件
  */
-const readJSON = (filePath: string): any =>
+const readJSON = <T = any>(filePath: string): T =>
   JSON.parse(fs.readFileSync(filePath, 'utf8'))
 
 /**
@@ -14,7 +29,7 @@ const readJSON = (filePath: string): any =>
 function collectSubRepoConfigs(): void {
   console.log('📊 开始收集子知识库配置...\n')
 
-  const rootConfig = readJSON(ROOT_CONFIG_PATH)
+  const rootConfig = readJSON<RootConfig>(ROOT_CONFIG_PATH)
   let totalCompletedNotes = 0
   let successCount = 0
   let failCount = 0
@@ -37,7 +52,7 @@ function collectSubRepoConfigs(): void {
     }
 
     try {
-      const subConfig = readJSON(configPath)
+      const subConfig = readJSON<SubConfig>(configPath)
 
       // 检查是否有 root_item
       if (!subConfig.root_item) {
@@ -63,8 +78,9 @@ function collectSubRepoConfigs(): void {
         })`
       )
       successCount++
-    } catch (error: any) {
-      console.error(`❌ [${repoName}] 收集失败: ${error.message}`)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error)
+      console.error(`❌ [${repoName}] 收集失败: ${message}`)
       failCount++
     }
   })

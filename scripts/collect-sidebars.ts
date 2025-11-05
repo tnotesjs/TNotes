@@ -12,15 +12,20 @@ interface SidebarItem {
   items?: SidebarItem[]
 }
 
+interface RootConfig {
+  sub_knowledge_list: string[]
+}
+
 /**
  * 读取 JSON 文件
  */
-const readJSON = (filePath: string): any => {
+const readJSON = <T = any>(filePath: string): T | null => {
   try {
     return JSON.parse(fs.readFileSync(filePath, 'utf8'))
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
     console.error(`❌ 读取文件失败: ${filePath}`)
-    console.error(`   错误: ${error.message}`)
+    console.error(`   错误: ${message}`)
     return null
   }
 }
@@ -61,7 +66,7 @@ async function collectSidebars(): Promise<void> {
   console.log('📚 开始收集侧边栏配置...\n')
 
   // 读取根配置
-  const rootConfig = readJSON(ROOT_CONFIG_PATH)
+  const rootConfig = readJSON<RootConfig>(ROOT_CONFIG_PATH)
   if (!rootConfig || !rootConfig.sub_knowledge_list) {
     console.error('❌ 无法读取根配置或子知识库列表为空')
     return
@@ -93,7 +98,7 @@ async function collectSidebars(): Promise<void> {
 
     try {
       // 读取源侧边栏配置
-      const sidebarData = readJSON(sourceSidebarPath)
+      const sidebarData = readJSON<SidebarItem[]>(sourceSidebarPath)
       if (!sidebarData) {
         failCount++
         continue
@@ -116,8 +121,9 @@ async function collectSidebars(): Promise<void> {
 
       console.log(`✅ [${repoName}] 侧边栏已收集`)
       successCount++
-    } catch (error: any) {
-      console.error(`❌ [${repoName}] 处理失败: ${error.message}`)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error)
+      console.error(`❌ [${repoName}] 处理失败: ${message}`)
       failCount++
     }
   }
@@ -129,7 +135,8 @@ async function collectSidebars(): Promise<void> {
 }
 
 // 执行收集
-collectSidebars().catch((error) => {
-  console.error('❌ 收集侧边栏失败:', error)
+collectSidebars().catch((error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error)
+  console.error('❌ 收集侧边栏失败:', message)
   process.exit(1)
 })

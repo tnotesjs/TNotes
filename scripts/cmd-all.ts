@@ -5,10 +5,9 @@ import minimist from 'minimist'
 import path from 'path'
 import { __dirname, ROOT_CONFIG_PATH } from './constants.ts'
 
-const readJSON = (filePath: string): any =>
-  JSON.parse(fs.readFileSync(filePath, 'utf8'))
-
-const rootConfig = readJSON(ROOT_CONFIG_PATH)
+interface RootConfig {
+  sub_knowledge_list: string[]
+}
 const COMMANDS_FILE = path.resolve(__dirname, 'commands.sh')
 
 // 解析命令行参数
@@ -52,7 +51,12 @@ function getCommand(): string {
 
 const CMD = getCommand()
 
-console.log(`✅ 正在批量执行命令: ${CMD}`)
+console.log(`\n🚀 开始批量执行命令: ${CMD}\n`)
+
+// 读取根配置
+const rootConfig: RootConfig = JSON.parse(
+  fs.readFileSync(ROOT_CONFIG_PATH, 'utf8')
+)
 console.log('----------------------------------------')
 
 // 批量执行命令
@@ -71,8 +75,9 @@ rootConfig.sub_knowledge_list
       // 执行命令
       execSync(CMD, { stdio: ['inherit', 'pipe', 'pipe'], cwd: dir })
       console.log(`✅ [${folderName}]`)
-    } catch (err: any) {
-      console.error(`❌ [${folderName}] 命令执行失败: ${err.message}`)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error(`❌ [${folderName}] 命令执行失败: ${message}`)
     }
   })
 

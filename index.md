@@ -9,4 +9,4 @@ hero:
     alt: notes logo
 ---
 
-<RootFolder />
+<KnowledgeNavigator />

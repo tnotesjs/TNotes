@@ -1,19 +1,34 @@
 import fs from 'fs'
-import { ROOT_CONFIG_PATH } from '../../scripts/constants.ts'
+import { ROOT_CONFIG_PATH } from '../../scripts/constants'
+
+interface SidebarItem {
+  text: string
+  link?: string
+  collapsed?: boolean
+  items?: SidebarItem[]
+}
+
+export interface RootData {
+  sidebars: Record<string, SidebarItem[]>
+  config: any
+}
+
+export const data: RootData = {} as any
 
 export default {
   watch: ['../../sidebars/**/sidebar.json'],
-  load(watchedFiles) {
-    const rootData = {
+  load(watchedFiles: string[]): RootData {
+    const rootData: RootData = {
       sidebars: {},
       config: {},
     }
-    watchedFiles.map((file) => {
+
+    watchedFiles.forEach((file) => {
       const repoName = file.split('/')[1]
-      let sidebar = JSON.parse(fs.readFileSync(file, 'utf-8'))
+      let sidebar: SidebarItem[] = JSON.parse(fs.readFileSync(file, 'utf-8'))
 
       // 递归处理 sidebar 中的链接，处理空格问题
-      const processSidebarItems = (items) => {
+      const processSidebarItems = (items: SidebarItem[]): SidebarItem[] => {
         if (!items || !Array.isArray(items)) return items
 
         return items.map((item) => {
@@ -42,6 +57,7 @@ export default {
 
       rootData.sidebars[repoName] = sidebar
     })
+
     rootData.config = JSON.parse(fs.readFileSync(ROOT_CONFIG_PATH, 'utf-8'))
     return rootData
   },
