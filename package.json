@@ -3,18 +3,22 @@
   "version": "0.0.1",
   "type": "module",
   "description": "TNotes.xxx 笔记管理工具",
-  "main": "core/index.js",
+  "main": "scripts/index.js",
   "devDependencies": {
+    "@types/minimist": "^1.2.5",
+    "@types/node": "^24.10.0",
     "markdown-it-task-lists": "^2.1.1",
     "npm-run-all": "^4.1.5",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
     "vitepress": "^1.6.3"
   },
   "scripts": {
-    "tn:dev": "         npm run tn:update && vitepress dev docs --host --port 0629 --open",
-    "tn:update": "      node core/gen-root-items.js",
-    "tn:push": "        npm run tn:update && node core/docs-publish.js",
-    "tn:build": "       vitepress build docs",
-    "tn:preview": "     vitepress preview docs"
+    "tn:dev": "npm run tn:build && vitepress dev --host --port 0629 --open",
+    "tn:build": "tsx scripts/build.ts",
+    "tn:deploy": "npm run tn:build && tsx scripts/deploy.ts",
+    "tn:preview": "vitepress preview",
+    "tn:cmd": "tsx scripts/cmd-all.ts"
   },
   "packageManager": "pnpm@9.0.4+sha512.c374b52de3de88c58fd8333df664a737279cdb0e1344ba4054d3b1fffa9a1a3670854f755dca4f16adea3f14be9896a7fcaf167409fe0c1ad60475271dafe81a",
   "dependencies": {

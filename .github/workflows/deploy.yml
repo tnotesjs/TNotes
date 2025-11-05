@@ -44,13 +44,13 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
       - name: Install dependencies
-        run: npm install # npm ci 或 pnpm install / yarn install / bun install
+        run: pnpm install
       - name: Build with VitePress
-        run: npm run tn:build # npm run tn:build 或 pnpm tn:build / yarn tn:build / bun run tn:build
+        run: pnpm run build && vitepress build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/.vitepress/dist
+          path: .vitepress/dist
 
   # 部署工作
   deploy:
