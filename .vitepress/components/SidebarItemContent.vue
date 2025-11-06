@@ -66,8 +66,8 @@
 </template>
 
 <script setup lang="ts">
-import icon__vscode from './icon__vscode.svg'
 import { buildVSCodeLink } from './utils/helpers'
+import icon__vscode from '/icon__vscode.svg'
 
 interface SidebarItem {
   text: string

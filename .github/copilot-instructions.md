@@ -4,7 +4,7 @@
 
 - 这是一个使用 VitePress 构建的 TNotes 开源知识库项目的根知识库。
 - 你可以通过其中一个子知识库 [TNotes.instruction](https://tnotesjs.github.io/TNotes.introduction/) 来了解 TNotes 知识库的基本信息。
-- 根知识库不纪录笔记，只提供快速导航功能。
+- 根知识库不纪录笔记，只提供快速导航功能，核心导航功能封装在 `KnowledgeNavigator.vue` 组件中。
 - 所有知识库均存放在 GitHub 上的 [tnotesjs](https://github.com/tnotesjs) 组织中。
 
 ## TNotes 知识库架构
@@ -43,4 +43,10 @@
 └── TNotes.…… # ……
 ```
 
-这些知识库在本地位于同一个目录下，你可以通过相对路径向上找遍历到每个知识库。
+示例：
+
+```bash
+TNotes # 假设当前位置是在根知识库
+# 可以通过 cd ../TNotes.introduction 相对路径向上找，找到 TNotes.introduction 子知识库
+# 所有知识库都位于同一个目录下
+```

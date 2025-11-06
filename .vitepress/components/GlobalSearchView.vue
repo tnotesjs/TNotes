@@ -59,7 +59,7 @@ const props = defineProps<{
   rootData: any
 }>()
 
-// 递归搜索侧边栏项
+// 递归搜索侧边栏项，只搜索带有 link 的笔记项
 const searchInItems = (
   items: any[],
   query: string,
@@ -71,11 +71,11 @@ const searchInItems = (
   for (const item of items) {
     const currentPath = parentPath ? `${parentPath} > ${item.text}` : item.text
 
-    // 检查当前项是否匹配
-    if (item.text?.toLowerCase().includes(searchLower)) {
+    // 只收集带有 link 的项（具体的笔记），不收集章节标题
+    if (item.link && item.text?.toLowerCase().includes(searchLower)) {
       results.push({
         text: item.text,
-        link: item.link || '',
+        link: item.link,
         path: parentPath || undefined,
       })
     }

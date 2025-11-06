@@ -35,10 +35,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { RootItem } from './composables/useNavigator'
-import icon__fold from './icon__fold.svg'
-import icon__github from './icon__github.svg'
-import icon__vscode from './icon__vscode.svg'
 import { buildGitHubLink, buildVSCodeLink } from './utils/helpers'
+import icon__fold from '/icon__fold.svg'
+import icon__github from '/icon__github.svg'
+import icon__vscode from '/icon__vscode.svg'
 
 const props = defineProps<{
   item: RootItem
@@ -75,7 +75,7 @@ const githubLink = computed(() => buildGitHubLink(props.item.title))
 }
 
 .repo-header h2 {
-  margin-top: 0;
+  margin-top: 1rem;
   margin-bottom: 10px;
   padding-top: 0px;
   border-top: none;
@@ -100,7 +100,7 @@ const githubLink = computed(() => buildGitHubLink(props.item.title))
   display: flex;
   gap: 8px;
   margin-left: 12px;
-  margin-top: 4px;
+  margin-top: 1rem;
 }
 
 .repo-action-icon {

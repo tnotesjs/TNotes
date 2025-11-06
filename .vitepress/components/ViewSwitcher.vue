@@ -10,27 +10,27 @@
     </button>
     <button
       class="view-btn"
-      :class="{ active: modelValue === 'search' }"
-      title="全局搜索视图"
-      @click="$emit('update:modelValue', 'search')"
-    >
-      <img :src="icon__search" alt="Search View" />
-    </button>
-    <button
-      class="view-btn"
       :class="{ active: modelValue === 'mindmap' }"
       title="思维导图视图"
       @click="$emit('update:modelValue', 'mindmap')"
     >
       <img :src="icon__mindmap" alt="Mind Map View" />
     </button>
+    <button
+      class="view-btn"
+      :class="{ active: modelValue === 'search' }"
+      title="全局搜索视图"
+      @click="$emit('update:modelValue', 'search')"
+    >
+      <img :src="icon__search" alt="Search View" />
+    </button>
   </div>
 </template>
 
 <script setup lang="ts">
-import icon__folder from './icon__folder.svg'
-import icon__mindmap from './icon__mindmap.svg'
-import icon__search from './icon__search.svg'
+import icon__folder from '/icon__folder.svg'
+import icon__mindmap from '/icon__mindmap.svg'
+import icon__search from '/icon__search.svg'
 
 defineProps<{
   modelValue: 'folder' | 'search' | 'mindmap'

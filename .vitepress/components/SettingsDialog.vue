@@ -34,6 +34,25 @@
                 placeholder="例如: /Users/username/tnotesjs"
               />
             </div>
+
+            <!-- 知识库排序设置 -->
+            <div class="setting-item">
+              <label for="sort-option">知识库排序方式</label>
+              <select
+                id="sort-option"
+                v-model="localSortOption"
+                class="setting-input"
+              >
+                <option value="name-asc">按名称升序</option>
+                <option value="name-desc">按名称降序</option>
+                <option value="count-asc">按笔记完成数量升序</option>
+                <option value="count-desc">按笔记完成数量降序</option>
+                <option value="updated-asc">按更新时间升序</option>
+                <option value="updated-desc">按更新时间降序</option>
+                <option value="created-asc">按创建时间升序</option>
+                <option value="created-desc">按创建时间降序</option>
+              </select>
+            </div>
           </div>
 
           <div class="dialog-footer">
@@ -48,21 +67,25 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import type { SortOption } from './composables/useNavigator'
 
 const props = defineProps<{
   modelValue: boolean
   containerHeight: number
   tnotesDir: string
+  sortOption: SortOption
 }>()
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
   'update:containerHeight': [value: number]
   'update:tnotesDir': [value: string]
+  'update:sortOption': [value: SortOption]
 }>()
 
 const localHeight = ref(props.containerHeight)
 const localTnotesDir = ref(props.tnotesDir)
+const localSortOption = ref(props.sortOption)
 
 watch(
   () => props.containerHeight,
@@ -78,6 +101,13 @@ watch(
   }
 )
 
+watch(
+  () => props.sortOption,
+  (newVal) => {
+    localSortOption.value = newVal
+  }
+)
+
 const close = () => {
   emit('update:modelValue', false)
 }
@@ -85,6 +115,7 @@ const close = () => {
 const save = () => {
   emit('update:containerHeight', localHeight.value)
   emit('update:tnotesDir', localTnotesDir.value)
+  emit('update:sortOption', localSortOption.value)
   close()
 }
 </script>

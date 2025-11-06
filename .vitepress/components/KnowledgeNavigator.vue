@@ -1,7 +1,8 @@
 <template>
   <div
     class="knowledge-navigator-container"
-    :style="{ height: containerHeight + 'px' }"
+    :class="{ 'is-fullscreen': isFullscreen }"
+    :style="!isFullscreen ? { height: containerHeight + 'px' } : {}"
   >
     <!-- 导航头部 -->
     <div class="navigator-header">
@@ -18,6 +19,18 @@
       />
       <!-- 思维导图视图占位，保持高度一致 -->
       <div v-else class="search-placeholder"></div>
+
+      <!-- 全屏切换按钮 -->
+      <button
+        class="fullscreen-btn"
+        :title="isFullscreen ? '退出全屏' : '全屏显示'"
+        @click="toggleFullscreen"
+      >
+        <img
+          :src="isFullscreen ? icon__fullscreen_exit : icon__fullscreen"
+          alt="Fullscreen"
+        />
+      </button>
 
       <!-- 设置按钮 -->
       <button class="settings-btn" title="设置" @click="showSettings = true">
@@ -77,7 +90,6 @@
     </div>
 
     <ResizeHandle
-      v-model:sort-option="sortOption"
       :active-sidebar-item="activeSidebarItem"
       :is-compact="isCompact"
       :view-mode="viewMode"
@@ -88,6 +100,7 @@
       v-model="showSettings"
       v-model:container-height="containerHeight"
       v-model:tnotes-dir="tnotesDir"
+      v-model:sort-option="sortOption"
     />
   </div>
 </template>
@@ -97,7 +110,6 @@ import { onMounted, ref, watch } from 'vue'
 import { useNavigator } from './composables/useNavigator'
 import { useResponsive } from './composables/useResponsive'
 import GlobalSearchView from './GlobalSearchView.vue'
-import icon__setting from './icon__setting.svg'
 import MindMapView from './MindMapView.vue'
 import RepoInfo from './RepoInfo.vue'
 import ResizeHandle from './ResizeHandle.vue'
@@ -107,9 +119,13 @@ import SettingsDialog from './SettingsDialog.vue'
 import SidebarList from './SidebarList.vue'
 import SidebarSection from './SidebarSection.vue'
 import ViewSwitcher from './ViewSwitcher.vue'
+import icon__fullscreen from '/icon__fullscreen.svg'
+import icon__fullscreen_exit from '/icon__fullscreen_exit.svg'
+import icon__setting from '/icon__setting.svg'
 
 const showSettings = ref(false)
 const containerHeight = ref(800)
+const isFullscreen = ref(false)
 
 const {
   activeKey,
@@ -129,6 +145,15 @@ const {
 } = useNavigator(rootData)
 
 const { isCompact } = useResponsive()
+
+// 切换全屏状态
+const toggleFullscreen = () => {
+  isFullscreen.value = !isFullscreen.value
+  localStorage.setItem(
+    'knowledge-navigator-fullscreen',
+    isFullscreen.value.toString()
+  )
+}
 
 // 保存容器高度到 localStorage
 watch(containerHeight, (newVal) => {
@@ -162,6 +187,11 @@ onMounted(() => {
     viewMode.value = savedViewMode as any
   }
 
+  const savedFullscreen = localStorage.getItem('knowledge-navigator-fullscreen')
+  if (savedFullscreen === 'true') {
+    isFullscreen.value = true
+  }
+
   setDefaultActiveKey()
 })
 </script>
@@ -175,6 +205,19 @@ onMounted(() => {
   background-color: var(--vp-c-bg);
   position: relative;
   overflow: hidden;
+}
+
+/* 全屏模式 */
+.knowledge-navigator-container.is-fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  margin: 0;
 }
 
 .navigator-header {
@@ -201,6 +244,33 @@ onMounted(() => {
   min-width: 200px;
   /* 输入框高度：padding (8px + 8px) + border (1px + 1px) + line-height ≈ 34px */
   height: 34px;
+}
+
+.fullscreen-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 4px;
+  background-color: transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 4px;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.fullscreen-btn:hover {
+  background-color: var(--vp-c-bg-soft);
+  opacity: 1;
+}
+
+.fullscreen-btn img {
+  width: 20px;
+  height: 20px;
+  display: block;
 }
 
 .settings-btn {

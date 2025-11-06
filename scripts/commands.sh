@@ -42,3 +42,4 @@
 # pnpm tn:update
 
 
+git pull
