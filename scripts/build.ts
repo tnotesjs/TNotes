@@ -100,7 +100,7 @@ function collectSubRepoConfigs(): void {
   console.log('\n📊 收集完成统计:')
   console.log(`   ✅ 成功: ${successCount}`)
   console.log(`   ❌ 失败: ${failCount}`)
-  console.log(`   � 笔记总数: ${totalCompletedNotes}`)
+  console.log(`   📒 笔记总数: ${totalCompletedNotes}`)
   console.log(`   📁 配置文件: ${ROOT_CONFIG_PATH}`)
 }
 

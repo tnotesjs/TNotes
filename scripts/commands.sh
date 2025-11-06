@@ -35,7 +35,7 @@
 # 确保本地是最新的：强制推送本地版本覆盖远程版本
 # git add .
 # git commit -m "update"
-git push origin main --force
+# git push origin main --force
 
 # 安装依赖
 # pnpm install
