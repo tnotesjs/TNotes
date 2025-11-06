@@ -16,10 +16,18 @@
         v-model="searchQuery"
         placeholder="搜索「所有知识库」..."
       />
+      <!-- 思维导图视图占位，保持高度一致 -->
+      <div v-else class="search-placeholder"></div>
+
+      <!-- 设置按钮 -->
+      <button class="settings-btn" title="设置" @click="showSettings = true">
+        <img :src="icon__setting" alt="Settings" />
+      </button>
     </div>
 
     <!-- 左侧知识库列表 -->
     <SidebarList
+      v-if="viewMode !== 'search'"
       :sorted-items="sortedRootItems"
       :active-key="activeKey"
       :is-compact="isCompact"
@@ -69,31 +77,39 @@
     </div>
 
     <ResizeHandle
-      v-model:container-height="containerHeight"
       v-model:sort-option="sortOption"
-      v-model:tnotes-dir="tnotesDir"
       :active-sidebar-item="activeSidebarItem"
       :is-compact="isCompact"
-      @mousedown="startResize"
-      @height-change="onHeightChange"
+      :view-mode="viewMode"
+    />
+
+    <!-- 设置对话框 -->
+    <SettingsDialog
+      v-model="showSettings"
+      v-model:container-height="containerHeight"
+      v-model:tnotes-dir="tnotesDir"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { useContainerHeight } from './composables/useContainerHeight'
+import { onMounted, ref, watch } from 'vue'
 import { useNavigator } from './composables/useNavigator'
 import { useResponsive } from './composables/useResponsive'
 import GlobalSearchView from './GlobalSearchView.vue'
+import icon__setting from './icon__setting.svg'
 import MindMapView from './MindMapView.vue'
 import RepoInfo from './RepoInfo.vue'
 import ResizeHandle from './ResizeHandle.vue'
 import { data as rootData } from './root.data'
 import SearchBar from './SearchBar.vue'
+import SettingsDialog from './SettingsDialog.vue'
 import SidebarList from './SidebarList.vue'
 import SidebarSection from './SidebarSection.vue'
 import ViewSwitcher from './ViewSwitcher.vue'
+
+const showSettings = ref(false)
+const containerHeight = ref(800)
 
 const {
   activeKey,
@@ -112,10 +128,23 @@ const {
   setDefaultActiveKey,
 } = useNavigator(rootData)
 
-const { containerHeight, startResize, onHeightChange } = useContainerHeight()
 const { isCompact } = useResponsive()
 
+// 保存容器高度到 localStorage
+watch(containerHeight, (newVal) => {
+  localStorage.setItem('knowledge-navigator-height', newVal.toString())
+})
+
 onMounted(() => {
+  // 从 localStorage 读取容器高度
+  const savedHeight = localStorage.getItem('knowledge-navigator-height')
+  if (savedHeight) {
+    const height = parseInt(savedHeight)
+    if (!isNaN(height) && height >= 500) {
+      containerHeight.value = height
+    }
+  }
+
   const savedSortOption = localStorage.getItem(
     'knowledge-navigator-sort-option'
   )
@@ -145,7 +174,6 @@ onMounted(() => {
     Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   background-color: var(--vp-c-bg);
   position: relative;
-  resize: both;
   overflow: hidden;
 }
 
@@ -157,6 +185,8 @@ onMounted(() => {
   border-bottom: 1px solid var(--vp-c-divider);
   background-color: var(--vp-c-bg-soft);
   flex-wrap: wrap;
+  min-height: 63px;
+  box-sizing: border-box;
 }
 
 .navigator-header :deep(.search-bar) {
@@ -164,6 +194,40 @@ onMounted(() => {
   min-width: 200px;
   padding: 0;
   border-bottom: none;
+}
+
+.search-placeholder {
+  flex: 1;
+  min-width: 200px;
+  /* 输入框高度：padding (8px + 8px) + border (1px + 1px) + line-height ≈ 34px */
+  height: 34px;
+}
+
+.settings-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 4px;
+  background-color: transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 4px;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.settings-btn:hover {
+  background-color: var(--vp-c-bg-soft);
+  opacity: 1;
+}
+
+.settings-btn img {
+  width: 20px;
+  height: 20px;
+  display: block;
 }
 
 .knowledge-navigator-container > .sidebar-list {
@@ -174,6 +238,11 @@ onMounted(() => {
   display: grid;
   grid-template-columns: auto 1fr;
   grid-template-rows: auto 1fr auto;
+}
+
+/* 全局搜索时单列布局 */
+.knowledge-navigator-container:has(.content-area .global-search-view) {
+  grid-template-columns: 1fr;
 }
 
 .navigator-header {
@@ -195,6 +264,14 @@ onMounted(() => {
   background-color: var(--vp-c-bg);
   display: flex;
   flex-direction: column;
+}
+
+/* 全局搜索时内容区占满宽度 */
+.knowledge-navigator-container:has(.content-area .global-search-view)
+  .content-area {
+  grid-column: 1;
+  padding-left: 0;
+  padding: 0 1rem;
 }
 
 .content-area .sidebar-content {
@@ -229,6 +306,12 @@ onMounted(() => {
 
   .navigator-header :deep(.search-bar) {
     min-width: 150px;
+  }
+
+  .search-placeholder {
+    min-width: 150px;
+    /* 移动端输入框高度：padding (6px + 6px) + border (1px + 1px) + line-height ≈ 30px */
+    height: 30px;
   }
 
   .navigator-header :deep(.search-input) {

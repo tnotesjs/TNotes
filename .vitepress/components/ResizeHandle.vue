@@ -1,14 +1,6 @@
 <template>
-  <div class="resize-handle" @mousedown="$emit('mousedown', $event)">
-    <div class="left-area">
-      <input
-        v-if="!isCompact"
-        v-model="localTnotesDir"
-        type="text"
-        class="dir-input"
-        placeholder="知识库所在目录路径"
-        @input="$emit('update:tnotesDir', localTnotesDir)"
-      />
+  <div class="resize-handle">
+    <div v-if="viewMode === 'folder'" class="left-area">
       <select
         v-model="localSortOption"
         class="sort-select"
@@ -26,8 +18,12 @@
     </div>
     <div class="right-area">
       <div
+        v-if="
+          viewMode === 'folder' &&
+          activeSidebarItem &&
+          activeSidebarItem.created_at
+        "
         class="date-info"
-        v-if="activeSidebarItem && activeSidebarItem.created_at"
       >
         <span class="resize-meta-item" v-if="!isCompact">
           创建: {{ formatTimestamp(activeSidebarItem.created_at) }}
@@ -36,13 +32,6 @@
           更新: {{ formatTimestamp(activeSidebarItem.updated_at) }}
         </span>
       </div>
-      <input
-        v-model.number="localHeight"
-        type="number"
-        class="height-input"
-        @change="$emit('height-change')"
-        min="500"
-      />
     </div>
   </div>
 </template>
@@ -53,42 +42,22 @@ import type { RootItem, SortOption } from './composables/useNavigator'
 import { formatTimestamp } from './utils/helpers'
 
 const props = defineProps<{
-  containerHeight: number
   sortOption: SortOption
-  tnotesDir: string
   activeSidebarItem: RootItem | null
   isCompact: boolean
+  viewMode: 'folder' | 'search' | 'mindmap'
 }>()
 
 const emit = defineEmits<{
-  mousedown: [e: MouseEvent]
-  'height-change': []
   'update:sortOption': [value: SortOption]
-  'update:tnotesDir': [value: string]
 }>()
 
-const localHeight = ref(props.containerHeight)
 const localSortOption = ref(props.sortOption)
-const localTnotesDir = ref(props.tnotesDir)
-
-watch(
-  () => props.containerHeight,
-  (newVal) => {
-    localHeight.value = newVal
-  }
-)
 
 watch(
   () => props.sortOption,
   (newVal) => {
     localSortOption.value = newVal
-  }
-)
-
-watch(
-  () => props.tnotesDir,
-  (newVal) => {
-    localTnotesDir.value = newVal
   }
 )
 </script>
@@ -101,7 +70,6 @@ watch(
   right: 0;
   height: 24px;
   background-color: var(--vp-c-divider);
-  cursor: ns-resize;
   z-index: 20;
   display: flex;
   align-items: center;

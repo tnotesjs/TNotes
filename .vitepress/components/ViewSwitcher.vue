@@ -44,50 +44,49 @@ defineEmits<{
 <style scoped>
 .view-switcher {
   display: flex;
-  gap: 8px;
-  padding: 10px 15px;
-  border-bottom: 1px solid var(--vp-c-divider);
-  background-color: var(--vp-c-bg-soft);
+  gap: 4px;
 }
 
 .view-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 6px;
-  background-color: var(--vp-c-bg);
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 4px;
+  background-color: transparent;
   cursor: pointer;
   transition: all 0.2s;
-  padding: 6px;
+  padding: 4px;
+  opacity: 0.6;
 }
 
 .view-btn:hover {
-  border-color: var(--vp-c-brand);
-  background-color: var(--vp-c-bg-alt);
+  background-color: var(--vp-c-bg-soft);
+  opacity: 1;
 }
 
 .view-btn.active {
-  border-color: var(--vp-c-brand);
   background-color: var(--vp-c-brand-soft);
+  opacity: 1;
 }
 
 .view-btn img {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   display: block;
 }
 
 @media (max-width: 768px) {
-  .view-switcher {
-    padding: 8px 10px;
+  .view-btn {
+    width: 28px;
+    height: 28px;
   }
 
-  .view-btn {
-    width: 32px;
-    height: 32px;
+  .view-btn img {
+    width: 16px;
+    height: 16px;
   }
 }
 </style>
