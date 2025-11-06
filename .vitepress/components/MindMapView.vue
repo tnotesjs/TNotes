@@ -374,6 +374,16 @@ function renderMindmap() {
 
       markmapInstance = Markmap.create(svgRef.value, options, root)
 
+      // 为所有链接添加 target="_blank"
+      setTimeout(() => {
+        if (svgRef.value) {
+          const links = svgRef.value.querySelectorAll('a')
+          links.forEach((link) => {
+            link.setAttribute('target', '_blank')
+          })
+        }
+      }, 100)
+
       setTimeout(() => {
         try {
           markmapInstance?.fit()

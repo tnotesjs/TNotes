@@ -10,7 +10,19 @@
 
     <div v-else class="search-results">
       <div class="results-summary">
-        找到 {{ totalCount }} 个结果（{{ searchResults.length }} 个知识库）
+        <span
+          >找到 {{ totalCount }} 个结果（{{
+            searchResults.length
+          }}
+          个知识库）</span
+        >
+        <button
+          class="batch-toggle-btn"
+          :title="allCollapsed ? '全部展开' : '全部折叠'"
+          @click="toggleAllGroups"
+        >
+          <img :src="icon__fold" alt="折叠/展开" />
+        </button>
       </div>
 
       <div
@@ -18,16 +30,31 @@
         :key="result.repoKey"
         class="result-group"
       >
-        <div class="repo-header">
-          <h3 class="repo-title">{{ result.repoTitle }}</h3>
+        <div class="repo-header" @click="toggleGroup(result.repoKey)">
+          <div class="repo-header-left">
+            <span
+              class="collapse-icon"
+              :class="{ collapsed: isGroupCollapsed(result.repoKey) }"
+            >
+              ▼
+            </span>
+            <img
+              v-if="result.icon"
+              :src="result.icon"
+              :alt="result.repoTitle"
+              class="repo-icon"
+            />
+            <h3 class="repo-title">{{ result.repoTitle }}</h3>
+          </div>
           <span class="result-count">{{ result.items.length }} 个结果</span>
         </div>
 
-        <div class="result-items">
+        <div v-show="!isGroupCollapsed(result.repoKey)" class="result-items">
           <a
             v-for="(item, index) in result.items"
             :key="index"
             :href="item.link"
+            target="_blank"
             class="result-item"
           >
             <span class="item-text">{{ item.text }}</span>
@@ -40,7 +67,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import icon__fold from '/icon__fold.svg'
 
 interface SearchResultItem {
   text: string
@@ -51,6 +79,7 @@ interface SearchResultItem {
 interface SearchResultGroup {
   repoKey: string
   repoTitle: string
+  icon?: string
   items: SearchResultItem[]
 }
 
@@ -58,6 +87,43 @@ const props = defineProps<{
   searchQuery: string
   rootData: any
 }>()
+
+// 折叠状态管理
+const collapsedGroups = ref<Set<string>>(new Set())
+
+const toggleGroup = (repoKey: string) => {
+  if (collapsedGroups.value.has(repoKey)) {
+    collapsedGroups.value.delete(repoKey)
+  } else {
+    collapsedGroups.value.add(repoKey)
+  }
+}
+
+const isGroupCollapsed = (repoKey: string) => {
+  return collapsedGroups.value.has(repoKey)
+}
+
+// 批量折叠/展开
+const allCollapsed = computed(() => {
+  return (
+    searchResults.value.length > 0 &&
+    searchResults.value.every((result) =>
+      collapsedGroups.value.has(result.repoKey)
+    )
+  )
+})
+
+const toggleAllGroups = () => {
+  if (allCollapsed.value) {
+    // 全部展开
+    collapsedGroups.value.clear()
+  } else {
+    // 全部折叠
+    searchResults.value.forEach((result) => {
+      collapsedGroups.value.add(result.repoKey)
+    })
+  }
+}
 
 // 递归搜索侧边栏项，只搜索带有 link 的笔记项
 const searchInItems = (
@@ -111,6 +177,7 @@ const searchResults = computed<SearchResultGroup[]>(() => {
       results.push({
         repoKey,
         repoTitle: repoItem.title || repoKey,
+        icon: repoItem.icon?.src,
         items,
       })
     }
@@ -151,12 +218,41 @@ const totalCount = computed(() => {
 }
 
 .results-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 0.75rem 1rem;
   margin-bottom: 1rem;
   background-color: var(--vp-c-bg-soft);
   border-radius: 8px;
   color: var(--vp-c-text-2);
   font-size: 14px;
+}
+
+.batch-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 4px;
+  background-color: transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 4px;
+  opacity: 0.6;
+}
+
+.batch-toggle-btn:hover {
+  background-color: var(--vp-c-bg);
+  opacity: 1;
+}
+
+.batch-toggle-btn img {
+  width: 16px;
+  height: 16px;
+  display: block;
 }
 
 .result-group {
@@ -168,8 +264,43 @@ const totalCount = computed(() => {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 0.75rem;
-  padding-bottom: 0.5rem;
+  padding: 0.75rem 1rem;
   border-bottom: 2px solid var(--vp-c-divider);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s;
+  border-radius: 6px;
+}
+
+.repo-header:hover {
+  background-color: var(--vp-c-bg-soft);
+}
+
+.repo-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.collapse-icon {
+  font-size: 12px;
+  color: var(--vp-c-text-2);
+  transition: transform 0.2s;
+  display: inline-block;
+  width: 16px;
+  text-align: center;
+}
+
+.collapse-icon.collapsed {
+  transform: rotate(-90deg);
+}
+
+.repo-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .repo-title {
