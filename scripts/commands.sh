@@ -25,9 +25,13 @@
 
 # 确保本地是最新的：强制推送本地版本覆盖远程版本
 # git add . && git commit -m "update" && git push origin main --force
+git add . & git commit -m "update" & git push origin main --force
+
+# 彻底恢复仓库状态
+# git reset --hard HEAD && git clean -fd
 
 # 恢复仓库状态
-# git reset --hard HEAD && git clean -fd
+# git restore .
 
 # 拉取最新代码
 # git pull
