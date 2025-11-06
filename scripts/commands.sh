@@ -20,22 +20,17 @@
 # 常用命令列表：
 # ================================================================
 
+# 确保远程是最新的：强制读取远程版本覆盖本地版本
+# git fetch origin && git reset --hard origin/main && git clean -fd
+
+# 确保本地是最新的：强制推送本地版本覆盖远程版本
+# git add . && git commit -m "update" && git push origin main --force
+
 # 恢复仓库状态
-# git reset --hard HEAD
-# git clean -fd
+# git reset --hard HEAD && git clean -fd
 
 # 拉取最新代码
 # git pull
-
-# 确保远程是最新的：强制读取远程版本覆盖本地版本
-# git fetch origin
-# git reset --hard origin/main
-# git clean -fd
-
-# 确保本地是最新的：强制推送本地版本覆盖远程版本
-# git add .
-# git commit -m "update"
-# git push origin main --force
 
 # 安装依赖
 # pnpm install
