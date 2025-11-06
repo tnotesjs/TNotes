@@ -33,10 +33,12 @@
 # git clean -fd
 
 # 确保本地是最新的：强制推送本地版本覆盖远程版本
-# git push origin main --force
+# git add .
+# git commit -m "update"
+git push origin main --force
 
 # 安装依赖
 # pnpm install
 
 # 知识库更新
-pnpm tn:update
+# pnpm tn:update
