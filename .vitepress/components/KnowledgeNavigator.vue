@@ -9,7 +9,12 @@
       <SearchBar
         v-if="viewMode === 'folder'"
         v-model="searchQuery"
-        placeholder="搜索当前知识库..."
+        placeholder="搜索「当前知识库」..."
+      />
+      <SearchBar
+        v-else-if="viewMode === 'search'"
+        v-model="searchQuery"
+        placeholder="搜索「所有知识库」..."
       />
     </div>
 
@@ -49,7 +54,7 @@
       <!-- 全局搜索视图 -->
       <GlobalSearchView
         v-else-if="viewMode === 'search'"
-        v-model:search-query="searchQuery"
+        :search-query="searchQuery"
         :root-data="rootData"
       />
 
@@ -78,8 +83,8 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useContainerHeight } from './composables/useContainerHeight'
-import { useResponsive } from './composables/useResponsive'
 import { useNavigator } from './composables/useNavigator'
+import { useResponsive } from './composables/useResponsive'
 import GlobalSearchView from './GlobalSearchView.vue'
 import MindMapView from './MindMapView.vue'
 import RepoInfo from './RepoInfo.vue'

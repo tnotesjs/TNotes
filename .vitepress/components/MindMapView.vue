@@ -86,7 +86,7 @@ function sidebarToMarkdown(
       if (item.link) {
         text = `[${item.text}](${item.link})`
       } else if (level === 1) {
-        text = `\`${item.text}\``
+        text = `**${item.text}**`
       } else {
         text = item.text
       }

@@ -1,19 +1,6 @@
 <template>
   <div class="global-search-view">
-    <div class="search-header">
-      <input
-        v-model="localSearchQuery"
-        type="text"
-        class="search-input"
-        placeholder="搜索所有知识库..."
-        @input="onSearch"
-      />
-      <button v-if="localSearchQuery" class="clear-btn" @click="clearSearch">
-        ✕
-      </button>
-    </div>
-
-    <div v-if="!localSearchQuery" class="empty-state">
+    <div v-if="!searchQuery" class="empty-state">
       <p>输入关键词搜索所有知识库的内容</p>
     </div>
 
@@ -53,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { computed } from 'vue'
 
 interface SearchResultItem {
   text: string
@@ -72,12 +59,6 @@ const props = defineProps<{
   rootData: any
 }>()
 
-const emit = defineEmits<{
-  'update:searchQuery': [value: string]
-}>()
-
-const localSearchQuery = ref(props.searchQuery)
-
 // 递归搜索侧边栏项
 const searchInItems = (
   items: any[],
@@ -88,9 +69,7 @@ const searchInItems = (
   const searchLower = query.toLowerCase()
 
   for (const item of items) {
-    const currentPath = parentPath
-      ? `${parentPath} > ${item.text}`
-      : item.text
+    const currentPath = parentPath ? `${parentPath} > ${item.text}` : item.text
 
     // 检查当前项是否匹配
     if (item.text?.toLowerCase().includes(searchLower)) {
@@ -113,7 +92,7 @@ const searchInItems = (
 
 // 搜索结果
 const searchResults = computed<SearchResultGroup[]>(() => {
-  if (!localSearchQuery.value) return []
+  if (!props.searchQuery) return []
 
   const results: SearchResultGroup[] = []
 
@@ -126,7 +105,7 @@ const searchResults = computed<SearchResultGroup[]>(() => {
     const sidebar = props.rootData.sidebars[repoKey]
     if (!sidebar) continue
 
-    const items = searchInItems(sidebar, localSearchQuery.value)
+    const items = searchInItems(sidebar, props.searchQuery)
 
     if (items.length > 0) {
       results.push({
@@ -145,22 +124,6 @@ const searchResults = computed<SearchResultGroup[]>(() => {
 const totalCount = computed(() => {
   return searchResults.value.reduce((sum, group) => sum + group.items.length, 0)
 })
-
-const onSearch = () => {
-  emit('update:searchQuery', localSearchQuery.value)
-}
-
-const clearSearch = () => {
-  localSearchQuery.value = ''
-  emit('update:searchQuery', '')
-}
-
-watch(
-  () => props.searchQuery,
-  (newVal) => {
-    localSearchQuery.value = newVal
-  }
-)
 </script>
 
 <style scoped>
@@ -170,52 +133,6 @@ watch(
   height: 100%;
   background-color: var(--vp-c-bg);
   overflow: hidden;
-}
-
-.search-header {
-  position: relative;
-  padding: 1rem;
-  border-bottom: 1px solid var(--vp-c-divider);
-}
-
-.search-input {
-  width: 100%;
-  padding: 10px 40px 10px 15px;
-  font-size: 15px;
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 8px;
-  background-color: var(--vp-c-bg-soft);
-  color: var(--vp-c-text-1);
-  transition: all 0.2s;
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: var(--vp-c-brand);
-  background-color: var(--vp-c-bg);
-}
-
-.clear-btn {
-  position: absolute;
-  right: 1.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 24px;
-  height: 24px;
-  border: none;
-  background: transparent;
-  color: var(--vp-c-text-2);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  font-size: 16px;
-}
-
-.clear-btn:hover {
-  background-color: var(--vp-c-bg-soft);
-  color: var(--vp-c-text-1);
 }
 
 .empty-state {
@@ -306,15 +223,6 @@ watch(
 }
 
 @media (max-width: 768px) {
-  .search-header {
-    padding: 0.75rem;
-  }
-
-  .search-input {
-    font-size: 14px;
-    padding: 8px 36px 8px 12px;
-  }
-
   .search-results {
     padding: 0.75rem;
   }

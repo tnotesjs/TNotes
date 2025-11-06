@@ -20,7 +20,7 @@ const props = withDefaults(
     placeholder?: string
   }>(),
   {
-    placeholder: '🔍 搜索当前知识库...',
+    placeholder: '搜索当前知识库...',
   }
 )
 
