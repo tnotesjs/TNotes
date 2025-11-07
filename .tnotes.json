@@ -1,6 +1,6 @@
 {
   "statistic": {
-    "completed_notes_count": 764
+    "completed_notes_count": 765
   },
   "sub_knowledge_list": [
     "TNotes.introduction",
@@ -385,11 +385,11 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--vscode.svg"
       },
       "title": "vscode",
-      "completed_notes_count": 22,
+      "completed_notes_count": 23,
       "details": "vscode 笔记",
       "link": "https://tnotesjs.github.io/TNotes.vscode/",
       "created_at": 1750939332000,
-      "updated_at": 1762475280119,
+      "updated_at": 1762482045420,
       "days_since_birth": 9495,
       "is_visible_in_root_folder": true
     },
