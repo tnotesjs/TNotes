@@ -21,7 +21,7 @@
 # ================================================================
 
 # 确保远程是最新的：强制读取远程版本覆盖本地版本
-git fetch origin && git reset --hard origin/main && git clean -fd
+# git fetch origin && git reset --hard origin/main && git clean -fd
 
 # 确保本地是最新的：强制推送本地版本覆盖远程版本
 # git add . && git commit -m "update" && git push origin main --force
@@ -40,3 +40,6 @@ git fetch origin && git reset --hard origin/main && git clean -fd
 
 # 知识库更新
 # pnpm tn:update
+
+# 移除所有 .vitepress-pid 模块
+# git rm --cached .vitepress-pid && git commit -m "chore: 停止跟踪 .vitepress-pid 文件" && git push
