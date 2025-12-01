@@ -46,7 +46,7 @@ const emit = defineEmits<{
 
 <style scoped>
 .sidebar-list {
-  width: 250px;
+  width: 300px;
   background-color: var(--vp-c-bg-soft);
   border-right: 1px solid var(--vp-c-divider);
   display: flex;

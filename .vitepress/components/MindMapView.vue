@@ -348,9 +348,9 @@ function renderMindmap() {
 
     const markdown = sidebarToMarkdown(props.activeSidebar!)
 
-    console.log('=== 生成的 Markdown ===')
-    console.log(markdown)
-    console.log('====================')
+    // console.log('=== 生成的 Markdown ===')
+    // console.log(markdown)
+    // console.log('====================')
 
     if (!markdown.trim()) {
       svgRef.value.innerHTML = '<text x="20" y="30" fill="#999">空内容</text>'

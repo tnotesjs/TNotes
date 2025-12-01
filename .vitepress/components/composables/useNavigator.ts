@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 export interface RootItem {
   icon?: { src: string }
   title: string
-  completed_notes_count: number
+  completed_notes_count: Record<string, number> // 现在是对象类型，key 为 "YY.MM" 格式
   details: string
   link: string
   created_at?: number
@@ -11,11 +11,58 @@ export interface RootItem {
   is_visible_in_root_folder?: boolean
 }
 
+// 获取当前月份的笔记数
+function getCurrentMonthCount(
+  completed_notes_count: Record<string, number> | number | undefined
+): number {
+  if (!completed_notes_count) return 0
+
+  // 兼容旧格式（number 类型）
+  if (typeof completed_notes_count === 'number') {
+    return completed_notes_count
+  }
+
+  // 新格式：从当前月份读取
+  const now = new Date()
+  const year = now.getFullYear().toString().slice(2) // 获取两位年份，如 "25"
+  const month = (now.getMonth() + 1).toString().padStart(2, '0') // 获取月份，补零，如 "12"
+  const currentKey = `${year}.${month}` // 如 "25.12"
+
+  return completed_notes_count[currentKey] || 0
+}
+
+// 获取当前月份的增量
+function getCurrentMonthIncrement(
+  completed_notes_count: Record<string, number> | number | undefined
+): number {
+  if (!completed_notes_count || typeof completed_notes_count === 'number') {
+    return 0
+  }
+
+  const now = new Date()
+  const year = now.getFullYear().toString().slice(2)
+  const month = (now.getMonth() + 1).toString().padStart(2, '0')
+  const currentKey = `${year}.${month}`
+
+  // 上个月
+  const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const prevYear = prevDate.getFullYear().toString().slice(2)
+  const prevMonth = (prevDate.getMonth() + 1).toString().padStart(2, '0')
+  const prevKey = `${prevYear}.${prevMonth}`
+
+  const currentCount = completed_notes_count[currentKey] || 0
+  const prevCount = completed_notes_count[prevKey] || 0
+
+  return currentCount - prevCount
+}
+
 export type SortOption =
   | 'name-asc'
   | 'name-desc'
   | 'count-asc'
   | 'count-desc'
+  | 'increment-asc'
+  | 'increment-desc'
   | 'updated-asc'
   | 'updated-desc'
   | 'created-asc'
@@ -47,13 +94,23 @@ export function useNavigator(rootData: any) {
           return (b[1].title || b[0]).localeCompare(a[1].title || a[0])
         case 'count-asc':
           return (
-            (a[1].completed_notes_count || 0) -
-            (b[1].completed_notes_count || 0)
+            getCurrentMonthCount(a[1].completed_notes_count) -
+            getCurrentMonthCount(b[1].completed_notes_count)
           )
         case 'count-desc':
           return (
-            (b[1].completed_notes_count || 0) -
-            (a[1].completed_notes_count || 0)
+            getCurrentMonthCount(b[1].completed_notes_count) -
+            getCurrentMonthCount(a[1].completed_notes_count)
+          )
+        case 'increment-asc':
+          return (
+            getCurrentMonthIncrement(a[1].completed_notes_count) -
+            getCurrentMonthIncrement(b[1].completed_notes_count)
+          )
+        case 'increment-desc':
+          return (
+            getCurrentMonthIncrement(b[1].completed_notes_count) -
+            getCurrentMonthIncrement(a[1].completed_notes_count)
           )
         case 'updated-asc':
           return (a[1].updated_at || 0) - (b[1].updated_at || 0)

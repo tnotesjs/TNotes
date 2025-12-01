@@ -21,7 +21,7 @@
 # ================================================================
 
 # 确保远程是最新的：强制读取远程版本覆盖本地版本
-# git fetch origin && git reset --hard origin/main && git clean -fd
+git fetch origin && git reset --hard origin/main && git clean -fd
 
 # 确保本地是最新的：强制推送本地版本覆盖远程版本
 # git add . && git commit -m "update" && git push origin main --force

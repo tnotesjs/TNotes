@@ -44,7 +44,7 @@
       :sorted-items="sortedRootItems"
       :active-key="activeKey"
       :is-compact="isCompact"
-      :total-count="rootData.config.statistic.completed_notes_count"
+      :total-count="totalNotesCount"
       @select="selectSidebar"
     />
 
@@ -106,7 +106,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useNavigator } from './composables/useNavigator'
 import { useResponsive } from './composables/useResponsive'
 import GlobalSearchView from './GlobalSearchView.vue'
@@ -145,6 +145,32 @@ const {
 } = useNavigator(rootData)
 
 const { isCompact } = useResponsive()
+
+// 获取当前月份的总笔记数
+const totalNotesCount = computed(() => {
+  const { completed_notes_count } = rootData.config.statistic
+
+  if (!completed_notes_count) return 0
+
+  // 错误数据处理（如果是字符串）
+  if (typeof completed_notes_count === 'string') {
+    console.warn('completed_notes_count 数据格式错误，请重新运行 pnpm tn:build')
+    return 0
+  }
+
+  // 兼容旧格式（number 类型）
+  if (typeof completed_notes_count === 'number') {
+    return completed_notes_count
+  }
+
+  // 新格式：从当前月份读取
+  const now = new Date()
+  const year = now.getFullYear().toString().slice(2)
+  const month = (now.getMonth() + 1).toString().padStart(2, '0')
+  const currentKey = `${year}.${month}`
+
+  return completed_notes_count[currentKey] || 0
+})
 
 // 切换全屏状态
 const toggleFullscreen = () => {

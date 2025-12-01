@@ -1,6 +1,8 @@
 {
   "statistic": {
-    "completed_notes_count": 835
+    "completed_notes_count": {
+      "25.12": 841
+    }
   },
   "sub_knowledge_list": [
     "TNotes.introduction",
@@ -38,11 +40,16 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--algorithms.svg"
       },
       "title": "algorithms",
-      "completed_notes_count": 11,
+      "completed_notes_count": {
+        "25.09": 10,
+        "25.10": 10,
+        "25.11": 11,
+        "25.12": 11
+      },
       "details": "算法与数据结构 笔记",
       "link": "https://tnotesjs.github.io/TNotes.algorithms/",
       "created_at": 1757555213000,
-      "updated_at": 1764289519489,
+      "updated_at": 1764578426239,
       "days_since_birth": 9572,
       "is_visible_in_root_folder": true
     },
@@ -51,11 +58,24 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--c-cpp.svg"
       },
       "title": "c-cpp",
-      "completed_notes_count": 1,
+      "completed_notes_count": {
+        "25.01": 1,
+        "25.02": 1,
+        "25.03": 1,
+        "25.04": 1,
+        "25.05": 1,
+        "25.06": 1,
+        "25.07": 1,
+        "25.08": 1,
+        "25.09": 1,
+        "25.10": 1,
+        "25.11": 1,
+        "25.12": 1
+      },
       "details": "C、C++ 笔记",
       "link": "https://tnotesjs.github.io/TNotes.c-cpp/",
       "created_at": 1737437192000,
-      "updated_at": 1762780401432,
+      "updated_at": 1764578430987,
       "days_since_birth": 9339,
       "is_visible_in_root_folder": true
     },
@@ -64,11 +84,22 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--canvas.svg"
       },
       "title": "canvas",
-      "completed_notes_count": 57,
+      "completed_notes_count": {
+        "25.03": 0,
+        "25.04": 0,
+        "25.05": 0,
+        "25.06": 0,
+        "25.07": 4,
+        "25.08": 53,
+        "25.09": 57,
+        "25.10": 57,
+        "25.11": 57,
+        "25.12": 57
+      },
       "details": "Canvas 笔记",
       "link": "https://tnotesjs.github.io/TNotes.canvas/",
       "created_at": 1741007058000,
-      "updated_at": 1762780402011,
+      "updated_at": 1764578435120,
       "days_since_birth": 9380,
       "is_visible_in_root_folder": true
     },
@@ -77,11 +108,22 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--cooking.svg"
       },
       "title": "cooking",
-      "completed_notes_count": 5,
+      "completed_notes_count": {
+        "25.03": 5,
+        "25.04": 5,
+        "25.05": 5,
+        "25.06": 5,
+        "25.07": 5,
+        "25.08": 5,
+        "25.09": 5,
+        "25.10": 5,
+        "25.11": 5,
+        "25.12": 5
+      },
       "details": "做饭笔记",
       "link": "https://tnotesjs.github.io/TNotes.cooking/",
       "created_at": 1742093975000,
-      "updated_at": 1762780403079,
+      "updated_at": 1764578443000,
       "days_since_birth": 9393,
       "is_visible_in_root_folder": true
     },
@@ -90,11 +132,22 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--eggjs.png"
       },
       "title": "egg",
-      "completed_notes_count": 19,
+      "completed_notes_count": {
+        "25.03": 16,
+        "25.04": 17,
+        "25.05": 19,
+        "25.06": 19,
+        "25.07": 19,
+        "25.08": 19,
+        "25.09": 19,
+        "25.10": 19,
+        "25.11": 19,
+        "25.12": 19
+      },
       "details": "Egg.js 笔记",
       "link": "https://tnotesjs.github.io/TNotes.egg/",
       "created_at": 1741248153000,
-      "updated_at": 1762780403638,
+      "updated_at": 1764578447190,
       "days_since_birth": 9383,
       "is_visible_in_root_folder": true
     },
@@ -103,11 +156,28 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--electron.svg"
       },
       "title": "electron",
-      "completed_notes_count": 20,
+      "completed_notes_count": {
+        "24.09": 0,
+        "24.10": 0,
+        "24.11": 0,
+        "24.12": 1,
+        "25.01": 2,
+        "25.02": 21,
+        "25.03": 21,
+        "25.04": 0,
+        "25.05": 19,
+        "25.06": 20,
+        "25.07": 20,
+        "25.08": 20,
+        "25.09": 20,
+        "25.10": 20,
+        "25.11": 20,
+        "25.12": 20
+      },
       "details": "Electron 笔记",
       "link": "https://tnotesjs.github.io/TNotes.electron/",
       "created_at": 1726304357000,
-      "updated_at": 1763096704228,
+      "updated_at": 1764578452562,
       "days_since_birth": 9210,
       "is_visible_in_root_folder": true
     },
@@ -116,11 +186,22 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--en-notes.svg"
       },
       "title": "en-notes",
-      "completed_notes_count": 15,
+      "completed_notes_count": {
+        "25.03": 5,
+        "25.04": 5,
+        "25.05": 5,
+        "25.06": 14,
+        "25.07": 14,
+        "25.08": 14,
+        "25.09": 14,
+        "25.10": 15,
+        "25.11": 14,
+        "25.12": 14
+      },
       "details": "英语学习笔记",
       "link": "https://tnotesjs.github.io/TNotes.en-notes/",
       "created_at": 1740846170000,
-      "updated_at": 1762780404769,
+      "updated_at": 1764578456874,
       "days_since_birth": 9379,
       "is_visible_in_root_folder": true
     },
@@ -138,11 +219,22 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--footprints.svg"
       },
       "title": "footprints",
-      "completed_notes_count": 44,
+      "completed_notes_count": {
+        "25.03": 6,
+        "25.04": 6,
+        "25.05": 6,
+        "25.06": 43,
+        "25.07": 43,
+        "25.08": 44,
+        "25.09": 44,
+        "25.10": 44,
+        "25.11": 44,
+        "25.12": 44
+      },
       "details": "记录活着的一些动态 - 在线版的微信朋友圈",
       "link": "https://tnotesjs.github.io/TNotes.footprints/",
       "created_at": 1741009521000,
-      "updated_at": 1762780405328,
+      "updated_at": 1764578461352,
       "days_since_birth": 9380,
       "is_visible_in_root_folder": true
     },
@@ -151,11 +243,28 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--git.svg"
       },
       "title": "git-notes",
-      "completed_notes_count": 18,
+      "completed_notes_count": {
+        "24.09": 0,
+        "24.10": 0,
+        "24.11": 0,
+        "24.12": 7,
+        "25.01": 7,
+        "25.02": 7,
+        "25.03": 7,
+        "25.04": 7,
+        "25.05": 0,
+        "25.06": 7,
+        "25.07": 13,
+        "25.08": 13,
+        "25.09": 17,
+        "25.10": 18,
+        "25.11": 18,
+        "25.12": 18
+      },
       "details": "Git 笔记",
       "link": "https://tnotesjs.github.io/TNotes.git-notes/",
       "created_at": 1727172590000,
-      "updated_at": 1762780405898,
+      "updated_at": 1764578466726,
       "days_since_birth": 9220,
       "is_visible_in_root_folder": true
     },
@@ -164,11 +273,22 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--leetcode.svg"
       },
       "title": "leetcode",
-      "completed_notes_count": 167,
+      "completed_notes_count": {
+        "25.03": 1,
+        "25.04": 3,
+        "25.05": 3,
+        "25.06": 3,
+        "25.07": 3,
+        "25.08": 3,
+        "25.09": 3,
+        "25.10": 161,
+        "25.11": 172,
+        "25.12": 172
+      },
       "details": "Leetcode 刷题笔记",
       "link": "https://tnotesjs.github.io/TNotes.leetcode/",
       "created_at": 1741793958000,
-      "updated_at": 1764289581316,
+      "updated_at": 1764578475588,
       "days_since_birth": 9389,
       "is_visible_in_root_folder": true
     },
@@ -177,11 +297,22 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--miniprogram-wechat.svg"
       },
       "title": "miniprogram",
-      "completed_notes_count": 0,
+      "completed_notes_count": {
+        "25.03": 0,
+        "25.04": 0,
+        "25.05": 0,
+        "25.06": 0,
+        "25.07": 0,
+        "25.08": 0,
+        "25.09": 0,
+        "25.10": 0,
+        "25.11": 0,
+        "25.12": 0
+      },
       "details": "小程序",
       "link": "https://tnotesjs.github.io/TNotes.miniprogram/",
       "created_at": 1740922620000,
-      "updated_at": 1762780408881,
+      "updated_at": 1764578480087,
       "days_since_birth": 9379,
       "is_visible_in_root_folder": true
     },
@@ -190,11 +321,20 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--network.svg"
       },
       "title": "network",
-      "completed_notes_count": 0,
+      "completed_notes_count": {
+        "25.05": 0,
+        "25.06": 0,
+        "25.07": 0,
+        "25.08": 0,
+        "25.09": 0,
+        "25.10": 0,
+        "25.11": 0,
+        "25.12": 0
+      },
       "details": "网络笔记",
       "link": "https://tnotesjs.github.io/TNotes.network/",
       "created_at": 1746575572000,
-      "updated_at": 1762780409420,
+      "updated_at": 1764578483609,
       "days_since_birth": 9445,
       "is_visible_in_root_folder": true
     },
@@ -203,11 +343,22 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--nodejs.svg"
       },
       "title": "nodejs",
-      "completed_notes_count": 61,
+      "completed_notes_count": {
+        "25.03": 2,
+        "25.04": 57,
+        "25.05": 57,
+        "25.06": 57,
+        "25.07": 57,
+        "25.08": 60,
+        "25.09": 60,
+        "25.10": 60,
+        "25.11": 62,
+        "25.12": 62
+      },
       "details": "NodeJS 笔记",
       "link": "https://tnotesjs.github.io/TNotes.nodejs/",
       "created_at": 1740924081000,
-      "updated_at": 1762780410070,
+      "updated_at": 1764578488093,
       "days_since_birth": 9379,
       "is_visible_in_root_folder": true
     },
@@ -216,11 +367,22 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--pc.svg"
       },
       "title": "notes",
-      "completed_notes_count": 32,
+      "completed_notes_count": {
+        "25.03": 17,
+        "25.04": 16,
+        "25.05": 46,
+        "25.06": 31,
+        "25.07": 32,
+        "25.08": 32,
+        "25.09": 32,
+        "25.10": 32,
+        "25.11": 32,
+        "25.12": 32
+      },
       "details": "早期在 B 站坐的工具分享系列内容，或者存储的一些没有明确分组的笔记的集合。",
       "link": "https://tnotesjs.github.io/TNotes.notes/",
       "created_at": 1740883219000,
-      "updated_at": 1762780410634,
+      "updated_at": 1764578492881,
       "days_since_birth": 9379,
       "is_visible_in_root_folder": true
     },
@@ -229,11 +391,17 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--python.svg"
       },
       "title": "python",
-      "completed_notes_count": 0,
+      "completed_notes_count": {
+        "25.08": 0,
+        "25.09": 0,
+        "25.10": 0,
+        "25.11": 0,
+        "25.12": 0
+      },
       "details": "python 笔记",
       "link": "https://tnotesjs.github.io/TNotes.python/",
       "created_at": 1754971781000,
-      "updated_at": 1762780411175,
+      "updated_at": 1764578496009,
       "days_since_birth": 9542,
       "is_visible_in_root_folder": true
     },
@@ -242,11 +410,23 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--react.svg"
       },
       "title": "react",
-      "completed_notes_count": 53,
+      "completed_notes_count": {
+        "25.02": 36,
+        "25.03": 37,
+        "25.04": 37,
+        "25.05": 37,
+        "25.06": 45,
+        "25.07": 44,
+        "25.08": 44,
+        "25.09": 44,
+        "25.10": 51,
+        "25.11": 53,
+        "25.12": 53
+      },
       "details": "React 笔记",
       "link": "https://tnotesjs.github.io/TNotes.react/",
       "created_at": 1740305655000,
-      "updated_at": 1762780411887,
+      "updated_at": 1764578500856,
       "days_since_birth": 9372,
       "is_visible_in_root_folder": true
     },
@@ -255,11 +435,22 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--svg.png"
       },
       "title": "svg",
-      "completed_notes_count": 34,
+      "completed_notes_count": {
+        "25.03": 34,
+        "25.04": 34,
+        "25.05": 34,
+        "25.06": 34,
+        "25.07": 34,
+        "25.08": 34,
+        "25.09": 34,
+        "25.10": 34,
+        "25.11": 34,
+        "25.12": 34
+      },
       "details": "SVG 笔记",
       "link": "https://tnotesjs.github.io/TNotes.svg/",
       "created_at": 1741007859000,
-      "updated_at": 1762780413574,
+      "updated_at": 1764578513173,
       "days_since_birth": 9380,
       "is_visible_in_root_folder": true
     },
@@ -268,11 +459,28 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--typescript.svg"
       },
       "title": "typescript",
-      "completed_notes_count": 126,
+      "completed_notes_count": {
+        "24.09": 0,
+        "24.10": 0,
+        "24.11": 0,
+        "24.12": 0,
+        "25.01": 0,
+        "25.02": 0,
+        "25.03": 0,
+        "25.04": 0,
+        "25.05": 0,
+        "25.06": 0,
+        "25.07": 0,
+        "25.08": 0,
+        "25.09": 0,
+        "25.10": 60,
+        "25.11": 127,
+        "25.12": 127
+      },
       "details": "TS 笔记",
       "link": "https://tnotesjs.github.io/TNotes.typescript/",
       "created_at": 1727046787000,
-      "updated_at": 1764507100109,
+      "updated_at": 1764578520088,
       "days_since_birth": 9219,
       "is_visible_in_root_folder": true
     },
@@ -281,11 +489,28 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--vite.svg"
       },
       "title": "vite",
-      "completed_notes_count": 9,
+      "completed_notes_count": {
+        "24.09": 0,
+        "24.10": 0,
+        "24.11": 0,
+        "24.12": 0,
+        "25.01": 0,
+        "25.02": 0,
+        "25.03": 0,
+        "25.04": 0,
+        "25.05": 0,
+        "25.06": 0,
+        "25.07": 0,
+        "25.08": 0,
+        "25.09": 0,
+        "25.10": 9,
+        "25.11": 9,
+        "25.12": 9
+      },
       "details": "Vite 笔记",
       "link": "https://tnotesjs.github.io/TNotes.vite/",
       "created_at": 1727046902000,
-      "updated_at": 1762780414838,
+      "updated_at": 1764578525532,
       "days_since_birth": 9219,
       "is_visible_in_root_folder": true
     },
@@ -294,11 +519,21 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--vitepress.svg"
       },
       "title": "vitepress",
-      "completed_notes_count": 1,
+      "completed_notes_count": {
+        "25.04": 1,
+        "25.05": 1,
+        "25.06": 1,
+        "25.07": 1,
+        "25.08": 1,
+        "25.09": 1,
+        "25.10": 1,
+        "25.11": 1,
+        "25.12": 1
+      },
       "details": "VitePress 笔记",
       "link": "https://tnotesjs.github.io/TNotes.vitepress/",
       "created_at": 1743699452000,
-      "updated_at": 1762780415379,
+      "updated_at": 1764578529535,
       "days_since_birth": 9412,
       "is_visible_in_root_folder": true
     },
@@ -307,11 +542,28 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--vue.svg"
       },
       "title": "vue",
-      "completed_notes_count": 0,
+      "completed_notes_count": {
+        "24.09": 0,
+        "24.10": 0,
+        "24.11": 0,
+        "24.12": 0,
+        "25.01": 0,
+        "25.02": 0,
+        "25.03": 0,
+        "25.04": 0,
+        "25.05": 0,
+        "25.06": 0,
+        "25.07": 0,
+        "25.08": 0,
+        "25.09": 0,
+        "25.10": 0,
+        "25.11": 0,
+        "25.12": 0
+      },
       "details": "Vue.js 笔记",
       "link": "https://tnotesjs.github.io/TNotes.vue/",
       "created_at": 1727047134000,
-      "updated_at": 1762780416529,
+      "updated_at": 1764578543297,
       "days_since_birth": 9219,
       "is_visible_in_root_folder": true
     },
@@ -320,11 +572,28 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--webpack.svg"
       },
       "title": "webpack",
-      "completed_notes_count": 0,
+      "completed_notes_count": {
+        "24.09": 0,
+        "24.10": 0,
+        "24.11": 0,
+        "24.12": 0,
+        "25.01": 0,
+        "25.02": 0,
+        "25.03": 0,
+        "25.04": 0,
+        "25.05": 0,
+        "25.06": 0,
+        "25.07": 0,
+        "25.08": 0,
+        "25.09": 0,
+        "25.10": 0,
+        "25.11": 0,
+        "25.12": 0
+      },
       "details": "Webpack 笔记",
       "link": "https://tnotesjs.github.io/TNotes.webpack/",
       "created_at": 1727133907000,
-      "updated_at": 1762780417064,
+      "updated_at": 1764578550059,
       "days_since_birth": 9220,
       "is_visible_in_root_folder": true
     },
@@ -346,11 +615,20 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--mysql.svg"
       },
       "title": "sql",
-      "completed_notes_count": 48,
+      "completed_notes_count": {
+        "25.05": 30,
+        "25.06": 48,
+        "25.07": 48,
+        "25.08": 48,
+        "25.09": 48,
+        "25.10": 48,
+        "25.11": 48,
+        "25.12": 48
+      },
       "details": "数据库笔记",
       "link": "https://tnotesjs.github.io/TNotes.sql/",
       "created_at": 1746873077000,
-      "updated_at": 1762780413008,
+      "updated_at": 1764578509080,
       "days_since_birth": 9448,
       "is_visible_in_root_folder": true
     },
@@ -359,12 +637,23 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--introduction.svg"
       },
       "title": "introduction",
-      "completed_notes_count": 14,
+      "completed_notes_count": {
+        "25.03": 5,
+        "25.04": 5,
+        "25.05": 5,
+        "25.06": 0,
+        "25.07": 1,
+        "25.08": 1,
+        "25.09": 1,
+        "25.10": 9,
+        "25.11": 14,
+        "25.12": 14
+      },
       "details": "TNotes 说明文档",
       "link": "https://tnotesjs.github.io/TNotes.introduction/",
       "created_at": 1740850835000,
-      "updated_at": 1763304970376,
-      "days_since_birth": 9629,
+      "updated_at": 1764578032954,
+      "days_since_birth": 9653,
       "is_visible_in_root_folder": true
     },
     "TNotes.chrome": {
@@ -372,11 +661,19 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--chrome.png"
       },
       "title": "chrome",
-      "completed_notes_count": 10,
+      "completed_notes_count": {
+        "25.06": 9,
+        "25.07": 10,
+        "25.08": 10,
+        "25.09": 10,
+        "25.10": 10,
+        "25.11": 10,
+        "25.12": 10
+      },
       "details": "chrome 笔记",
       "link": "https://tnotesjs.github.io/TNotes.chrome/",
       "created_at": 1750939210000,
-      "updated_at": 1762780402539,
+      "updated_at": 1764578438842,
       "days_since_birth": 9495,
       "is_visible_in_root_folder": true
     },
@@ -385,11 +682,19 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--vscode.svg"
       },
       "title": "vscode",
-      "completed_notes_count": 23,
+      "completed_notes_count": {
+        "25.06": 7,
+        "25.07": 18,
+        "25.08": 18,
+        "25.09": 18,
+        "25.10": 18,
+        "25.11": 23,
+        "25.12": 23
+      },
       "details": "vscode 笔记",
       "link": "https://tnotesjs.github.io/TNotes.vscode/",
       "created_at": 1750939332000,
-      "updated_at": 1762780415982,
+      "updated_at": 1764578534737,
       "days_since_birth": 9495,
       "is_visible_in_root_folder": true
     },
@@ -398,11 +703,18 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--redis.svg"
       },
       "title": "redis",
-      "completed_notes_count": 24,
+      "completed_notes_count": {
+        "25.07": 24,
+        "25.08": 24,
+        "25.09": 24,
+        "25.10": 24,
+        "25.11": 24,
+        "25.12": 24
+      },
       "details": "redis 笔记",
       "link": "https://tnotesjs.github.io/TNotes.redis/",
       "created_at": 1751462200000,
-      "updated_at": 1762780412437,
+      "updated_at": 1764578505069,
       "days_since_birth": 9501,
       "is_visible_in_root_folder": true
     },
@@ -411,11 +723,22 @@
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--javascript.svg"
       },
       "title": "javascript",
-      "completed_notes_count": 43,
+      "completed_notes_count": {
+        "25.03": 29,
+        "25.04": 29,
+        "25.05": 30,
+        "25.06": 30,
+        "25.07": 30,
+        "25.08": 30,
+        "25.09": 43,
+        "25.10": 43,
+        "25.11": 43,
+        "25.12": 43
+      },
       "details": "前端三件套及跟前端相关的其它内容",
       "link": "https://tnotesjs.github.io/TNotes.javascript/",
       "created_at": 1740924811000,
-      "updated_at": 1762780406493,
+      "updated_at": 1764578471078,
       "days_since_birth": 9379
     }
   }
