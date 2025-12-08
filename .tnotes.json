@@ -1,7 +1,7 @@
 {
   "statistic": {
     "completed_notes_count": {
-      "25.12": 841
+      "25.12": 854
     }
   },
   "sub_knowledge_list": [
@@ -475,12 +475,12 @@
         "25.09": 0,
         "25.10": 60,
         "25.11": 127,
-        "25.12": 127
+        "25.12": 145
       },
       "details": "TS 笔记",
       "link": "https://tnotesjs.github.io/TNotes.typescript/",
       "created_at": 1727046787000,
-      "updated_at": 1764578520088,
+      "updated_at": 1765072329851,
       "days_since_birth": 9219,
       "is_visible_in_root_folder": true
     },
@@ -733,12 +733,12 @@
         "25.09": 43,
         "25.10": 43,
         "25.11": 43,
-        "25.12": 43
+        "25.12": 38
       },
       "details": "前端三件套及跟前端相关的其它内容",
       "link": "https://tnotesjs.github.io/TNotes.javascript/",
       "created_at": 1740924811000,
-      "updated_at": 1764578471078,
+      "updated_at": 1765112282482,
       "days_since_birth": 9379
     }
   }
