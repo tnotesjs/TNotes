@@ -1,7 +1,7 @@
 {
   "statistic": {
     "completed_notes_count": {
-      "25.12": 865
+      "25.12": 866
     }
   },
   "sub_knowledge_list": [
@@ -44,12 +44,12 @@
         "25.09": 10,
         "25.10": 10,
         "25.11": 11,
-        "25.12": 11
+        "25.12": 12
       },
       "details": "算法与数据结构 笔记",
       "link": "https://tnotesjs.github.io/TNotes.algorithms/",
       "created_at": 1757555213000,
-      "updated_at": 1765297965305,
+      "updated_at": 1765298206282,
       "days_since_birth": 9572,
       "is_visible_in_root_folder": true
     },
