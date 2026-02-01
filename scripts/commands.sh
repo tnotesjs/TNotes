@@ -39,7 +39,7 @@
 # pnpm install
 
 # 知识库更新
-pnpm tn:update
+# pnpm tn:update
 
 # 移除所有 .vitepress-pid 模块
 # git rm --cached .vitepress-pid && git commit -m "chore: 停止跟踪 .vitepress-pid 文件" && git push
