@@ -12,7 +12,7 @@
 ```bash
 ├── TNotes # 根知识库
 ├── TNotes.algorithms # 算法知识库
-├── TNotes.c-cpp # C/C++ 知识库
+├── TNotes.c # C/C++ 知识库
 ├── TNotes.canvas # Canvas 知识库
 ├── TNotes.chrome # Chrome 浏览器知识库
 ├── TNotes.cooking # 菜谱知识库

@@ -3,7 +3,7 @@
   "common_ignore_dirs": ["md-imgs", ".git", "assets", ".vscode", "0000", "9999. templates", "node_modules"],
   "repos": [
     "0",
-    "c-cpp",
+    "c",
     "canvas",
     "chrome",
     "electron",
@@ -32,7 +32,7 @@
     "wh-bot_"
   ],
   "repos_vitepress": [
-    "c-cpp",
+    "c",
     "canvas",
     "chrome",
     "electron",
