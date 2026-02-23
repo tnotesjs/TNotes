@@ -1,7 +1,7 @@
 {
   "statistic": {
     "completed_notes_count": {
-      "26.02": 1116
+      "26.02": 1117
     }
   },
   "sub_knowledge_list": [
@@ -719,12 +719,12 @@
         "25.11": 14,
         "25.12": 15,
         "26.01": 15,
-        "26.02": 15
+        "26.02": 16
       },
       "details": "TNotes 说明文档",
       "link": "https://tnotesjs.github.io/TNotes.introduction/",
       "created_at": 1740850835000,
-      "updated_at": 1771654932874,
+      "updated_at": 1771847798217,
       "days_since_birth": 9724,
       "is_visible_in_root_folder": true
     },
