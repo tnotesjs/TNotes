@@ -18,6 +18,7 @@
     "tn:preview": "vitepress preview",
     "tn:deploy": "tsx scripts/deploy.ts",
     "tn:cmd": "tsx scripts/cmd-all.ts",
+    "tn:create-repo": "tsx scripts/create-repo.ts",
     "tn:sidebars": "tsx scripts/collect-sidebars.ts",
     "tn:changelog": "tsx scripts/generate-changelog.ts"
   },
