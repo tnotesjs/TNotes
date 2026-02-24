@@ -1,5 +1,112 @@
-import { exec } from 'child_process'
-import path from 'path'
+import { exec } from "child_process"
+import fs from "fs"
+import path from "path"
+import { __dirname } from "./constants.ts"
+
+// ================================================================
+// #region - 常量
+// ================================================================
+
+/** GitHub 组织名 */
+const GITHUB_ORG = "tnotesjs"
+
+/** GitHub raw 文件 CDN 基础 URL */
+const GITHUB_RAW_BASE = "https://raw.githubusercontent.com"
+
+// #endregion
+
+// ================================================================
+// #region - 远程文件读取
+// ================================================================
+
+/**
+ * 从 GitHub raw CDN 获取远程文件内容
+ *
+ * @param repoName 仓库名称，如 TNotes.leetcode
+ * @param filePath 文件路径，如 .tnotes.json 或 sidebar.json
+ * @param branch 分支名，默认 main
+ * @returns 文件内容字符串，失败返回 null
+ */
+async function fetchRemoteFile(
+  repoName: string,
+  filePath: string,
+  branch = "main",
+): Promise<string | null> {
+  const url = `${GITHUB_RAW_BASE}/${GITHUB_ORG}/${repoName}/${branch}/${filePath}`
+  try {
+    const res = await fetch(url)
+    if (!res.ok) {
+      console.warn(`⚠️  远程文件获取失败: ${url} (${res.status})`)
+      return null
+    }
+    return await res.text()
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.warn(`⚠️  远程文件获取异常: ${url} — ${message}`)
+    return null
+  }
+}
+
+/**
+ * 读取子仓库中的文件内容（本地优先，可选远程回退）
+ *
+ * @param repoName 仓库名称
+ * @param filePath 文件相对路径
+ * @param options.forceRemote 强制使用远程读取
+ * @returns 文件内容字符串，失败返回 null
+ */
+async function readRepoFile(
+  repoName: string,
+  filePath: string,
+  options: { forceRemote?: boolean } = {},
+): Promise<string | null> {
+  const { forceRemote = false } = options
+
+  // 本地读取
+  if (!forceRemote) {
+    const localPath = path.resolve(__dirname, "..", "..", repoName, filePath)
+    if (fs.existsSync(localPath)) {
+      try {
+        return fs.readFileSync(localPath, "utf8")
+      } catch {
+        // 本地读取失败，回退到远程
+      }
+    }
+  }
+
+  // 远程读取
+  return fetchRemoteFile(repoName, filePath)
+}
+
+/**
+ * 读取子仓库中的 JSON 文件
+ *
+ * @param repoName 仓库名称
+ * @param filePath JSON 文件相对路径
+ * @param options.forceRemote 强制使用远程读取
+ * @returns 解析后的 JSON 对象，失败返回 null
+ */
+async function readRepoJSON<T = any>(
+  repoName: string,
+  filePath: string,
+  options: { forceRemote?: boolean } = {},
+): Promise<T | null> {
+  const content = await readRepoFile(repoName, filePath, options)
+  if (content === null) return null
+  try {
+    return JSON.parse(content)
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.warn(`⚠️  JSON 解析失败 [${repoName}/${filePath}]: ${message}`)
+    return null
+  }
+}
+
+// #endregion
+
+// ================================================================
+// #region - Shell 命令执行
+// ================================================================
 
 /**
  * 执行 shell 命令
@@ -10,7 +117,7 @@ import path from 'path'
 async function runCommand(
   command: string,
   dir: string,
-  silent = false
+  silent = false,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     exec(command, { cwd: dir }, (error, stdout, stderr) => {
@@ -32,7 +139,7 @@ async function runCommand(
  */
 async function isGitRepository(dir: string): Promise<boolean> {
   try {
-    await runCommand('git rev-parse --is-inside-work-tree', dir, true)
+    await runCommand("git rev-parse --is-inside-work-tree", dir, true)
     return true
   } catch {
     return false
@@ -43,7 +150,7 @@ async function isGitRepository(dir: string): Promise<boolean> {
  * 检查是否有未提交的更改
  */
 async function hasUncommittedChanges(dir: string): Promise<boolean> {
-  const status = await runCommand('git status --porcelain', dir)
+  const status = await runCommand("git status --porcelain", dir)
   return status.length > 0
 }
 
@@ -52,7 +159,7 @@ async function hasUncommittedChanges(dir: string): Promise<boolean> {
  */
 async function hasStash(dir: string): Promise<boolean> {
   try {
-    const stashList = await runCommand('git stash list', dir, true)
+    const stashList = await runCommand("git stash list", dir, true)
     return stashList.length > 0
   } catch {
     return false
@@ -92,13 +199,13 @@ async function syncLocalAndRemote(dir: string): Promise<void> {
     // 3. 拉取远程更新
     try {
       console.log(`⬇️  [${repoName}] 拉取远程更新...`)
-      await runCommand('git pull --rebase', dir)
+      await runCommand("git pull --rebase", dir)
     } catch (error: any) {
       // 如果 pull 失败,尝试恢复 stash
       if (hasStashed) {
         console.log(`🔄 [${repoName}] Pull 失败,恢复本地更改...`)
         try {
-          await runCommand('git stash pop', dir)
+          await runCommand("git stash pop", dir)
         } catch {
           console.error(`❌ [${repoName}] 无法恢复 stash,请手动处理`)
         }
@@ -110,10 +217,10 @@ async function syncLocalAndRemote(dir: string): Promise<void> {
     if (hasStashed) {
       console.log(`📤 [${repoName}] 恢复本地更改...`)
       try {
-        await runCommand('git stash pop', dir)
+        await runCommand("git stash pop", dir)
       } catch (error: any) {
         // Stash pop 失败通常是因为冲突
-        if (error.message.includes('CONFLICT')) {
+        if (error.message.includes("CONFLICT")) {
           console.error(`⚠️  [${repoName}] 检测到合并冲突,请手动解决`)
           console.error(`   运行: cd ${dir} && git status`)
         }
@@ -125,23 +232,23 @@ async function syncLocalAndRemote(dir: string): Promise<void> {
     if (await hasUncommittedChanges(dir)) {
       console.log(`📝 [${repoName}] 提交更改...`)
 
-      await runCommand('git add .', dir)
+      await runCommand("git add .", dir)
 
       // 获取更改的文件列表
-      const status = await runCommand('git status --porcelain', dir)
-      const files = status.split('\n').filter((line) => line.trim())
+      const status = await runCommand("git status --porcelain", dir)
+      const files = status.split("\n").filter((line) => line.trim())
       const changedCount = files.length
 
       // 生成提交信息
-      const timestamp = new Date().toISOString().split('T')[0]
+      const timestamp = new Date().toISOString().split("T")[0]
       const commitMsg = `chore: update ${changedCount} file${
-        changedCount > 1 ? 's' : ''
+        changedCount > 1 ? "s" : ""
       } (${timestamp})`
 
       await runCommand(`git commit -m "${commitMsg}"`, dir)
 
       console.log(`⬆️  [${repoName}] 推送到远程...`)
-      await runCommand('git push', dir)
+      await runCommand("git push", dir)
 
       console.log(`✅ [${repoName}] 同步完成`)
     } else {
@@ -179,7 +286,7 @@ interface SyncOptions {
  */
 async function syncLocalAndRemoteWithOptions(
   dir: string,
-  options: SyncOptions = {}
+  options: SyncOptions = {},
 ): Promise<void> {
   const {
     skipCommit = false,
@@ -208,12 +315,12 @@ async function syncLocalAndRemoteWithOptions(
 
     try {
       log(`⬇️  [${repoName}] 拉取远程更新...`)
-      await runCommand('git pull --rebase', dir)
+      await runCommand("git pull --rebase", dir)
     } catch (error: unknown) {
       if (hasStashed) {
         log(`🔄 [${repoName}] Pull 失败,恢复本地更改...`)
         try {
-          await runCommand('git stash pop', dir)
+          await runCommand("git stash pop", dir)
         } catch {
           console.error(`❌ [${repoName}] 无法恢复 stash,请手动处理`)
         }
@@ -224,10 +331,10 @@ async function syncLocalAndRemoteWithOptions(
     if (hasStashed) {
       log(`📤 [${repoName}] 恢复本地更改...`)
       try {
-        await runCommand('git stash pop', dir)
+        await runCommand("git stash pop", dir)
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error)
-        if (message.includes('CONFLICT')) {
+        if (message.includes("CONFLICT")) {
           console.error(`⚠️  [${repoName}] 检测到合并冲突,请手动解决`)
           console.error(`   运行: cd ${dir} && git status`)
         }
@@ -244,24 +351,24 @@ async function syncLocalAndRemoteWithOptions(
     if (await hasUncommittedChanges(dir)) {
       log(`📝 [${repoName}] 提交更改...`)
 
-      await runCommand('git add .', dir)
+      await runCommand("git add .", dir)
 
-      const status = await runCommand('git status --porcelain', dir)
-      const files = status.split('\n').filter((line) => line.trim())
+      const status = await runCommand("git status --porcelain", dir)
+      const files = status.split("\n").filter((line) => line.trim())
       const changedCount = files.length
 
-      const timestamp = new Date().toISOString().split('T')[0]
+      const timestamp = new Date().toISOString().split("T")[0]
       const msg =
         commitMessage ||
         `chore: update ${changedCount} file${
-          changedCount > 1 ? 's' : ''
+          changedCount > 1 ? "s" : ""
         } (${timestamp})`
 
       await runCommand(`git commit -m "${msg}"`, dir)
 
       if (!skipPush) {
         log(`⬆️  [${repoName}] 推送到远程...`)
-        await runCommand('git push', dir)
+        await runCommand("git push", dir)
       }
 
       log(`✅ [${repoName}] 同步完成`)
@@ -280,4 +387,11 @@ async function syncLocalAndRemoteWithOptions(
   }
 }
 
-export { syncLocalAndRemote, syncLocalAndRemoteWithOptions, type SyncOptions }
+export {
+  fetchRemoteFile,
+  readRepoFile,
+  readRepoJSON,
+  syncLocalAndRemote,
+  syncLocalAndRemoteWithOptions,
+  type SyncOptions,
+}

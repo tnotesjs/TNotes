@@ -1,0 +1,110 @@
+# 收集子知识库元数据并重新部署根站点
+# 触发方式:
+#   1. repository_dispatch — 由子仓库 deploy 完成后自动触发
+#   2. workflow_dispatch  — 手动触发（可选指定单个仓库）
+name: Collect & Deploy
+
+on:
+  repository_dispatch:
+    types: [sub_repo_updated]
+
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: "仅收集指定仓库（如 TNotes.leetcode），留空则收集全部"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: collect-pages
+  cancel-in-progress: true
+
+jobs:
+  collect-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      # 确定 --repo 参数（dispatch 事件从 client_payload 获取，手动触发从 inputs 获取）
+      - name: Determine repo param
+        id: params
+        run: |
+          REPO="${{ github.event.client_payload.repo || github.event.inputs.repo }}"
+          if [ -n "$REPO" ]; then
+            echo "flags=--remote --repo $REPO" >> "$GITHUB_OUTPUT"
+            echo "📦 增量模式：$REPO"
+          else
+            echo "flags=--remote" >> "$GITHUB_OUTPUT"
+            echo "📦 全量模式"
+          fi
+
+      # 收集子知识库统计信息
+      - name: Collect sub-repo configs
+        run: pnpm tsx scripts/build.ts ${{ steps.params.outputs.flags }}
+
+      # 收集子知识库侧边栏
+      - name: Collect sub-repo sidebars
+        run: pnpm tsx scripts/collect-sidebars.ts ${{ steps.params.outputs.flags }}
+
+      # 如果有变更，提交到仓库
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "✅ 没有变更，跳过提交"
+          else
+            REPO="${{ github.event.client_payload.repo || github.event.inputs.repo }}"
+            if [ -n "$REPO" ]; then
+              git commit -m "chore: collect metadata from $REPO"
+            else
+              git commit -m "chore: collect all sub-repo metadata"
+            fi
+            git push
+          fi
+
+      # 构建 VitePress 站点
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Build with VitePress
+        run: pnpm vitepress build
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .vitepress/dist
+
+  deploy:
+    environment:
+      name: TNotes
+      url: ${{ steps.deployment.outputs.page_url }}
+    needs: collect-and-deploy
+    runs-on: ubuntu-latest
+    name: Deploy
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
