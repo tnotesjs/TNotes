@@ -46,14 +46,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      # 确定 --repo 参数（dispatch 事件从 client_payload 获取，手动触发从 inputs 获取）
+      # repository_dispatch 始终全量收集（因为 cancel-in-progress 会取消前序 run，增量模式会丢数据）
+      # workflow_dispatch 支持 --repo 增量模式
       - name: Determine repo param
         id: params
         run: |
-          REPO="${{ github.event.client_payload.repo || github.event.inputs.repo }}"
-          if [ -n "$REPO" ]; then
-            echo "flags=--remote --repo $REPO" >> "$GITHUB_OUTPUT"
-            echo "📦 增量模式：$REPO"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.repo }}" ]; then
+            echo "flags=--remote --repo ${{ github.event.inputs.repo }}" >> "$GITHUB_OUTPUT"
+            echo "📦 增量模式：${{ github.event.inputs.repo }}"
           else
             echo "flags=--remote" >> "$GITHUB_OUTPUT"
             echo "📦 全量模式"
@@ -76,9 +76,11 @@ jobs:
           if git diff --cached --quiet; then
             echo "✅ 没有变更，跳过提交"
           else
-            REPO="${{ github.event.client_payload.repo || github.event.inputs.repo }}"
-            if [ -n "$REPO" ]; then
-              git commit -m "chore: collect metadata from $REPO"
+            if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+              REPO="${{ github.event.client_payload.repo }}"
+              git commit -m "chore: collect all metadata (triggered by $REPO)"
+            elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.repo }}" ]; then
+              git commit -m "chore: collect metadata from ${{ github.event.inputs.repo }}"
             else
               git commit -m "chore: collect all sub-repo metadata"
             fi
