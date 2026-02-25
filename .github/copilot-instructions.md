@@ -3,7 +3,6 @@
 ## 项目概述
 
 - 这是一个使用 VitePress 构建的 TNotes 开源知识库项目的根知识库。
-- 你可以通过其中一个子知识库 [TNotes.instruction](https://tnotesjs.github.io/TNotes.introduction/) 来了解 TNotes 知识库的基本信息。
 - 根知识库不纪录笔记，只提供快速导航功能，核心导航功能封装在 `KnowledgeNavigator.vue` 组件中。
 - 所有知识库均存放在 GitHub 上的 [tnotesjs](https://github.com/tnotesjs) 组织中。
 

@@ -55,20 +55,29 @@
         v-if="viewMode === 'folder' && activeSidebar && activeSidebarItem"
         class="sidebar-content"
       >
-        <RepoInfo
-          :item="activeSidebarItem"
-          :tnotes-dir="tnotesDir"
-          :all-collapsed="allCollapsed"
-          @toggle-all="toggleAllSections"
-        />
+        <RepoInfo :item="activeSidebarItem" :tnotes-dir="tnotesDir" />
+
+        <div class="collapse-toggle">
+          <!-- <span class="collapse-toggle-label">{{
+            allCollapsed ? '全部展开' : '全部折叠'
+          }}</span> -->
+          <button
+            class="switch-btn"
+            :class="{ 'is-on': !allCollapsed }"
+            :title="allCollapsed ? '全部展开' : '全部折叠'"
+            @click="toggleAllSections"
+          >
+            <span class="switch-knob" />
+          </button>
+        </div>
 
         <SidebarSection
           v-for="(section, index) in activeSidebar"
           :key="index"
           :section="section"
-          :collapsed="getSectionState(index)"
+          :collapsed="getSectionState(Number(index))"
           :tnotes-dir="tnotesDir"
-          @toggle="toggleSection(index)"
+          @toggle="toggleSection(Number(index))"
         />
       </div>
 
@@ -177,7 +186,7 @@ const toggleFullscreen = () => {
   isFullscreen.value = !isFullscreen.value
   localStorage.setItem(
     'knowledge-navigator-fullscreen',
-    isFullscreen.value.toString()
+    isFullscreen.value.toString(),
   )
 }
 
@@ -197,7 +206,7 @@ onMounted(() => {
   }
 
   const savedSortOption = localStorage.getItem(
-    'knowledge-navigator-sort-option'
+    'knowledge-navigator-sort-option',
   )
   if (savedSortOption) sortOption.value = savedSortOption as any
 
@@ -226,8 +235,9 @@ onMounted(() => {
 .knowledge-navigator-container {
   display: flex;
   flex-direction: column;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
-    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
+    Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   background-color: var(--vp-c-bg);
   position: relative;
   overflow: hidden;
@@ -242,7 +252,7 @@ onMounted(() => {
   bottom: 0;
   width: 100vw;
   height: 100vh;
-  z-index: 9999;
+  z-index: 9998;
   margin: 0;
 }
 
@@ -383,6 +393,52 @@ onMounted(() => {
 .knowledge-navigator-container > .resize-handle {
   grid-column: 1 / -1;
   grid-row: 3;
+}
+
+.collapse-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 0 4px 12px;
+}
+
+/* .collapse-toggle-label {
+  font-size: 12px;
+  color: var(--vp-c-text-3);
+  user-select: none;
+} */
+
+.switch-btn {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  border: none;
+  background-color: var(--vp-c-divider);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.switch-btn.is-on {
+  background-color: var(--vp-c-brand);
+}
+
+.switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #fff;
+  transition: transform 0.2s ease;
+}
+
+.switch-btn.is-on .switch-knob {
+  transform: translateX(16px);
 }
 
 .empty-content {

@@ -21,7 +21,7 @@
           :title="allCollapsed ? '全部展开' : '全部折叠'"
           @click="toggleAllGroups"
         >
-          <img :src="icon__fold" alt="折叠/展开" />
+          {{ allCollapsed ? '全部展开' : '全部折叠' }}
         </button>
       </div>
 
@@ -68,7 +68,6 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import icon__fold from '/icon__fold.svg'
 
 interface SearchResultItem {
   text: string
@@ -108,7 +107,7 @@ const allCollapsed = computed(() => {
   return (
     searchResults.value.length > 0 &&
     searchResults.value.every((result) =>
-      collapsedGroups.value.has(result.repoKey)
+      collapsedGroups.value.has(result.repoKey),
     )
   )
 })
@@ -129,7 +128,7 @@ const toggleAllGroups = () => {
 const searchInItems = (
   items: any[],
   query: string,
-  parentPath: string = ''
+  parentPath: string = '',
 ): SearchResultItem[] => {
   const results: SearchResultItem[] = []
   const searchLower = query.toLowerCase()
@@ -164,7 +163,7 @@ const searchResults = computed<SearchResultGroup[]>(() => {
 
   // 遍历所有知识库
   for (const [repoKey, repoItem] of Object.entries(
-    props.rootData.config.root_items
+    props.rootData.config.root_items,
   ) as [string, any][]) {
     if (repoItem.is_visible_in_root_folder === false) continue
 
@@ -233,7 +232,6 @@ const totalCount = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
   height: 28px;
   border: none;
   border-radius: 4px;

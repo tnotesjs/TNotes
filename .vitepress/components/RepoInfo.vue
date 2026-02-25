@@ -20,14 +20,6 @@
       <a title="打开知识库仓库" target="_blank" :href="githubLink">
         <img :src="icon__github" alt="GitHub" class="repo-action-icon" />
       </a>
-
-      <img
-        :title="allCollapsed ? '全部展开' : '全部折叠'"
-        :src="icon__fold"
-        alt="Fold"
-        class="repo-action-icon"
-        @click="$emit('toggle-all')"
-      />
     </div>
   </div>
 
@@ -51,7 +43,6 @@ import { computed } from 'vue'
 import VChart from 'vue-echarts'
 import type { RootItem } from './composables/useNavigator'
 import { buildGitHubLink, buildVSCodeLink } from './utils/helpers'
-import icon__fold from '/icon__fold.svg'
 import icon__github from '/icon__github.svg'
 import icon__vscode from '/icon__vscode.svg'
 
@@ -69,15 +60,10 @@ use([
 const props = defineProps<{
   item: RootItem
   tnotesDir: string
-  allCollapsed: boolean
-}>()
-
-defineEmits<{
-  'toggle-all': []
 }>()
 
 const vsCodeLink = computed(() =>
-  buildVSCodeLink(props.tnotesDir, props.item.title)
+  buildVSCodeLink(props.tnotesDir, props.item.title),
 )
 const githubLink = computed(() => buildGitHubLink(props.item.title))
 
@@ -238,7 +224,7 @@ const chartOption = computed(() => {
 .repo-actions {
   display: flex;
   gap: 8px;
-  margin-left: 12px;
+  margin-right: 12px;
   margin-top: 1rem;
 }
 
@@ -259,7 +245,7 @@ const chartOption = computed(() => {
   margin-bottom: 20px;
   padding: 15px;
   border-radius: 8px;
-  background-color: var(--vp-c-bg-soft);
-  border: 1px solid var(--vp-c-divider);
+  /* background-color: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-divider); */
 }
 </style>

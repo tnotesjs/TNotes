@@ -13,7 +13,7 @@ export interface RootItem {
 
 // 获取当前月份的笔记数
 function getCurrentMonthCount(
-  completed_notes_count: Record<string, number> | number | undefined
+  completed_notes_count: Record<string, number> | number | undefined,
 ): number {
   if (!completed_notes_count) return 0
 
@@ -33,7 +33,7 @@ function getCurrentMonthCount(
 
 // 获取当前月份的增量
 function getCurrentMonthIncrement(
-  completed_notes_count: Record<string, number> | number | undefined
+  completed_notes_count: Record<string, number> | number | undefined,
 ): number {
   if (!completed_notes_count || typeof completed_notes_count === 'number') {
     return 0
@@ -82,7 +82,7 @@ export function useNavigator(rootData: any) {
   // 计算属性：排序后的知识库列表（不再处理搜索）
   const sortedRootItems = computed(() => {
     const visibleItems = Object.entries(
-      rootData.config.root_items as Record<string, RootItem>
+      rootData.config.root_items as Record<string, RootItem>,
     ).filter(([_, item]) => item.is_visible_in_root_folder !== false)
 
     // 排序
@@ -177,7 +177,7 @@ export function useNavigator(rootData: any) {
   const allCollapsed = computed(() => {
     if (!activeSidebar.value) return true
     return activeSidebar.value.every(
-      (_: any, index: number) => sectionStates.value[index] === true
+      (_: any, index: number) => (sectionStates.value[index] ?? true) === true,
     )
   })
 
@@ -186,8 +186,30 @@ export function useNavigator(rootData: any) {
     activeKey.value = key
   }
 
+  // 持久化 section 折叠状态到 localStorage
+  const saveSectionStates = () => {
+    if (!activeKey.value) return
+    const key = `section-states-${activeKey.value}`
+    localStorage.setItem(key, JSON.stringify(sectionStates.value))
+  }
+
+  // 从 localStorage 加载 section 折叠状态
+  const loadSectionStates = (): Record<number, boolean> | null => {
+    if (!activeKey.value) return null
+    const key = `section-states-${activeKey.value}`
+    const saved = localStorage.getItem(key)
+    if (!saved) return null
+    try {
+      return JSON.parse(saved)
+    } catch {
+      return null
+    }
+  }
+
   const toggleSection = (index: number) => {
-    sectionStates.value[index] = !sectionStates.value[index]
+    const current = sectionStates.value[index] ?? true
+    sectionStates.value[index] = !current
+    saveSectionStates()
   }
 
   const toggleAllSections = () => {
@@ -196,10 +218,12 @@ export function useNavigator(rootData: any) {
     activeSidebar.value.forEach((_: any, index: number) => {
       sectionStates.value[index] = targetState
     })
+    saveSectionStates()
   }
 
   const getSectionState = (index: number) => {
-    return sectionStates.value[index] ?? false
+    // 默认折叠（true）
+    return sectionStates.value[index] ?? true
   }
 
   const setDefaultActiveKey = () => {
@@ -208,13 +232,19 @@ export function useNavigator(rootData: any) {
     }
   }
 
-  // 监听器
+  // 监听器：切换知识库时恢复或初始化 section 折叠状态
   watch(
     activeSidebar,
     () => {
-      sectionStates.value = {}
+      const saved = loadSectionStates()
+      if (saved) {
+        sectionStates.value = saved
+      } else {
+        // 默认全部折叠（空对象 + getSectionState 默认返回 true）
+        sectionStates.value = {}
+      }
     },
-    { immediate: true }
+    { immediate: true },
   )
 
   watch(sortOption, (newVal) => {

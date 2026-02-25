@@ -93,7 +93,7 @@ defineProps<{
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid var(--vp-c-divider);
-  padding: 5px 0;
+  padding: 5px;
 }
 
 .level-1 {
