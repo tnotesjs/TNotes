@@ -398,7 +398,7 @@ onMounted(() => {
 .collapse-toggle {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: flex-end;
   gap: 8px;
   padding: 0 4px 12px;
 }
