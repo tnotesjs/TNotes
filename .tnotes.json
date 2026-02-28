@@ -854,6 +854,20 @@
       "created_at": 1771901194253,
       "updated_at": 1772118871131,
       "days_since_birth": 9738
+    },
+    "TNotes.github": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--github.svg"
+      },
+      "title": "github",
+      "completed_notes_count": {
+        "26.02": 0
+      },
+      "details": "github 笔记",
+      "link": "https://tnotesjs.github.io/TNotes.github/",
+      "created_at": 1772277967477,
+      "updated_at": 1772278944711,
+      "days_since_birth": 9742
     }
   }
 }
