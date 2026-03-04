@@ -1,7 +1,7 @@
 {
   "statistic": {
     "completed_notes_count": {
-      "26.03": 1112
+      "26.03": 1113
     }
   },
   "sub_knowledge_list": [
@@ -876,12 +876,12 @@
       "title": "markdown",
       "completed_notes_count": {
         "26.02": 3,
-        "26.03": 10
+        "26.03": 11
       },
       "details": "markdown 相关笔记",
       "link": "https://tnotesjs.github.io/TNotes.markdown/",
       "created_at": 1771901194253,
-      "updated_at": 1772468340514,
+      "updated_at": 1772667070508,
       "days_since_birth": 9738
     },
     "TNotes.github": {
