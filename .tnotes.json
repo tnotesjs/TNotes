@@ -1,7 +1,7 @@
 {
   "statistic": {
     "completed_notes_count": {
-      "26.03": 1136
+      "26.03": 1137
     }
   },
   "sub_knowledge_list": [
@@ -891,12 +891,12 @@
       "title": "github",
       "completed_notes_count": {
         "26.02": 0,
-        "26.03": 12
+        "26.03": 13
       },
       "details": "github 笔记",
       "link": "https://tnotesjs.github.io/TNotes.github/",
       "created_at": 1772277967477,
-      "updated_at": 1772976412161,
+      "updated_at": 1773037802588,
       "days_since_birth": 9742
     }
   }
