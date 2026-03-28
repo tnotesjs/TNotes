@@ -18,6 +18,7 @@
     "tn:preview": "vitepress preview",
     "tn:deploy": "tsx scripts/deploy.ts",
     "tn:cmd": "tsx scripts/cmd-all.ts",
+    "tn:sync-pkg": "tsx scripts/cmd-all.ts --sync-pkg",
     "tn:create-repo": "tsx scripts/create-repo.ts",
     "tn:sidebars": "tsx scripts/collect-sidebars.ts",
     "tn:collect": "tsx scripts/build.ts && tsx scripts/collect-sidebars.ts",
