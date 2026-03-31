@@ -7,32 +7,29 @@
  *   pnpm tn:create-repo --name markdown
  *   pnpm tn:create-repo              # 交互式输入
  */
-import fs from "fs"
-import path from "path"
-import { execSync } from "child_process"
-import { createInterface } from "readline"
-import { randomUUID } from "crypto"
-import minimist from "minimist"
-import { __dirname, ROOT_CONFIG_PATH } from "./constants"
+import fs from 'fs'
+import path from 'path'
+import { execSync } from 'child_process'
+import { createInterface } from 'readline'
+import { randomUUID } from 'crypto'
+import minimist from 'minimist'
+import { __dirname, ROOT_CONFIG_PATH } from './constants'
 
 // ================================================================
 // #region - 常量
 // ================================================================
 
 /** 出生日期（用于计算 days_since_birth），1999-06-29 作为第 1 天 */
-const BIRTH_DATE = new Date("1999-06-29T00:00:00+08:00").getTime()
+const BIRTH_DATE = new Date('1999-06-29T00:00:00+08:00').getTime()
 
 /** 一天的毫秒数 */
 const MS_PER_DAY = 1000 * 60 * 60 * 24
 
 /** 所有知识库的上级目录 */
-const REPOS_ROOT = path.resolve(__dirname, "..", "..")
+const REPOS_ROOT = path.resolve(__dirname, '..', '..')
 
 /** 模板来源仓库（使用 TNotes.c 作为模板基准） */
-const TEMPLATE_REPO = path.join(REPOS_ROOT, "TNotes.c")
-
-/** TNotes.core 子模块远程地址 */
-const CORE_REPO_URL = "https://github.com/tnotesjs/TNotes.core.git"
+const TEMPLATE_REPO = path.join(REPOS_ROOT, 'TNotes.c')
 
 // #endregion
 
@@ -64,7 +61,7 @@ function prompt(question: string): Promise<string> {
  * 执行 shell 命令
  */
 function run(cmd: string, cwd: string): string {
-  return execSync(cmd, { cwd, encoding: "utf-8", stdio: "pipe" }).trim()
+  return execSync(cmd, { cwd, encoding: 'utf-8', stdio: 'pipe' }).trim()
 }
 
 /**
@@ -80,18 +77,18 @@ function copyFile(src: string, dest: string): void {
  */
 function writeFile(filePath: string, content: string): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true })
-  fs.writeFileSync(filePath, content, "utf-8")
+  fs.writeFileSync(filePath, content, 'utf-8')
 }
 
 /**
  * 读取 JSON 文件（支持 JSONC 格式）
  */
 function readJSON(filePath: string): any {
-  const raw = fs.readFileSync(filePath, "utf-8")
+  const raw = fs.readFileSync(filePath, 'utf-8')
   // 移除 JSONC 注释（仅移除行首或行首空白后的 // 注释，避免误伤 URL 中的 //）
   const cleaned = raw
-    .replace(/^\s*\/\/.*$/gm, "")
-    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
   return JSON.parse(cleaned)
 }
 
@@ -99,7 +96,7 @@ function readJSON(filePath: string): any {
  * 写入 JSON 文件（无 BOM）
  */
 function writeJSON(filePath: string, data: any): void {
-  writeFile(filePath, JSON.stringify(data, null, 2) + "\n")
+  writeFile(filePath, JSON.stringify(data, null, 2) + '\n')
 }
 
 // #endregion
@@ -122,21 +119,21 @@ function generateTnotesConfig(name: string): object {
   const now = Date.now()
   const daysSinceBirth = getDaysSinceBirth(now)
   const nowDate = new Date(now)
-  const ymKey = `${String(nowDate.getFullYear()).slice(2)}.${String(nowDate.getMonth() + 1).padStart(2, "0")}`
+  const ymKey = `${String(nowDate.getFullYear()).slice(2)}.${String(nowDate.getMonth() + 1).padStart(2, '0')}`
 
   return {
-    author: "tnotesjs",
+    author: 'tnotesjs',
     repoName,
     keywords: [repoName],
     ignore_dirs: [
-      ".vscode",
-      "0000",
-      "assets",
-      "node_modules",
-      "hidden",
-      "assets",
+      '.vscode',
+      '0000',
+      'assets',
+      'node_modules',
+      'hidden',
+      'assets',
     ],
-    rootSidebarDir: "../TNotes/sidebars",
+    rootSidebarDir: '../TNotes/sidebars',
     root_item: {
       icon: {
         src: `https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--${name}.svg`,
@@ -153,29 +150,29 @@ function generateTnotesConfig(name: string): object {
     },
     port: daysSinceBirth,
     menuItems: [
-      { text: "🏠 Home", link: "/" },
-      { text: "⚙️ Settings", link: "/Settings" },
-      { text: "📒 TNotes", link: "https://tnotesjs.github.io/TNotes" },
+      { text: '🏠 Home', link: '/' },
+      { text: '⚙️ Settings', link: '/Settings' },
+      { text: '📒 TNotes', link: 'https://tnotesjs.github.io/TNotes' },
       {
-        text: "📂 TNotes.yuque",
-        link: "https://www.yuque.com/tdahuyou/tnotes.yuque",
+        text: '📂 TNotes.yuque',
+        link: 'https://www.yuque.com/tdahuyou/tnotes.yuque',
       },
     ],
     socialLinks: [
       {
-        ariaLabel: "Tdahuyou 语雀主页链接",
-        link: "https://www.yuque.com/tdahuyou",
+        ariaLabel: 'Tdahuyou 语雀主页链接',
+        link: 'https://www.yuque.com/tdahuyou',
         icon: { svg: YUQUE_SVG },
       },
       {
-        ariaLabel: "Tdahuyou B 站主页链接",
-        link: "https://space.bilibili.com/407241004",
+        ariaLabel: 'Tdahuyou B 站主页链接',
+        link: 'https://space.bilibili.com/407241004',
         icon: { svg: BILIBILI_SVG },
       },
       {
         ariaLabel: `${repoName} github 仓库链接`,
         link: `https://github.com/tnotesjs/${repoName}`,
-        icon: "github",
+        icon: 'github',
       },
     ],
     id: randomUUID(),
@@ -213,16 +210,6 @@ function generateReadmeMd(name: string): string {
 `
 }
 
-/**
- * 生成 .gitmodules
- */
-function generateGitmodules(): string {
-  return `[submodule ".vitepress/tnotes"]
-\tpath = .vitepress/tnotes
-\turl = ${CORE_REPO_URL}
-`
-}
-
 // #endregion
 
 // ================================================================
@@ -233,18 +220,18 @@ async function main() {
   const args = minimist(process.argv.slice(2))
 
   // 1. 获取仓库名
-  let name: string = args.name || args.n || ""
+  let name: string = args.name || args.n || ''
   if (!name) {
-    name = await prompt("请输入知识库名称（如 markdown）：")
+    name = await prompt('请输入知识库名称（如 markdown）：')
   }
 
   // 2. 校验
   if (!name) {
-    console.error("❌ 知识库名称不能为空")
+    console.error('❌ 知识库名称不能为空')
     process.exit(1)
   }
   if (!/^[a-z][a-z0-9-]*$/.test(name)) {
-    console.error("❌ 知识库名称只能包含小写字母、数字和连字符，且以字母开头")
+    console.error('❌ 知识库名称只能包含小写字母、数字和连字符，且以字母开头')
     process.exit(1)
   }
 
@@ -264,32 +251,32 @@ async function main() {
   const now = Date.now()
   const daysSinceBirth = getDaysSinceBirth(now)
 
-  console.log("")
+  console.log('')
   console.log(`📦 正在创建知识库：${repoName}`)
   console.log(`📁 目录：${repoDir}`)
   console.log(`🔢 端口号：${daysSinceBirth}`)
-  console.log("")
+  console.log('')
 
   // 3. 创建目录
   fs.mkdirSync(repoDir, { recursive: true })
 
   // 4. 复制固定模板文件
-  console.log("📋 复制模板文件...")
+  console.log('📋 复制模板文件...')
 
   const fixedFiles = [
-    ".gitattributes",
-    ".gitignore",
-    "tsconfig.json",
-    "Loading.md",
-    "Settings.md",
-    ".vitepress/config.mts",
-    ".vitepress/theme/index.ts",
-    ".vitepress/env.d.ts",
-    ".github/workflows/deploy.yml",
-    ".vscode/tasks.json",
-    ".vscode/settings.json",
-    "public/favicon.ico",
-    "public/logo.png",
+    '.gitattributes',
+    '.gitignore',
+    'tsconfig.json',
+    'Loading.md',
+    'Settings.md',
+    '.vitepress/config.mts',
+    '.vitepress/theme/index.ts',
+    '.vitepress/env.d.ts',
+    '.github/workflows/deploy.yml',
+    '.vscode/tasks.json',
+    '.vscode/settings.json',
+    'public/favicon.ico',
+    'public/logo.png',
   ]
 
   for (const file of fixedFiles) {
@@ -303,27 +290,27 @@ async function main() {
   }
 
   // 5. 生成定制文件
-  console.log("✏️  生成配置文件...")
+  console.log('✏️  生成配置文件...')
 
   // .tnotes.json
-  writeJSON(path.join(repoDir, ".tnotes.json"), generateTnotesConfig(name))
+  writeJSON(path.join(repoDir, '.tnotes.json'), generateTnotesConfig(name))
 
   // package.json（从模板复制内容一致的 package.json）
-  const templatePkg = readJSON(path.join(TEMPLATE_REPO, "package.json"))
-  writeJSON(path.join(repoDir, "package.json"), templatePkg)
+  const templatePkg = readJSON(path.join(TEMPLATE_REPO, 'package.json'))
+  writeJSON(path.join(repoDir, 'package.json'), templatePkg)
 
   // index.md
-  writeFile(path.join(repoDir, "index.md"), generateIndexMd(name))
+  writeFile(path.join(repoDir, 'index.md'), generateIndexMd(name))
 
   // README.md
-  writeFile(path.join(repoDir, "README.md"), generateReadmeMd(name))
+  writeFile(path.join(repoDir, 'README.md'), generateReadmeMd(name))
 
   // References.md
-  writeFile(path.join(repoDir, "References.md"), "")
+  writeFile(path.join(repoDir, 'References.md'), '')
 
   // Words.md
   writeFile(
-    path.join(repoDir, "Words.md"),
+    path.join(repoDir, 'Words.md'),
     `<E
   needSort
   :words="[
@@ -333,26 +320,26 @@ async function main() {
   )
 
   // sidebar.json
-  writeFile(path.join(repoDir, "sidebar.json"), "[]\n")
+  writeFile(path.join(repoDir, 'sidebar.json'), '[]\n')
 
   // notes/ 目录
-  writeFile(path.join(repoDir, "notes", ".gitkeep"), "")
+  writeFile(path.join(repoDir, 'notes', '.gitkeep'), '')
 
   // 6. 初始化 git 仓库
-  console.log("🔧 初始化 Git 仓库...")
-  run("git init -b main", repoDir)
+  console.log('🔧 初始化 Git 仓库...')
+  run('git init -b main', repoDir)
 
-  // 添加子模块
-  console.log("📥 添加 TNotes.core 子模块...")
-  run(`git submodule add ${CORE_REPO_URL} .vitepress/tnotes`, repoDir)
+  // 安装依赖
+  console.log('📥 安装 NPM 依赖...')
+  run('pnpm install', repoDir)
 
   // 首次提交
-  console.log("💾 创建首次提交...")
-  run("git add .", repoDir)
+  console.log('💾 创建首次提交...')
+  run('git add .', repoDir)
   run(`git commit -m "chore: init ${repoName}"`, repoDir)
 
   // 7. 注册到根仓库
-  console.log("📝 注册到根仓库...")
+  console.log('📝 注册到根仓库...')
   const rootConfig = readJSON(ROOT_CONFIG_PATH)
   const list: string[] = rootConfig.sub_knowledge_list || []
 
@@ -360,8 +347,8 @@ async function main() {
     list.push(repoName)
     list.sort((a: string, b: string) => {
       // TNotes.introduction 始终排第一
-      if (a === "TNotes.introduction") return -1
-      if (b === "TNotes.introduction") return 1
+      if (a === 'TNotes.introduction') return -1
+      if (b === 'TNotes.introduction') return 1
       return a.localeCompare(b)
     })
     rootConfig.sub_knowledge_list = list
@@ -372,37 +359,37 @@ async function main() {
   }
 
   // 8. 完成提示
-  console.log("")
-  console.log("═".repeat(60))
+  console.log('')
+  console.log('═'.repeat(60))
   console.log(`✅ ${repoName} 创建成功！`)
-  console.log("═".repeat(60))
-  console.log("")
-  console.log("后续步骤：")
-  console.log("")
+  console.log('═'.repeat(60))
+  console.log('')
+  console.log('后续步骤：')
+  console.log('')
   console.log(`  1. 在 GitHub tnotesjs 组织中创建仓库 ${repoName}`)
   console.log(`     https://github.com/organizations/tnotesjs/repositories/new`)
-  console.log("")
+  console.log('')
   console.log(`  2. 关联远程仓库并推送：`)
   console.log(`     cd ${repoDir}`)
   console.log(
     `     git remote add origin https://github.com/tnotesjs/${repoName}.git`,
   )
   console.log(`     git push -u origin main`)
-  console.log("")
+  console.log('')
   console.log(`  3. 安装依赖并启动：`)
   console.log(`     cd ${repoDir}`)
   console.log(`     pnpm install`)
   console.log(`     pnpm tn:dev`)
-  console.log("")
+  console.log('')
   console.log(`  4. （可选）为知识库创建专属图标：`)
   console.log(
     `     上传 icon--${name}.svg 到 tnotesjs/imgs 仓库的 assets/ 目录`,
   )
-  console.log("")
+  console.log('')
 }
 
 main().catch((err) => {
-  console.error("❌ 创建失败：", err.message || err)
+  console.error('❌ 创建失败：', err.message || err)
   process.exit(1)
 })
 
