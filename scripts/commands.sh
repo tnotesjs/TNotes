@@ -45,8 +45,5 @@
 # 知识库推送
 # pnpm tn:push
 
-# 移除所有 .vitepress-pid 模块
-# git rm --cached .vitepress-pid && git commit -m "chore: 停止跟踪 .vitepress-pid 文件" && git push
-
-# 确保远程是最新的：强制读取远程版本覆盖本地版本，并拉取项目并初始化子模块
-# git fetch origin && git reset --hard origin/main && git clean -fd && git submodule update --init && git -C .vitepress/tnotes fetch origin && git -C .vitepress/tnotes reset --hard origin/main
+# 更新笔记完成数量
+# pnpm tn:update-completed-count

@@ -42,9 +42,14 @@ function getCurrentMonthCount(
     return completed_notes_count
   }
 
-  // 新格式：从当前月份读取
+  // 新格式：从当前月份读取，若当前月份无数据则取最近月份
   const currentKey = getCurrentMonthKey()
-  return completed_notes_count[currentKey] || 0
+  if (currentKey in completed_notes_count) {
+    return completed_notes_count[currentKey]
+  }
+
+  const keys = Object.keys(completed_notes_count).sort()
+  return keys.length > 0 ? completed_notes_count[keys[keys.length - 1]] : 0
 }
 
 /**
@@ -139,10 +144,11 @@ async function collectSubRepoConfigs(
     }
   }
 
-  // 更新统计信息
+  // 更新统计信息（保留历史月份数据）
   const currentKey = getCurrentMonthKey()
   rootConfig.statistic = {
     completed_notes_count: {
+      ...rootConfig.statistic?.completed_notes_count,
       [currentKey]: totalCompletedNotes,
     },
   }

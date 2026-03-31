@@ -172,13 +172,19 @@ const totalNotesCount = computed(() => {
     return completed_notes_count
   }
 
-  // 新格式：从当前月份读取
+  // 新格式：从当前月份读取，若当前月份无数据则取最近月份
   const now = new Date()
   const year = now.getFullYear().toString().slice(2)
   const month = (now.getMonth() + 1).toString().padStart(2, '0')
   const currentKey = `${year}.${month}`
 
-  return completed_notes_count[currentKey] || 0
+  if (currentKey in completed_notes_count) {
+    return completed_notes_count[currentKey]
+  }
+
+  // 当前月份无数据，取最近月份的值
+  const keys = Object.keys(completed_notes_count).sort()
+  return keys.length > 0 ? completed_notes_count[keys[keys.length - 1]] : 0
 })
 
 // 切换全屏状态
