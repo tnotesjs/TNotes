@@ -732,8 +732,6 @@
       },
       "title": "introduction",
       "completed_notes_count": {
-        "25.02": 0,
-        "25.03": 5,
         "25.04": 5,
         "25.05": 5,
         "25.06": 0,
@@ -750,8 +748,8 @@
       "details": "TNotes 说明文档",
       "link": "https://tnotesjs.github.io/TNotes.introduction/",
       "created_at": 1740850835000,
-      "updated_at": 1774944349050,
-      "days_since_birth": 9724,
+      "updated_at": 1774947200812,
+      "days_since_birth": 9773,
       "is_visible_in_root_folder": true
     },
     "TNotes.chrome": {
