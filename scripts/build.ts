@@ -1,38 +1,21 @@
 import fs from 'fs'
-import path from 'path'
 import minimist from 'minimist'
-import { __dirname, ROOT_CONFIG_PATH } from './constants.ts'
-import { pMap, readRepoJSON } from './utils.ts'
+import { ROOT_CONFIG_PATH } from './constants.ts'
 
 interface RootConfig {
   statistic: {
-    completed_notes_count: Record<string, number> | number
+    completed_notes_count: number
   }
   sub_knowledge_list: string[]
   root_items: Record<string, any>
 }
 
-interface SubConfig {
-  root_item: {
-    completed_notes_count?: Record<string, number> | number
-    [key: string]: any
-  }
-}
-
 /**
- * 获取当前月份的 key (格式: YY.MM)
+ * 从 completed_notes_count 中取最近一个月的值
+ * 支持对象格式（多月份历史记录）和数字格式（旧格式兼容）
+ * 若读取失败或异常，返回 0
  */
-function getCurrentMonthKey(): string {
-  const now = new Date()
-  const year = now.getFullYear().toString().slice(2)
-  const month = (now.getMonth() + 1).toString().padStart(2, '0')
-  return `${year}.${month}`
-}
-
-/**
- * 从 completed_notes_count 获取当前月份的数量
- */
-function getCurrentMonthCount(
+function getLatestMonthCount(
   completed_notes_count: Record<string, number> | number | undefined,
 ): number {
   if (!completed_notes_count) return 0
@@ -42,14 +25,13 @@ function getCurrentMonthCount(
     return completed_notes_count
   }
 
-  // 新格式：从当前月份读取，若当前月份无数据则取最近月份
-  const currentKey = getCurrentMonthKey()
-  if (currentKey in completed_notes_count) {
-    return completed_notes_count[currentKey]
+  // 对象格式：取最后一个 key 的值
+  try {
+    const keys = Object.keys(completed_notes_count).sort()
+    return keys.length > 0 ? completed_notes_count[keys[keys.length - 1]] : 0
+  } catch {
+    return 0
   }
-
-  const keys = Object.keys(completed_notes_count).sort()
-  return keys.length > 0 ? completed_notes_count[keys[keys.length - 1]] : 0
 }
 
 /**
@@ -61,16 +43,18 @@ const readLocalJSON = <T = any>(filePath: string): T =>
 /**
  * 收集子知识库配置信息
  *
- * @param options.remote 是否强制远程读取
+ * 从根知识库自身的 root_items 中读取每个子库的统计数据，
+ * 取最近一个月的值作为当前月份的笔记完成数。
+ * 不再远程读取子知识库的 .tnotes.json。
+ *
  * @param options.repo 仅收集指定仓库（增量模式）
  */
 async function collectSubRepoConfigs(
-  options: { remote?: boolean; repo?: string } = {},
+  options: { repo?: string } = {},
 ): Promise<void> {
-  const { remote = false, repo } = options
+  const { repo } = options
 
   console.log('📊 开始收集子知识库配置...\n')
-  if (remote) console.log('🌐 使用远程模式读取\n')
   if (repo) console.log(`🎯 增量模式：仅收集 ${repo}\n`)
 
   const rootConfig = readLocalJSON<RootConfig>(ROOT_CONFIG_PATH)
@@ -87,51 +71,19 @@ async function collectSubRepoConfigs(
     process.exit(1)
   }
 
-  // 并行读取所有子知识库配置（并发数 6）
-  const results = await pMap(repoList, async (repoName) => {
-    try {
-      const subConfig = await readRepoJSON<SubConfig>(
-        repoName,
-        '.tnotes.json',
-        { forceRemote: remote },
-      )
-      return { repoName, subConfig, error: null }
-    } catch (error: unknown) {
-      return { repoName, subConfig: null, error }
-    }
-  })
-
-  // 处理结果
-  for (const { repoName, subConfig, error } of results) {
-    if (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      console.error(`❌ [${repoName}] 收集失败: ${message}`)
+  // 遍历所有子知识库，从根库自身数据中取最近月份值
+  for (const repoName of repoList) {
+    const item = rootConfig.root_items[repoName]
+    if (!item) {
+      console.warn(`⚠️  [${repoName}] 不存在于 root_items 中`)
       failCount++
       continue
     }
 
-    if (!subConfig) {
-      console.warn(`⚠️  [${repoName}] 配置文件不存在或读取失败`)
-      failCount++
-      continue
-    }
-
-    if (!subConfig.root_item) {
-      console.warn(`⚠️  [${repoName}] 缺少 root_item 字段`)
-      failCount++
-      continue
-    }
-
-    // 更新 root_items
-    rootConfig.root_items[repoName] = {
-      ...rootConfig.root_items[repoName],
-      ...subConfig.root_item,
-    }
-
-    const currentMonthCount = getCurrentMonthCount(
-      subConfig.root_item.completed_notes_count,
+    const completedCount = getLatestMonthCount(
+      item.completed_notes_count,
     )
-    console.log(`✅ [${repoName}] 已收集 (当前月份笔记: ${currentMonthCount})`)
+    console.log(`✅ [${repoName}] 已收集 (当前月份笔记: ${completedCount})`)
     successCount++
   }
 
@@ -140,17 +92,13 @@ async function collectSubRepoConfigs(
   for (const rn of rootConfig.sub_knowledge_list) {
     const item = rootConfig.root_items[rn]
     if (item) {
-      totalCompletedNotes += getCurrentMonthCount(item.completed_notes_count)
+      totalCompletedNotes += getLatestMonthCount(item.completed_notes_count)
     }
   }
 
-  // 更新统计信息（保留历史月份数据）
-  const currentKey = getCurrentMonthKey()
+  // 更新统计信息（数字类型）
   rootConfig.statistic = {
-    completed_notes_count: {
-      ...rootConfig.statistic?.completed_notes_count,
-      [currentKey]: totalCompletedNotes,
-    },
+    completed_notes_count: totalCompletedNotes,
   }
 
   // 写入根配置
@@ -170,7 +118,6 @@ async function collectSubRepoConfigs(
 // CLI 入口
 const args = minimist(process.argv.slice(2))
 collectSubRepoConfigs({
-  remote: !!args.remote,
   repo: args.repo || undefined,
 }).catch((err: unknown) => {
   const message = err instanceof Error ? err.message : String(err)

@@ -155,36 +155,10 @@ const {
 
 const { isCompact } = useResponsive()
 
-// 获取当前月份的总笔记数
+// 获取总笔记数（statistic 为数字类型）
 const totalNotesCount = computed(() => {
   const { completed_notes_count } = rootData.config.statistic
-
-  if (!completed_notes_count) return 0
-
-  // 错误数据处理（如果是字符串）
-  if (typeof completed_notes_count === 'string') {
-    console.warn('completed_notes_count 数据格式错误，请重新运行 pnpm tn:build')
-    return 0
-  }
-
-  // 兼容旧格式（number 类型）
-  if (typeof completed_notes_count === 'number') {
-    return completed_notes_count
-  }
-
-  // 新格式：从当前月份读取，若当前月份无数据则取最近月份
-  const now = new Date()
-  const year = now.getFullYear().toString().slice(2)
-  const month = (now.getMonth() + 1).toString().padStart(2, '0')
-  const currentKey = `${year}.${month}`
-
-  if (currentKey in completed_notes_count) {
-    return completed_notes_count[currentKey]
-  }
-
-  // 当前月份无数据，取最近月份的值
-  const keys = Object.keys(completed_notes_count).sort()
-  return keys.length > 0 ? completed_notes_count[keys[keys.length - 1]] : 0
+  return typeof completed_notes_count === 'number' ? completed_notes_count : 0
 })
 
 // 切换全屏状态
