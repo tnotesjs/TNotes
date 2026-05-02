@@ -1,6 +1,6 @@
 {
   "statistic": {
-    "completed_notes_count": 1229
+    "completed_notes_count": 1230
   },
   "sub_knowledge_list": [
     "TNotes.introduction",
@@ -724,13 +724,13 @@
         "26.02": 23,
         "26.03": 23,
         "26.04": 23,
-        "26.05": 23
+        "26.05": 24
       },
       "details": "vscode 笔记",
       "link": "https://tnotesjs.github.io/TNotes.vscode/",
       "created_at": 1750939332000,
-      "updated_at": 1775000968000,
-      "days_since_birth": 9774,
+      "updated_at": 1777707577000,
+      "days_since_birth": 9805,
       "is_visible_in_root_folder": true
     },
     "TNotes.redis": {
