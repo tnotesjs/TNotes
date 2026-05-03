@@ -9,6 +9,10 @@ import path from 'path'
 import readline from 'readline'
 import { __dirname, ROOT_CONFIG_PATH } from './constants.ts'
 
+const REMOTE_MAIN_REF = 'origin/main'
+const REMOTE_MAIN_FETCH_REF = '+refs/heads/main:refs/remotes/origin/main'
+const fetchedRemoteMainRepos = new Set<string>()
+
 interface RootConfig {
   sub_knowledge_list: string[]
 }
@@ -24,6 +28,24 @@ interface RepoChangelog {
   repoName: string
   repoUrl: string
   newNotes: Note[]
+}
+
+/**
+ * 更新远端 main 分支的本地跟踪引用
+ * @param repoPath 仓库路径
+ */
+function ensureRemoteMainFetched(repoPath: string): void {
+  if (fetchedRemoteMainRepos.has(repoPath)) {
+    return
+  }
+
+  execSync(`git fetch --prune origin ${REMOTE_MAIN_FETCH_REF}`, {
+    cwd: repoPath,
+    encoding: 'utf8',
+    stdio: ['pipe', 'pipe', 'pipe'],
+  })
+
+  fetchedRemoteMainRepos.add(repoPath)
 }
 
 /**
@@ -90,14 +112,15 @@ function getPreviousMonth(
 function getLastCommitInMonth(
   repoPath: string,
   start: Date,
-  end: Date
+  end: Date,
+  ref = REMOTE_MAIN_REF
 ): string | null {
   try {
     const startStr = start.toISOString()
     const endStr = end.toISOString()
 
     const result = execSync(
-      `git log --after="${startStr}" --before="${endStr}" --format=%H -n 1`,
+      `git log ${ref} --after="${startStr}" --before="${endStr}" --format=%H -n 1`,
       {
         cwd: repoPath,
         encoding: 'utf8',
@@ -202,6 +225,8 @@ function generateRepoChangelog(
   currentMonth: string
 ): RepoChangelog | null {
   try {
+    ensureRemoteMainFetched(repoPath)
+
     // 检查是否为首月（25.01）
     const isFirstMonth = currentYear === '25' && currentMonth === '1'
 
