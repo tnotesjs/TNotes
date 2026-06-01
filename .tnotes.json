@@ -1,6 +1,6 @@
 {
   "statistic": {
-    "completed_notes_count": 1274
+    "completed_notes_count": 1275
   },
   "sub_knowledge_list": [
     "TNotes.introduction",
@@ -52,7 +52,7 @@
         "26.02": 13,
         "26.03": 15,
         "26.04": 17,
-        "26.05": 17
+        "26.06": 17
       },
       "details": "算法与数据结构 笔记",
       "link": "https://tnotesjs.github.io/TNotes.algorithms/",
@@ -78,7 +78,7 @@
         "26.02": 12,
         "26.03": 12,
         "26.04": 12,
-        "26.05": 12
+        "26.06": 12
       },
       "details": "C 语言笔记",
       "link": "https://tnotesjs.github.io/TNotes.c/",
@@ -104,7 +104,7 @@
         "26.02": 57,
         "26.03": 57,
         "26.04": 57,
-        "26.05": 57
+        "26.06": 57
       },
       "details": "Canvas 笔记",
       "link": "https://tnotesjs.github.io/TNotes.canvas/",
@@ -130,7 +130,7 @@
         "26.02": 5,
         "26.03": 5,
         "26.04": 5,
-        "26.05": 5
+        "26.06": 5
       },
       "details": "做饭笔记",
       "link": "https://tnotesjs.github.io/TNotes.cooking/",
@@ -156,7 +156,7 @@
         "26.02": 19,
         "26.03": 19,
         "26.04": 19,
-        "26.05": 19
+        "26.06": 19
       },
       "details": "Egg.js 笔记",
       "link": "https://tnotesjs.github.io/TNotes.egg/",
@@ -182,7 +182,7 @@
         "26.02": 20,
         "26.03": 20,
         "26.04": 20,
-        "26.05": 20
+        "26.06": 20
       },
       "details": "Electron 笔记",
       "link": "https://tnotesjs.github.io/TNotes.electron/",
@@ -208,7 +208,7 @@
         "26.02": 15,
         "26.03": 15,
         "26.04": 15,
-        "26.05": 15
+        "26.06": 15
       },
       "details": "英语学习笔记",
       "link": "https://tnotesjs.github.io/TNotes.en-notes/",
@@ -243,7 +243,7 @@
         "26.02": 44,
         "26.03": 44,
         "26.04": 44,
-        "26.05": 44
+        "26.06": 44
       },
       "details": "记录活着的一些动态 - 在线版的微信朋友圈",
       "link": "https://tnotesjs.github.io/TNotes.footprints/",
@@ -269,7 +269,7 @@
         "26.02": 3,
         "26.03": 21,
         "26.04": 24,
-        "26.05": 24
+        "26.06": 24
       },
       "details": "Git 笔记",
       "link": "https://tnotesjs.github.io/TNotes.git-notes/",
@@ -284,7 +284,6 @@
       },
       "title": "leetcode",
       "completed_notes_count": {
-        "25.06": 0,
         "25.07": 0,
         "25.08": 0,
         "25.09": 0,
@@ -295,7 +294,8 @@
         "26.02": 415,
         "26.03": 422,
         "26.04": 460,
-        "26.05": 471
+        "26.05": 471,
+        "26.06": 471
       },
       "details": "Leetcode 刷题笔记",
       "link": "https://tnotesjs.github.io/TNotes.leetcode/",
@@ -321,7 +321,7 @@
         "26.02": 0,
         "26.03": 0,
         "26.04": 0,
-        "26.05": 0
+        "26.06": 0
       },
       "details": "小程序",
       "link": "https://tnotesjs.github.io/TNotes.miniprogram/",
@@ -347,7 +347,7 @@
         "26.02": 0,
         "26.03": 0,
         "26.04": 0,
-        "26.05": 0
+        "26.06": 0
       },
       "details": "网络笔记",
       "link": "https://tnotesjs.github.io/TNotes.network/",
@@ -373,7 +373,7 @@
         "26.02": 62,
         "26.03": 62,
         "26.04": 62,
-        "26.05": 62
+        "26.06": 62
       },
       "details": "NodeJS 笔记",
       "link": "https://tnotesjs.github.io/TNotes.nodejs/",
@@ -399,7 +399,7 @@
         "26.02": 30,
         "26.03": 30,
         "26.04": 31,
-        "26.05": 31
+        "26.06": 31
       },
       "details": "早期在 B 站坐的工具分享系列内容，或者存储的一些没有明确分组的笔记的集合。",
       "link": "https://tnotesjs.github.io/TNotes.notes/",
@@ -425,7 +425,7 @@
         "26.02": 0,
         "26.03": 0,
         "26.04": 0,
-        "26.05": 0
+        "26.06": 0
       },
       "details": "python 笔记",
       "link": "https://tnotesjs.github.io/TNotes.python/",
@@ -451,7 +451,7 @@
         "26.02": 55,
         "26.03": 55,
         "26.04": 55,
-        "26.05": 55
+        "26.06": 55
       },
       "details": "React 笔记",
       "link": "https://tnotesjs.github.io/TNotes.react/",
@@ -477,7 +477,7 @@
         "26.02": 34,
         "26.03": 34,
         "26.04": 34,
-        "26.05": 34
+        "26.06": 34
       },
       "details": "SVG 笔记",
       "link": "https://tnotesjs.github.io/TNotes.svg/",
@@ -503,7 +503,7 @@
         "26.02": 146,
         "26.03": 146,
         "26.04": 146,
-        "26.05": 146
+        "26.06": 146
       },
       "details": "TS 笔记",
       "link": "https://tnotesjs.github.io/TNotes.typescript/",
@@ -529,7 +529,7 @@
         "26.02": 9,
         "26.03": 9,
         "26.04": 9,
-        "26.05": 9
+        "26.06": 9
       },
       "details": "Vite 笔记",
       "link": "https://tnotesjs.github.io/TNotes.vite/",
@@ -555,7 +555,7 @@
         "26.02": 1,
         "26.03": 1,
         "26.04": 1,
-        "26.05": 1
+        "26.06": 1
       },
       "details": "VitePress 笔记",
       "link": "https://tnotesjs.github.io/TNotes.vitepress/",
@@ -570,7 +570,6 @@
       },
       "title": "vue",
       "completed_notes_count": {
-        "25.06": 0,
         "25.07": 0,
         "25.08": 0,
         "25.09": 0,
@@ -581,13 +580,14 @@
         "26.02": 0,
         "26.03": 0,
         "26.04": 10,
-        "26.05": 38
+        "26.05": 38,
+        "26.06": 39
       },
       "details": "Vue.js 笔记",
       "link": "https://tnotesjs.github.io/TNotes.vue/",
       "created_at": 1727047134000,
-      "updated_at": 1780236088000,
-      "days_since_birth": 9834,
+      "updated_at": 1780272748000,
+      "days_since_birth": 9835,
       "is_visible_in_root_folder": true
     },
     "TNotes.webpack": {
@@ -607,7 +607,7 @@
         "26.02": 0,
         "26.03": 0,
         "26.04": 0,
-        "26.05": 0
+        "26.06": 0
       },
       "details": "Webpack 笔记",
       "link": "https://tnotesjs.github.io/TNotes.webpack/",
@@ -646,7 +646,7 @@
         "26.02": 48,
         "26.03": 48,
         "26.04": 48,
-        "26.05": 48
+        "26.06": 48
       },
       "details": "数据库笔记",
       "link": "https://tnotesjs.github.io/TNotes.sql/",
@@ -672,7 +672,7 @@
         "26.02": 16,
         "26.03": 16,
         "26.04": 16,
-        "26.05": 16
+        "26.06": 16
       },
       "details": "TNotes 说明文档",
       "link": "https://tnotesjs.github.io/TNotes.introduction/",
@@ -698,7 +698,7 @@
         "26.02": 10,
         "26.03": 10,
         "26.04": 10,
-        "26.05": 10
+        "26.06": 10
       },
       "details": "chrome 笔记",
       "link": "https://tnotesjs.github.io/TNotes.chrome/",
@@ -713,7 +713,6 @@
       },
       "title": "vscode",
       "completed_notes_count": {
-        "25.06": 7,
         "25.07": 18,
         "25.08": 18,
         "25.09": 18,
@@ -724,7 +723,8 @@
         "26.02": 23,
         "26.03": 23,
         "26.04": 23,
-        "26.05": 24
+        "26.05": 24,
+        "26.06": 24
       },
       "details": "vscode 笔记",
       "link": "https://tnotesjs.github.io/TNotes.vscode/",
@@ -750,7 +750,7 @@
         "26.02": 24,
         "26.03": 24,
         "26.04": 24,
-        "26.05": 24
+        "26.06": 24
       },
       "details": "redis 笔记",
       "link": "https://tnotesjs.github.io/TNotes.redis/",
@@ -765,7 +765,6 @@
       },
       "title": "javascript",
       "completed_notes_count": {
-        "25.06": 30,
         "25.07": 30,
         "25.08": 30,
         "25.09": 43,
@@ -776,7 +775,8 @@
         "26.02": 41,
         "26.03": 41,
         "26.04": 41,
-        "26.05": 49
+        "26.05": 49,
+        "26.06": 49
       },
       "details": "前端三件套及跟前端相关的其它内容",
       "link": "https://tnotesjs.github.io/TNotes.javascript/",
@@ -801,7 +801,7 @@
         "26.02": 3,
         "26.03": 22,
         "26.04": 22,
-        "26.05": 22
+        "26.06": 22
       },
       "details": "markdown 相关笔记",
       "link": "https://tnotesjs.github.io/TNotes.markdown/",
@@ -826,7 +826,7 @@
         "26.02": 0,
         "26.03": 19,
         "26.04": 21,
-        "26.05": 21
+        "26.06": 21
       },
       "details": "github 笔记",
       "link": "https://tnotesjs.github.io/TNotes.github/",
