@@ -54,7 +54,8 @@ function getLatestMonthCount(
 
 /**
  * 规范化每个子库的 completed_notes_count：
- * - 如果当前月份不存在，则用最近月份的值补齐当前月份
+ * - 补齐所有相邻月份之间的缺失月份（用前一个月的值填充）
+ * - 确保当前月份存在（如果不存在则用最近值填充）
  * - 仅保留最近 12 个月的数据
  */
 function normalizeCompletedNotesCount(
@@ -68,20 +69,92 @@ function normalizeCompletedNotesCount(
     const currentKey = getCurrentMonthKey()
     const nextCompletedNotesCount = { ...completed_notes_count }
 
+    // 确保当前月份存在（兜底）
     if (!(currentKey in nextCompletedNotesCount)) {
       nextCompletedNotesCount[currentKey] = getLatestMonthCount(
         nextCompletedNotesCount,
       )
     }
 
-    const keys = Object.keys(nextCompletedNotesCount).sort().slice(-12)
+    // 补齐所有相邻月份之间的缺失月份
+    const fixed = fillMissingMonthGaps(nextCompletedNotesCount, currentKey)
+
+    const keys = Object.keys(fixed).sort().slice(-12)
     return keys.reduce<Record<string, number>>((result, key) => {
-      result[key] = nextCompletedNotesCount[key]
+      result[key] = fixed[key]
       return result
     }, {})
   } catch {
     return { [getCurrentMonthKey()]: 0 }
   }
+}
+
+/**
+ * 补齐 completed_notes_count 中所有相邻月份之间的缺口
+ * 遍历排序后的所有 key（加上 currentKey），发现非连续的月份就插入缺失值
+ */
+function fillMissingMonthGaps(
+  counts: Record<string, number>,
+  currentKey: string,
+): Record<string, number> {
+  const existingKeys = Object.keys(counts).sort()
+  const result: Record<string, number> = {}
+
+  // 将 currentKey 加入集合以确保覆盖到当前月
+  const keySet = new Set(existingKeys)
+  keySet.add(currentKey)
+  const allKeys = Array.from(keySet).sort()
+
+  let prevValue = 0
+  let lastKey: string | null = null
+
+  for (const key of allKeys) {
+    if (lastKey !== null) {
+      // 检查 lastKey 和 key 之间是否有缺口
+      const missing = generateMissingMonthKeys(lastKey, key)
+      for (const midKey of missing) {
+        result[midKey] = prevValue
+      }
+    }
+    result[key] = counts[key] ?? prevValue
+    prevValue = result[key]
+    lastKey = key
+  }
+
+  return result
+}
+
+/**
+ * 生成两个 YY.MM 格式月份键之间的所有缺失月份键（不含两端）
+ */
+function generateMissingMonthKeys(fromKey: string, toKey: string): string[] {
+  const parseKey = (key: string) => {
+    const [yy, mm] = key.split('.').map(Number)
+    return { year: 2000 + yy, month: mm }
+  }
+
+  const from = parseKey(fromKey)
+  const to = parseKey(toKey)
+
+  const missing: string[] = []
+  let year = from.year
+  let month = from.month
+
+  while (true) {
+    month++
+    if (month > 12) { month = 1; year++ }
+
+    const shortYear = String(year).slice(-2)
+    const paddedMonth = String(month).padStart(2, '0')
+    const candidateKey = `${shortYear}.${paddedMonth}`
+
+    if (candidateKey === toKey) break
+    if (year > to.year || (year === to.year && month > to.month)) break
+
+    missing.push(candidateKey)
+  }
+
+  return missing
 }
 
 /**
