@@ -30,7 +30,7 @@ const TEMPLATE_PKG = `{
     "vue": "^3.5.27"
   },
   "dependencies": {
-    "@tnotesjs/core": "^0.1.12"
+    "@tnotesjs/core": "^0.1.27"
   }
 }
 `
