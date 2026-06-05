@@ -834,6 +834,20 @@
       "created_at": 1772277969000,
       "updated_at": 1780398057000,
       "days_since_birth": 9836
+    },
+    "TNotes.rust": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs-2026@main/assets/icon--rust.svg"
+      },
+      "title": "rust",
+      "completed_notes_count": {
+        "26.06": 0
+      },
+      "details": "rust 笔记",
+      "link": "https://tnotesjs.github.io/TNotes.rust/",
+      "created_at": 1772277969000,
+      "updated_at": 1780398057000,
+      "days_since_birth": 9839
     }
   }
 }
