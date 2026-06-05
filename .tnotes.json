@@ -1,6 +1,6 @@
 {
   "statistic": {
-    "completed_notes_count": 1280
+    "completed_notes_count": 1281
   },
   "sub_knowledge_list": [
     "TNotes.introduction",
@@ -295,13 +295,13 @@
         "26.03": 422,
         "26.04": 460,
         "26.05": 471,
-        "26.06": 471
+        "26.06": 472
       },
       "details": "Leetcode 刷题笔记",
       "link": "https://tnotesjs.github.io/TNotes.leetcode/",
       "created_at": 1741793958000,
-      "updated_at": 1780583133000,
-      "days_since_birth": 9838,
+      "updated_at": 1780617905000,
+      "days_since_birth": 9839,
       "is_visible_in_root_folder": true
     },
     "TNotes.miniprogram": {
