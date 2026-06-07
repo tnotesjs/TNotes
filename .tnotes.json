@@ -1,6 +1,6 @@
 {
   "statistic": {
-    "completed_notes_count": 1285
+    "completed_notes_count": 1286
   },
   "sub_knowledge_list": [
     "TNotes.introduction",
@@ -582,13 +582,13 @@
         "26.03": 0,
         "26.04": 10,
         "26.05": 38,
-        "26.06": 48
+        "26.06": 49
       },
       "details": "Vue.js 笔记",
       "link": "https://tnotesjs.github.io/TNotes.vue/",
       "created_at": 1727047134000,
-      "updated_at": 1780662926000,
-      "days_since_birth": 9839,
+      "updated_at": 1780833100000,
+      "days_since_birth": 9841,
       "is_visible_in_root_folder": true
     },
     "TNotes.webpack": {
