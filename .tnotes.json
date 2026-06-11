@@ -1,6 +1,6 @@
 {
   "statistic": {
-    "completed_notes_count": 1291
+    "completed_notes_count": 1292
   },
   "sub_knowledge_list": [
     "TNotes.introduction",
@@ -452,13 +452,13 @@
         "26.03": 55,
         "26.04": 55,
         "26.05": 55,
-        "26.06": 57
+        "26.06": 58
       },
       "details": "React 笔记",
       "link": "https://tnotesjs.github.io/TNotes.react/",
       "created_at": 1740305655000,
-      "updated_at": 1781102150000,
-      "days_since_birth": 9844,
+      "updated_at": 1781166164000,
+      "days_since_birth": 9845,
       "is_visible_in_root_folder": true
     },
     "TNotes.svg": {
