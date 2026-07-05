@@ -30,6 +30,7 @@
     "TNotes.svg",
     "TNotes.typescript",
     "TNotes.vite",
+    "TNotes.vitest",
     "TNotes.vitepress",
     "TNotes.vscode",
     "TNotes.vue",
