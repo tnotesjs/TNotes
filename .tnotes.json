@@ -1,6 +1,6 @@
 {
   "statistic": {
-    "completed_notes_count": 1344
+    "completed_notes_count": 1345
   },
   "sub_knowledge_list": [
     "TNotes.introduction",
@@ -778,13 +778,13 @@
         "26.04": 41,
         "26.05": 49,
         "26.06": 49,
-        "26.07": 49
+        "26.07": 50
       },
       "details": "前端三件套及跟前端相关的其它内容",
       "link": "https://tnotesjs.github.io/TNotes.javascript/",
       "created_at": 1740924811000,
-      "updated_at": 1783130964000,
-      "days_since_birth": 9868
+      "updated_at": 1784598708000,
+      "days_since_birth": 9885
     },
     "TNotes.markdown": {
       "icon": {
