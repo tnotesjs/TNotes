@@ -1,6 +1,6 @@
 {
   "statistic": {
-    "completed_notes_count": 1368
+    "completed_notes_count": 1369
   },
   "sub_knowledge_list": [
     "TNotes.introduction",
@@ -297,7 +297,7 @@
         "26.05": 471,
         "26.06": 494,
         "26.07": 525,
-        "26.08": 536
+        "26.08": 537
       },
       "details": "Leetcode 刷题笔记",
       "link": "https://tnotesjs.github.io/TNotes.leetcode/",
