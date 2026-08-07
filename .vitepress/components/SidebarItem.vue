@@ -1,5 +1,9 @@
 <template>
-  <div class="sidebar-item" :class="{ active: isActive }" @click="onClick">
+  <div
+    class="sidebar-item"
+    :class="{ active: isActive, compact: isCompact }"
+    @click="onClick"
+  >
     <div class="folder-icon">
       <img v-if="item.icon?.src" :src="item.icon.src" :alt="item.title" />
       <div v-else class="default-folder-icon">📁</div>
@@ -107,6 +111,12 @@ const monthIncrement = computed(() => {
   transition: background-color 0.2s;
 }
 
+.sidebar-item.compact {
+  justify-content: center;
+  padding: 10px;
+  margin: 0 6px;
+}
+
 .sidebar-item:hover {
   background-color: color-mix(in srgb, var(--vp-c-brand) 14%, transparent);
 }
@@ -122,6 +132,10 @@ const monthIncrement = computed(() => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+.sidebar-item.compact .folder-icon {
+  margin-right: 0;
 }
 
 .folder-icon img {
