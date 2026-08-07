@@ -141,6 +141,28 @@
       "days_since_birth": 9863,
       "is_visible_in_root_folder": true
     },
+    "TNotes.docs": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--introduction.svg"
+      },
+      "title": "docs",
+      "completed_notes_count": {
+        "25.09": 1,
+        "25.10": 9,
+        "25.11": 14,
+        "25.12": 15,
+        "26.01": 15,
+        "26.02": 16,
+        "26.03": 16,
+        "26.04": 16,
+        "26.05": 16,
+        "26.06": 16,
+        "26.07": 16,
+        "26.08": 16
+      },
+      "details": "TNotes 说明文档",
+      "link": "https://tnotesjs.github.io/TNotes.docs/"
+    },
     "TNotes.egg": {
       "icon": {
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--eggjs.png"
@@ -618,19 +640,6 @@
       "days_since_birth": 9863,
       "is_visible_in_root_folder": true
     },
-    "TNotes.0": {
-      "icon": {
-        "src": "https://cdn.jsdelivr.net/gh/Tdahuyou/imgs@main/assets/icon--0.svg"
-      },
-      "title": "0",
-      "completed_notes_count": 0,
-      "details": "个人学习资料汇总，存储了一些不便公开的学习资料，从 0 到 1 嘛，0 是学习资料、1 就是这些公开的笔记了。",
-      "link": "https://github.com/tnotesjs/TNotes.0",
-      "created_at": 1741094027000,
-      "updated_at": 1754494588473,
-      "days_since_birth": 9381,
-      "is_visible_in_root_folder": false
-    },
     "TNotes.sql": {
       "icon": {
         "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--mysql.svg"
@@ -655,32 +664,6 @@
       "created_at": 1746873077000,
       "updated_at": 1782718331000,
       "days_since_birth": 9863,
-      "is_visible_in_root_folder": true
-    },
-    "TNotes.introduction": {
-      "icon": {
-        "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--introduction.svg"
-      },
-      "title": "introduction",
-      "completed_notes_count": {
-        "25.09": 1,
-        "25.10": 9,
-        "25.11": 14,
-        "25.12": 15,
-        "26.01": 15,
-        "26.02": 16,
-        "26.03": 16,
-        "26.04": 16,
-        "26.05": 16,
-        "26.06": 16,
-        "26.07": 16,
-        "26.08": 16
-      },
-      "details": "TNotes 说明文档",
-      "link": "https://tnotesjs.github.io/TNotes.introduction/",
-      "created_at": 1740850835000,
-      "updated_at": 1782637601000,
-      "days_since_birth": 9862,
       "is_visible_in_root_folder": true
     },
     "TNotes.chrome": {
@@ -866,28 +849,6 @@
       "created_at": 1783221721000,
       "updated_at": 1783222417000,
       "days_since_birth": 9869
-    },
-    "TNotes.docs": {
-      "icon": {
-        "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--introduction.svg"
-      },
-      "title": "docs",
-      "completed_notes_count": {
-        "25.09": 1,
-        "25.10": 9,
-        "25.11": 14,
-        "25.12": 15,
-        "26.01": 15,
-        "26.02": 16,
-        "26.03": 16,
-        "26.04": 16,
-        "26.05": 16,
-        "26.06": 16,
-        "26.07": 16,
-        "26.08": 16
-      },
-      "details": "TNotes 说明文档",
-      "link": "https://tnotesjs.github.io/TNotes.docs/"
     }
   }
 }

@@ -47,13 +47,8 @@ export default {
         })
       }
 
-      // 处理整个 sidebar 数据
-      sidebar = sidebar.map((section) => {
-        if (section.items && Array.isArray(section.items)) {
-          section.items = processSidebarItems(section.items)
-        }
-        return section
-      })
+      // 处理整个 sidebar 数据（含顶层 section 自身的 link）
+      sidebar = processSidebarItems(sidebar)
 
       rootData.sidebars[repoName] = sidebar
     })

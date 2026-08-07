@@ -17,12 +17,15 @@ import { Transformer } from 'markmap-lib'
 import { Toolbar } from 'markmap-toolbar'
 import 'markmap-toolbar/dist/style.css'
 import { Markmap, type IMarkmapOptions } from 'markmap-view'
-import { withBase } from 'vitepress'
+import { useData, withBase } from 'vitepress'
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { RootItem } from './composables/useNavigator'
 
 const MARKMAP_THEME_KEY = 'knowledge-navigator-markmap-theme'
 const MARKMAP_EXPAND_LEVEL_KEY = 'knowledge-navigator-markmap-expand-level'
+const DEFAULT_EXPAND_LEVEL = 2
+
+type MarkmapTheme = 'default' | 'colorful' | 'dark'
 
 interface SidebarItem {
   text: string
@@ -36,10 +39,12 @@ const props = defineProps<{
   activeSidebarItem: RootItem | null
 }>()
 
+const { isDark } = useData()
+
 const svgRef = ref<SVGSVGElement | null>(null)
 const containerRef = ref<HTMLDivElement | null>(null)
-const markmapTheme = ref<'default' | 'colorful' | 'dark'>('default')
-const expandLevel = ref(5)
+const markmapTheme = ref<MarkmapTheme>('default')
+const expandLevel = ref(DEFAULT_EXPAND_LEVEL)
 const isFullscreen = ref(false)
 
 let markmapInstance: Markmap | null = null
@@ -47,9 +52,23 @@ let toolbarEl: HTMLElement | null = null
 let toolbarLevelInput: HTMLInputElement | null = null
 const transformer = new Transformer()
 
+function getVitePressMarkmapTheme(): MarkmapTheme {
+  return isDark.value ? 'dark' : 'default'
+}
+
+function applyMarkmapTheme(theme: MarkmapTheme, { persist = true } = {}) {
+  markmapTheme.value = theme
+  if (persist) {
+    localStorage.setItem(MARKMAP_THEME_KEY, theme)
+  }
+  document.documentElement.classList.toggle('markmap-dark', theme === 'dark')
+}
+
 // 获取主题颜色函数（从 localStorage 读取，与 markmap 工具栏同步）
 const getThemeColorFn = () => {
-  const theme = localStorage.getItem(MARKMAP_THEME_KEY) || 'default'
+  const theme =
+    (localStorage.getItem(MARKMAP_THEME_KEY) as MarkmapTheme | null) ||
+    markmapTheme.value
   switch (theme) {
     case 'colorful':
       return scaleOrdinal(schemeTableau10)
@@ -233,22 +252,21 @@ function addFullscreenButton(toolbar: HTMLElement) {
 
 // 监听主题变化（markmap 工具栏会自动更新 localStorage）
 function observeThemeChange() {
-  // 定期检查 localStorage 中的主题变化
   const checkTheme = () => {
     const currentTheme = localStorage.getItem(MARKMAP_THEME_KEY) as
-      | 'default'
-      | 'colorful'
-      | 'dark'
+      | MarkmapTheme
       | null
-    if (currentTheme && currentTheme !== markmapTheme.value) {
-      markmapTheme.value = currentTheme
+    if (
+      currentTheme &&
+      ['default', 'colorful', 'dark'].includes(currentTheme) &&
+      currentTheme !== markmapTheme.value
+    ) {
+      applyMarkmapTheme(currentTheme, { persist: false })
     }
   }
 
-  // 定期检查主题变化（同页面内 storage 事件不触发，需要轮询）
   const intervalId = setInterval(checkTheme, 300)
 
-  // 保存清理函数的引用
   ;(containerRef.value as any).__themeCleanup = () => {
     clearInterval(intervalId)
   }
@@ -403,24 +421,10 @@ function renderMindmap() {
 }
 
 onMounted(() => {
-  // 从 localStorage 读取主题（支持 markmap 的三种主题）
-  const savedTheme = localStorage.getItem(MARKMAP_THEME_KEY) as
-    | 'default'
-    | 'colorful'
-    | 'dark'
-    | null
-  if (savedTheme && ['default', 'colorful', 'dark'].includes(savedTheme)) {
-    markmapTheme.value = savedTheme
-  }
-
-  // 从 localStorage 读取展开层级
-  const savedLevel = localStorage.getItem(MARKMAP_EXPAND_LEVEL_KEY)
-  if (savedLevel) {
-    const level = parseInt(savedLevel)
-    if (!isNaN(level) && level >= 1 && level <= 100) {
-      expandLevel.value = level
-    }
-  }
+  // 打开思维导图视图时：层级默认 2，主题跟随 VitePress 当前亮/暗色
+  expandLevel.value = DEFAULT_EXPAND_LEVEL
+  localStorage.setItem(MARKMAP_EXPAND_LEVEL_KEY, String(DEFAULT_EXPAND_LEVEL))
+  applyMarkmapTheme(getVitePressMarkmapTheme())
 
   // 添加全屏事件监听
   document.addEventListener('fullscreenchange', handleFullscreenChange)
@@ -457,12 +461,16 @@ onBeforeUnmount(() => {
   document.removeEventListener('webkitfullscreenchange', handleFullscreenChange)
 })
 
-// 监听思维导图主题变化
-watch(markmapTheme, (newTheme, oldTheme) => {
-  console.log('=== 思维导图主题已切换 ===')
-  console.log('从:', oldTheme, '→ 到:', newTheme)
-  console.log('是否暗色主题:', newTheme === 'dark')
-  console.log('========================')
+// VitePress 亮/暗色切换时，同步思维导图主题
+watch(isDark, () => {
+  applyMarkmapTheme(getVitePressMarkmapTheme())
+})
+
+// 主题变化后重渲染配色（打开时 instance 尚未创建，由 onMounted 负责首次渲染）
+watch(markmapTheme, () => {
+  if (markmapInstance && props.activeSidebar) {
+    renderMindmap()
+  }
 })
 
 // 监听层级变化，同步输入框显示

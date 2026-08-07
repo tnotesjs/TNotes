@@ -1,8 +1,9 @@
 <template>
   <div
+    ref="containerRef"
     class="knowledge-navigator-container"
     :class="{ 'is-fullscreen': isFullscreen }"
-    :style="!isFullscreen ? { height: containerHeight + 'px' } : {}"
+    :style="containerStyle"
   >
     <!-- 导航头部 -->
     <div class="navigator-header">
@@ -39,14 +40,26 @@
     </div>
 
     <!-- 左侧知识库列表 -->
-    <SidebarList
+    <div
       v-if="viewMode !== 'search'"
-      :sorted-items="sortedRootItems"
-      :active-key="activeKey"
-      :is-compact="isCompact"
-      :total-count="totalNotesCount"
-      @select="selectSidebar"
-    />
+      class="repo-sidebar-pane"
+      :class="{
+        'is-collapsed': sidebarHidden,
+        'is-resizing': isSidebarResizing,
+      }"
+      :style="{ width: sidebarLayoutWidth + 'px' }"
+    >
+      <SidebarList
+        v-show="!sidebarHidden"
+        :sorted-items="sortedRootItems"
+        :active-key="activeKey"
+        :is-compact="sidebarCompact"
+        :total-count="totalNotesCount"
+        :width="sidebarWidth"
+        @select="selectSidebar"
+      />
+      <RepoSidebarResizeHandle />
+    </div>
 
     <!-- 右侧内容区 -->
     <div class="content-area">
@@ -98,16 +111,9 @@
       <div v-else class="empty-content">请选择一个知识库查看内容</div>
     </div>
 
-    <ResizeHandle
-      :active-sidebar-item="activeSidebarItem"
-      :is-compact="isCompact"
-      :view-mode="viewMode"
-    />
-
     <!-- 设置对话框 -->
     <SettingsDialog
       v-model="showSettings"
-      v-model:container-height="containerHeight"
       v-model:tnotes-dir="tnotesDir"
       v-model:sort-option="sortOption"
     />
@@ -115,26 +121,28 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import { useNavigator } from './composables/useNavigator'
-import { useResponsive } from './composables/useResponsive'
-import GlobalSearchView from './GlobalSearchView.vue'
-import MindMapView from './MindMapView.vue'
-import RepoInfo from './RepoInfo.vue'
-import ResizeHandle from './ResizeHandle.vue'
-import { data as rootData } from './root.data'
-import SearchBar from './SearchBar.vue'
-import SettingsDialog from './SettingsDialog.vue'
-import SidebarList from './SidebarList.vue'
-import SidebarSection from './SidebarSection.vue'
-import ViewSwitcher from './ViewSwitcher.vue'
-import icon__fullscreen from '/icon__fullscreen.svg'
-import icon__fullscreen_exit from '/icon__fullscreen_exit.svg'
-import icon__setting from '/icon__setting.svg'
+import { computed, onMounted, ref, watch } from "vue";
+import { useNavigator } from "./composables/useNavigator";
+import { useRepoSidebarLayout } from "./composables/useRepoSidebarLayout";
+import { useResponsive } from "./composables/useResponsive";
+import { useViewportFillHeight } from "./composables/useViewportFillHeight";
+import GlobalSearchView from "./GlobalSearchView.vue";
+import MindMapView from "./MindMapView.vue";
+import RepoInfo from "./RepoInfo.vue";
+import RepoSidebarResizeHandle from "./RepoSidebarResizeHandle.vue";
+import { data as rootData } from "./root.data";
+import SearchBar from "./SearchBar.vue";
+import SettingsDialog from "./SettingsDialog.vue";
+import SidebarList from "./SidebarList.vue";
+import SidebarSection from "./SidebarSection.vue";
+import ViewSwitcher from "./ViewSwitcher.vue";
+import icon__fullscreen from "/icon__fullscreen.svg";
+import icon__fullscreen_exit from "/icon__fullscreen_exit.svg";
+import icon__setting from "/icon__setting.svg";
 
-const showSettings = ref(false)
-const containerHeight = ref(800)
-const isFullscreen = ref(false)
+const showSettings = ref(false);
+const isFullscreen = ref(false);
+const containerRef = ref<HTMLElement | null>(null);
 
 const {
   activeKey,
@@ -151,74 +159,106 @@ const {
   toggleAllSections,
   getSectionState,
   setDefaultActiveKey,
-} = useNavigator(rootData)
+} = useNavigator(rootData);
 
-const { isCompact } = useResponsive()
+const { isCompact } = useResponsive();
+const {
+  hidden: sidebarHidden,
+  width: sidebarWidth,
+  isResizing: isSidebarResizing,
+  layoutWidth: sidebarLayoutWidth,
+  isIconCompact,
+  init: initRepoSidebarLayout,
+} = useRepoSidebarLayout();
+
+const sidebarCompact = computed(() => isCompact.value || isIconCompact.value);
+
+// 非全屏、非全局搜索：按视口剩余高度撑满
+const shouldFillViewport = computed(
+  () => !isFullscreen.value && viewMode.value !== "search",
+);
+
+const { height: viewportFillHeight, updateHeight } = useViewportFillHeight(
+  containerRef,
+  shouldFillViewport,
+  0,
+);
+
+const containerStyle = computed(() => {
+  if (!shouldFillViewport.value || viewportFillHeight.value == null) return {};
+  return { height: `${viewportFillHeight.value}px` };
+});
 
 // 获取总笔记数（statistic 为数字类型）
 const totalNotesCount = computed(() => {
-  const { completed_notes_count } = rootData.config.statistic
-  return typeof completed_notes_count === 'number' ? completed_notes_count : 0
-})
+  const { completed_notes_count } = rootData.config.statistic;
+  return typeof completed_notes_count === "number" ? completed_notes_count : 0;
+});
 
 // 切换全屏状态
 const toggleFullscreen = () => {
-  isFullscreen.value = !isFullscreen.value
+  isFullscreen.value = !isFullscreen.value;
   localStorage.setItem(
-    'knowledge-navigator-fullscreen',
+    "knowledge-navigator-fullscreen",
     isFullscreen.value.toString(),
-  )
-}
+  );
+};
 
-// 保存容器高度到 localStorage
-watch(containerHeight, (newVal) => {
-  localStorage.setItem('knowledge-navigator-height', newVal.toString())
-})
+watch(isFullscreen, () => {
+  // 退出全屏后重新测量顶部偏移
+  updateHeight();
+});
 
 onMounted(() => {
-  // 从 localStorage 读取容器高度
-  const savedHeight = localStorage.getItem('knowledge-navigator-height')
-  if (savedHeight) {
-    const height = parseInt(savedHeight)
-    if (!isNaN(height) && height >= 500) {
-      containerHeight.value = height
-    }
-  }
+  initRepoSidebarLayout();
 
   const savedSortOption = localStorage.getItem(
-    'knowledge-navigator-sort-option',
-  )
-  if (savedSortOption) sortOption.value = savedSortOption as any
+    "knowledge-navigator-sort-option",
+  );
+  if (savedSortOption) sortOption.value = savedSortOption as any;
 
-  const savedTnotesDir = localStorage.getItem('tnotes-dir')
-  if (savedTnotesDir) tnotesDir.value = savedTnotesDir
+  const savedTnotesDir = localStorage.getItem("tnotes-dir");
+  if (savedTnotesDir) tnotesDir.value = savedTnotesDir;
 
-  const savedViewMode = localStorage.getItem('knowledge-navigator-view-mode')
+  const savedViewMode = localStorage.getItem("knowledge-navigator-view-mode");
   if (
-    savedViewMode === 'folder' ||
-    savedViewMode === 'search' ||
-    savedViewMode === 'mindmap'
+    savedViewMode === "folder" ||
+    savedViewMode === "search" ||
+    savedViewMode === "mindmap"
   ) {
-    viewMode.value = savedViewMode as any
+    viewMode.value = savedViewMode as any;
   }
 
-  const savedFullscreen = localStorage.getItem('knowledge-navigator-fullscreen')
-  if (savedFullscreen === 'true') {
-    isFullscreen.value = true
+  const savedFullscreen = localStorage.getItem(
+    "knowledge-navigator-fullscreen",
+  );
+  if (savedFullscreen === "true") {
+    isFullscreen.value = true;
   }
 
-  setDefaultActiveKey()
-})
+  setDefaultActiveKey();
+  updateHeight();
+});
 </script>
 
 <style scoped>
 .knowledge-navigator-container {
-  display: flex;
-  flex-direction: column;
+  --tn-glass-radius: 16px;
+  --tn-glass-gap: 12px;
+  --tn-glass-bg: color-mix(in srgb, var(--vp-c-bg-soft) 72%, transparent);
+  --tn-glass-bg-strong: color-mix(in srgb, var(--vp-c-bg-elv) 78%, transparent);
+  --tn-glass-border: color-mix(in srgb, var(--vp-c-divider) 70%, transparent);
+
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: var(--tn-glass-gap);
+  padding: var(--tn-glass-gap);
+  box-sizing: border-box;
   font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
-    Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  background-color: var(--vp-c-bg);
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+    Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  background: transparent;
   position: relative;
   overflow: hidden;
 }
@@ -234,18 +274,25 @@ onMounted(() => {
   height: 100vh;
   z-index: 9998;
   margin: 0;
+  /* 遮住底层页面，避免面板缝隙透出下方内容 */
+  background: var(--vp-c-bg);
 }
 
 .navigator-header {
+  grid-column: 1 / -1;
+  grid-row: 1;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 15px;
-  border-bottom: 1px solid var(--vp-c-divider);
-  background-color: var(--vp-c-bg-soft);
+  padding: 10px 14px;
   flex-wrap: wrap;
   min-height: 63px;
   box-sizing: border-box;
+  border-radius: var(--tn-glass-radius);
+  background: var(--tn-glass-bg);
+  border: 1px solid var(--tn-glass-border);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
 }
 
 .navigator-header :deep(.search-bar) {
@@ -253,6 +300,14 @@ onMounted(() => {
   min-width: 200px;
   padding: 0;
   border-bottom: none;
+}
+
+.navigator-header :deep(.search-input) {
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--vp-c-bg) 70%, transparent);
+  border-color: color-mix(in srgb, var(--vp-c-divider) 80%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .search-placeholder {
@@ -269,7 +324,7 @@ onMounted(() => {
   width: 32px;
   height: 32px;
   border: none;
-  border-radius: 4px;
+  border-radius: 10px;
   background-color: transparent;
   cursor: pointer;
   transition: all 0.2s;
@@ -279,7 +334,7 @@ onMounted(() => {
 }
 
 .fullscreen-btn:hover {
-  background-color: var(--vp-c-bg-soft);
+  background-color: color-mix(in srgb, var(--vp-c-bg) 55%, transparent);
   opacity: 1;
 }
 
@@ -296,7 +351,7 @@ onMounted(() => {
   width: 32px;
   height: 32px;
   border: none;
-  border-radius: 4px;
+  border-radius: 10px;
   background-color: transparent;
   cursor: pointer;
   transition: all 0.2s;
@@ -306,7 +361,7 @@ onMounted(() => {
 }
 
 .settings-btn:hover {
-  background-color: var(--vp-c-bg-soft);
+  background-color: color-mix(in srgb, var(--vp-c-bg) 55%, transparent);
   opacity: 1;
 }
 
@@ -316,63 +371,77 @@ onMounted(() => {
   display: block;
 }
 
-.knowledge-navigator-container > .sidebar-list {
-  display: none;
-}
-
-.knowledge-navigator-container {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-rows: auto 1fr auto;
-}
-
 /* 全局搜索时单列布局 */
 .knowledge-navigator-container:has(.content-area .global-search-view) {
   grid-template-columns: 1fr;
 }
 
-.navigator-header {
-  grid-column: 1 / -1;
-  grid-row: 1;
-}
-
-.knowledge-navigator-container > .sidebar-list {
+.knowledge-navigator-container > .repo-sidebar-pane {
+  position: relative;
   display: flex;
+  flex-direction: column;
   grid-column: 1;
   grid-row: 2;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  transition: width 0.2s ease;
+  border-radius: var(--tn-glass-radius);
+  background: var(--tn-glass-bg);
+  border: 1px solid var(--tn-glass-border);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+}
+
+.knowledge-navigator-container > .repo-sidebar-pane.is-resizing {
+  transition: none;
+}
+
+.knowledge-navigator-container > .repo-sidebar-pane.is-collapsed {
+  background: transparent;
+  border-color: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .content-area {
   grid-column: 2;
   grid-row: 2;
-  padding-left: 1rem;
+  min-height: 0;
+  padding: 12px 16px;
   overflow: hidden;
-  background-color: var(--vp-c-bg);
   display: flex;
   flex-direction: column;
+  border-radius: var(--tn-glass-radius);
+  background: var(--tn-glass-bg-strong);
+  border: 1px solid var(--tn-glass-border);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
 }
 
 /* 全局搜索时内容区占满宽度 */
 .knowledge-navigator-container:has(.content-area .global-search-view)
   .content-area {
   grid-column: 1;
-  padding-left: 0;
-  padding: 0 1rem;
 }
 
 .content-area .sidebar-content {
   flex: 1;
   overflow-y: auto;
+  padding-right: 4px;
 }
 
 .content-area :deep(.mindmap-view) {
   flex: 1;
   overflow: hidden;
+  border-radius: 12px;
 }
 
-.knowledge-navigator-container > .resize-handle {
-  grid-column: 1 / -1;
-  grid-row: 3;
+:global(body.is-repo-sidebar-resizing),
+:global(body.is-repo-sidebar-resizing *) {
+  cursor: col-resize !important;
+  user-select: none !important;
 }
 
 .collapse-toggle {
@@ -380,7 +449,7 @@ onMounted(() => {
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  padding: 0 4px 12px;
+  padding: 0 12px 12px;
 }
 
 /* .collapse-toggle-label {
@@ -431,6 +500,11 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
+  .knowledge-navigator-container {
+    --tn-glass-radius: 12px;
+    --tn-glass-gap: 8px;
+  }
+
   .navigator-header {
     padding: 8px 10px;
     gap: 8px;
@@ -449,6 +523,10 @@ onMounted(() => {
   .navigator-header :deep(.search-input) {
     font-size: 13px;
     padding: 6px 28px 6px 10px;
+  }
+
+  .content-area {
+    padding: 10px 12px;
   }
 }
 </style>

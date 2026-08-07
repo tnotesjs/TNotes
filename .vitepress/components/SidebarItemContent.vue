@@ -5,11 +5,11 @@
       <a :href="item.link" target="_blank" class="item-link">{{ item.text }}</a>
       <a
         v-if="item.link && tnotesDir"
-        title="打开笔记文件夹"
-        :href="buildVSCodeLink(tnotesDir, '', item.link)"
+        :title="openNoteTitle"
+        :href="ideLink(item.link)"
         target="_blank"
       >
-        <img :src="icon__vscode" alt="VS Code" class="repo-action-icon" />
+        <img :src="localIdeIcon" :alt="openNoteTitle" class="repo-action-icon" />
       </a>
     </div>
 
@@ -26,11 +26,15 @@
           }}</a>
           <a
             v-if="subItem.link && tnotesDir"
-            title="打开笔记文件夹"
-            :href="buildVSCodeLink(tnotesDir, '', subItem.link)"
+            :title="openNoteTitle"
+            :href="ideLink(subItem.link)"
             target="_blank"
           >
-            <img :src="icon__vscode" alt="VS Code" class="repo-action-icon" />
+            <img
+              :src="localIdeIcon"
+              :alt="openNoteTitle"
+              class="repo-action-icon"
+            />
           </a>
         </div>
 
@@ -47,13 +51,13 @@
               }}</a>
               <a
                 v-if="subSubItem.link && tnotesDir"
-                title="打开笔记文件夹"
-                :href="buildVSCodeLink(tnotesDir, '', subSubItem.link)"
+                :title="openNoteTitle"
+                :href="ideLink(subSubItem.link)"
                 target="_blank"
               >
                 <img
-                  :src="icon__vscode"
-                  alt="VS Code"
+                  :src="localIdeIcon"
+                  :alt="openNoteTitle"
                   class="repo-action-icon"
                 />
               </a>
@@ -66,8 +70,8 @@
 </template>
 
 <script setup lang="ts">
-import { buildVSCodeLink } from './utils/helpers'
-import icon__vscode from '/icon__vscode.svg'
+import { useLocalIde } from './composables/useLocalIde'
+import { buildIdeLink } from './utils/helpers'
 
 interface SidebarItem {
   text: string
@@ -75,10 +79,20 @@ interface SidebarItem {
   items?: SidebarItem[]
 }
 
-defineProps<{
+const props = defineProps<{
   item: SidebarItem
   tnotesDir: string
 }>()
+
+const {
+  ide,
+  icon: localIdeIcon,
+  openNoteTitle,
+} = useLocalIde()
+
+function ideLink(notePath: string) {
+  return buildIdeLink(props.tnotesDir, '', notePath, ide.value)
+}
 </script>
 
 <style scoped>

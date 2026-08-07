@@ -10,11 +10,15 @@
     <div class="repo-actions">
       <a
         v-if="tnotesDir"
-        title="打开知识库文件夹"
+        :title="openRepoTitle"
         target="_blank"
-        :href="vsCodeLink"
+        :href="ideLink"
       >
-        <img :src="icon__vscode" alt="VS Code" class="repo-action-icon" />
+        <img
+          :src="localIdeIcon"
+          :alt="openRepoTitle"
+          class="repo-action-icon"
+        />
       </a>
 
       <a title="打开知识库仓库" target="_blank" :href="githubLink">
@@ -30,21 +34,21 @@
 </template>
 
 <script setup lang="ts">
-import { BarChart, LineChart } from 'echarts/charts'
+import { BarChart, LineChart } from "echarts/charts";
 import {
   GridComponent,
   LegendComponent,
   TitleComponent,
   TooltipComponent,
-} from 'echarts/components'
-import { use } from 'echarts/core'
-import { CanvasRenderer } from 'echarts/renderers'
-import { computed } from 'vue'
-import VChart from 'vue-echarts'
-import type { RootItem } from './composables/useNavigator'
-import { buildGitHubLink, buildVSCodeLink } from './utils/helpers'
-import icon__github from '/icon__github.svg'
-import icon__vscode from '/icon__vscode.svg'
+} from "echarts/components";
+import { use } from "echarts/core";
+import { CanvasRenderer } from "echarts/renderers";
+import { computed } from "vue";
+import VChart from "vue-echarts";
+import { useLocalIde } from "./composables/useLocalIde";
+import type { RootItem } from "./composables/useNavigator";
+import { buildGitHubLink, buildIdeLink } from "./utils/helpers";
+import icon__github from "/icon__github.svg";
 
 // 注册 ECharts 组件
 use([
@@ -55,107 +59,109 @@ use([
   LegendComponent,
   TitleComponent,
   TooltipComponent,
-])
+]);
 
 const props = defineProps<{
-  item: RootItem
-  tnotesDir: string
-}>()
+  item: RootItem;
+  tnotesDir: string;
+}>();
 
-const vsCodeLink = computed(() =>
-  buildVSCodeLink(props.tnotesDir, props.item.title),
-)
-const githubLink = computed(() => buildGitHubLink(props.item.title))
+const { ide, icon: localIdeIcon, openRepoTitle } = useLocalIde();
+
+const ideLink = computed(() =>
+  buildIdeLink(props.tnotesDir, props.item.title, undefined, ide.value),
+);
+const githubLink = computed(() => buildGitHubLink(props.item.title));
 
 // 判断是否有图表数据
 const hasChartData = computed(() => {
-  const { completed_notes_count } = props.item
-  if (!completed_notes_count) return false
-  if (typeof completed_notes_count === 'number') return false
-  return Object.keys(completed_notes_count).length > 0
-})
+  const { completed_notes_count } = props.item;
+  if (!completed_notes_count) return false;
+  if (typeof completed_notes_count === "number") return false;
+  return Object.keys(completed_notes_count).length > 0;
+});
 
 // 生成图表配置
 const chartOption = computed(() => {
-  const { completed_notes_count } = props.item
+  const { completed_notes_count } = props.item;
 
-  if (!completed_notes_count || typeof completed_notes_count === 'number') {
-    return {}
+  if (!completed_notes_count || typeof completed_notes_count === "number") {
+    return {};
   }
 
   // 按时间排序
   const sortedEntries = Object.entries(completed_notes_count).sort((a, b) => {
-    return a[0].localeCompare(b[0])
-  })
+    return a[0].localeCompare(b[0]);
+  });
 
-  const dates = sortedEntries.map(([date]) => date)
-  const counts = sortedEntries.map(([, count]) => count)
+  const dates = sortedEntries.map(([date]) => date);
+  const counts = sortedEntries.map(([, count]) => count);
 
   // 计算每月增量（相比上月的变化）
   const increments = counts.map((count, index) => {
-    if (index === 0) return 0
-    return count - counts[index - 1]
-  })
+    if (index === 0) return 0;
+    return count - counts[index - 1];
+  });
 
   return {
     tooltip: {
-      trigger: 'axis',
+      trigger: "axis",
       formatter: (params: any) => {
-        const index = params[0].dataIndex
-        const date = params[0].axisValue
-        const total = params[0].value
-        const increment = increments[index]
+        const index = params[0].dataIndex;
+        const date = params[0].axisValue;
+        const total = params[0].value;
+        const increment = increments[index];
 
-        let result = `${date}<br/>${total}`
+        let result = `${date}<br/>${total}`;
         if (increment !== 0) {
-          const sign = increment > 0 ? '+' : ''
-          const color = increment > 0 ? '#10b981' : '#ef4444'
-          result += ` <span style="color: ${color};">(${sign}${increment})</span>`
+          const sign = increment > 0 ? "+" : "";
+          const color = increment > 0 ? "#10b981" : "#ef4444";
+          result += ` <span style="color: ${color};">(${sign}${increment})</span>`;
         }
-        return result
+        return result;
       },
     },
     grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
-      top: '10%',
+      left: "3%",
+      right: "4%",
+      bottom: "3%",
+      top: "10%",
       containLabel: true,
     },
     xAxis: {
-      type: 'category',
+      type: "category",
       data: dates,
       axisLabel: {
         fontSize: 11,
       },
     },
     yAxis: {
-      type: 'value',
+      type: "value",
       axisLabel: {
         fontSize: 11,
       },
       splitLine: {
         lineStyle: {
-          type: 'dashed',
+          type: "dashed",
           opacity: 0.3,
         },
       },
     },
     series: [
       {
-        name: '笔记数量',
-        type: 'line',
+        name: "笔记数量",
+        type: "line",
         smooth: true,
         data: counts,
         itemStyle: {
-          color: '#646cff',
+          color: "#646cff",
         },
         lineStyle: {
           width: 2,
         },
         areaStyle: {
           color: {
-            type: 'linear',
+            type: "linear",
             x: 0,
             y: 0,
             x2: 0,
@@ -163,32 +169,34 @@ const chartOption = computed(() => {
             colorStops: [
               {
                 offset: 0,
-                color: 'rgba(100, 108, 255, 0.3)',
+                color: "rgba(100, 108, 255, 0.3)",
               },
               {
                 offset: 1,
-                color: 'rgba(100, 108, 255, 0.05)',
+                color: "rgba(100, 108, 255, 0.05)",
               },
             ],
           },
         },
         emphasis: {
-          focus: 'series',
+          focus: "series",
         },
       },
     ],
-  }
-})
+  };
+});
 </script>
 
 <style scoped>
 .repo-info {
   margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid var(--vp-c-divider);
+  padding: 12px 14px 15px;
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--vp-c-divider) 75%, transparent);
   position: sticky;
   top: 0;
-  background-color: var(--vp-c-bg);
+  background-color: var(--vp-c-bg-soft);
+  border-radius: 12px;
   z-index: 10;
   display: flex;
   justify-content: space-between;
@@ -200,7 +208,7 @@ const chartOption = computed(() => {
 }
 
 .repo-header h2 {
-  margin-top: 1rem;
+  margin-top: 0rem;
   margin-bottom: 10px;
   padding-top: 0px;
   border-top: none;

@@ -101,17 +101,19 @@ const monthIncrement = computed(() => {
   display: flex;
   align-items: center;
   padding: 10px 15px;
+  margin: 0 8px;
+  border-radius: 10px;
   cursor: pointer;
   transition: background-color 0.2s;
 }
 
 .sidebar-item:hover {
-  background-color: #646cff22;
+  background-color: color-mix(in srgb, var(--vp-c-brand) 14%, transparent);
 }
 
 .sidebar-item.active {
-  background-color: #646cff88;
-  color: white;
+  background-color: color-mix(in srgb, var(--vp-c-brand) 42%, transparent);
+  color: var(--vp-c-text-1);
 }
 
 .folder-icon {

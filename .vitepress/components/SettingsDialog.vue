@@ -9,30 +9,47 @@
           </div>
 
           <div class="dialog-body">
-            <!-- 容器高度设置 -->
+            <!-- 本地 IDE 打开 -->
             <div class="setting-item">
-              <label for="container-height">容器高度 (px)</label>
-              <input
-                id="container-height"
-                v-model.number="localHeight"
-                type="number"
-                class="setting-input"
-                min="500"
-                max="2000"
-                step="50"
-              />
-            </div>
+              <label>本地 IDE 打开</label>
+              <p class="setting-hint">
+                配置本地知识库目录，并选择 VS Code 或 Cursor，即可从页面快速打开知识库或笔记。
+              </p>
 
-            <!-- TNotes 目录设置 -->
-            <div class="setting-item">
-              <label for="tnotes-dir">TNotes 知识库目录</label>
-              <input
-                id="tnotes-dir"
-                v-model="localTnotesDir"
-                type="text"
-                class="setting-input"
-                placeholder="例如: /Users/username/tnotesjs"
-              />
+              <div class="field-stack">
+                <div class="field">
+                  <span class="control-label">IDE</span>
+                  <div class="segmented">
+                    <label
+                      v-for="option in localIdeOptions"
+                      :key="option.value"
+                      class="segment"
+                      :class="{ 'is-active': localIde === option.value }"
+                    >
+                      <input
+                        v-model="localIde"
+                        type="radio"
+                        name="local-ide"
+                        :value="option.value"
+                      />
+                      <span>{{ option.label }}</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label class="control-label" for="tnotes-dir"
+                    >知识库目录</label
+                  >
+                  <input
+                    id="tnotes-dir"
+                    v-model="localTnotesDir"
+                    type="text"
+                    class="setting-input"
+                    placeholder="例如: /Users/username/tnotesjs"
+                  />
+                </div>
+              </div>
             </div>
 
             <!-- 知识库排序设置 -->
@@ -69,45 +86,59 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { useLocalIde } from './composables/useLocalIde'
 import type { SortOption } from './composables/useNavigator'
+import {
+  DEFAULT_LOCAL_IDE,
+  type LocalIdeId,
+} from './utils/helpers'
 
 const props = defineProps<{
   modelValue: boolean
-  containerHeight: number
   tnotesDir: string
   sortOption: SortOption
 }>()
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
-  'update:containerHeight': [value: number]
   'update:tnotesDir': [value: string]
   'update:sortOption': [value: SortOption]
 }>()
 
-const localHeight = ref(props.containerHeight)
+const { ide, setLocalIde, refreshLocalIde } = useLocalIde()
+
+const localIdeOptions: Array<{ label: string; value: LocalIdeId }> = [
+  { label: 'VS Code', value: 'vscode' },
+  { label: 'Cursor', value: 'cursor' },
+]
+
 const localTnotesDir = ref(props.tnotesDir)
 const localSortOption = ref(props.sortOption)
-
-watch(
-  () => props.containerHeight,
-  (newVal) => {
-    localHeight.value = newVal
-  }
-)
+const localIde = ref<LocalIdeId>(DEFAULT_LOCAL_IDE)
 
 watch(
   () => props.tnotesDir,
   (newVal) => {
     localTnotesDir.value = newVal
-  }
+  },
 )
 
 watch(
   () => props.sortOption,
   (newVal) => {
     localSortOption.value = newVal
-  }
+  },
+)
+
+watch(
+  () => props.modelValue,
+  (open) => {
+    if (!open) return
+    localTnotesDir.value = props.tnotesDir
+    localSortOption.value = props.sortOption
+    refreshLocalIde()
+    localIde.value = ide.value
+  },
 )
 
 const close = () => {
@@ -115,9 +146,9 @@ const close = () => {
 }
 
 const save = () => {
-  emit('update:containerHeight', localHeight.value)
   emit('update:tnotesDir', localTnotesDir.value)
   emit('update:sortOption', localSortOption.value)
+  setLocalIde(localIde.value)
   close()
 }
 </script>
@@ -198,12 +229,80 @@ const save = () => {
   margin-bottom: 0;
 }
 
-.setting-item label {
+.setting-item > label {
   display: block;
   margin-bottom: 8px;
   font-size: 14px;
   font-weight: 500;
   color: var(--vp-c-text-1);
+}
+
+.setting-hint {
+  margin: 0 0 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--vp-c-text-3);
+}
+
+.field-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.control-label {
+  color: var(--vp-c-text-2);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 500;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 6px;
+}
+
+.segment {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 34px;
+  color: var(--vp-c-text-2);
+  border-right: 1px solid var(--vp-c-divider);
+  cursor: pointer;
+  font-size: 13px;
+  user-select: none;
+}
+
+.segment:last-child {
+  border-right: none;
+}
+
+.segment input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.segment:hover,
+.segment.is-active {
+  color: var(--vp-c-brand);
+  background: var(--vp-c-bg-soft);
+}
+
+.segment.is-active {
+  font-weight: 600;
 }
 
 .setting-input {

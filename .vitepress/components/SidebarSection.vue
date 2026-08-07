@@ -1,7 +1,15 @@
 <template>
   <div class="sidebar-section">
-    <div class="section-header" @click="$emit('toggle')">
-      <span class="collapse-icon" :class="{ 'is-collapsed': collapsed }">
+    <div
+      class="section-header"
+      :class="{ 'is-toggleable': hasItems }"
+      @click="hasItems && $emit('toggle')"
+    >
+      <span
+        v-if="hasItems"
+        class="collapse-icon"
+        :class="{ 'is-collapsed': collapsed }"
+      >
         <svg width="10" height="10" viewBox="0 0 10 10">
           <path
             d="M3 1 L7 5 L3 9"
@@ -13,13 +21,23 @@
           />
         </svg>
       </span>
-      <span class="section-title">{{ section.text }}</span>
-      <span v-if="section.items?.length" class="section-count">{{
+      <a
+        v-if="section.link"
+        :href="section.link"
+        target="_blank"
+        class="section-title section-title-link"
+        @click.stop
+      >
+        {{ section.text }}
+      </a>
+      <span v-else class="section-title">{{ section.text }}</span>
+      <span v-if="hasItems" class="section-count">{{
         section.items.length
       }}</span>
     </div>
 
     <Transition
+      v-if="hasItems"
       @before-enter="onBeforeEnter"
       @enter="onEnter"
       @after-enter="onAfterEnter"
@@ -59,6 +77,7 @@ interface SidebarItem {
 
 interface SidebarSection {
   text: string
+  link?: string
   collapsed?: boolean
   items: SidebarItem[]
 }
@@ -79,6 +98,7 @@ const sentinelRef = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | null = null
 
 const totalCount = computed(() => props.section.items?.length ?? 0)
+const hasItems = computed(() => totalCount.value > 0)
 const hasMore = computed(() => visibleCount.value < totalCount.value)
 const visibleItems = computed(() => {
   if (!props.section.items) return []
@@ -205,11 +225,15 @@ function onAfterLeave(el: Element) {
 .section-header {
   display: flex;
   align-items: center;
+  gap: 8px;
   padding: 12px 15px;
   /* background-color: var(--vp-c-bg-soft); */
-  cursor: pointer;
   font-weight: 500;
   user-select: none;
+}
+
+.section-header.is-toggleable {
+  cursor: pointer;
 }
 
 /* .section-header:hover {
@@ -220,7 +244,6 @@ function onAfterLeave(el: Element) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-right: 8px;
   font-size: 12px;
   transition: transform 0.2s ease;
   transform: rotate(90deg);
@@ -232,7 +255,17 @@ function onAfterLeave(el: Element) {
 }
 
 .section-title {
-  flex: 1;
+  min-width: 0;
+}
+
+.section-title-link {
+  flex: 0 1 auto;
+  color: var(--vp-c-brand);
+  text-decoration: none;
+}
+
+.section-title-link:hover {
+  text-decoration: underline;
 }
 
 .section-count {
@@ -241,13 +274,13 @@ function onAfterLeave(el: Element) {
   background-color: var(--vp-c-bg);
   padding: 1px 8px;
   border-radius: 10px;
-  margin-left: 8px;
+  margin-left: auto;
   flex-shrink: 0;
 }
 
 .section-items {
   padding: 10px 0;
-  background-color: var(--vp-c-bg);
+  background-color: var(--tn-glass-bg-strong);
 }
 
 .load-more-sentinel {

@@ -1,5 +1,9 @@
 <template>
-  <div class="sidebar-list" :class="{ compact: isCompact }">
+  <div
+    class="sidebar-list"
+    :class="{ compact: isCompact }"
+    :style="{ width: width + 'px' }"
+  >
     <!-- 头部统计 -->
     <div class="sidebar-header">
       <div class="statistics">
@@ -37,26 +41,25 @@ defineProps<{
   activeKey: string | null
   isCompact: boolean
   totalCount: number
+  width: number
 }>()
 
-const emit = defineEmits<{
+defineEmits<{
   select: [key: string]
 }>()
 </script>
 
 <style scoped>
 .sidebar-list {
-  width: 300px;
-  background-color: var(--vp-c-bg-soft);
-  border-right: 1px solid var(--vp-c-divider);
+  height: 100%;
+  min-height: 0;
+  flex: 1;
+  background-color: transparent;
+  border-right: none;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: width 0.3s ease;
-}
-
-.sidebar-list.compact {
-  width: 60px;
+  border-radius: inherit;
 }
 
 .sidebar-list.compact .sidebar-header {
@@ -66,7 +69,9 @@ const emit = defineEmits<{
 .sidebar-header {
   position: sticky;
   top: 0;
-  background-color: var(--vp-c-bg-soft);
+  background-color: color-mix(in srgb, var(--vp-c-bg-soft) 55%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   z-index: 10;
 }
 
@@ -95,6 +100,7 @@ const emit = defineEmits<{
 .sidebar-items-container {
   overflow-y: auto;
   flex: 1;
+  min-height: 0;
   padding: 20px 0;
 }
 

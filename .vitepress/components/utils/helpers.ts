@@ -1,27 +1,36 @@
-/**
- * 格式化时间戳为 yyyy-mm-dd hh:mm:ss
- */
-export function formatTimestamp(timestamp: number | undefined): string {
-  if (!timestamp) return ''
+export type LocalIdeId = 'vscode' | 'cursor'
 
-  const date = new Date(timestamp)
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  const seconds = String(date.getSeconds()).padStart(2, '0')
+export const DEFAULT_LOCAL_IDE: LocalIdeId = 'vscode'
 
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+export const LOCAL_IDE_STORAGE_KEY = 'knowledge-navigator-local-ide'
+
+const IDE_SCHEMES: Record<LocalIdeId, string> = {
+  vscode: 'vscode',
+  cursor: 'cursor',
+}
+
+export function normalizeLocalIde(
+  value: string | null | undefined,
+): LocalIdeId {
+  return value === 'cursor' ? 'cursor' : DEFAULT_LOCAL_IDE
+}
+
+export function toIdeFileUrl(
+  filePath: string,
+  ide: LocalIdeId = DEFAULT_LOCAL_IDE,
+): string {
+  const scheme = IDE_SCHEMES[normalizeLocalIde(ide)]
+  return `${scheme}://file/${filePath}`
 }
 
 /**
- * 构建 VS Code 打开链接
+ * 构建本地 IDE 打开链接（VS Code / Cursor）
  */
-export function buildVSCodeLink(
+export function buildIdeLink(
   tnotesDir: string,
   repoTitle: string,
-  notePath?: string
+  notePath?: string,
+  ide: LocalIdeId = DEFAULT_LOCAL_IDE,
 ): string {
   let path = `${tnotesDir}/TNotes.${repoTitle}`
 
@@ -32,7 +41,18 @@ export function buildVSCodeLink(
     path = `${tnotesDir}/${cleanPath}`
   }
 
-  return `vscode://file/${path}`
+  return toIdeFileUrl(path, ide)
+}
+
+/**
+ * @deprecated 使用 buildIdeLink(..., 'vscode')
+ */
+export function buildVSCodeLink(
+  tnotesDir: string,
+  repoTitle: string,
+  notePath?: string,
+): string {
+  return buildIdeLink(tnotesDir, repoTitle, notePath, 'vscode')
 }
 
 /**
