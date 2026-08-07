@@ -866,6 +866,28 @@
       "created_at": 1783221721000,
       "updated_at": 1783222417000,
       "days_since_birth": 9869
+    },
+    "TNotes.docs": {
+      "icon": {
+        "src": "https://cdn.jsdelivr.net/gh/tnotesjs/imgs@main/assets/icon--introduction.svg"
+      },
+      "title": "docs",
+      "completed_notes_count": {
+        "25.09": 1,
+        "25.10": 9,
+        "25.11": 14,
+        "25.12": 15,
+        "26.01": 15,
+        "26.02": 16,
+        "26.03": 16,
+        "26.04": 16,
+        "26.05": 16,
+        "26.06": 16,
+        "26.07": 16,
+        "26.08": 16
+      },
+      "details": "TNotes 说明文档",
+      "link": "https://tnotesjs.github.io/TNotes.docs/"
     }
   }
 }
