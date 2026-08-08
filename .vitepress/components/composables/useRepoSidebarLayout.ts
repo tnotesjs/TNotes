@@ -11,6 +11,8 @@ const SIDEBAR_MIN_WIDTH = 60
 const SIDEBAR_MAX_WIDTH = 400
 const SIDEBAR_DEFAULT_WIDTH = 300
 const SIDEBAR_COLLAPSED_WIDTH = 14
+/** 窄屏/紧凑模式下仅展示图标时的轨道宽度 */
+const SIDEBAR_ICON_RAIL_WIDTH = 64
 
 const hidden = ref(false)
 const width = ref(SIDEBAR_DEFAULT_WIDTH)
@@ -94,6 +96,7 @@ export function useRepoSidebarLayout() {
     minWidth: SIDEBAR_MIN_WIDTH,
     maxWidth: SIDEBAR_MAX_WIDTH,
     defaultWidth: SIDEBAR_DEFAULT_WIDTH,
+    iconRailWidth: SIDEBAR_ICON_RAIL_WIDTH,
     init,
     setHidden,
     toggle,

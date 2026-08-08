@@ -46,8 +46,9 @@
       :class="{
         'is-collapsed': sidebarHidden,
         'is-resizing': isSidebarResizing,
+        'is-icon-rail': isCompact,
       }"
-      :style="{ width: sidebarLayoutWidth + 'px' }"
+      :style="{ width: effectiveSidebarLayoutWidth + 'px' }"
     >
       <SidebarList
         v-show="!sidebarHidden"
@@ -55,7 +56,6 @@
         :active-key="activeKey"
         :is-compact="sidebarCompact"
         :total-count="totalNotesCount"
-        :width="sidebarWidth"
         @select="selectSidebar"
       />
       <RepoSidebarResizeHandle />
@@ -164,14 +164,21 @@ const {
 const { isCompact } = useResponsive();
 const {
   hidden: sidebarHidden,
-  width: sidebarWidth,
   isResizing: isSidebarResizing,
   layoutWidth: sidebarLayoutWidth,
   isIconCompact,
+  iconRailWidth,
   init: initRepoSidebarLayout,
 } = useRepoSidebarLayout();
 
 const sidebarCompact = computed(() => isCompact.value || isIconCompact.value);
+
+/** 窄屏已切到图标模式时，强制使用图标轨道宽度，避免沿用桌面端 300px 挤占内容区 */
+const effectiveSidebarLayoutWidth = computed(() => {
+  if (sidebarHidden.value) return sidebarLayoutWidth.value;
+  if (isCompact.value) return iconRailWidth;
+  return sidebarLayoutWidth.value;
+});
 
 // 非全屏、非全局搜索：按视口剩余高度撑满
 const shouldFillViewport = computed(
@@ -403,6 +410,20 @@ onMounted(() => {
   border-color: transparent;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+}
+
+/* 窄屏图标轨道：禁用拖拽改宽，保留收起/展开按钮 */
+.knowledge-navigator-container > .repo-sidebar-pane.is-icon-rail :deep(.resize-hotspot),
+.knowledge-navigator-container
+  > .repo-sidebar-pane.is-icon-rail
+  :deep(.resize-indicator) {
+  display: none;
+}
+
+.knowledge-navigator-container
+  > .repo-sidebar-pane.is-icon-rail
+  :deep(.repo-sidebar-resize-handle) {
+  cursor: default;
 }
 
 .content-area {

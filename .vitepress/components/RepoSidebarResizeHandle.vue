@@ -67,6 +67,11 @@ function startResize(event: MouseEvent) {
   if (hidden.value || event.button !== 0) return
 
   paneEl = getPaneEl(event.currentTarget)
+  // 窄屏图标轨道由布局强制宽度，禁止拖拽改宽以免覆盖桌面端偏好
+  if (paneEl?.classList.contains('is-icon-rail')) {
+    paneEl = null
+    return
+  }
   isResizing.value = true
   document.body.classList.add('is-repo-sidebar-resizing')
   window.addEventListener('mousemove', onResize)

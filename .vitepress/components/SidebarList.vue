@@ -1,9 +1,5 @@
 <template>
-  <div
-    class="sidebar-list"
-    :class="{ compact: isCompact }"
-    :style="{ width: width + 'px' }"
-  >
+  <div class="sidebar-list" :class="{ compact: isCompact }">
     <!-- 头部统计 -->
     <div class="sidebar-header">
       <div class="statistics">
@@ -41,7 +37,6 @@ defineProps<{
   activeKey: string | null
   isCompact: boolean
   totalCount: number
-  width: number
 }>()
 
 defineEmits<{
@@ -51,6 +46,7 @@ defineEmits<{
 
 <style scoped>
 .sidebar-list {
+  width: 100%;
   height: 100%;
   min-height: 0;
   flex: 1;
