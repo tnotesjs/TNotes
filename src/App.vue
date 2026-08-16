@@ -30,6 +30,7 @@ function showToast(msg: string) {
 function onReady(editor: MindmapEditor) {
   editorRef.value = editor
   editor.on('selectionChange', () => docVersion.value++)
+  editor.on('collapseChange', () => docVersion.value++)
   editor.on('focusChange', (titles) => {
     focusPath.value = titles
     docVersion.value++

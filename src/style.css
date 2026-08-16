@@ -159,6 +159,13 @@ body,
   fill: var(--mm-accent);
 }
 
+.mm-resize-handle {
+  fill: #ffffff;
+  stroke: var(--mm-accent);
+  stroke-width: 2;
+  cursor: nwse-resize;
+}
+
 /* ---------- 内联编辑 ---------- */
 
 .mm-overlay {

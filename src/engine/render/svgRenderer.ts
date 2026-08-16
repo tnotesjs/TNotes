@@ -14,12 +14,12 @@ export interface ViewTransform {
   k: number
 }
 
-export type NodeRole = 'body' | 'checkbox' | 'collapse' | 'link' | 'image'
+export type NodeRole = 'body' | 'checkbox' | 'collapse' | 'link' | 'image' | 'resize'
 
 export interface RendererEvents {
   onNodeClick(id: string, role: NodeRole, ev: MouseEvent): void
   onNodeDblClick(id: string, ev: MouseEvent): void
-  onNodePointerDown(id: string, ev: PointerEvent): void
+  onNodePointerDown(id: string, role: NodeRole, ev: PointerEvent): void
   onBackgroundPointerDown(ev: PointerEvent): void
 }
 
@@ -91,8 +91,12 @@ export class SvgRenderer {
     const target = ev.target as Element
     const g = target.closest?.('.mm-node') as SVGGElement | null
     const id = g?.getAttribute('data-id')
-    if (id) this.events.onNodePointerDown(id, ev)
-    else this.events.onBackgroundPointerDown(ev)
+    if (!id) {
+      this.events.onBackgroundPointerDown(ev)
+      return
+    }
+    const role = (target.closest?.('[data-role]')?.getAttribute('data-role') ?? 'body') as NodeRole
+    this.events.onNodePointerDown(id, role, ev)
   }
 
   constructor(
@@ -197,10 +201,14 @@ export class SvgRenderer {
   private scheduleCull(): void {
     if (this.cullScheduled) return
     this.cullScheduled = true
-    requestAnimationFrame(() => {
+    const run = () => {
+      if (!this.cullScheduled) return
       this.cullScheduled = false
       this.draw()
-    })
+    }
+    requestAnimationFrame(run)
+    // 后台标签页 rAF 会暂停，用 setTimeout 兜底保证渲染
+    setTimeout(run, 50)
   }
 
   private computeBranchColors(root: MindmapNode): void {
@@ -356,6 +364,18 @@ export class SvgRenderer {
             height: String(ih),
             href: img.src,
             preserveAspectRatio: 'xMidYMid meet',
+          }),
+        )
+      }
+      // 选中时显示右下角拖拽调宽手柄
+      if (state.selection.has(node.id)) {
+        g.append(
+          el('circle', {
+            class: 'mm-resize-handle',
+            'data-role': 'resize',
+            cx: String(ix + iw),
+            cy: String(iy + ih),
+            r: '6',
           }),
         )
       }

@@ -5,7 +5,7 @@
  */
 
 import { History } from './commands/history'
-import { layoutTree } from './layout/treeLayout'
+import { DEFAULT_IMAGE_WIDTH, layoutTree, NODE_PAD_X } from './layout/treeLayout'
 import type { LayoutResult, TextMeasurer } from './layout/treeLayout'
 import { parseMarkdown } from './markdown/parser'
 import { serializeMarkdown } from './markdown/serializer'
@@ -24,6 +24,8 @@ export interface EditorEvents {
   /** 文档变更，payload 为最新 markdown */
   change: string
   selectionChange: string | null
+  /** 折叠/展开等视图态变化（markdown 不变，驱动大纲等 UI 刷新） */
+  collapseChange: null
   /** 聚焦路径变化，payload 为从根到聚焦根的标题数组 */
   focusChange: string[]
   /** 警告信息（如文件含非脑图内容） */
@@ -72,6 +74,7 @@ export class MindmapEditor {
   private dragState: { id: string; startX: number; startY: number; dragging: boolean } | null = null
   private panState: { startX: number; startY: number; baseX: number; baseY: number } | null = null
   private panMoved = false
+  private resizeState: { id: string; snapshot: string; moved: boolean } | null = null
   private suppressClick = false
   private resizeObserver: ResizeObserver | null = null
 
@@ -96,7 +99,7 @@ export class MindmapEditor {
     this.renderer = new SvgRenderer(container, {
       onNodeClick: (id, role, ev) => this.handleNodeClick(id, role, ev),
       onNodeDblClick: (id) => this.handleNodeDblClick(id),
-      onNodePointerDown: (id, ev) => this.handleNodePointerDown(id, ev),
+      onNodePointerDown: (id, role, ev) => this.handleNodePointerDown(id, role, ev),
       onBackgroundPointerDown: (ev) => this.handleBackgroundPointerDown(ev),
     })
     container.append(this.overlay)
@@ -112,7 +115,11 @@ export class MindmapEditor {
     this.resizeObserver.observe(container)
 
     this.relayout()
-    requestAnimationFrame(() => this.zoomToFit())
+    // 初始 transform 立即同步给渲染器；rAF 在后台标签页会暂停，加 setTimeout 兜底
+    this.setTransform(this.transform)
+    const initialFit = () => this.zoomToFit()
+    requestAnimationFrame(initialFit)
+    setTimeout(initialFit, 60)
   }
 
   // ---------- 事件 ----------
@@ -163,7 +170,9 @@ export class MindmapEditor {
       this.emit('warning', '该文件含非脑图内容，保存后将仅保留脑图部分（H1 + 无序列表）')
     }
     this.relayout()
+    // rAF 在后台标签页会暂停，加 setTimeout 兜底
     requestAnimationFrame(() => this.zoomToFit())
+    setTimeout(() => this.zoomToFit(), 60)
   }
 
   get canUndo(): boolean {
@@ -230,9 +239,26 @@ export class MindmapEditor {
   toggleCollapse(id: string): void {
     const node = this.doc.find(id)
     if (!node || node.children.length === 0) return
-    // 折叠是视图态：不进历史、不触发 change
+    // 折叠是视图态：不进历史
+    const oldBox = this.layout.boxes.get(id)
     this.doc.toggleCollapse(node)
     this.relayout()
+    // 位置补偿：保持被操作节点在屏幕上不动，其它节点围绕它调整
+    if (oldBox) {
+      const newBox = this.layout.boxes.get(id)
+      if (newBox) {
+        const dx = newBox.x - oldBox.x
+        const dy = newBox.y - oldBox.y
+        if (dx !== 0 || dy !== 0) {
+          this.setTransform({
+            ...this.transform,
+            x: this.transform.x - dx * this.transform.k,
+            y: this.transform.y - dy * this.transform.k,
+          })
+        }
+      }
+    }
+    this.emit('collapseChange', null)
   }
 
   insertChildOf(id: string): MindmapNode | null {
@@ -393,13 +419,24 @@ export class MindmapEditor {
     input.className = 'mm-edit-input'
     input.value = node.content.raw
     input.rows = 1
-    input.style.left = `${box.x * k + this.transform.x}px`
-    input.style.top = `${box.y * k + this.transform.y}px`
-    input.style.minWidth = `${Math.max(box.width * k, 120)}px`
+    // 减 2px 补偿边框，使输入框与节点边框对齐
+    input.style.left = `${box.x * k + this.transform.x - 2}px`
+    input.style.top = `${box.y * k + this.transform.y - 2}px`
+    input.style.height = `${(box.height + 4) * k}px`
     input.style.fontSize = `${14 * k}px`
     this.overlay.append(input)
     this.editingInput = input
     this.editingNode = node
+
+    // 宽度随内容自适应（canvas 测量，与节点尺寸同口径）
+    const syncWidth = () => {
+      const m = this.measurer.measure(input.value || ' ')
+      const worldWidth = Math.max(box.width, m.width + NODE_PAD_X * 2)
+      input.style.width = `${worldWidth * k + 4}px`
+    }
+    syncWidth()
+    input.addEventListener('input', syncWidth)
+
     input.focus()
     input.setSelectionRange(input.value.length, input.value.length)
 
@@ -417,13 +454,11 @@ export class MindmapEditor {
         this.cancelEdit()
       } else if (e.key === 'Tab') {
         e.preventDefault()
-        const id2 = this.editingNode?.id
+        // 编辑态 Tab：提交后新增子节点并继续编辑
+        const edited = node
         this.commitEdit()
-        if (id2) {
-          if (e.shiftKey) this.outdentNode(id2)
-          else this.indentNode(id2)
-          this.startEdit(id2)
-        }
+        const created = this.insertChildOf(edited.id)
+        if (created) this.startEdit(created.id)
       }
     })
     input.addEventListener('blur', () => this.commitEdit())
@@ -540,6 +575,19 @@ export class MindmapEditor {
       this.emit('requestSearch', null)
       return
     }
+    // 升降级：Cmd/Ctrl + ] / [
+    if (mod && e.key === ']') {
+      e.preventDefault()
+      const sel = this.selectedNode
+      if (sel) this.indentNode(sel.id)
+      return
+    }
+    if (mod && e.key === '[') {
+      e.preventDefault()
+      const sel = this.selectedNode
+      if (sel) this.outdentNode(sel.id)
+      return
+    }
 
     const sel = this.selectedNode
     switch (e.key) {
@@ -553,9 +601,9 @@ export class MindmapEditor {
       case 'Tab':
         e.preventDefault()
         if (sel) {
-          if (e.shiftKey) this.outdentNode(sel.id)
-          else this.indentNode(sel.id)
-          this.select(sel.id)
+          // 幕布/XMind 式：Tab 新增子节点并进入编辑
+          const created = this.insertChildOf(sel.id)
+          if (created) this.startEdit(created.id)
         }
         break
       case 'Delete':
@@ -641,8 +689,13 @@ export class MindmapEditor {
     this.startEdit(id)
   }
 
-  private handleNodePointerDown(id: string, ev: PointerEvent): void {
+  private handleNodePointerDown(id: string, role: NodeRole, ev: PointerEvent): void {
     if (ev.button !== 0 || this.editingInput) return
+    if (role === 'resize') {
+      // 图片调宽：拖动前暂存快照，松手时再入历史
+      this.resizeState = { id, snapshot: snapshotDoc(this.doc), moved: false }
+      return
+    }
     this.dragState = { id, startX: ev.clientX, startY: ev.clientY, dragging: false }
   }
 
@@ -655,6 +708,24 @@ export class MindmapEditor {
   }
 
   private onPointerMove = (ev: PointerEvent): void => {
+    if (this.resizeState) {
+      const node = this.doc.find(this.resizeState.id)
+      const box = node ? this.layout.boxes.get(node.id) : null
+      if (node?.content.image && box) {
+        const world = this.screenToWorld(ev.clientX, ev.clientY)
+        const imgW = node.content.image.width ?? DEFAULT_IMAGE_WIDTH
+        const imgLeft = box.x + (box.width - imgW) / 2
+        const newWidth = Math.min(Math.max(Math.round(world.x - imgLeft), 40), 800)
+        if (newWidth !== node.content.image.width) {
+          this.doc.setImageWidth(node, newWidth)
+          this.resizeState.moved = true
+          this.relayout()
+        }
+      }
+      this.suppressClick = true
+      return
+    }
+
     if (this.panState) {
       this.panMoved = true
       this.setTransform({
@@ -680,6 +751,17 @@ export class MindmapEditor {
   }
 
   private onPointerUp = (): void => {
+    if (this.resizeState) {
+      const rs = this.resizeState
+      this.resizeState = null
+      if (rs.moved) {
+        this.history.record(rs.snapshot)
+        this.emit('change', this.getMarkdown())
+      }
+      setTimeout(() => (this.suppressClick = false), 0)
+      return
+    }
+
     if (this.panState) {
       // 无位移的空白点击 = 取消选中
       if (!this.panMoved) this.select(null)
