@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { cloneSubtree, parseMarkdown, serializeSubtree } from '../engine'
 import type { MindmapNode, MindmapSession } from '../engine'
 
 const props = defineProps<{
@@ -8,7 +9,10 @@ const props = defineProps<{
   version: number
 }>()
 
-const emit = defineEmits<{ imagePreview: [src: string] }>()
+const emit = defineEmits<{
+  imagePreview: [src: string]
+  requestSearch: []
+}>()
 
 const ROW_HEIGHT = 28
 const PADDING_TOP = 8
@@ -84,96 +88,319 @@ watch(focusPathLen, () => {
   if (containerRef.value) containerRef.value.scrollTop = 0
 })
 
-// ---------- 内联编辑（幕布式行编辑） ----------
+// ---------- 行焦点（焦点 = 选中 = 编辑态，幕布式） ----------
 
-const editingId = ref<string | null>(null)
-const editInput = ref<HTMLInputElement>()
-let committing = false
+const focusedId = ref<string | null>(null)
 
-function startEdit(node: MindmapNode) {
-  if (editingId.value) return
-  editingId.value = node.id
+function inputOf(id: string): HTMLInputElement | null {
+  return containerRef.value?.querySelector(`input.row-input[data-id="${id}"]`) ?? null
+}
+
+/** 聚焦某行并放置光标（col 省略时到末尾） */
+function focusRow(id: string, col?: number) {
   nextTick(() => {
-    const input = editInput.value
-    if (input) {
-      input.value = node.content.raw
-      input.focus()
-      input.setSelectionRange(input.value.length, input.value.length)
-    }
+    const input = inputOf(id)
+    if (!input) return
+    input.focus()
+    const pos = col === undefined ? input.value.length : Math.min(col, input.value.length)
+    input.setSelectionRange(pos, pos)
   })
 }
 
-function commitEdit(removeIfEmpty = true) {
-  if (!editingId.value || committing) return
-  committing = true
+function scrollRowIntoView(index: number) {
+  const el = containerRef.value
+  if (!el) return
+  const target = index * ROW_HEIGHT
+  if (target < el.scrollTop || target > el.scrollTop + el.clientHeight - ROW_HEIGHT) {
+    el.scrollTop = Math.max(0, target - el.clientHeight / 2)
+  }
+}
+
+/** 搜索/外部定位：展开祖先、选中、滚动到该行 */
+function locateNode(id: string) {
   const session = props.session
-  const id = editingId.value
-  const input = editInput.value
-  editingId.value = null
-  committing = false
-  if (!session || !input) return
-  const node = session.document.find(id)
-  if (!node) return
+  session.expandAncestors(id)
+  session.select(id)
+  nextTick(() => {
+    const idx = rows.value.findIndex((r) => r.node.id === id)
+    if (idx >= 0) scrollRowIntoView(idx)
+  })
+}
+
+defineExpose({ locateNode })
+
+// ---------- 行内编辑行为（光标感知，对齐幕布） ----------
+
+/** 提交行文本；空行且无子节点时删除（幕布行为）。返回是否有文档变化 */
+function commitRow(node: MindmapNode, input: HTMLInputElement): boolean {
+  const session = props.session
   const raw = input.value.trim()
   if (raw && raw !== node.content.raw) {
-    session.updateNodeRaw(id, raw)
-  } else if (!raw && node.content.raw === '' && removeIfEmpty && node !== session.document.root) {
-    session.removeNode(id)
+    session.updateNodeRaw(node.id, raw)
+    return true
   }
+  if (!raw && node.content.raw === '' && node.children.length === 0 && node !== session.document.root) {
+    session.removeNode(node.id)
+    return true
+  }
+  return false
 }
 
-function onEditKeydown(e: KeyboardEvent, node: MindmapNode) {
+function onEditKeydown(node: MindmapNode, e: KeyboardEvent) {
   const session = props.session
+  const input = e.target as HTMLInputElement
   e.stopPropagation()
-  if (e.key === 'Enter') {
-    e.preventDefault()
-    const id = node.id
-    commitEdit()
-    // 幕布式连续录入：新建同级并继续编辑
-    const created = session.insertSiblingOf(id)
-    if (created) {
-      session.select(created.id)
-      nextTick(() => {
-        const n = session.document.find(created.id)
-        if (n) startEdit(n)
-      })
+
+  const mod = e.metaKey || e.ctrlKey
+  if (mod) {
+    const key = e.key.toLowerCase()
+    const col = input.selectionStart ?? 0
+    if (key === 'z' || key === 'y') {
+      e.preventDefault()
+      commitRow(node, input)
+      if (key === 'z' && !e.shiftKey) session.undo()
+      else session.redo()
+    } else if (key === 'f') {
+      e.preventDefault()
+      emit('requestSearch')
+    } else if (key === ']') {
+      e.preventDefault()
+      commitRow(node, input)
+      session.indentNode(node.id)
+      focusRow(node.id, col)
+    } else if (key === '[') {
+      e.preventDefault()
+      commitRow(node, input)
+      session.outdentNode(node.id)
+      focusRow(node.id, col)
     }
-  } else if (e.key === 'Escape') {
-    e.preventDefault()
-    editingId.value = null
-  } else if (e.key === 'Tab') {
-    e.preventDefault()
-    const id = node.id
-    commitEdit(false)
-    if (e.shiftKey) session.outdentNode(id)
-    else session.indentNode(id)
-    session.select(id)
-    nextTick(() => {
-      const n = session.document.find(id)
-      if (n) startEdit(n)
-    })
+    return
+  }
+
+  const start = input.selectionStart ?? 0
+  const end = input.selectionEnd ?? 0
+  const collapsedSelection = start === end
+  const value = input.value
+  const list = rows.value
+  const rowIndex = list.findIndex((r) => r.node.id === node.id)
+  const prevRow = rowIndex > 0 ? list[rowIndex - 1] : null
+  const nextRow = rowIndex >= 0 && rowIndex < list.length - 1 ? list[rowIndex + 1] : null
+
+  switch (e.key) {
+    case 'Enter': {
+      e.preventDefault()
+      if (start === 0 && end === 0 && value.length > 0) {
+        // 行首 Enter：上方插入空行并进入
+        const created = session.insertBeforeOf(node.id)
+        if (created) focusRow(created.id, 0)
+      } else if (end < value.length) {
+        // 文本中间 Enter：分裂节点（前段留当前行，后段进新行）
+        const before = value.slice(0, start)
+        const after = value.slice(end)
+        // 先同步 input 值，防止 blur 兜底提交覆盖分裂结果
+        input.value = before
+        let created: MindmapNode | null = null
+        session.transact((doc) => {
+          doc.updateRaw(node, before)
+          created = doc.insertAfter(node, after)
+        })
+        if (created) {
+          session.select((created as MindmapNode).id)
+          focusRow((created as MindmapNode).id, 0)
+        }
+      } else if (node.children.length > 0 && !node.collapsed) {
+        // 幕布：有可见子节点时 Enter 新建第一个子节点
+        commitRow(node, input)
+        const created = session.insertChildOf(node.id, 0)
+        if (created) {
+          session.select(created.id)
+          focusRow(created.id, 0)
+        }
+      } else {
+        // 行尾 Enter：提交并新建同级继续录入
+        commitRow(node, input)
+        const created = session.insertSiblingOf(node.id)
+        if (created) {
+          session.select(created.id)
+          focusRow(created.id, 0)
+        }
+      }
+      break
+    }
+    case 'Backspace': {
+      if (!collapsedSelection || start > 0) break
+      e.preventDefault()
+      if (!prevRow) break
+      if (value.length === 0) {
+        if (node.children.length > 0) break // 空行但有子节点：不删，避免丢子树
+        // 空行 Backspace：删除本行，光标移到上一行末尾
+        const prevId = prevRow.node.id
+        const prevLen = prevRow.node.content.raw.length
+        session.removeNode(node.id)
+        focusRow(prevId, prevLen)
+      } else if (node.parent && node.parent.children[0] === node) {
+        // 首个子节点行首 Backspace：升级（根的直接子节点除外）
+        if (node.parent === session.document.root) break
+        session.outdentNode(node.id)
+        focusRow(node.id, 0)
+      } else {
+        // 行首 Backspace：合并到视觉上一行，子节点并入目标行
+        const prevId = prevRow.node.id
+        const prevLen = prevRow.node.content.raw.length
+        session.transact((doc) => {
+          doc.updateRaw(prevRow.node, prevRow.node.content.raw + value)
+          for (const c of [...node.children]) doc.move(c, prevRow.node, prevRow.node.children.length)
+          doc.remove(node)
+        })
+        session.select(prevId)
+        focusRow(prevId, prevLen)
+      }
+      break
+    }
+    case 'Delete': {
+      // 行尾向前删除：与下一行合并（仅当下一行无子节点）
+      if (!collapsedSelection || end < value.length) break
+      if (!nextRow || nextRow.node.children.length > 0) break
+      e.preventDefault()
+      const nextRaw = nextRow.node.content.raw
+      session.transact((doc) => {
+        doc.updateRaw(node, value + nextRaw)
+        doc.remove(nextRow.node)
+      })
+      focusRow(node.id, value.length)
+      break
+    }
+    case 'Tab': {
+      e.preventDefault()
+      const col = input.selectionStart ?? 0
+      commitRow(node, input)
+      if (e.shiftKey) session.outdentNode(node.id)
+      else session.indentNode(node.id)
+      focusRow(node.id, col)
+      break
+    }
+    case 'Escape': {
+      e.preventDefault()
+      commitRow(node, input)
+      containerRef.value?.focus()
+      break
+    }
+    case 'ArrowUp': {
+      e.preventDefault()
+      commitRow(node, input)
+      if (prevRow) focusRow(prevRow.node.id, start)
+      break
+    }
+    case 'ArrowDown': {
+      e.preventDefault()
+      commitRow(node, input)
+      if (nextRow) focusRow(nextRow.node.id, start)
+      break
+    }
+    case 'ArrowLeft': {
+      if (!collapsedSelection || start > 0) break
+      e.preventDefault()
+      commitRow(node, input)
+      if (prevRow) focusRow(prevRow.node.id)
+      break
+    }
+    case 'ArrowRight': {
+      if (!collapsedSelection || end < value.length) break
+      e.preventDefault()
+      commitRow(node, input)
+      if (nextRow) focusRow(nextRow.node.id, 0)
+      break
+    }
   }
 }
 
-// ---------- 行交互 ----------
+function onRowInputBlur(node: MindmapNode, e: FocusEvent) {
+  const input = e.target as HTMLInputElement
+  commitRow(node, input)
+  if (focusedId.value === node.id) focusedId.value = null
+}
 
-function onRowClick(node: MindmapNode) {
+function onRowInputFocus(node: MindmapNode) {
+  focusedId.value = node.id
   props.session.select(node.id)
-  containerRef.value?.focus()
 }
 
-function onRowDblClick(node: MindmapNode) {
-  startEdit(node)
+// ---------- 复制 / 剪切 / 粘贴（行级，子树为单位） ----------
+
+const LIST_LINE_RE = /^\s*[-*+]\s+/
+
+function onPaste(node: MindmapNode, e: ClipboardEvent) {
+  const text = e.clipboardData?.getData('text/plain') ?? ''
+  if (!text.includes('\n')) return // 单行走默认粘贴
+  e.preventDefault()
+  const session = props.session
+  const input = e.target as HTMLInputElement
+
+  // 每行规范化为列表项（保留缩进）后复用 parser 解析层级
+  const fragment = text
+    .split(/\r?\n/)
+    .filter((l) => l.trim() !== '')
+    .map((l) => {
+      if (LIST_LINE_RE.test(l)) return l
+      const m = /^(\s*)(.*)$/.exec(l)!
+      return `${m[1]}- ${m[2]}`
+    })
+    .join('\n')
+  const { doc: tmp } = parseMarkdown(`# _\n\n${fragment}\n`)
+  const nodes = tmp.root.children.map((c) => cloneSubtree(c))
+  if (nodes.length === 0) return
+
+  const currentRaw = input.value.trim()
+  session.transact((doc) => {
+    let anchor = node
+    // 当前行为空 → 首行内容（含其子树）填入当前行
+    if (currentRaw === '' && node !== doc.root) {
+      const first = nodes.shift()!
+      doc.updateRaw(node, first.content.raw)
+      for (const c of [...first.children]) doc.move(c, node, node.children.length)
+    } else if (currentRaw !== node.content.raw) {
+      doc.updateRaw(node, currentRaw)
+    }
+    const parent = anchor.parent ?? doc.root
+    let index = parent.children.indexOf(anchor) + 1
+    for (const n of nodes) {
+      const inserted = doc.addNode(parent, n.content, index++)
+      inserted.collapsed = n.collapsed
+      for (const c of [...n.children]) doc.move(c, inserted, inserted.children.length)
+    }
+  })
+  session.select(node.id)
 }
+
+function onCopy(node: MindmapNode, e: ClipboardEvent) {
+  const input = e.target as HTMLInputElement
+  if (input.selectionStart !== input.selectionEnd) return // 有选中文本走默认复制
+  e.preventDefault()
+  e.clipboardData?.setData('text/plain', serializeSubtree(node))
+}
+
+function onCut(node: MindmapNode, e: ClipboardEvent) {
+  const input = e.target as HTMLInputElement
+  if (input.selectionStart !== input.selectionEnd) return
+  e.preventDefault()
+  e.clipboardData?.setData('text/plain', serializeSubtree(node))
+  if (node !== props.session.document.root) props.session.removeNode(node.id)
+}
+
+// ---------- 行点击 / bullet / 折叠 ----------
+
+let suppressRowClick = false
 
 function onBulletClick(node: MindmapNode, e: MouseEvent) {
   e.stopPropagation()
+  if (suppressRowClick) return
   // 幕布：点击 bullet 进入主题（聚焦）
   props.session.focusNode(node.id)
 }
 
 function onArrowClick(node: MindmapNode, e: MouseEvent) {
   e.stopPropagation()
+  if (suppressRowClick) return
   props.session.toggleCollapse(node.id)
 }
 
@@ -192,28 +419,9 @@ function onImageClick(node: MindmapNode, e: MouseEvent) {
   if (node.content.image) emit('imagePreview', node.content.image.src)
 }
 
-/** 搜索/外部定位：展开祖先、选中并滚动到该行 */
-function locateNode(id: string) {
-  const session = props.session
-  session.expandAncestors(id)
-  session.select(id)
-  nextTick(() => {
-    const idx = rows.value.findIndex((r) => r.node.id === id)
-    if (idx < 0 || !containerRef.value) return
-    const target = idx * ROW_HEIGHT
-    const el = containerRef.value
-    if (target < el.scrollTop || target > el.scrollTop + el.clientHeight - ROW_HEIGHT) {
-      el.scrollTop = Math.max(0, target - el.clientHeight / 2)
-    }
-  })
-}
-
-defineExpose({ locateNode })
-
-// ---------- 键盘导航（非编辑态） ----------
+// ---------- 键盘导航（焦点在容器、非编辑态时） ----------
 
 function onKeydown(e: KeyboardEvent) {
-  if (editingId.value) return
   const session = props.session
   const sel = session.selectedNode
   const mod = e.metaKey || e.ctrlKey
@@ -236,15 +444,13 @@ function onKeydown(e: KeyboardEvent) {
   switch (e.key) {
     case 'Enter':
       e.preventDefault()
-      if (sel) startEdit(sel)
+      if (sel) focusRow(sel.id)
       break
     case 'Tab':
       e.preventDefault()
       if (sel) {
-        // 幕布大纲：Tab 降级 / Shift+Tab 升级
         if (e.shiftKey) session.outdentNode(sel.id)
         else session.indentNode(sel.id)
-        session.select(sel.id)
       }
       break
     case 'Delete':
@@ -261,12 +467,7 @@ function onKeydown(e: KeyboardEvent) {
           ? list[0]
           : list[Math.max(0, Math.min(list.length - 1, idx + (e.key === 'ArrowDown' ? 1 : -1)))]
       session.select(next.node.id)
-      // 滚动到选中行
-      const target = next.index * ROW_HEIGHT
-      const el = containerRef.value
-      if (el && (target < el.scrollTop || target > el.scrollTop + el.clientHeight - ROW_HEIGHT)) {
-        el.scrollTop = target - ROW_HEIGHT
-      }
+      scrollRowIntoView(next.index)
       break
     }
     case 'ArrowLeft':
@@ -286,7 +487,7 @@ function onKeydown(e: KeyboardEvent) {
   }
 }
 
-// ---------- 拖拽移动 ----------
+// ---------- 拖拽移动（仅 bullet/箭头/缩进区发起，文本区留给文本选择） ----------
 
 interface DragState {
   id: string
@@ -297,8 +498,8 @@ interface DragState {
 
 const drag = ref<DragState | null>(null)
 
-function onRowPointerDown(node: MindmapNode, e: PointerEvent) {
-  if (e.button !== 0 || editingId.value) return
+function onGripPointerDown(node: MindmapNode, e: PointerEvent) {
+  if (e.button !== 0) return
   drag.value = { id: node.id, startY: e.clientY, dragging: false, indicator: null }
   window.addEventListener('pointermove', onDragMove)
   window.addEventListener('pointerup', onDragUp, { once: true })
@@ -318,6 +519,7 @@ function onDragMove(e: PointerEvent) {
   if (!d.dragging) {
     if (Math.abs(e.clientY - d.startY) < 5) return
     d.dragging = true
+    suppressRowClick = true
     props.session.select(d.id)
   }
   const el = containerRef.value
@@ -331,8 +533,7 @@ function onDragMove(e: PointerEvent) {
   // 不允许拖到自身后代
   let p = row.node.parent
   let intoSelf = false
-  const dragNode = props.session.document.find(d.id)
-  while (p && dragNode) {
+  while (p) {
     if (p.id === d.id) intoSelf = true
     p = p.parent
   }
@@ -358,6 +559,7 @@ function onDragUp() {
   window.removeEventListener('pointermove', onDragMove)
   const d = drag.value
   drag.value = null
+  setTimeout(() => (suppressRowClick = false), 0)
   if (!d?.dragging || !d.indicator) return
   const session = props.session
   const target = session.document.find(d.indicator.targetId)
@@ -385,24 +587,23 @@ function onDragUp() {
           'is-focus-root': row.index === 0,
         }"
         :style="{ top: `${row.index * ROW_HEIGHT}px`, height: `${ROW_HEIGHT}px` }"
-        @click="onRowClick(row.node)"
-        @dblclick="onRowDblClick(row.node)"
-        @pointerdown="onRowPointerDown(row.node, $event)"
       >
-        <span class="row-indent" :style="{ width: `${row.depth * 20}px` }" />
+        <span class="row-indent" :style="{ width: `${row.depth * 20}px` }" @pointerdown="onGripPointerDown(row.node, $event)" />
         <span
           v-if="row.node.children.length > 0"
           class="row-arrow"
           :class="{ collapsed: row.node.collapsed }"
           @click="onArrowClick(row.node, $event)"
+          @pointerdown="onGripPointerDown(row.node, $event)"
           >▸</span
         >
-        <span v-else class="row-arrow-placeholder" />
+        <span v-else class="row-arrow-placeholder" @pointerdown="onGripPointerDown(row.node, $event)" />
         <span
           class="row-bullet"
           :class="{ 'has-children': row.node.children.length > 0 }"
           title="点击进入主题"
           @click="onBulletClick(row.node, $event)"
+          @pointerdown="onGripPointerDown(row.node, $event)"
         >
           <i />{{ row.node.collapsed ? row.node.children.length : '' }}
         </span>
@@ -414,17 +615,18 @@ function onDragUp() {
           >{{ row.node.content.checked ? '☑' : '☐' }}</span
         >
         <input
-          v-if="editingId === row.node.id"
-          ref="editInput"
-          class="row-edit"
-          :default-value="row.node.content.raw"
-          @keydown="onEditKeydown($event, row.node)"
-          @blur="commitEdit()"
-          @click.stop
+          class="row-input"
+          :class="{ 'is-task-done': row.node.content.checked === true }"
+          :value="row.node.content.raw"
+          :data-id="row.node.id"
+          spellcheck="false"
+          @focus="onRowInputFocus(row.node)"
+          @blur="onRowInputBlur(row.node, $event)"
+          @keydown="onEditKeydown(row.node, $event)"
+          @paste="onPaste(row.node, $event)"
+          @copy="onCopy(row.node, $event)"
+          @cut="onCut(row.node, $event)"
         />
-        <span v-else class="row-text" :class="{ 'is-task-done': row.node.content.checked === true }">
-          {{ row.node.content.text }}
-        </span>
         <span v-if="row.node.content.link" class="row-badge" title="打开链接" @click="onLinkClick(row.node, $event)">↗</span>
         <span v-if="row.node.content.image" class="row-badge" title="查看图片" @click="onImageClick(row.node, $event)">🖼</span>
       </div>
@@ -461,7 +663,6 @@ function onDragUp() {
   padding-right: 12px;
   font-size: 14px;
   color: var(--mm-text);
-  cursor: pointer;
   user-select: none;
   white-space: nowrap;
 }
@@ -471,17 +672,18 @@ function onDragUp() {
 .outline-row.is-selected {
   background: var(--mm-selected-bg);
 }
-.outline-row.is-matched .row-text {
+.outline-row.is-matched .row-input {
   background: rgb(255 213 79 / 0.4);
   border-radius: 3px;
 }
-.outline-row.is-focus-root {
+.outline-row.is-focus-root .row-input {
   font-weight: 700;
   font-size: 15px;
 }
 .row-indent {
   flex: none;
   height: 100%;
+  cursor: grab;
 }
 .row-arrow {
   width: 16px;
@@ -532,11 +734,23 @@ function onDragUp() {
 .row-checkbox.checked {
   color: var(--mm-accent);
 }
-.row-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
+.row-input {
+  flex: 1;
+  min-width: 60px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: inherit;
+  font-family: inherit;
+  color: inherit;
+  padding: 2px 4px;
+  border-radius: 4px;
 }
-.row-text.is-task-done {
+.row-input:focus {
+  background: var(--mm-canvas-bg);
+  box-shadow: 0 0 0 1px var(--mm-accent);
+}
+.row-input.is-task-done {
   text-decoration: line-through;
   color: var(--mm-text-dim);
 }
@@ -548,17 +762,6 @@ function onDragUp() {
 }
 .row-badge:hover {
   color: var(--mm-accent);
-}
-.row-edit {
-  flex: 1;
-  min-width: 60px;
-  font-size: 14px;
-  padding: 1px 4px;
-  border: 1px solid var(--mm-accent);
-  border-radius: 4px;
-  outline: none;
-  background: var(--mm-canvas-bg);
-  color: var(--mm-text);
 }
 .drop-indicator {
   position: absolute;

@@ -7,7 +7,8 @@
 import { History } from './commands/history'
 import { parseMarkdown } from './markdown/parser'
 import { serializeMarkdown } from './markdown/serializer'
-import { MindmapDocument, restoreDoc, snapshotDoc } from './model/document'
+import { isAncestor, MindmapDocument, restoreDoc, snapshotDoc } from './model/document'
+import { parseInline } from './model/inline'
 import type { MindmapNode } from './model/document'
 
 export interface SessionOptions {
@@ -165,7 +166,8 @@ export class MindmapSession {
 
   toggleChecked(id: string): void {
     const node = this.doc.find(id)
-    if (node) this.mutate(() => this.doc.toggleChecked(node))
+    if (!node || node === this.doc.root) return
+    this.mutate(() => this.doc.toggleChecked(node))
   }
 
   setImageWidth(id: string, width: number | null): void {
@@ -188,13 +190,13 @@ export class MindmapSession {
     this.emit('collapseChange', null)
   }
 
-  insertChildOf(id: string): MindmapNode | null {
+  insertChildOf(id: string, index?: number): MindmapNode | null {
     const parent = this.doc.find(id)
     if (!parent) return null
     let created: MindmapNode | null = null
     this.mutate(() => {
       parent.collapsed = false
-      created = this.doc.insertChild(parent, parent.children.length, '')
+      created = this.doc.insertChild(parent, index ?? parent.children.length, '')
     })
     return created
   }
@@ -209,9 +211,31 @@ export class MindmapSession {
     return created
   }
 
+  /** 在指定节点之前插入同级（行首 Enter 场景） */
+  insertBeforeOf(id: string): MindmapNode | null {
+    const node = this.doc.find(id)
+    if (!node || !node.parent || node === this.doc.root) return null
+    let created: MindmapNode | null = null
+    this.mutate(() => {
+      const i = node.parent!.children.indexOf(node)
+      created = this.doc.addNode(node.parent!, parseInline(''), i)
+    })
+    return created
+  }
+
+  /**
+   * 事务：把多个文档操作合并为一条历史 + 一次 change 广播。
+   * 供视图层实现复合操作（Enter 分裂、Backspace 合并、多行粘贴等）。
+   */
+  transact(fn: (doc: MindmapDocument) => void): void {
+    this.mutate(() => fn(this.doc))
+  }
+
   indentNode(id: string): void {
     const node = this.doc.find(id)
-    if (!node) return
+    // 预检：无可行操作时不动历史
+    if (!node || !node.parent || node === this.doc.root) return
+    if (node.parent.children.indexOf(node) <= 0) return
     this.mutate(() => {
       this.doc.indent(node)
     })
@@ -219,7 +243,8 @@ export class MindmapSession {
 
   outdentNode(id: string): void {
     const node = this.doc.find(id)
-    if (!node) return
+    if (!node || !node.parent || node === this.doc.root) return
+    if (node.parent === this.doc.root || !node.parent.parent) return
     this.mutate(() => {
       this.doc.outdent(node)
     })
@@ -242,12 +267,13 @@ export class MindmapSession {
     const node = this.doc.find(id)
     const parent = this.doc.find(newParentId)
     if (!node || !parent) return false
-    let ok = false
+    // 预检：不合法移动不动历史
+    if (node === this.doc.root || node === parent || isAncestor(node, parent)) return false
     this.mutate(() => {
       parent.collapsed = false
-      ok = this.doc.move(node, parent, index)
+      this.doc.move(node, parent, index)
     })
-    return ok
+    return true
   }
 
   // ---------- 聚焦 ----------

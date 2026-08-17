@@ -212,7 +212,14 @@ const viewTabs: Array<{ id: ViewId; label: string }> = [
         @request-search="searchVisible = true"
         @image-preview="(src) => (imagePreviewSrc = src)"
       />
-      <OutlineView v-else-if="view === 'outline'" ref="outlineViewRef" :session="session" :version="docVersion" @image-preview="(src) => (imagePreviewSrc = src)" />
+      <OutlineView
+        v-else-if="view === 'outline'"
+        ref="outlineViewRef"
+        :session="session"
+        :version="docVersion"
+        @image-preview="(src) => (imagePreviewSrc = src)"
+        @request-search="searchVisible = true"
+      />
       <MarkdownView v-else v-model="markdown" />
 
       <SearchBar :session="session" :visible="searchVisible" :version="docVersion" :on-jump="onJumpToNode" @close="searchVisible = false" />

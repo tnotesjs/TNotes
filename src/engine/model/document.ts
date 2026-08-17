@@ -192,6 +192,21 @@ export class MindmapDocument {
   }
 }
 
+/** 深拷贝子树（分配新 id），用于粘贴/复制 */
+export function cloneSubtree(node: MindmapNode): MindmapNode {
+  const copy = createNode({
+    ...node.content,
+    image: node.content.image ? { ...node.content.image } : null,
+  })
+  copy.collapsed = node.collapsed
+  copy.children = node.children.map((c) => {
+    const child = cloneSubtree(c)
+    child.parent = copy
+    return child
+  })
+  return copy
+}
+
 export function snapshotDoc(doc: MindmapDocument): string {
   const toJSON = (n: MindmapNode): MindmapNodeJSON => ({
     id: n.id,

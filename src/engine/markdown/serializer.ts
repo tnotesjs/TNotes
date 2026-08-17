@@ -25,3 +25,14 @@ export function serializeMarkdown(doc: MindmapDocument): string {
   }
   return lines.join('\n') + '\n'
 }
+
+/** 序列化任意子树为无序列表片段（不含 H1），用于行级复制/剪切 */
+export function serializeSubtree(node: MindmapNode): string {
+  const lines: string[] = []
+  const walk = (n: MindmapNode, depth: number) => {
+    lines.push(`${'  '.repeat(depth)}- ${serializeItem(n)}`)
+    for (const c of n.children) walk(c, depth + 1)
+  }
+  walk(node, 0)
+  return lines.join('\n')
+}
