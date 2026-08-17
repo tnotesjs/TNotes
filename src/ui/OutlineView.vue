@@ -208,16 +208,8 @@ function onEditKeydown(node: MindmapNode, e: KeyboardEvent) {
           session.select((created as MindmapNode).id)
           focusRow((created as MindmapNode).id, 0)
         }
-      } else if (node.children.length > 0 && !node.collapsed) {
-        // 幕布：有可见子节点时 Enter 新建第一个子节点
-        commitRow(node, input)
-        const created = session.insertChildOf(node.id, 0)
-        if (created) {
-          session.select(created.id)
-          focusRow(created.id, 0)
-        }
       } else {
-        // 行尾 Enter：提交并新建同级继续录入
+        // 行尾 Enter：提交并在下方新建同级空行，光标移入新行
         commitRow(node, input)
         const created = session.insertSiblingOf(node.id)
         if (created) {
