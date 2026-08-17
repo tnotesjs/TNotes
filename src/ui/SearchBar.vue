@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import type { MindmapEditor, MindmapNode } from '../engine'
+import type { MindmapNode, MindmapSession } from '../engine'
 
 const props = defineProps<{
-  editor: MindmapEditor | null
+  session: MindmapSession
   visible: boolean
   version: number
+  /** 跳转定位（由 App 按当前视图路由：脑图居中 / 大纲滚动） */
+  onJump: (id: string) => void
 }>()
 
 const emit = defineEmits<{ close: [] }>()
@@ -15,19 +17,16 @@ const activeIndex = ref(0)
 const inputRef = ref<HTMLInputElement>()
 
 const matches = computed<MindmapNode[]>(() => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-expressions -- 依赖 version 驱动重算
-  props.version
-  if (!props.editor || !query.value.trim()) return []
-  return props.editor.document.search(query.value)
+  if (props.version < 0) return []
+  if (!query.value.trim()) return []
+  return props.session.search(query.value)
 })
 
 watch([query, matches], () => {
   activeIndex.value = 0
-  const ed = props.editor
-  if (!ed) return
-  ed.setMatchHighlight(new Set(matches.value.map((n) => n.id)))
+  props.session.setMatchHighlight(new Set(matches.value.map((n) => n.id)))
   if (matches.value.length > 0) {
-    ed.centerOnNode(matches.value[0].id, false)
+    props.onJump(matches.value[0].id)
   }
 })
 
@@ -38,7 +37,7 @@ watch(
       nextTick(() => inputRef.value?.focus())
     } else {
       query.value = ''
-      props.editor?.setMatchHighlight(new Set())
+      props.session.setMatchHighlight(new Set())
     }
   },
 )
@@ -47,7 +46,7 @@ function step(dir: 1 | -1) {
   const list = matches.value
   if (list.length === 0) return
   activeIndex.value = (activeIndex.value + dir + list.length) % list.length
-  props.editor?.centerOnNode(list[activeIndex.value].id, false)
+  props.onJump(list[activeIndex.value].id)
 }
 
 function onKeydown(e: KeyboardEvent) {

@@ -3,9 +3,11 @@
  * 抽离 mindmap-core 时，整个 src/engine/ 目录原样搬走即可。
  */
 
-export { MindmapEditor, createCanvasMeasurer } from './editor'
-export type { EditorEvents, EditorOptions } from './editor'
-export { MindmapDocument, resetNodeIdCounter, restoreDoc, snapshotDoc } from './model/document'
+export { MindmapSession } from './session'
+export type { SessionEvents, SessionOptions } from './session'
+export { CanvasEditor, createCanvasMeasurer } from './canvasEditor'
+export type { CanvasEditorEvents } from './canvasEditor'
+export { MindmapDocument, resetNodeIdCounter, restoreDoc, snapshotDoc, visibleChildren } from './model/document'
 export type { MindmapNode } from './model/document'
 export { parseMarkdown } from './markdown/parser'
 export { serializeMarkdown } from './markdown/serializer'

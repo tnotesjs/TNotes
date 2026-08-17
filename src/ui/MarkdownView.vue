@@ -11,7 +11,7 @@ let typing = false
 watch(
   () => props.modelValue,
   (md) => {
-    // 正在输入时不打断用户，输入停顿后由 canvas 变更回流
+    // 正在输入时不打断用户，输入停顿后由其它视图变更回流
     if (!typing) draft.value = md
   },
 )
@@ -33,8 +33,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="markdown-panel">
-    <div class="panel-title">Markdown 源码</div>
+  <div class="markdown-view">
     <textarea
       class="md-textarea"
       :value="draft"
@@ -46,29 +45,21 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.markdown-panel {
-  display: flex;
-  flex-direction: column;
+.markdown-view {
   height: 100%;
-  border-top: 1px solid var(--mm-border);
   background: var(--mm-panel-bg);
-}
-.panel-title {
-  padding: 6px 12px;
-  font-size: 12px;
-  color: var(--mm-text-dim);
-  border-bottom: 1px solid var(--mm-border);
-  user-select: none;
+  overflow: hidden;
+  display: flex;
 }
 .md-textarea {
   flex: 1;
   resize: none;
   border: none;
   outline: none;
-  padding: 10px 12px;
+  padding: 16px 20px;
   font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.7;
   background: transparent;
   color: var(--mm-text);
 }
