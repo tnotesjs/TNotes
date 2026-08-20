@@ -670,14 +670,13 @@ function caretVisualBoundary(input: RichInlineEditorElement): { first: boolean; 
   return { first: currentTop <= firstTop + 1, last: currentTop >= lastTop - 1 }
 }
 
-function inlineFormatShortcut(event: KeyboardEvent): InlineFormat | null {
+function inlineFormatShortcut(event: KeyboardEvent, hasSelection = true): InlineFormat | null {
   const key = event.key.toLowerCase()
-  if (event.altKey && !(event.metaKey || event.ctrlKey) && key === 'l') return 'code'
   if (!(event.metaKey || event.ctrlKey) || event.altKey) return null
   if (key === 'b' && !event.shiftKey) return 'bold'
   if (key === 'i' && !event.shiftKey) return 'italic'
   if (key === 'u' && !event.shiftKey) return 'underline'
-  if (key === 'enter' && !event.shiftKey) return 'strike'
+  if (key === 'enter' && !event.shiftKey && hasSelection) return 'strike'
   if ((key === 's' || key === 'x') && event.shiftKey) return 'strike'
   if (key === 'h' && event.shiftKey) return 'highlight'
   if (key === 'e' && !event.shiftKey) return 'code'
@@ -685,14 +684,49 @@ function inlineFormatShortcut(event: KeyboardEvent): InlineFormat | null {
 }
 
 function applyInputFormatShortcut(node: MindmapNode, input: RichInlineEditorElement, format: InlineFormat) {
-  const start = input.selectionStart ?? 0
-  const end = input.selectionEnd ?? 0
-  if (start === end) return
-  const selection: TextSelectionState = { nodeId: node.id, start, end, position: selectionPosition(input) }
+  const caretStart = input.selectionStart ?? 0
+  const caretEnd = input.selectionEnd ?? 0
+  if (input.value.length === 0) return
+  const collapsed = caretStart === caretEnd
+  const start = collapsed ? 0 : caretStart
+  const end = collapsed ? input.value.length : caretEnd
   commitRow(node, input)
   props.session.toggleNodeInlineFormat(node.id, start, end, format)
-  textSelection.value = selection
-  restoreTextSelection(selection)
+  if (collapsed) {
+    textSelection.value = null
+    nextTick(() => {
+      const editor = inputOf(node.id)
+      editor?.focus()
+      editor?.setSelectionRange(caretStart, caretStart)
+    })
+  } else {
+    const selection: TextSelectionState = { nodeId: node.id, start, end, position: selectionPosition(input) }
+    textSelection.value = selection
+    restoreTextSelection(selection)
+  }
+}
+
+function applyInputClearFormats(node: MindmapNode, input: RichInlineEditorElement) {
+  const caretStart = input.selectionStart ?? 0
+  const caretEnd = input.selectionEnd ?? 0
+  if (input.value.length === 0) return
+  const collapsed = caretStart === caretEnd
+  const start = collapsed ? 0 : caretStart
+  const end = collapsed ? input.value.length : caretEnd
+  commitRow(node, input)
+  props.session.clearNodeInlineFormats(node.id, start, end)
+  if (collapsed) {
+    textSelection.value = null
+    nextTick(() => {
+      const editor = inputOf(node.id)
+      editor?.focus()
+      editor?.setSelectionRange(caretStart, caretStart)
+    })
+  } else {
+    const selection: TextSelectionState = { nodeId: node.id, start, end, position: selectionPosition(input) }
+    textSelection.value = selection
+    restoreTextSelection(selection)
+  }
 }
 
 function onTitleKeydown(e: KeyboardEvent) {
@@ -715,17 +749,13 @@ function onTitleKeydown(e: KeyboardEvent) {
   }
   if (mod) {
     const key = e.key.toLowerCase()
-    if (key === '\\' && input.selectionStart !== input.selectionEnd) {
+    if (key === '\\') {
       e.preventDefault()
-      const start = input.selectionStart
-      const end = input.selectionEnd
-      commitRow(root, input)
-      session.clearNodeInlineFormats(root.id, start, end)
-      restoreTextSelection({ nodeId: root.id, start, end, position: selectionPosition(input) })
+      applyInputClearFormats(root, input)
       return
     }
-    const format = inlineFormatShortcut(e)
-    if (format && input.selectionStart !== input.selectionEnd) {
+    const format = inlineFormatShortcut(e, input.selectionStart !== input.selectionEnd)
+    if (format) {
       e.preventDefault()
       applyInputFormatShortcut(root, input, format)
       return
@@ -811,17 +841,13 @@ function onEditKeydown(node: MindmapNode, e: KeyboardEvent) {
   if (mod) {
     const key = e.key.toLowerCase()
     const col = input.selectionStart ?? 0
-    if (key === '\\' && input.selectionStart !== input.selectionEnd) {
+    if (key === '\\') {
       e.preventDefault()
-      const start = input.selectionStart
-      const end = input.selectionEnd
-      commitRow(node, input)
-      session.clearNodeInlineFormats(node.id, start, end)
-      restoreTextSelection({ nodeId: node.id, start, end, position: selectionPosition(input) })
+      applyInputClearFormats(node, input)
       return
     }
-    const format = inlineFormatShortcut(e)
-    if (format && input.selectionStart !== input.selectionEnd) {
+    const format = inlineFormatShortcut(e, input.selectionStart !== input.selectionEnd)
+    if (format) {
       e.preventDefault()
       applyInputFormatShortcut(node, input, format)
     } else if (key === 'k' && !e.shiftKey && input.selectionStart !== input.selectionEnd) {
@@ -1391,7 +1417,7 @@ function onKeydown(e: KeyboardEvent) {
     return
   }
 
-  const format = inlineFormatShortcut(e)
+  const format = inlineFormatShortcut(e, session.selectionIds.size > 1)
   if (format && session.selectionIds.size > 0) {
     e.preventDefault()
     session.formatSelectedNodes(format)

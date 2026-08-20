@@ -28,7 +28,7 @@
   },
   "homepage": "https://tnotesjs.github.io/mindmap-web/",
   "dependencies": {
-    "@tnotesjs/mindmap-core": "0.1.0",
+    "@tnotesjs/mindmap-core": "0.1.1",
     "vue": "^3.5.41"
   },
   "devDependencies": {

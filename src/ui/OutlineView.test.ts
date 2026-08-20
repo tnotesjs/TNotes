@@ -664,6 +664,41 @@ describe('大纲富文本、链接与浮动工具栏', () => {
     expect(node.content.raw).toBe('**<u>alpha</u>**')
   })
 
+  it.each([
+    ['b', '**alpha**'],
+    ['e', '`alpha`'],
+  ])('光标停在节点内且无选区时 Cmd+%s 格式化整个节点', async (key, expectedRaw) => {
+    const { session, host } = mountOutline('# T\n\n- alpha\n')
+    const node = session.document.root.children[0]
+    const input = inputOf(host, node.id)!
+    input.focus()
+    await settle()
+    input.setSelectionRange(2, 2)
+
+    keydown(input, key, { metaKey: true })
+    await settle()
+
+    expect(node.content.raw).toBe(expectedRaw)
+    const active = inputOf(host, node.id)!
+    expect(document.activeElement).toBe(active)
+    expect([active.selectionStart, active.selectionEnd]).toEqual([2, 2])
+  })
+
+  it('Option+L 不再被编辑器拦截为行内代码', async () => {
+    const { session, host } = mountOutline('# T\n\n- alpha\n')
+    const node = session.document.root.children[0]
+    const input = inputOf(host, node.id)!
+    input.focus()
+    await settle()
+    input.setSelectionRange(0, input.value.length)
+    const event = new KeyboardEvent('keydown', { key: 'l', altKey: true, bubbles: true, cancelable: true })
+
+    input.dispatchEvent(event)
+
+    expect(event.defaultPrevented).toBe(false)
+    expect(node.content.raw).toBe('alpha')
+  })
+
   it('文档 H1 标题选区也使用同一富文本工具栏', async () => {
     const { session, host } = mountOutline('# Root title\n\n- child\n')
     const root = session.document.root

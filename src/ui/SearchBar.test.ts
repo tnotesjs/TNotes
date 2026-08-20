@@ -61,6 +61,36 @@ describe('当前文档搜索结果视图', () => {
     expect(segment?.link?.url).toBe('https://old.example')
   })
 
+  it('搜索结果无选区时 Cmd+E 格式化整个主题，Option+L 不再被拦截', async () => {
+    const { session, host } = mountSearch('# T\n\n- alpha\n')
+    const node = session.document.root.children[0]
+    const query = host.querySelector('.search-field input') as HTMLInputElement
+    query.value = 'alpha'
+    query.dispatchEvent(new Event('input', { bubbles: true }))
+    await settle()
+
+    const editor = host.querySelector('.result-editor') as HTMLDivElement & {
+      value: string
+      selectionStart: number
+      selectionEnd: number
+      setSelectionRange(start: number, end: number): void
+    }
+    editor.focus()
+    editor.setSelectionRange(2, 2)
+    const code = new KeyboardEvent('keydown', { key: 'e', metaKey: true, bubbles: true, cancelable: true })
+    editor.dispatchEvent(code)
+    await settle()
+    expect(code.defaultPrevented).toBe(true)
+    expect(node.content.raw).toBe('`alpha`')
+    expect([editor.selectionStart, editor.selectionEnd]).toEqual([2, 2])
+
+    editor.setSelectionRange(0, editor.value.length)
+    const altL = new KeyboardEvent('keydown', { key: 'l', altKey: true, bubbles: true, cancelable: true })
+    editor.dispatchEvent(altL)
+    expect(altL.defaultPrevented).toBe(false)
+    expect(node.content.raw).toBe('`alpha`')
+  })
+
   it('搜索整份当前文档（含折叠/聚焦范围外节点），结果可直接编辑', async () => {
     const { session, host } = mountSearch(
       '# T\n\n- 当前分支\n  - 子主题\n- 其它分支\n  - [目标链接](https://old.example)\n',

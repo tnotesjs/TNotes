@@ -1,25 +1,34 @@
-export const SAMPLE_MARKDOWN = `# 读书笔记：《原则》
+export const SAMPLE_MARKDOWN = `# TNotes Mindmap 使用指南
 
-- 生活原则
-  - 拥抱现实，应对现实
-  - 五步流程实现人生目标
-    - 明确目标
-    - 识别问题，不容忍问题
-    - 诊断问题，找到根源
-    - 规划方案
-    - 坚定执行
-  - 做到极度求真、极度透明
-- 工作原则
-  - 创意择优
-    - 可信度加权
-    - 极度求真与极度透明
-  - [桥水官网](https://www.bridgewater.com)
-  - [《原则》豆瓣页](https://book.douban.com/subject/27608239/)
-- 我的实践
-  - [ ] 每周复盘一次决策
-  - [x] 建立问题记录习惯
-  - 参考资料
-    - ![示例头像|200](https://avatars.githubusercontent.com/u/83686346?v=4)
+- 这是什么
+  - 一个以 Markdown 为唯一数据源的大纲与思维导图编辑器
+  - 同一份 *.tn-mindmap.md 文件可在大纲、脑图和源码视图之间切换
+  - 当前优先支持最新版 Chrome，Web 版为纯静态应用，不依赖账号或云端存储
+- 快速开始
+  - 单击主题开始编辑，Enter 新建同级主题，Tab 新建或缩进为下级主题
+  - 使用方向键在主题间移动，拖拽主题可调整层级与顺序
+  - Cmd/Ctrl+B 加粗，Cmd/Ctrl+I 斜体，Cmd/Ctrl+U 下划线
+  - Cmd/Ctrl+E 切换行内代码，Cmd/Ctrl+K 添加链接，Cmd/Ctrl+Shift+L 切换待办
+  - 光标停在主题内且没有选择文字时，格式快捷键会作用于整个主题
+  - Cmd/Ctrl+F 搜索当前文档；脑图中搜索会切换到可编辑的大纲结果视图
+- 文件与图片
+  - 可以直接编辑内存草稿，也可以打开或创建本地作品目录
+  - 首次粘贴图片时，按引导创建本地作品，图片会写入作品目录的 assets 文件夹
+  - [ ] 尝试编辑这个待办主题
+  - [x] 已经打开默认测试示例
+- mindmap-web
+  - 浏览器端编辑应用，负责大纲、脑图、源码视图和本地文件交互
+  - [GitHub 仓库](https://github.com/tnotesjs/mindmap-web)
+  - [在线体验](https://tnotesjs.github.io/mindmap-web/)
+- mindmap-core
+  - 与界面无关的 TypeScript 核心，提供 Markdown 解析、文档会话、布局和画布编辑能力
+  - 可供 Web、VS Code 插件和只读渲染场景复用
+  - [GitHub 仓库](https://github.com/tnotesjs/mindmap-core)
+  - [npm 包](https://www.npmjs.com/package/@tnotesjs/mindmap-core)
+- 数据原则
+  - Markdown 是唯一持久化数据源，界面状态不会取代原始文档
+  - 合法文档必须且只能有一个 H1 根主题
+  - 源码格式非法时，只允许留在源码视图修复；保存前会再次提醒
 `
 
 /** 生成约 count 个节点的压力测试脑图 */

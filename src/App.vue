@@ -16,10 +16,11 @@ import IconButton from './ui/IconButton.vue'
 import { primaryShortcut } from './ui/platform'
 
 const DEFAULT_NAME = '未命名.tn-mindmap.md'
+const DEFAULT_SAMPLE_NAME = 'TNotes-Mindmap-使用指南.tn-mindmap.md'
 type ViewId = 'outline' | 'map' | 'source'
 
-const fileName = ref(DEFAULT_NAME)
-const session = new MindmapSession({ markdown: '# 未命名\n', fileName: fileName.value })
+const fileName = ref(DEFAULT_SAMPLE_NAME)
+const session = new MindmapSession({ markdown: SAMPLE_MARKDOWN, fileName: fileName.value })
 
 const markdown = ref(session.getMarkdown())
 const view = ref<ViewId>('map')
@@ -166,7 +167,7 @@ function onExport() {
 
 function loadSample() {
   detachLocalProject()
-  fileName.value = '示例.tn-mindmap.md'
+  fileName.value = DEFAULT_SAMPLE_NAME
   markdown.value = SAMPLE_MARKDOWN
 }
 
@@ -431,7 +432,7 @@ function switchView(next: ViewId) {
             <button type="button" @click="onSave"><AppIcon name="save" />保存到本地作品 <kbd>⌘S</kbd></button>
             <button type="button" @click="onExport"><AppIcon name="download" />导出 Markdown</button>
             <span class="menu-divider" />
-            <button type="button" @click="loadSample">载入示例</button>
+            <button type="button" @click="loadSample">载入默认测试示例</button>
             <button type="button" @click="loadStress">生成压力测试数据</button>
           </div>
         </details>

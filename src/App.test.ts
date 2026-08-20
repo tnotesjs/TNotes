@@ -79,6 +79,13 @@ beforeEach(() => {
 })
 
 describe('搜索视图路由', () => {
+  it('首次打开显示 Web 层默认测试示例和对应文件名', () => {
+    const { app, host } = mountApp()
+    expect(host.querySelector('.file-name')?.textContent).toBe('TNotes-Mindmap-使用指南.tn-mindmap.md')
+    expect([...host.querySelectorAll('button')].some((button) => button.textContent === '载入默认测试示例')).toBe(true)
+    app.unmount()
+  })
+
   it('脑图发起搜索时切换为大纲结果视图，返回脑图时关闭搜索', async () => {
     const { app, host } = mountApp()
     expect(host.querySelector('[data-view="map"]')).not.toBeNull()

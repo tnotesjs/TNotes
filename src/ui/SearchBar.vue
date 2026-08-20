@@ -65,14 +65,13 @@ function commitResult(node: MindmapNode, payload: { raw: string; text: string })
   else if (payload.raw !== node.content.raw) props.session.updateNodeRaw(node.id, payload.raw)
 }
 
-function inlineFormatShortcut(event: KeyboardEvent): InlineFormat | null {
+function inlineFormatShortcut(event: KeyboardEvent, hasSelection = true): InlineFormat | null {
   const key = event.key.toLowerCase()
-  if (event.altKey && !(event.metaKey || event.ctrlKey) && key === 'l') return 'code'
   if (!(event.metaKey || event.ctrlKey) || event.altKey) return null
   if (key === 'b' && !event.shiftKey) return 'bold'
   if (key === 'i' && !event.shiftKey) return 'italic'
   if (key === 'u' && !event.shiftKey) return 'underline'
-  if (key === 'enter' && !event.shiftKey) return 'strike'
+  if (key === 'enter' && !event.shiftKey && hasSelection) return 'strike'
   if ((key === 's' || key === 'x') && event.shiftKey) return 'strike'
   if (key === 'h' && event.shiftKey) return 'highlight'
   if (key === 'e' && !event.shiftKey) return 'code'
@@ -85,30 +84,36 @@ function onResultKeydown(node: MindmapNode, event: KeyboardEvent) {
   if (event.isComposing || editor.isComposing) return
   const mod = event.metaKey || event.ctrlKey
   const key = event.key.toLowerCase()
-  if (mod && key === '\\' && !node.content.image && editor.selectionStart !== editor.selectionEnd) {
+  if (mod && key === '\\' && !node.content.image && editor.value.length > 0) {
     event.preventDefault()
-    const start = editor.selectionStart
-    const end = editor.selectionEnd
+    const caretStart = editor.selectionStart
+    const caretEnd = editor.selectionEnd
+    const collapsed = caretStart === caretEnd
+    const start = collapsed ? 0 : caretStart
+    const end = collapsed ? editor.value.length : caretEnd
     commitResult(node, { raw: editor.rawValue, text: editor.value })
     editor.markCommitted()
     props.session.clearNodeInlineFormats(node.id, start, end)
     nextTick(() => {
       editor.focus()
-      editor.setSelectionRange(start, end)
+      editor.setSelectionRange(caretStart, collapsed ? caretStart : caretEnd)
     })
     return
   }
-  const format = node.content.image ? null : inlineFormatShortcut(event)
-  if (format && editor.selectionStart !== editor.selectionEnd) {
+  const format = node.content.image ? null : inlineFormatShortcut(event, editor.selectionStart !== editor.selectionEnd)
+  if (format && editor.value.length > 0) {
     event.preventDefault()
-    const start = editor.selectionStart
-    const end = editor.selectionEnd
+    const caretStart = editor.selectionStart
+    const caretEnd = editor.selectionEnd
+    const collapsed = caretStart === caretEnd
+    const start = collapsed ? 0 : caretStart
+    const end = collapsed ? editor.value.length : caretEnd
     commitResult(node, { raw: editor.rawValue, text: editor.value })
     editor.markCommitted()
     props.session.toggleNodeInlineFormat(node.id, start, end, format)
     nextTick(() => {
       editor.focus()
-      editor.setSelectionRange(start, end)
+      editor.setSelectionRange(caretStart, collapsed ? caretStart : caretEnd)
     })
     return
   }
