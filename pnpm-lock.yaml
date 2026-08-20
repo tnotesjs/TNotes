@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@tnotesjs/mindmap-core':
-        specifier: 0.1.1
-        version: 0.1.1
+        specifier: 0.1.2
+        version: 0.1.2
       vue:
         specifier: ^3.5.41
         version: 3.5.41(typescript@5.9.3)
@@ -226,8 +226,8 @@ packages:
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
-  '@tnotesjs/mindmap-core@0.1.1':
-    resolution: {integrity: sha512-F/EtNHssFSA5aao0+Ooxs1Nes2ScbWl/jW/7SXSDtPRqbyoxVpMDqs3Z0PEAMSOXQXSkHJNSl/jMlLoMHSbX0g==}
+  '@tnotesjs/mindmap-core@0.1.2':
+    resolution: {integrity: sha512-9fRtDqebBMKLZRtO8Ed6kyFlEMakq+41YoJgGwu3Js/DKw4BrnTHKU2NpgOsPSzrBNcbSyMBY4Ku7ITSS8OZiw==}
     engines: {node: '>=18.0.0'}
 
   '@types/chai@5.2.3':
@@ -1112,7 +1112,7 @@ snapshots:
 
   '@standard-schema/spec@1.1.0': {}
 
-  '@tnotesjs/mindmap-core@0.1.1': {}
+  '@tnotesjs/mindmap-core@0.1.2': {}
 
   '@types/chai@5.2.3':
     dependencies:

@@ -452,6 +452,19 @@ async function copySelectedFromToolbar() {
   }
 }
 
+async function cutSelectedToClipboard() {
+  const text = serializeSelection()
+  if (!text) return
+  const ids = [...props.session.selectionIds]
+  try {
+    await navigator.clipboard.writeText(text)
+    props.session.removeNodesByIds(ids)
+    containerRef.value?.focus()
+  } catch {
+    // 剪贴板写入失败时不能删除节点，避免剪切造成数据丢失。
+  }
+}
+
 function openSelectionLinkEditor() {
   const selection = textSelection.value
   if (!selection) return
@@ -1446,6 +1459,11 @@ function onKeydown(e: KeyboardEvent) {
     emit('requestSearch')
     return
   }
+  if (mod && !e.shiftKey && key === 'x' && session.selectionIds.size > 0) {
+    e.preventDefault()
+    void cutSelectedToClipboard()
+    return
+  }
   if ((e.key === '.' || e.key === '>') && (mod || e.altKey)) {
     e.preventDefault()
     if (mod && e.altKey && e.shiftKey) session.toggleCollapseAll()
@@ -1618,6 +1636,7 @@ function onRowPointerDown(row: Row, e: PointerEvent) {
   const onUp = (ev: PointerEvent) => {
     if (ev.isTrusted && ev.pointerId !== pointerId) return
     cleanup()
+    if (dragging) containerRef.value?.focus()
   }
 
   stopRangeSelect = cleanup

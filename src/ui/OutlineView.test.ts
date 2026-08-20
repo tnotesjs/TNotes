@@ -399,6 +399,67 @@ describe('大纲连续节点选择（幕布对齐）', () => {
 
     expect(session.selectedNodes.map((n) => n.content.text)).toEqual(['a1', 'a2', 'b'])
     expect(host.querySelectorAll('.outline-row.is-selected')).toHaveLength(3)
+    expect(document.activeElement).toBe(host.querySelector('.outline-view'))
+  })
+
+  it.each(['Delete', 'Backspace'])('拖动选中连续节点后按 %s 删除所选节点', async (key) => {
+    const { session, host } = mountOutline()
+    const a1 = session.document.root.children[0].children[0]
+    const input = inputOf(host, a1.id)!
+    input.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerId: 1, clientY: 40 }))
+    document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 1, clientY: 110 }))
+    document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1, clientY: 110 }))
+    await settle()
+
+    const container = host.querySelector('.outline-view') as HTMLElement
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })
+    container.dispatchEvent(event)
+    await settle()
+
+    expect(event.defaultPrevented).toBe(true)
+    expect(session.document.root.children.map((node) => node.content.text)).toEqual(['a'])
+    expect(session.document.root.children[0].children).toHaveLength(0)
+    session.undo()
+    expect(session.getMarkdown()).toBe(MD)
+  })
+
+  it('节点选择态 Cmd+X 写入 Markdown 后删除所选节点', async () => {
+    const { session, host } = mountOutline()
+    const [a, b] = session.document.root.children
+    session.selectMany([a.id, b.id], b.id, a.id)
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
+    const container = host.querySelector('.outline-view') as HTMLElement
+    container.focus()
+    const event = new KeyboardEvent('keydown', { key: 'x', metaKey: true, bubbles: true, cancelable: true })
+
+    container.dispatchEvent(event)
+    await Promise.resolve()
+    await settle()
+
+    expect(event.defaultPrevented).toBe(true)
+    expect(writeText).toHaveBeenCalledWith('- a\n  - a1\n  - a2\n- b')
+    expect(session.document.root.children).toHaveLength(0)
+    session.undo()
+    expect(session.getMarkdown()).toBe(MD)
+  })
+
+  it('剪贴板写入失败时 Cmd+X 不删除节点', async () => {
+    const { session, host } = mountOutline()
+    const a = session.document.root.children[0]
+    session.select(a.id)
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },
+    })
+    const container = host.querySelector('.outline-view') as HTMLElement
+    container.focus()
+
+    container.dispatchEvent(new KeyboardEvent('keydown', { key: 'x', metaKey: true, bubbles: true, cancelable: true }))
+    await Promise.resolve()
+    await settle()
+
+    expect(session.document.root.children.map((node) => node.content.text)).toEqual(['a', 'b'])
   })
 
   it('Shift+方向键以首次选择为锚点扩展和收缩连续选择', async () => {

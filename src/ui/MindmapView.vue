@@ -160,6 +160,8 @@ onMounted(() => {
       contextMenu.value = request
       if (request) linkEditor.value = null
     },
+    onCopySelection: copySelected,
+    onCutSelection: cutSelected,
   })
   emit('ready', editor)
   // 切回脑图视图：居中当前选中节点（无选中则保持 zoomToFit）
