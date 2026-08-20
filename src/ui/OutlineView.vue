@@ -1,48 +1,191 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { cloneSubtree, parseMarkdown, serializeSubtree } from '../engine'
-import type { MindmapNode, MindmapSession } from '../engine'
+import {
+  caretOffsetFromPoint,
+  cloneSubtree,
+  parseMarkdown,
+  richSelectionRect,
+  serializeSubtree,
+  wrapTextLines,
+} from '@tnotesjs/mindmap-core'
+import type { InlineFormat, InlineLink, MindmapNode, MindmapSession, RichInlineEditorElement } from '@tnotesjs/mindmap-core'
+import LinkPopover from './LinkPopover.vue'
+import RichInlineEditor from './RichInlineEditor.vue'
+import SelectionToolbar from './SelectionToolbar.vue'
+import { resolveAfterDropLevel } from './outlineDrag'
 
 const props = defineProps<{
   session: MindmapSession
   /** 每次文档/选中/折叠/聚焦变化时 +1，驱动本组件重算 */
   version: number
+  resolveImageSrc?: (src: string) => string
 }>()
+
+function resolvedImageSrc(src: string): string {
+  return props.resolveImageSrc?.(src) ?? src
+}
 
 const emit = defineEmits<{
   imagePreview: [src: string]
   requestSearch: []
+  pasteImage: [anchorId: string, blob: Blob]
 }>()
 
-const ROW_HEIGHT = 28
-const PADDING_TOP = 8
+const ROW_HEIGHT = 32
+const TITLE_LINE = 36
+/** 与幕布一致：每层水平步进 */
+const INDENT = 28
+/** 与 .outline-view padding-top / .outline-title margin-bottom 保持一致 */
+const VIEW_PADDING_TOP = 12
+const TITLE_MARGIN_BOTTOM = 8
+const TEXT_LINE = 22
+/** 折叠按钮占位（叠在父级圆点列，不额外把圆点挤开） */
+const COLLAPSE_LEAD = 18
+const BULLET_SIZE = 22
+/** 深度 0 圆点中心 X；装饰线与祖先圆点对齐 */
+const BULLET_CENTER = COLLAPSE_LEAD + BULLET_SIZE / 2
+/** 大纲行左侧控件占位（折叠列 + 圆点 + 间隙） */
+const ROW_CHROME = COLLAPSE_LEAD + BULLET_SIZE + 8
+/** 大纲图片默认/边界宽度（与 md `|宽度` 一致） */
+const DEFAULT_OUTLINE_IMG_W = 240
+const MIN_IMG_W = 80
+const MAX_IMG_W = 720
+const IMG_BLOCK_PAD = 10
+const IMG_MAX_H = 480
+
+function gutterWidth(depth: number): number {
+  return COLLAPSE_LEAD + depth * INDENT + BULLET_SIZE
+}
 
 interface Row {
   node: MindmapNode
   depth: number
   index: number
+  top: number
+  height: number
+  textHeight: number
 }
 
+/** src → 宽/高比；加载后更新以正确计算行高 */
+const imageAspects = ref(new Map<string, number>())
+/** 拖拽调宽时的即时预览宽度 */
+const liveImageWidth = ref<Map<string, number>>(new Map())
+/** 编辑中未提交文案（数据源仍为一行；用于避免 :value 重渲染冲掉输入） */
+const draftTexts = ref(new Map<string, string>())
+/** 编辑中未提交文案的折行高度 */
+const draftTextHeights = ref(new Map<string, number>())
+/** 外层内容区宽度，驱动折行 */
+const containerWidth = ref(800)
+
+let measureCtx: CanvasRenderingContext2D | null = null
+function measureOutlineText(text: string, fontSize: number): number {
+  if (typeof document === 'undefined') return text.length * fontSize * 0.6
+  if (!measureCtx) {
+    const c = document.createElement('canvas')
+    measureCtx = c.getContext('2d')
+  }
+  if (!measureCtx) return text.length * fontSize * 0.6
+  measureCtx.font = `${fontSize}px system-ui, -apple-system, "Segoe UI", sans-serif`
+  return measureCtx.measureText(text).width
+}
+
+function contentAreaWidth(): number {
+  // .outline-view padding: 12px 24px
+  return Math.max(80, containerWidth.value - 48)
+}
+
+function outlineTextMaxWidth(depth: number, hasCheckbox: boolean, hasLink: boolean): number {
+  const chrome = depth * INDENT + ROW_CHROME + (hasCheckbox ? 20 : 0) + (hasLink ? 24 : 0) + 12
+  return Math.max(60, contentAreaWidth() - chrome)
+}
+
+function measureTextBlockHeight(
+  text: string,
+  maxWidth: number,
+  fontSize: number,
+  lineHeight: number,
+  minHeight: number,
+): number {
+  const lines = wrapTextLines(text || ' ', maxWidth, (s) => measureOutlineText(s, fontSize))
+  return Math.max(minHeight, lines.length * lineHeight + 8)
+}
+
+function displayImageWidth(node: MindmapNode): number {
+  const live = liveImageWidth.value.get(node.id)
+  if (live != null) return live
+  return node.content.image?.width ?? DEFAULT_OUTLINE_IMG_W
+}
+
+function imageBlockHeight(node: MindmapNode): number {
+  if (!node.content.image) return 0
+  const w = displayImageWidth(node)
+  const aspect = imageAspects.value.get(node.content.image.src) ?? 1
+  const h = Math.round(w / Math.max(aspect, 0.15))
+  return Math.min(h, IMG_MAX_H) + IMG_BLOCK_PAD
+}
+
+function layoutDisplayText(node: MindmapNode): string {
+  // 大纲始终按用户看到的文案排版，Markdown 标记只存在于源码层。
+  return node.content.text
+}
+
+function measureRowTextHeight(node: MindmapNode, depth: number): number {
+  const draft = draftTextHeights.value.get(node.id)
+  if (draft != null) return draft
+  const maxW = outlineTextMaxWidth(depth, node.content.checked !== null, !!node.content.link)
+  return measureTextBlockHeight(layoutDisplayText(node), maxW, 15, TEXT_LINE, ROW_HEIGHT)
+}
+
+/** 列表行 = 聚焦根的后代（不含根本身；根作为上方标题渲染，对齐幕布） */
 const rows = computed<Row[]>(() => {
-  // version 恒 >= 0；引用它仅为与 session 事件建立响应式依赖
   if (props.version < 0) return []
-  const session = props.session
-  const root = session.focusRootNode
-  const out: Row[] = [{ node: root, depth: 0, index: 0 }]
+  const root = props.session.focusRootNode
+  const out: Row[] = []
+  let top = 0
   const walk = (n: MindmapNode, depth: number) => {
     if (n.collapsed) return
     for (const c of n.children) {
-      out.push({ node: c, depth, index: out.length })
+      const textHeight = measureRowTextHeight(c, depth)
+      const height = textHeight + imageBlockHeight(c)
+      out.push({ node: c, depth, index: out.length, top, height, textHeight })
+      top += height
       walk(c, depth + 1)
     }
   }
-  walk(root, 1)
+  walk(root, 0)
   return out
+})
+
+const titleHeight = computed(() => {
+  if (props.version < 0) return 56
+  const root = props.session.focusRootNode
+  const draft = draftTextHeights.value.get(root.id)
+  const textH =
+    draft ??
+    measureTextBlockHeight(layoutDisplayText(root), contentAreaWidth(), 28, TITLE_LINE, 56)
+  return textH + imageBlockHeight(root)
+})
+
+const totalListHeight = computed(() => {
+  const list = rows.value
+  if (list.length === 0) return 0
+  const last = list[list.length - 1]
+  return last.top + last.height
+})
+
+const focusRoot = computed(() => {
+  if (props.version < 0) return null
+  return props.session.focusRootNode
 })
 
 const selectedId = computed(() => {
   if (props.version < 0) return null
   return props.session.selectedNode?.id ?? null
+})
+
+const selectedIds = computed(() => {
+  if (props.version < 0) return new Set<string>()
+  return props.session.selectionIds
 })
 
 const matches = computed(() => {
@@ -56,72 +199,312 @@ const containerRef = ref<HTMLElement>()
 const scrollTop = ref(0)
 const viewportH = ref(600)
 
-const startIndex = computed(() => Math.max(0, Math.floor(scrollTop.value / ROW_HEIGHT) - 10))
-const endIndex = computed(() =>
-  Math.min(rows.value.length, Math.ceil((scrollTop.value + viewportH.value) / ROW_HEIGHT) + 10),
-)
+/** 列表（spacer）相对滚动内容顶部的偏移：padding + 标题 + 标题下边距 */
+function listChromeHeight(): number {
+  return VIEW_PADDING_TOP + titleHeight.value + TITLE_MARGIN_BOTTOM
+}
+
+const listScrollTop = computed(() => Math.max(0, scrollTop.value - listChromeHeight()))
+
+const startIndex = computed(() => {
+  const list = rows.value
+  const y = listScrollTop.value
+  let lo = 0
+  let hi = list.length
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1
+    if (list[mid].top + list[mid].height < y) lo = mid + 1
+    else hi = mid
+  }
+  return Math.max(0, lo - 2)
+})
+
+const endIndex = computed(() => {
+  const list = rows.value
+  const y = listScrollTop.value + viewportH.value
+  let i = startIndex.value
+  while (i < list.length && list[i].top < y) i++
+  return Math.min(list.length, i + 2)
+})
+
 const visibleRows = computed(() => rows.value.slice(startIndex.value, endIndex.value))
 
 function onScroll() {
   scrollTop.value = containerRef.value?.scrollTop ?? 0
+  textSelection.value = null
+  if (linkEditor.value?.mode === 'existing') linkEditor.value = null
 }
 
 let resizeObserver: ResizeObserver | null = null
 onMounted(() => {
   if (containerRef.value) {
-    viewportH.value = containerRef.value.clientHeight
+    viewportH.value = containerRef.value.clientHeight || 600
+    containerWidth.value = containerRef.value.clientWidth || 800
     resizeObserver = new ResizeObserver(() => {
-      viewportH.value = containerRef.value?.clientHeight ?? 600
+      const el = containerRef.value
+      if (!el) return
+      viewportH.value = el.clientHeight || 600
+      containerWidth.value = el.clientWidth || 800
     })
     resizeObserver.observe(containerRef.value)
   }
 })
-onBeforeUnmount(() => resizeObserver?.disconnect())
-
-// 聚焦切换后回到顶部
-const focusPathLen = computed(() => {
-  if (props.version < 0) return 0
-  return props.session.focusPath.length
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
+  stopRangeSelect?.()
+  if (linkLeaveTimer) clearTimeout(linkLeaveTimer)
 })
-watch(focusPathLen, () => {
-  scrollTop.value = 0
-  if (containerRef.value) containerRef.value.scrollTop = 0
+
+const focusPathKey = computed(() => {
+  if (props.version < 0) return ''
+  return props.session.focusPath.map((node) => node.id).join('/')
 })
 
 // ---------- 行焦点（焦点 = 选中 = 编辑态，幕布式） ----------
 
 const focusedId = ref<string | null>(null)
+const hoveredId = ref<string | null>(null)
 
-function inputOf(id: string): HTMLInputElement | null {
-  return containerRef.value?.querySelector(`input.row-input[data-id="${id}"]`) ?? null
+interface TextSelectionState {
+  nodeId: string
+  start: number
+  end: number
+  position: { left: number; top: number }
 }
 
-/** 聚焦某行并放置光标（col 省略时到末尾） */
+interface LinkEditorState {
+  mode: 'selection' | 'existing'
+  nodeId: string
+  url: string
+  position: { left: number; top: number }
+  start?: number
+  end?: number
+  rawStart?: number
+  rawEnd?: number
+}
+
+const textSelection = ref<TextSelectionState | null>(null)
+const linkEditor = ref<LinkEditorState | null>(null)
+const linkPopoverRef = ref<InstanceType<typeof LinkPopover> | null>(null)
+const imagePickerRef = ref<HTMLInputElement>()
+const pendingImageAnchorId = ref<string | null>(null)
+let linkLeaveTimer: ReturnType<typeof setTimeout> | null = null
+
+watch(focusPathKey, () => {
+  // 进入/退出子树聚焦时，聚焦根应先以富文本标题展示，而不是继续停留在
+  // 编辑态；先提交当前受控草稿，再清理局部选区与浮层。
+  const active = document.activeElement
+  if (isInlineEditorElement(active)) {
+    const activeNode = props.session.document.find(active.dataset.id ?? '')
+    if (activeNode) commitRow(activeNode, active)
+  }
+  focusedId.value = null
+  textSelection.value = null
+  linkEditor.value = null
+  draftTexts.value = new Map()
+  draftTextHeights.value = new Map()
+  scrollTop.value = 0
+  if (containerRef.value) containerRef.value.scrollTop = 0
+  nextTick(() => containerRef.value?.focus())
+})
+
+function inputOf(id: string): RichInlineEditorElement | null {
+  return containerRef.value?.querySelector(`.rich-inline-editor[data-id="${id}"]`) ?? null
+}
+
+function isInlineEditorElement(value: unknown): value is RichInlineEditorElement {
+  return value instanceof HTMLDivElement && value.classList.contains('rich-inline-editor')
+}
+
+/** 聚焦某行并放置光标（col 省略时到末尾）；DOM 更新后可能需多拍再试 */
 function focusRow(id: string, col?: number) {
+  focusedId.value = id
+  const attempt = (left: number) => {
+    nextTick(() => {
+      const input = inputOf(id)
+      if (!input) {
+        if (left > 0) attempt(left - 1)
+        return
+      }
+      input.focus()
+      const pos = col === undefined ? input.value.length : Math.min(col, input.value.length)
+      input.setSelectionRange(pos, pos)
+    })
+  }
+  attempt(3)
+}
+
+function focusRowRange(id: string, start: number, end: number) {
+  focusedId.value = id
   nextTick(() => {
     const input = inputOf(id)
     if (!input) return
     input.focus()
-    const pos = col === undefined ? input.value.length : Math.min(col, input.value.length)
-    input.setSelectionRange(pos, pos)
+    input.setSelectionRange(Math.min(start, input.value.length), Math.min(end, input.value.length))
+    syncTextSelection(id, input)
   })
+}
+
+function selectionPosition(input: RichInlineEditorElement): { left: number; top: number } {
+  const rect = richSelectionRect(input)
+  return {
+    left: Math.max(190, Math.min(window.innerWidth - 190, rect.left + rect.width / 2)),
+    top: Math.max(58, rect.top - 8),
+  }
+}
+
+function syncTextSelection(nodeId: string, input: RichInlineEditorElement) {
+  const start = input.selectionStart ?? 0
+  const end = input.selectionEnd ?? 0
+  if (start === end) {
+    if (textSelection.value?.nodeId === nodeId) textSelection.value = null
+    return
+  }
+  textSelection.value = { nodeId, start, end, position: selectionPosition(input) }
+}
+
+function onTextSelection(node: MindmapNode, event: Event) {
+  syncTextSelection(node.id, event.currentTarget as RichInlineEditorElement)
+}
+
+const selectedTextFormats = computed<Partial<Record<InlineFormat, boolean>>>(() => {
+  if (props.version < 0) return {}
+  const selection = textSelection.value
+  if (!selection) return {}
+  const formats: InlineFormat[] = ['bold', 'italic', 'underline', 'strike', 'highlight', 'code']
+  return Object.fromEntries(formats.map((format) => [
+    format,
+    props.session.inlineFormatActive(selection.nodeId, selection.start, selection.end, format),
+  ]))
+})
+
+const multiSelectionPosition = computed(() => {
+  if (props.version < 0 || props.session.selectionIds.size <= 1 || textSelection.value) return null
+  const id = props.session.selectedNode?.id
+  if (!id) return null
+  const row = containerRef.value?.querySelector(`.outline-row[data-node-id="${id}"]`) as HTMLElement | null
+  if (!row) return null
+  const rect = row.getBoundingClientRect()
+  if (rect.width === 0 && rect.height === 0) {
+    return { left: Math.max(180, window.innerWidth / 2), top: 60 }
+  }
+  if (rect.bottom < 48 || rect.top > window.innerHeight) return null
+  return {
+    left: Math.max(180, Math.min(window.innerWidth - 180, rect.left + rect.width / 2)),
+    top: Math.max(58, rect.top - 8),
+  }
+})
+
+function restoreTextSelection(selection: TextSelectionState) {
+  nextTick(() => focusRowRange(selection.nodeId, selection.start, selection.end))
+}
+
+function applyTextFormat(format: InlineFormat) {
+  const selection = textSelection.value
+  if (!selection) return
+  const node = props.session.document.find(selection.nodeId)
+  const input = inputOf(selection.nodeId)
+  if (!node || !input) return
+  commitRow(node, input)
+  props.session.toggleNodeInlineFormat(selection.nodeId, selection.start, selection.end, format)
+  restoreTextSelection(selection)
+}
+
+function applyNodeFormat(format: InlineFormat) {
+  props.session.formatSelectedNodes(format)
+}
+
+function clearTextFormat() {
+  const selection = textSelection.value
+  if (!selection) return
+  const node = props.session.document.find(selection.nodeId)
+  const input = inputOf(selection.nodeId)
+  if (!node || !input) return
+  commitRow(node, input)
+  props.session.clearNodeInlineFormats(selection.nodeId, selection.start, selection.end)
+  restoreTextSelection(selection)
+}
+
+function clearNodeFormats() {
+  props.session.clearSelectedNodeFormats()
+}
+
+function toggleSelectionTask() {
+  const selection = textSelection.value
+  if (selection) props.session.toggleTask(selection.nodeId)
+  else props.session.toggleTaskSelectedNodes()
+}
+
+function removeToolbarSelection() {
+  textSelection.value = null
+  linkEditor.value = null
+  props.session.removeSelectedNodes()
+  containerRef.value?.focus()
+}
+
+async function copySelectedFromToolbar() {
+  const text = serializeSelection()
+  if (!text) return
+  try {
+    await navigator.clipboard.writeText(text)
+  } catch {
+    // 浏览器拒绝异步剪贴板时，仍可使用系统 Cmd/Ctrl+C 的既有路径。
+  }
+}
+
+function openSelectionLinkEditor() {
+  const selection = textSelection.value
+  if (!selection) return
+  linkEditor.value = {
+    mode: 'selection',
+    nodeId: selection.nodeId,
+    start: selection.start,
+    end: selection.end,
+    url: 'https://',
+    position: { left: selection.position.left, top: selection.position.top + 12 },
+  }
+  nextTick(() => linkPopoverRef.value?.focusInput())
+}
+
+function requestSelectionImage() {
+  pendingImageAnchorId.value = textSelection.value?.nodeId ?? props.session.selectedNode?.id ?? null
+  imagePickerRef.value?.click()
+}
+
+function onSelectionImagePicked(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  const anchorId = pendingImageAnchorId.value ?? textSelection.value?.nodeId
+  pendingImageAnchorId.value = null
+  if (file && anchorId) emit('pasteImage', anchorId, file)
+}
+
+function focusTitle(col?: number) {
+  const root = focusRoot.value
+  if (!root) return
+  focusRow(root.id, col)
 }
 
 function scrollRowIntoView(index: number) {
   const el = containerRef.value
-  if (!el) return
-  const target = index * ROW_HEIGHT
-  if (target < el.scrollTop || target > el.scrollTop + el.clientHeight - ROW_HEIGHT) {
-    el.scrollTop = Math.max(0, target - el.clientHeight / 2)
-  }
+  const row = rows.value[index]
+  if (!el || !row) return
+  const target = listChromeHeight() + row.top
+  const bottom = target + row.height
+  if (target < el.scrollTop) el.scrollTop = Math.max(0, target - 8)
+  else if (bottom > el.scrollTop + el.clientHeight) el.scrollTop = bottom - el.clientHeight + 8
 }
 
-/** 搜索/外部定位：展开祖先、选中、滚动到该行 */
 function locateNode(id: string) {
   const session = props.session
   session.expandAncestors(id)
   session.select(id)
   nextTick(() => {
+    if (id === session.focusRootNode.id) {
+      focusTitle()
+      return
+    }
     const idx = rows.value.findIndex((r) => r.node.id === id)
     if (idx >= 0) scrollRowIntoView(idx)
   })
@@ -131,31 +514,321 @@ defineExpose({ locateNode })
 
 // ---------- 行内编辑行为（光标感知，对齐幕布） ----------
 
-/** 提交行文本；空行且无子节点时删除（幕布行为）。返回是否有文档变化 */
-function commitRow(node: MindmapNode, input: HTMLInputElement): boolean {
+function imageMarkdown(alt: string, src: string, width: number | null): string {
+  const w = width != null && width > 0 ? `|${Math.round(width)}` : ''
+  return `![${alt || '图片'}${w}](${src})`
+}
+
+function commitRow(node: MindmapNode, input: RichInlineEditorElement): boolean {
   const session = props.session
-  const raw = input.value.trim()
-  if (raw && raw !== node.content.raw) {
+  const typed = input.value.trim().replace(/\n/g, '')
+  clearDraft(node.id)
+  // 图片节点：行内文案 = 描述（alt），保留 src / 宽度
+  if (node.content.image) {
+    const img = node.content.image
+    if (typed !== img.alt) {
+      session.updateNodeRaw(node.id, imageMarkdown(typed, img.src, img.width))
+      input.markCommitted()
+      return true
+    }
+    input.markCommitted()
+    return false
+  }
+  // contenteditable 草稿已经是合法 Markdown；直接提交 raw，保留全部行内 marks / href。
+  const raw = typed === '' ? '' : input.rawValue.trim()
+  if (raw !== node.content.raw) {
     session.updateNodeRaw(node.id, raw)
+    input.markCommitted()
     return true
   }
-  if (!raw && node.content.raw === '' && node.children.length === 0 && node !== session.document.root) {
-    session.removeNode(node.id)
-    return true
-  }
+  input.markCommitted()
   return false
 }
 
-function onEditKeydown(node: MindmapNode, e: KeyboardEvent) {
+function commitEditorPayload(node: MindmapNode, payload: { raw: string; text: string }) {
+  clearDraft(node.id)
+  if (node.content.image) {
+    const image = node.content.image
+    if (payload.text !== image.alt) {
+      props.session.updateNodeRaw(node.id, imageMarkdown(payload.text, image.src, image.width))
+    }
+  } else if (payload.raw !== node.content.raw) {
+    props.session.updateNodeRaw(node.id, payload.raw)
+  }
+  inputOf(node.id)?.markCommitted()
+}
+
+function clearDraft(id: string) {
+  let changed = false
+  if (draftTextHeights.value.has(id)) {
+    const next = new Map(draftTextHeights.value)
+    next.delete(id)
+    draftTextHeights.value = next
+    changed = true
+  }
+  if (draftTexts.value.has(id)) {
+    const next = new Map(draftTexts.value)
+    next.delete(id)
+    draftTexts.value = next
+    changed = true
+  }
+  return changed
+}
+
+function syncDraftText(node: MindmapNode, depth: number | null, text: string) {
+  if (draftTexts.value.get(node.id) !== text) {
+    const next = new Map(draftTexts.value)
+    next.set(node.id, text)
+    draftTexts.value = next
+  }
+  const isTitle = depth == null
+  const maxW = isTitle
+    ? contentAreaWidth()
+    : outlineTextMaxWidth(depth, node.content.checked !== null, !!node.content.link)
+  const h = measureTextBlockHeight(
+    text,
+    maxW,
+    isTitle ? 28 : 15,
+    isTitle ? TITLE_LINE : TEXT_LINE,
+    isTitle ? 56 : ROW_HEIGHT,
+  )
+  if (draftTextHeights.value.get(node.id) !== h) {
+    const next = new Map(draftTextHeights.value)
+    next.set(node.id, h)
+    draftTextHeights.value = next
+  }
+}
+
+function onRowDraftChange(node: MindmapNode, depth: number | null, payload: { text: string }) {
+  syncDraftText(node, depth, payload.text)
+}
+
+/**
+ * textarea 没有原生 caretClientRect；用同样排版样式的隐藏镜像判断光标是否位于首/末视觉行。
+ * 仅在跨节点导航前调用，行内上下移动仍交给浏览器原生处理。
+ */
+function caretVisualBoundary(input: RichInlineEditorElement): { first: boolean; last: boolean } {
+  const value = input.value
+  const position = input.selectionStart ?? 0
+  if (value.length === 0 || input.clientWidth === 0) return { first: true, last: true }
+
+  const style = getComputedStyle(input)
+  const mirror = document.createElement('div')
+  const copied = [
+    'boxSizing',
+    'width',
+    'borderTopWidth',
+    'borderRightWidth',
+    'borderBottomWidth',
+    'borderLeftWidth',
+    'paddingTop',
+    'paddingRight',
+    'paddingBottom',
+    'paddingLeft',
+    'fontFamily',
+    'fontSize',
+    'fontStyle',
+    'fontWeight',
+    'fontVariant',
+    'lineHeight',
+    'letterSpacing',
+    'textTransform',
+    'textIndent',
+    'textAlign',
+    'tabSize',
+    'whiteSpace',
+    'wordBreak',
+    'overflowWrap',
+  ] as const
+  for (const property of copied) {
+    mirror.style.setProperty(property.replace(/[A-Z]/g, (ch) => `-${ch.toLowerCase()}`), style[property] as string)
+  }
+  mirror.style.position = 'fixed'
+  mirror.style.left = '-10000px'
+  mirror.style.top = '0'
+  mirror.style.height = 'auto'
+  mirror.style.minHeight = '0'
+  mirror.style.maxHeight = 'none'
+  mirror.style.overflow = 'hidden'
+  mirror.style.visibility = 'hidden'
+  mirror.style.pointerEvents = 'none'
+  document.body.append(mirror)
+
+  const topAt = (offset: number) => {
+    mirror.textContent = value.slice(0, offset)
+    const marker = document.createElement('span')
+    marker.textContent = value.slice(offset, offset + 1) || '\u200b'
+    mirror.append(marker)
+    const top = marker.offsetTop
+    marker.remove()
+    return top
+  }
+  const firstTop = topAt(0)
+  const currentTop = topAt(position)
+  const lastTop = topAt(value.length)
+  mirror.remove()
+  return { first: currentTop <= firstTop + 1, last: currentTop >= lastTop - 1 }
+}
+
+function inlineFormatShortcut(event: KeyboardEvent): InlineFormat | null {
+  const key = event.key.toLowerCase()
+  if (event.altKey && !(event.metaKey || event.ctrlKey) && key === 'l') return 'code'
+  if (!(event.metaKey || event.ctrlKey) || event.altKey) return null
+  if (key === 'b' && !event.shiftKey) return 'bold'
+  if (key === 'i' && !event.shiftKey) return 'italic'
+  if (key === 'u' && !event.shiftKey) return 'underline'
+  if (key === 'enter' && !event.shiftKey) return 'strike'
+  if ((key === 's' || key === 'x') && event.shiftKey) return 'strike'
+  if (key === 'h' && event.shiftKey) return 'highlight'
+  if (key === 'e' && !event.shiftKey) return 'code'
+  return null
+}
+
+function applyInputFormatShortcut(node: MindmapNode, input: RichInlineEditorElement, format: InlineFormat) {
+  const start = input.selectionStart ?? 0
+  const end = input.selectionEnd ?? 0
+  if (start === end) return
+  const selection: TextSelectionState = { nodeId: node.id, start, end, position: selectionPosition(input) }
+  commitRow(node, input)
+  props.session.toggleNodeInlineFormat(node.id, start, end, format)
+  textSelection.value = selection
+  restoreTextSelection(selection)
+}
+
+function onTitleKeydown(e: KeyboardEvent) {
+  const root = focusRoot.value
+  if (!root) return
+  if (focusedId.value !== root.id) return
   const session = props.session
-  const input = e.target as HTMLInputElement
+  const input = e.currentTarget as RichInlineEditorElement
+  if (e.isComposing || input.isComposing) return
   e.stopPropagation()
 
   const mod = e.metaKey || e.ctrlKey
+  if ((e.key === '.' || e.key === '>') && (mod || e.altKey)) {
+    e.preventDefault()
+    commitRow(root, input)
+    if (mod && e.altKey && e.shiftKey) session.toggleCollapseAll()
+    else session.toggleCollapse(root.id)
+    focusTitle(input.selectionStart ?? 0)
+    return
+  }
+  if (mod) {
+    const key = e.key.toLowerCase()
+    if (key === '\\' && input.selectionStart !== input.selectionEnd) {
+      e.preventDefault()
+      const start = input.selectionStart
+      const end = input.selectionEnd
+      commitRow(root, input)
+      session.clearNodeInlineFormats(root.id, start, end)
+      restoreTextSelection({ nodeId: root.id, start, end, position: selectionPosition(input) })
+      return
+    }
+    const format = inlineFormatShortcut(e)
+    if (format && input.selectionStart !== input.selectionEnd) {
+      e.preventDefault()
+      applyInputFormatShortcut(root, input, format)
+      return
+    }
+    if (key === 'z' || key === 'y') {
+      e.preventDefault()
+      commitRow(root, input)
+      if (key === 'z' && !e.shiftKey) session.undo()
+      else session.redo()
+    } else if (key === 'f') {
+      e.preventDefault()
+      emit('requestSearch')
+    } else if (key === '[') {
+      e.preventDefault()
+      commitRow(root, input)
+      if (session.focusPath.length > 0) {
+        session.exitFocusTo(session.focusPath.length - 1)
+        focusRow(root.id)
+      }
+    } else if (key === 'a') {
+      const fullySelected = input.selectionStart === 0 && input.selectionEnd === input.value.length
+      if (fullySelected) {
+        e.preventDefault()
+        commitRow(root, input)
+        selectAllRows()
+      }
+    }
+    return
+  }
+
+  switch (e.key) {
+    case 'Enter': {
+      e.preventDefault()
+      commitRow(root, input)
+      // 幕布：标题行尾 Enter → 聚焦首个子节点；无子节点则新建
+      if (root.children.length > 0) {
+        focusRow(root.children[0].id, 0)
+      } else {
+        const created = session.insertChildOf(root.id, 0)
+        if (created) focusRow(created.id, 0)
+      }
+      break
+    }
+    case 'ArrowDown': {
+      if (input.selectionStart !== input.selectionEnd || !caretVisualBoundary(input).last) break
+      e.preventDefault()
+      commitRow(root, input)
+      if (rows.value.length > 0) focusRow(rows.value[0].node.id, input.selectionStart ?? 0)
+      break
+    }
+    case 'Escape': {
+      e.preventDefault()
+      commitRow(root, input)
+      containerRef.value?.focus()
+      break
+    }
+  }
+}
+
+function onEditKeydown(node: MindmapNode, e: KeyboardEvent) {
+  if (focusedId.value !== node.id) return
+  const session = props.session
+  const input = e.currentTarget as RichInlineEditorElement
+  if (e.isComposing || input.isComposing) return
+  e.stopPropagation()
+
+  const mod = e.metaKey || e.ctrlKey
+  if ((e.key === '.' || e.key === '>') && (mod || e.altKey)) {
+    e.preventDefault()
+    commitRow(node, input)
+    if (mod && e.altKey && e.shiftKey) session.toggleCollapseAll()
+    else if (mod && e.shiftKey) session.toggleCollapseSiblings(node.id)
+    else session.toggleCollapse(node.id)
+    focusRow(node.id, input.selectionStart ?? 0)
+    return
+  }
+  if (e.altKey && !mod && e.key === 'Enter') {
+    e.preventDefault()
+    pendingImageAnchorId.value = node.id
+    imagePickerRef.value?.click()
+    return
+  }
   if (mod) {
     const key = e.key.toLowerCase()
     const col = input.selectionStart ?? 0
-    if (key === 'z' || key === 'y') {
+    if (key === '\\' && input.selectionStart !== input.selectionEnd) {
+      e.preventDefault()
+      const start = input.selectionStart
+      const end = input.selectionEnd
+      commitRow(node, input)
+      session.clearNodeInlineFormats(node.id, start, end)
+      restoreTextSelection({ nodeId: node.id, start, end, position: selectionPosition(input) })
+      return
+    }
+    const format = inlineFormatShortcut(e)
+    if (format && input.selectionStart !== input.selectionEnd) {
+      e.preventDefault()
+      applyInputFormatShortcut(node, input, format)
+    } else if (key === 'k' && !e.shiftKey && input.selectionStart !== input.selectionEnd) {
+      e.preventDefault()
+      syncTextSelection(node.id, input)
+      openSelectionLinkEditor()
+    } else if (key === 'z' || key === 'y') {
       e.preventDefault()
       commitRow(node, input)
       if (key === 'z' && !e.shiftKey) session.undo()
@@ -166,14 +839,63 @@ function onEditKeydown(node: MindmapNode, e: KeyboardEvent) {
     } else if (key === ']') {
       e.preventDefault()
       commitRow(node, input)
-      session.indentNode(node.id)
-      focusRow(node.id, col)
+      session.focusNode(node.id)
     } else if (key === '[') {
       e.preventDefault()
       commitRow(node, input)
-      session.outdentNode(node.id)
+      if (session.focusPath.length > 0) {
+        session.exitFocusTo(session.focusPath.length - 1)
+        focusRow(node.id, col)
+      }
+    } else if (e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      e.preventDefault()
+      commitRow(node, input)
+      session.moveSelectedNodes(e.key === 'ArrowUp' ? -1 : 1)
       focusRow(node.id, col)
+    } else if (e.shiftKey && (key === 'backspace' || key === 'd')) {
+      e.preventDefault()
+      commitRow(node, input)
+      session.removeSelectedNodes()
+      containerRef.value?.focus()
+    } else if (e.shiftKey && key === 'l') {
+      e.preventDefault()
+      commitRow(node, input)
+      session.toggleTaskSelectedNodes()
+      focusRow(node.id, col)
+    } else if (e.shiftKey && key === 'k') {
+      e.preventDefault()
+      commitRow(node, input)
+      session.toggleCheckedSelectedNodes()
+      focusRow(node.id, col)
+    } else if (key === 'd') {
+      e.preventDefault()
+      commitRow(node, input)
+      session.duplicateSelectedNodes()
+      containerRef.value?.focus()
+    } else if (key === 'enter') {
+      // Cmd/Ctrl+Enter：新建子节点（脑图视图同款）
+      e.preventDefault()
+      commitRow(node, input)
+      const created = session.insertChildOf(node.id)
+      if (created) focusRow(created.id, 0)
+    } else if (key === 'a') {
+      // 幕布：第一次 Cmd/Ctrl+A 走 textarea 默认行为选中文本；
+      // 文本已经全选时再次按下，扩大为当前主题下的全部节点。
+      const fullySelected = input.selectionStart === 0 && input.selectionEnd === input.value.length
+      if (fullySelected) {
+        e.preventDefault()
+        commitRow(node, input)
+        selectAllRows()
+      }
     }
+    return
+  }
+
+  if (e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+    e.preventDefault()
+    commitRow(node, input)
+    extendSelection(e.key === 'ArrowUp' ? -1 : 1)
+    containerRef.value?.focus()
     return
   }
 
@@ -185,23 +907,27 @@ function onEditKeydown(node: MindmapNode, e: KeyboardEvent) {
   const rowIndex = list.findIndex((r) => r.node.id === node.id)
   const prevRow = rowIndex > 0 ? list[rowIndex - 1] : null
   const nextRow = rowIndex >= 0 && rowIndex < list.length - 1 ? list[rowIndex + 1] : null
+  const root = session.focusRootNode
 
   switch (e.key) {
     case 'Enter': {
       e.preventDefault()
       if (start === 0 && end === 0 && value.length > 0) {
-        // 行首 Enter：上方插入空行并进入
         const created = session.insertBeforeOf(node.id)
         if (created) focusRow(created.id, 0)
       } else if (end < value.length) {
-        // 文本中间 Enter：分裂节点（前段留当前行，后段进新行）
         const before = value.slice(0, start)
         const after = value.slice(end)
-        // 先同步 input 值，防止 blur 兜底提交覆盖分裂结果
+        clearDraft(node.id)
         input.value = before
         let created: MindmapNode | null = null
         session.transact((doc) => {
-          doc.updateRaw(node, before)
+          if (node.content.image) {
+            const img = node.content.image
+            doc.updateRaw(node, imageMarkdown(before, img.src, img.width))
+          } else {
+            doc.updateDisplayText(node, before)
+          }
           created = doc.insertAfter(node, after)
         })
         if (created) {
@@ -209,7 +935,6 @@ function onEditKeydown(node: MindmapNode, e: KeyboardEvent) {
           focusRow((created as MindmapNode).id, 0)
         }
       } else {
-        // 行尾 Enter：提交并在下方新建同级空行，光标移入新行
         commitRow(node, input)
         const created = session.insertSiblingOf(node.id)
         if (created) {
@@ -222,25 +947,31 @@ function onEditKeydown(node: MindmapNode, e: KeyboardEvent) {
     case 'Backspace': {
       if (!collapsedSelection || start > 0) break
       e.preventDefault()
-      if (!prevRow) break
+      if (!prevRow) {
+        // 列表首行：空行删除后回到标题；有内容则不与标题合并（幕布行为）
+        if (value.length === 0) {
+          if (node.children.length > 0) break
+          session.removeNode(node.id)
+          focusTitle()
+        }
+        break
+      }
       if (value.length === 0) {
-        if (node.children.length > 0) break // 空行但有子节点：不删，避免丢子树
-        // 空行 Backspace：删除本行，光标移到上一行末尾
+        if (node.children.length > 0) break
         const prevId = prevRow.node.id
-        const prevLen = prevRow.node.content.raw.length
+        const prevLen = prevRow.node.content.text.length
         session.removeNode(node.id)
         focusRow(prevId, prevLen)
       } else if (node.parent && node.parent.children[0] === node) {
-        // 首个子节点行首 Backspace：升级（根的直接子节点除外）
-        if (node.parent === session.document.root) break
+        // 首个子节点行首 Backspace：升级（聚焦根/文档根的直接子节点除外）
+        if (node.parent === session.document.root || node.parent === root) break
         session.outdentNode(node.id)
         focusRow(node.id, 0)
       } else {
-        // 行首 Backspace：合并到视觉上一行，子节点并入目标行
         const prevId = prevRow.node.id
-        const prevLen = prevRow.node.content.raw.length
+        const prevLen = prevRow.node.content.text.length
         session.transact((doc) => {
-          doc.updateRaw(prevRow.node, prevRow.node.content.raw + value)
+          doc.updateDisplayText(prevRow.node, prevRow.node.content.text + value)
           for (const c of [...node.children]) doc.move(c, prevRow.node, prevRow.node.children.length)
           doc.remove(node)
         })
@@ -250,13 +981,12 @@ function onEditKeydown(node: MindmapNode, e: KeyboardEvent) {
       break
     }
     case 'Delete': {
-      // 行尾向前删除：与下一行合并（仅当下一行无子节点）
       if (!collapsedSelection || end < value.length) break
       if (!nextRow || nextRow.node.children.length > 0) break
       e.preventDefault()
-      const nextRaw = nextRow.node.content.raw
+      const nextText = nextRow.node.content.text
       session.transact((doc) => {
-        doc.updateRaw(node, value + nextRaw)
+        doc.updateDisplayText(node, value + nextText)
         doc.remove(nextRow.node)
       })
       focusRow(node.id, value.length)
@@ -278,12 +1008,15 @@ function onEditKeydown(node: MindmapNode, e: KeyboardEvent) {
       break
     }
     case 'ArrowUp': {
+      if (!collapsedSelection || !caretVisualBoundary(input).first) break
       e.preventDefault()
       commitRow(node, input)
       if (prevRow) focusRow(prevRow.node.id, start)
+      else focusTitle(start)
       break
     }
     case 'ArrowDown': {
+      if (!collapsedSelection || !caretVisualBoundary(input).last) break
       e.preventDefault()
       commitRow(node, input)
       if (nextRow) focusRow(nextRow.node.id, start)
@@ -294,6 +1027,7 @@ function onEditKeydown(node: MindmapNode, e: KeyboardEvent) {
       e.preventDefault()
       commitRow(node, input)
       if (prevRow) focusRow(prevRow.node.id)
+      else focusTitle()
       break
     }
     case 'ArrowRight': {
@@ -307,28 +1041,92 @@ function onEditKeydown(node: MindmapNode, e: KeyboardEvent) {
 }
 
 function onRowInputBlur(node: MindmapNode, e: FocusEvent) {
-  const input = e.target as HTMLInputElement
+  const input = e.currentTarget as RichInlineEditorElement
   commitRow(node, input)
   if (focusedId.value === node.id) focusedId.value = null
+  if (!linkEditor.value && textSelection.value?.nodeId === node.id) textSelection.value = null
 }
 
-function onRowInputFocus(node: MindmapNode) {
+function onRowInputFocus(node: MindmapNode, e?: FocusEvent) {
   focusedId.value = node.id
   props.session.select(node.id)
+  const input = (e?.currentTarget as RichInlineEditorElement | undefined) ?? inputOf(node.id)
+  if (input && !draftTexts.value.has(node.id)) {
+    const next = new Map(draftTexts.value)
+    next.set(node.id, input.value)
+    draftTexts.value = next
+  }
 }
 
-// ---------- 复制 / 剪切 / 粘贴（行级，子树为单位） ----------
+// ---------- 复制 / 剪切 / 粘贴 ----------
 
 const LIST_LINE_RE = /^\s*[-*+]\s+/
 
-function onPaste(node: MindmapNode, e: ClipboardEvent) {
-  const text = e.clipboardData?.getData('text/plain') ?? ''
-  if (!text.includes('\n')) return // 单行走默认粘贴
-  e.preventDefault()
-  const session = props.session
-  const input = e.target as HTMLInputElement
+function selectedRoots(): MindmapNode[] {
+  const ids = props.session.selectionIds
+  return props.session.selectedNodes.filter((node) => {
+    if (node === props.session.focusRootNode || node === props.session.document.root) return false
+    let parent = node.parent
+    while (parent) {
+      if (ids.has(parent.id)) return false
+      parent = parent.parent
+    }
+    return true
+  })
+}
 
-  // 每行规范化为列表项（保留缩进）后复用 parser 解析层级
+function serializeSelection(): string {
+  return selectedRoots().map((node) => serializeSubtree(node)).join('\n')
+}
+
+function selectAllRows() {
+  const list = rows.value
+  if (list.length === 0) return
+  props.session.selectMany(
+    list.map((row) => row.node.id),
+    list[list.length - 1].node.id,
+    list[0].node.id,
+  )
+  containerRef.value?.focus()
+}
+
+function extendSelectionTo(index: number) {
+  const list = rows.value
+  const target = list[index]
+  if (!target) return
+  const anchorId = props.session.selectionAnchor?.id ?? props.session.selectedNode?.id ?? target.node.id
+  const anchorIndex = list.findIndex((row) => row.node.id === anchorId)
+  const normalizedAnchor = anchorIndex >= 0 ? anchorIndex : index
+  const from = Math.min(normalizedAnchor, index)
+  const to = Math.max(normalizedAnchor, index)
+  props.session.selectMany(
+    list.slice(from, to + 1).map((row) => row.node.id),
+    target.node.id,
+    list[normalizedAnchor].node.id,
+  )
+  scrollRowIntoView(index)
+}
+
+function extendSelection(direction: -1 | 1) {
+  const list = rows.value
+  if (list.length === 0) return
+  const selected = props.session.selectedNode
+  const current = selected ? list.findIndex((row) => row.node.id === selected.id) : -1
+  const next = current < 0 ? (direction > 0 ? 0 : list.length - 1) : Math.max(0, Math.min(list.length - 1, current + direction))
+  extendSelectionTo(next)
+}
+
+function onEditorPasteImage(node: MindmapNode, image: Blob) {
+  const input = inputOf(node.id)
+  if (input) commitRow(node, input)
+  emit('pasteImage', node.id, image)
+}
+
+function onEditorPasteMultiline(node: MindmapNode, text: string) {
+  const session = props.session
+  const input = inputOf(node.id)
+  if (input) commitRow(node, input)
+
   const fragment = text
     .split(/\r?\n/)
     .filter((l) => l.trim() !== '')
@@ -342,16 +1140,30 @@ function onPaste(node: MindmapNode, e: ClipboardEvent) {
   const nodes = tmp.root.children.map((c) => cloneSubtree(c))
   if (nodes.length === 0) return
 
-  const currentRaw = input.value.trim()
+  const currentText = node.content.text.trim()
   session.transact((doc) => {
     let anchor = node
-    // 当前行为空 → 首行内容（含其子树）填入当前行
-    if (currentRaw === '' && node !== doc.root) {
+    if (currentText === '' && node !== doc.root && node !== session.focusRootNode) {
       const first = nodes.shift()!
       doc.updateRaw(node, first.content.raw)
       for (const c of [...first.children]) doc.move(c, node, node.children.length)
-    } else if (currentRaw !== node.content.raw) {
-      doc.updateRaw(node, currentRaw)
+    } else if (node.content.image) {
+      const img = node.content.image
+      if (currentText !== img.alt) {
+        doc.updateRaw(node, imageMarkdown(currentText, img.src, img.width))
+      }
+    } else if (currentText !== node.content.text) {
+      doc.updateDisplayText(node, currentText)
+    }
+    // 粘贴到标题：插入为标题的子节点
+    if (node === session.focusRootNode) {
+      let index = node.children.length
+      for (const n of nodes) {
+        const inserted = doc.addNode(node, n.content, index++)
+        inserted.collapsed = n.collapsed
+        for (const c of [...n.children]) doc.move(c, inserted, inserted.children.length)
+      }
+      return
     }
     const parent = anchor.parent ?? doc.root
     let index = parent.children.indexOf(anchor) + 1
@@ -365,18 +1177,45 @@ function onPaste(node: MindmapNode, e: ClipboardEvent) {
 }
 
 function onCopy(node: MindmapNode, e: ClipboardEvent) {
-  const input = e.target as HTMLInputElement
-  if (input.selectionStart !== input.selectionEnd) return // 有选中文本走默认复制
+  const input = e.currentTarget as RichInlineEditorElement
+  if (input.selectionStart !== input.selectionEnd) return
   e.preventDefault()
-  e.clipboardData?.setData('text/plain', serializeSubtree(node))
+  const text = props.session.selectionIds.size > 1 && props.session.selectionIds.has(node.id)
+    ? serializeSelection()
+    : serializeSubtree(node)
+  e.clipboardData?.setData('text/plain', text)
 }
 
 function onCut(node: MindmapNode, e: ClipboardEvent) {
-  const input = e.target as HTMLInputElement
+  const input = e.currentTarget as RichInlineEditorElement
   if (input.selectionStart !== input.selectionEnd) return
   e.preventDefault()
-  e.clipboardData?.setData('text/plain', serializeSubtree(node))
-  if (node !== props.session.document.root) props.session.removeNode(node.id)
+  if (props.session.selectionIds.size > 1 && props.session.selectionIds.has(node.id)) {
+    e.clipboardData?.setData('text/plain', serializeSelection())
+    props.session.removeSelectedNodes()
+  } else {
+    e.clipboardData?.setData('text/plain', serializeSubtree(node))
+    if (node !== props.session.document.root && node !== props.session.focusRootNode) {
+      props.session.removeNode(node.id)
+    }
+  }
+}
+
+function onContainerCopy(e: ClipboardEvent) {
+  if (props.session.selectionIds.size === 0) return
+  const text = serializeSelection()
+  if (!text) return
+  e.preventDefault()
+  e.clipboardData?.setData('text/plain', text)
+}
+
+function onContainerCut(e: ClipboardEvent) {
+  if (props.session.selectionIds.size === 0) return
+  const text = serializeSelection()
+  if (!text) return
+  e.preventDefault()
+  e.clipboardData?.setData('text/plain', text)
+  props.session.removeSelectedNodes()
 }
 
 // ---------- 行点击 / bullet / 折叠 ----------
@@ -386,7 +1225,6 @@ let suppressRowClick = false
 function onBulletClick(node: MindmapNode, e: MouseEvent) {
   e.stopPropagation()
   if (suppressRowClick) return
-  // 幕布：点击 bullet 进入主题（聚焦）
   props.session.focusNode(node.id)
 }
 
@@ -401,14 +1239,142 @@ function onCheckboxClick(node: MindmapNode, e: MouseEvent) {
   props.session.toggleChecked(node.id)
 }
 
-function onLinkClick(node: MindmapNode, e: MouseEvent) {
+function onInlineDisplayClick(node: MindmapNode, e: MouseEvent) {
   e.stopPropagation()
-  if (node.content.link) window.open(node.content.link, '_blank', 'noopener')
+  if ((e.target as HTMLElement | null)?.closest('.inline-run.link')) return
+  if (focusedId.value === node.id) return
+  const editor = e.currentTarget as HTMLElement
+  focusRow(node.id, caretOffsetFromPoint(editor, e.clientX, e.clientY))
+}
+
+function navigableUrl(raw: string): string | null {
+  const url = raw.trim()
+  if (!url || /^(?:javascript|data|vbscript):/i.test(url)) return null
+  if (/^(?:https?|mailto|tel):/i.test(url) || /^(?:[./#]|\/)/.test(url)) return url
+  return `https://${url}`
+}
+
+function onInlineLinkClick(link: InlineLink, event: Event) {
+  event.preventDefault()
+  event.stopPropagation()
+  const url = navigableUrl(link.url)
+  if (url) window.open(url, '_blank', 'noopener,noreferrer')
+}
+
+function keepLinkPopover() {
+  if (linkLeaveTimer) clearTimeout(linkLeaveTimer)
+  linkLeaveTimer = null
+}
+
+function closeLinkPopoverSoon() {
+  keepLinkPopover()
+  linkLeaveTimer = setTimeout(() => {
+    if (linkEditor.value?.mode === 'existing') linkEditor.value = null
+  }, 180)
+}
+
+function onInlineLinkEnter(node: MindmapNode, link: InlineLink, event: MouseEvent) {
+  if (linkEditor.value?.mode === 'selection') return
+  keepLinkPopover()
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+  linkEditor.value = {
+    mode: 'existing',
+    nodeId: node.id,
+    rawStart: link.rawStart,
+    rawEnd: link.rawEnd,
+    url: link.url,
+    position: {
+      left: Math.max(220, Math.min(window.innerWidth - 220, rect.left + rect.width / 2)),
+      top: Math.min(window.innerHeight - 54, rect.bottom + 6),
+    },
+  }
+}
+
+function onTitleLinkEnter(link: InlineLink, event: MouseEvent) {
+  const root = focusRoot.value
+  if (root) onInlineLinkEnter(root, link, event)
+}
+
+function saveLink(url: string) {
+  const editor = linkEditor.value
+  if (!editor) return
+  if (editor.mode === 'existing') {
+    props.session.updateNodeInlineLink(editor.nodeId, editor.rawStart!, editor.rawEnd!, url)
+  } else {
+    props.session.setNodeInlineLink(editor.nodeId, editor.start!, editor.end!, url)
+  }
+  linkEditor.value = null
+  const selection = textSelection.value
+  if (selection) restoreTextSelection(selection)
+}
+
+function removeLink() {
+  const editor = linkEditor.value
+  if (!editor) return
+  if (editor.mode === 'existing') {
+    props.session.updateNodeInlineLink(editor.nodeId, editor.rawStart!, editor.rawEnd!, null)
+  } else {
+    props.session.setNodeInlineLink(editor.nodeId, editor.start!, editor.end!, null)
+  }
+  linkEditor.value = null
 }
 
 function onImageClick(node: MindmapNode, e: MouseEvent) {
   e.stopPropagation()
-  if (node.content.image) emit('imagePreview', node.content.image.src)
+  if (node.content.image) emit('imagePreview', resolvedImageSrc(node.content.image.src))
+}
+
+function onOutlineImageLoad(src: string, e: Event) {
+  const el = e.target as HTMLImageElement
+  if (!el.naturalWidth || !el.naturalHeight) return
+  const aspect = el.naturalWidth / el.naturalHeight
+  if (imageAspects.value.get(src) === aspect) return
+  const next = new Map(imageAspects.value)
+  next.set(src, aspect)
+  imageAspects.value = next
+}
+
+interface ImgResizeState {
+  id: string
+  startX: number
+  startW: number
+}
+
+let imgResize: ImgResizeState | null = null
+
+function onImageResizePointerDown(node: MindmapNode, e: PointerEvent) {
+  if (e.button !== 0 || !node.content.image) return
+  e.preventDefault()
+  e.stopPropagation()
+  imgResize = {
+    id: node.id,
+    startX: e.clientX,
+    startW: node.content.image.width ?? DEFAULT_OUTLINE_IMG_W,
+  }
+  suppressRowClick = true
+  window.addEventListener('pointermove', onImageResizeMove)
+  window.addEventListener('pointerup', onImageResizeUp, { once: true })
+}
+
+function onImageResizeMove(e: PointerEvent) {
+  if (!imgResize) return
+  const next = Math.max(MIN_IMG_W, Math.min(MAX_IMG_W, Math.round(imgResize.startW + (e.clientX - imgResize.startX))))
+  const map = new Map(liveImageWidth.value)
+  map.set(imgResize.id, next)
+  liveImageWidth.value = map
+}
+
+function onImageResizeUp() {
+  window.removeEventListener('pointermove', onImageResizeMove)
+  const state = imgResize
+  imgResize = null
+  setTimeout(() => (suppressRowClick = false), 0)
+  if (!state) return
+  const w = liveImageWidth.value.get(state.id) ?? state.startW
+  const map = new Map(liveImageWidth.value)
+  map.delete(state.id)
+  liveImageWidth.value = map
+  if (w !== state.startW) props.session.setImageWidth(state.id, w)
 }
 
 // ---------- 键盘导航（焦点在容器、非编辑态时） ----------
@@ -417,43 +1383,127 @@ function onKeydown(e: KeyboardEvent) {
   const session = props.session
   const sel = session.selectedNode
   const mod = e.metaKey || e.ctrlKey
+  const key = e.key.toLowerCase()
 
-  if (mod && e.key.toLowerCase() === 'z') {
+  if (mod && key === '\\' && session.selectionIds.size > 0) {
+    e.preventDefault()
+    session.clearSelectedNodeFormats()
+    return
+  }
+
+  const format = inlineFormatShortcut(e)
+  if (format && session.selectionIds.size > 0) {
+    e.preventDefault()
+    session.formatSelectedNodes(format)
+    return
+  }
+
+  if (mod && key === 'a') {
+    e.preventDefault()
+    selectAllRows()
+    return
+  }
+
+  if (mod && key === 'z') {
     e.preventDefault()
     if (e.shiftKey) session.redo()
     else session.undo()
     return
   }
-  if (mod && e.key.toLowerCase() === 'y') {
+  if (mod && key === 'y') {
     e.preventDefault()
     session.redo()
+    return
+  }
+  if (mod && key === 'f') {
+    e.preventDefault()
+    emit('requestSearch')
+    return
+  }
+  if ((e.key === '.' || e.key === '>') && (mod || e.altKey)) {
+    e.preventDefault()
+    if (mod && e.altKey && e.shiftKey) session.toggleCollapseAll()
+    else if (mod && e.shiftKey && sel) session.toggleCollapseSiblings(sel.id)
+    else if (sel) session.toggleCollapse(sel.id)
+    return
+  }
+  if (mod && e.key === ']') {
+    e.preventDefault()
+    if (sel) {
+      session.focusNode(sel.id)
+      focusTitle()
+    }
+    return
+  }
+  if (mod && e.key === '[') {
+    e.preventDefault()
+    if (session.focusPath.length > 0) session.exitFocusTo(session.focusPath.length - 1)
+    return
+  }
+  if (mod && e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+    e.preventDefault()
+    session.moveSelectedNodes(e.key === 'ArrowUp' ? -1 : 1)
+    return
+  }
+  if (mod && e.shiftKey && (key === 'backspace' || key === 'd')) {
+    e.preventDefault()
+    session.removeSelectedNodes()
+    return
+  }
+  if (mod && e.shiftKey && key === 'l') {
+    e.preventDefault()
+    session.toggleTaskSelectedNodes()
+    return
+  }
+  if (mod && e.shiftKey && key === 'k') {
+    e.preventDefault()
+    session.toggleCheckedSelectedNodes()
+    return
+  }
+  if (mod && key === 'd') {
+    e.preventDefault()
+    session.duplicateSelectedNodes()
     return
   }
 
   const list = rows.value
   const idx = sel ? list.findIndex((r) => r.node.id === sel.id) : -1
+  const root = session.focusRootNode
 
   switch (e.key) {
     case 'Enter':
       e.preventDefault()
       if (sel) focusRow(sel.id)
+      else focusTitle()
       break
     case 'Tab':
       e.preventDefault()
-      if (sel) {
-        if (e.shiftKey) session.outdentNode(sel.id)
-        else session.indentNode(sel.id)
+      if (sel && sel !== root) {
+        if (e.shiftKey) session.outdentSelectedNodes()
+        else session.indentSelectedNodes()
       }
       break
     case 'Delete':
     case 'Backspace':
       e.preventDefault()
-      if (sel) session.removeNode(sel.id)
+      if (sel && sel !== root) session.removeSelectedNodes()
       break
     case 'ArrowUp':
     case 'ArrowDown': {
       e.preventDefault()
-      if (list.length === 0) return
+      if (e.shiftKey) {
+        extendSelection(e.key === 'ArrowDown' ? 1 : -1)
+        break
+      }
+      if (list.length === 0) {
+        session.select(root.id)
+        break
+      }
+      if (sel?.id === root.id && e.key === 'ArrowDown') {
+        session.select(list[0].node.id)
+        scrollRowIntoView(0)
+        break
+      }
       const next =
         idx < 0
           ? list[0]
@@ -464,7 +1514,7 @@ function onKeydown(e: KeyboardEvent) {
     }
     case 'ArrowLeft':
       e.preventDefault()
-      if (sel) {
+      if (sel && sel !== root) {
         if (sel.children.length > 0 && !sel.collapsed) session.toggleCollapse(sel.id)
         else if (sel.parent) session.select(sel.parent.id)
       }
@@ -479,76 +1529,301 @@ function onKeydown(e: KeyboardEvent) {
   }
 }
 
-// ---------- 拖拽移动（仅 bullet/箭头/缩进区发起，文本区留给文本选择） ----------
+// ---------- 鼠标跨节点连续选择 ----------
+
+const rangeSelecting = ref(false)
+let stopRangeSelect: (() => void) | null = null
+
+function onRowPointerDown(row: Row, e: PointerEvent) {
+  if (e.button !== 0) return
+  const target = e.target as HTMLElement | null
+  if (target?.closest('.row-gutter, .row-checkbox, .row-badge, .row-image, .row-image-handle')) return
+
+  if (e.shiftKey) {
+    e.preventDefault()
+    const active = document.activeElement
+    if (isInlineEditorElement(active)) active.blur()
+    extendSelectionTo(row.index)
+    containerRef.value?.focus()
+    return
+  }
+
+  stopRangeSelect?.()
+  const pointerId = e.pointerId
+  const startIndex = row.index
+  const startY = e.clientY
+  let dragging = false
+
+  const cleanup = () => {
+    document.removeEventListener('pointermove', onMove)
+    document.removeEventListener('pointerup', onUp)
+    document.removeEventListener('pointercancel', onUp)
+    if (dragging) {
+      document.body.style.removeProperty('user-select')
+      document.body.style.removeProperty('-webkit-user-select')
+      setTimeout(() => (rangeSelecting.value = false), 0)
+    }
+    stopRangeSelect = null
+  }
+  const onMove = (ev: PointerEvent) => {
+    if (ev.isTrusted && ev.pointerId !== pointerId) return
+    const index = rowIndexAt(ev.clientY)
+    if (index < 0) return
+    if (!dragging) {
+      if (index === startIndex || Math.abs(ev.clientY - startY) < 5) return
+      dragging = true
+      rangeSelecting.value = true
+      document.body.style.setProperty('user-select', 'none')
+      document.body.style.setProperty('-webkit-user-select', 'none')
+      const active = document.activeElement
+      if (isInlineEditorElement(active)) active.blur()
+      window.getSelection()?.removeAllRanges()
+    }
+    ev.preventDefault()
+    const from = Math.min(startIndex, index)
+    const to = Math.max(startIndex, index)
+    const selected = rows.value.slice(from, to + 1)
+    props.session.selectMany(
+      selected.map((item) => item.node.id),
+      rows.value[index]?.node.id ?? null,
+      rows.value[startIndex]?.node.id ?? null,
+    )
+  }
+  const onUp = (ev: PointerEvent) => {
+    if (ev.isTrusted && ev.pointerId !== pointerId) return
+    cleanup()
+  }
+
+  stopRangeSelect = cleanup
+  document.addEventListener('pointermove', onMove, { passive: false })
+  document.addEventListener('pointerup', onUp)
+  document.addEventListener('pointercancel', onUp)
+}
+
+// ---------- 拖拽移动（幕布口径：圆点发起；横线 + 层级线高亮） ----------
+
+interface DropIndicator {
+  type: 'before' | 'after' | 'child'
+  targetId: string
+  /** 相对 .outline-spacer 的横线位置 */
+  top: number
+  left: number
+  width: number
+  /** child：高亮与父级圆点对齐的那一列引导线（depth 值） */
+  guideDepth: number | null
+}
 
 interface DragState {
   id: string
   startY: number
   dragging: boolean
-  indicator: { type: 'before' | 'after' | 'child'; targetId: string; top: number; left: number; width: number } | null
+  pointerX: number
+  pointerY: number
+  indicator: DropIndicator | null
 }
 
 const drag = ref<DragState | null>(null)
 
-function onGripPointerDown(node: MindmapNode, e: PointerEvent) {
-  if (e.button !== 0) return
-  drag.value = { id: node.id, startY: e.clientY, dragging: false, indicator: null }
-  window.addEventListener('pointermove', onDragMove)
-  window.addEventListener('pointerup', onDragUp, { once: true })
+function bulletCenterX(depth: number): number {
+  return COLLAPSE_LEAD + depth * INDENT + BULLET_SIZE / 2
 }
 
-function rowIndexAt(clientY: number): number {
-  const el = containerRef.value
-  if (!el) return -1
-  const rect = el.getBoundingClientRect()
-  const y = clientY - rect.top - PADDING_TOP + el.scrollTop
-  return Math.max(0, Math.min(rows.value.length - 1, Math.floor(y / ROW_HEIGHT)))
-}
-
-function onDragMove(e: PointerEvent) {
-  const d = drag.value
-  if (!d) return
-  if (!d.dragging) {
-    if (Math.abs(e.clientY - d.startY) < 5) return
-    d.dragging = true
-    suppressRowClick = true
-    props.session.select(d.id)
-  }
-  const el = containerRef.value
-  if (!el) return
-  const idx = rowIndexAt(e.clientY)
-  const row = rows.value[idx]
-  if (!row || row.node.id === d.id) {
-    d.indicator = null
-    return
-  }
-  // 不允许拖到自身后代
-  let p = row.node.parent
-  let intoSelf = false
+function isUnderAncestor(node: MindmapNode, ancestorId: string): boolean {
+  let p = node.parent
   while (p) {
-    if (p.id === d.id) intoSelf = true
+    if (p.id === ancestorId) return true
     p = p.parent
   }
-  if (intoSelf) {
-    d.indicator = null
-    return
+  return false
+}
+
+function isDropGuideHighlighted(row: Row, guideDepth: number): boolean {
+  const ind = drag.value?.indicator
+  if (!ind || ind.type !== 'child' || ind.guideDepth !== guideDepth) return false
+  return row.node.id === ind.targetId || isUnderAncestor(row.node, ind.targetId)
+}
+
+function onGripPointerDown(node: MindmapNode, e: PointerEvent) {
+  if (e.button !== 0) return
+  if (node === props.session.focusRootNode) return
+  e.preventDefault()
+  const grip = e.currentTarget as HTMLElement | null
+  try {
+    grip?.setPointerCapture?.(e.pointerId)
+  } catch {
+    /* ignore */
   }
-  const rect = el.getBoundingClientRect()
-  const rowTop = idx * ROW_HEIGHT + PADDING_TOP - el.scrollTop
-  const ratio = (e.clientY - rect.top - rowTop) / ROW_HEIGHT
-  const type = ratio < 0.3 ? 'before' : ratio > 0.7 ? 'after' : 'child'
-  const depthIndent = type === 'child' ? row.depth + 1 : row.depth
-  d.indicator = {
+  document.body.style.setProperty('user-select', 'none')
+  document.body.style.setProperty('-webkit-user-select', 'none')
+  window.getSelection()?.removeAllRanges()
+  const pointerId = e.pointerId
+  // 阈值前不写 drag ref，避免重渲染拆掉 grip 上的 capture/监听
+  const pending: DragState = {
+    id: node.id,
+    startY: e.clientY,
+    dragging: false,
+    pointerX: e.clientX,
+    pointerY: e.clientY,
+    indicator: null,
+  }
+  let finished = false
+  const startX = e.clientX
+  const onMove = (ev: PointerEvent) => {
+    if (ev.isTrusted && ev.pointerId !== pointerId) return
+    pending.pointerX = ev.clientX
+    pending.pointerY = ev.clientY
+    const moved =
+      pending.dragging ||
+      Math.abs(ev.clientY - pending.startY) >= 5 ||
+      Math.abs(ev.clientX - startX) >= 5
+    if (!moved) return
+    if (!pending.dragging) {
+      pending.dragging = true
+      suppressRowClick = true
+      window.getSelection()?.removeAllRanges()
+    }
+    pending.indicator = calcDropIndicator(ev.clientX, ev.clientY, pending.id)
+    drag.value = { ...pending }
+  }
+  const onUp = (ev: PointerEvent) => {
+    if (ev.isTrusted && ev.pointerId !== pointerId) return
+    if (finished) return
+    finished = true
+    document.removeEventListener('pointermove', onMove)
+    document.removeEventListener('pointerup', onUp)
+    document.removeEventListener('pointercancel', onUp)
+    try {
+      if (grip?.hasPointerCapture?.(pointerId)) grip.releasePointerCapture(pointerId)
+    } catch {
+      /* ignore */
+    }
+    onDragUp()
+  }
+  // 只挂 document：setPointerCapture 后事件仍冒泡到 document；避免 grip 重渲染丢监听
+  document.addEventListener('pointermove', onMove)
+  document.addEventListener('pointerup', onUp)
+  document.addEventListener('pointercancel', onUp)
+}
+
+/** 用 spacer 可视坐标命中行，避免 padding/标题 margin 造成的偏移 */
+function rowIndexAt(clientY: number): number {
+  const el = containerRef.value
+  const spacer = el?.querySelector('.outline-spacer') as HTMLElement | null
+  if (!el || !spacer) return -1
+  const y = clientY - spacer.getBoundingClientRect().top
+  const list = rows.value
+  if (list.length === 0) return -1
+  if (y < 0) return 0
+  for (let i = 0; i < list.length; i++) {
+    const row = list[i]
+    if (y < row.top + row.height) return i
+  }
+  return list.length - 1
+}
+
+function descendantCount(node: MindmapNode): number {
+  return node.children.reduce((total, child) => total + 1 + descendantCount(child), 0)
+}
+
+/** 幕布式落点：下半区锚定当前行，偏右/有子则收为子节点，否则插到同级之后（可左移升层） */
+function calcDropIndicator(clientX: number, clientY: number, dragId: string): DropIndicator | null {
+  const el = containerRef.value
+  const spacer = el?.querySelector('.outline-spacer') as HTMLElement | null
+  if (!el || !spacer) return null
+  const list = rows.value
+  if (list.length === 0) return null
+
+  const idx = rowIndexAt(clientY)
+  if (idx < 0) return null
+  const hit = list[idx]
+  const hitEl = el.querySelector(`.outline-row[data-node-id="${hit.node.id}"]`) as HTMLElement | null
+  if (!hitEl) return null
+  const hitRect = hitEl.getBoundingClientRect()
+  const midY = (hitRect.top + hitRect.bottom) / 2
+
+  // 锚定节点：指针在行下半 → 本行；上半 → 上一行（幕布 _calcDropOperation）
+  let anchorIdx = idx
+  if (clientY <= midY) {
+    if (idx === 0) {
+      // 插到列表最前：作为聚焦根的第一个子节点之前 → before 首行
+      if (hit.node.id === dragId || isUnderAncestor(hit.node, dragId)) return null
+      return lineIndicator('before', hit, 0, spacer)
+    }
+    anchorIdx = idx - 1
+  }
+
+  // 落在被拖节点或其子树上时，改锚定到最近的合法邻居
+  while (
+    anchorIdx >= 0 &&
+    (list[anchorIdx].node.id === dragId || isUnderAncestor(list[anchorIdx].node, dragId))
+  ) {
+    anchorIdx -= 1
+  }
+  if (anchorIdx < 0) {
+    const first = list.find((r) => r.node.id !== dragId && !isUnderAncestor(r.node, dragId))
+    if (!first) return null
+    return lineIndicator('before', first, first.depth, spacer)
+  }
+  const anchor = list[anchorIdx]
+
+  const anchorEl = el.querySelector(`.outline-row[data-node-id="${anchor.node.id}"]`) as HTMLElement | null
+  const anchorRect = (anchorEl ?? hitEl).getBoundingClientRect()
+  const indentEdge = anchorRect.left + anchor.depth * INDENT
+  const hasVisibleKids = anchor.node.children.some((c) => c.id !== dragId) && !anchor.node.collapsed
+  // 偏右超过一层缩进，或目标已有展开子节点 → 收为第一个子节点（幕布口径）
+  if ((hasVisibleKids || clientX > indentEdge + INDENT) && !anchor.node.collapsed) {
+    return lineIndicator('child', anchor, anchor.depth + 1, spacer)
+  }
+
+  // 向左拖：按指针所在缩进层级逐级提升。不能只允许“末子”提升，
+  // 否则有后续兄弟的节点永远无法拖回顶层。
+  const resolved = resolveAfterDropLevel(
+    anchor.node,
+    props.session.focusRootNode,
+    clientX,
+    indentEdge,
+    anchor.depth,
+    INDENT,
+  )
+  const place = resolved.node
+  const depth = resolved.depth
+  if (place.id === dragId || isUnderAncestor(place, dragId)) return null
+
+  const placeRow = list.find((r) => r.node.id === place.id) ?? anchor
+  // 横线画在指针锚定行附近（幕布画在 curNode）；提交时插到 place 之后
+  const visual = lineIndicator('after', anchor, depth, spacer)
+  visual.targetId = placeRow.node.id
+  return visual
+}
+
+function lineIndicator(
+  type: 'before' | 'after' | 'child',
+  row: Row,
+  lineDepth: number,
+  spacer: HTMLElement,
+): DropIndicator {
+  const top =
+    type === 'before'
+      ? row.top
+      : type === 'after'
+        ? row.top + row.height
+        : row.top + Math.min(row.textHeight, ROW_HEIGHT)
+  const lineLeft = Math.max(0, COLLAPSE_LEAD + Math.max(0, lineDepth) * INDENT)
+  const width = Math.max(120, spacer.clientWidth - lineLeft - 8)
+  return {
     type,
     targetId: row.node.id,
-    top: type === 'before' ? rowTop : type === 'after' ? rowTop + ROW_HEIGHT : rowTop + ROW_HEIGHT / 2,
-    left: 24 + depthIndent * 20,
-    width: 200,
+    top,
+    left: lineLeft,
+    width,
+    guideDepth: type === 'child' ? row.depth : null,
   }
 }
 
 function onDragUp() {
-  window.removeEventListener('pointermove', onDragMove)
+  document.body.style.removeProperty('user-select')
+  document.body.style.removeProperty('-webkit-user-select')
+  window.getSelection()?.removeAllRanges()
   const d = drag.value
   drag.value = null
   setTimeout(() => (suppressRowClick = false), 0)
@@ -557,7 +1832,7 @@ function onDragUp() {
   const target = session.document.find(d.indicator.targetId)
   if (!target) return
   if (d.indicator.type === 'child') {
-    session.moveNode(d.id, target.id, target.children.length)
+    session.moveNode(d.id, target.id, 0)
   } else if (target.parent) {
     const idx = target.parent.children.indexOf(target)
     session.moveNode(d.id, target.parent.id, d.indicator.type === 'before' ? idx : idx + 1)
@@ -567,68 +1842,256 @@ function onDragUp() {
 </script>
 
 <template>
-  <div ref="containerRef" class="outline-view" tabindex="0" @scroll="onScroll" @keydown="onKeydown">
-    <div class="outline-spacer" :style="{ height: `${rows.length * ROW_HEIGHT}px` }">
+  <div
+    ref="containerRef"
+    class="outline-view"
+    :class="{ 'is-dragging': !!drag?.dragging, 'is-range-selecting': rangeSelecting }"
+    tabindex="0"
+    @scroll="onScroll"
+    @keydown="onKeydown"
+    @copy="onContainerCopy"
+    @cut="onContainerCut"
+  >
+    <div v-if="focusRoot" class="outline-title" :class="{ 'is-selected': focusRoot.id === selectedId, 'has-image': !!focusRoot.content.image }" :style="{ minHeight: `${titleHeight}px` }">
+      <RichInlineEditor
+        class="title-input"
+        :class="{ 'is-view-mode': focusedId !== focusRoot.id }"
+        :editor-id="focusRoot.id"
+        :raw="focusRoot.content.image ? focusRoot.content.text : focusRoot.content.raw"
+        :active="focusedId === focusRoot.id"
+        :placeholder="focusRoot.content.image ? '图片描述' : '标题'"
+        paste-mode="outline"
+        :style="{ height: `${Math.max(36, titleHeight - imageBlockHeight(focusRoot))}px` }"
+        @click="onInlineDisplayClick(focusRoot, $event)"
+        @focus="onRowInputFocus(focusRoot, $event)"
+        @blur="onRowInputBlur(focusRoot, $event)"
+        @draft-change="onRowDraftChange(focusRoot, null, $event)"
+        @commit="commitEditorPayload(focusRoot, $event)"
+        @keydown="onTitleKeydown"
+        @keyup="onTextSelection(focusRoot, $event)"
+        @mouseup="onTextSelection(focusRoot, $event)"
+        @select="onTextSelection(focusRoot, $event)"
+        @copy="onCopy(focusRoot, $event)"
+        @cut="onCut(focusRoot, $event)"
+        @paste-image="onEditorPasteImage(focusRoot, $event)"
+        @paste-multiline="onEditorPasteMultiline(focusRoot, $event)"
+        @link-enter="onTitleLinkEnter"
+        @link-leave="closeLinkPopoverSoon"
+        @link-click="onInlineLinkClick"
+      />
+      <div v-if="focusRoot.content.image" class="title-image">
+        <div class="row-image-frame" :style="{ width: `${displayImageWidth(focusRoot)}px` }">
+          <img
+            class="row-image-img"
+            :src="resolvedImageSrc(focusRoot.content.image.src)"
+            :alt="focusRoot.content.image.alt"
+            draggable="false"
+            @load="onOutlineImageLoad(focusRoot.content.image.src, $event)"
+            @click="onImageClick(focusRoot, $event)"
+          />
+          <span
+            class="row-image-handle"
+            title="拖动调节宽度"
+            @pointerdown="onImageResizePointerDown(focusRoot, $event)"
+          />
+        </div>
+      </div>
+    </div>
+
+    <div class="outline-spacer" :style="{ height: `${totalListHeight}px` }">
       <div
         v-for="row in visibleRows"
         :key="row.node.id"
         class="outline-row"
+        :data-node-id="row.node.id"
         :class="{
-          'is-selected': row.node.id === selectedId,
+          'is-selected': selectedIds.has(row.node.id),
           'is-matched': matches.has(row.node.id),
-          'is-focus-root': row.index === 0,
+          'is-hovered': hoveredId === row.node.id,
+          'has-image': !!row.node.content.image,
+          'is-drag-source': drag?.dragging && drag.id === row.node.id,
         }"
-        :style="{ top: `${row.index * ROW_HEIGHT}px`, height: `${ROW_HEIGHT}px` }"
+        :style="{ top: `${row.top}px`, height: `${row.height}px` }"
+        @mouseenter="hoveredId = row.node.id"
+        @mouseleave="hoveredId = null"
+        @pointerdown.capture="onRowPointerDown(row, $event)"
       >
-        <span class="row-indent" :style="{ width: `${row.depth * 20}px` }" @pointerdown="onGripPointerDown(row.node, $event)" />
-        <span
-          v-if="row.node.children.length > 0"
-          class="row-arrow"
-          :class="{ collapsed: row.node.collapsed }"
-          @click="onArrowClick(row.node, $event)"
-          @pointerdown="onGripPointerDown(row.node, $event)"
-          >▸</span
-        >
-        <span v-else class="row-arrow-placeholder" @pointerdown="onGripPointerDown(row.node, $event)" />
-        <span
-          class="row-bullet"
-          :class="{ 'has-children': row.node.children.length > 0 }"
-          title="点击进入主题"
-          @click="onBulletClick(row.node, $event)"
-          @pointerdown="onGripPointerDown(row.node, $event)"
-        >
-          <i />{{ row.node.collapsed ? row.node.children.length : '' }}
+        <!-- 引导线与祖先圆点中心对齐（幕布 indent-item 口径） -->
+        <span class="row-indents" :style="{ width: `${gutterWidth(row.depth)}px` }">
+          <i
+            v-for="i in row.depth"
+            :key="i"
+            class="indent-guide"
+            :class="{ 'is-drop-highlight': isDropGuideHighlighted(row, i - 1) }"
+            :style="{ left: `${(i - 1) * INDENT + BULLET_CENTER}px` }"
+          />
+          <!-- 收为子节点时：在目标行自身圆点列补一条高亮层级线 -->
+          <i
+            v-if="drag?.indicator?.type === 'child' && drag.indicator.targetId === row.node.id"
+            class="indent-guide is-drop-highlight is-drop-parent"
+            :style="{ left: `${bulletCenterX(row.depth)}px` }"
+          />
         </span>
-        <span
-          v-if="row.node.content.checked !== null"
-          class="row-checkbox"
-          :class="{ checked: row.node.content.checked }"
-          @click="onCheckboxClick(row.node, $event)"
-          >{{ row.node.content.checked ? '☑' : '☐' }}</span
+
+        <div class="row-main">
+          <span
+            class="row-gutter"
+            :style="{ width: `${gutterWidth(row.depth)}px` }"
+            @pointerdown="onGripPointerDown(row.node, $event)"
+          >
+            <button
+              v-if="row.node.children.length > 0"
+              type="button"
+              class="row-collapse"
+              :class="{
+                collapsed: row.node.collapsed,
+                visible: hoveredId === row.node.id || row.node.collapsed,
+              }"
+              :style="{ left: `${row.depth > 0 ? (row.depth - 1) * INDENT + BULLET_CENTER - COLLAPSE_LEAD / 2 : 0}px` }"
+              title="折叠/展开"
+              @click="onArrowClick(row.node, $event)"
+              @pointerdown.stop="onGripPointerDown(row.node, $event)"
+            />
+            <span
+              class="row-bullet"
+              :class="{ 'has-children': row.node.children.length > 0, collapsed: row.node.collapsed }"
+              :style="{ left: `${COLLAPSE_LEAD + row.depth * INDENT}px` }"
+              title="点击进入主题"
+              @click="onBulletClick(row.node, $event)"
+              @pointerdown.stop="onGripPointerDown(row.node, $event)"
+            >
+              <i class="bullet-dot" />
+              <span v-if="row.node.collapsed && row.node.children.length > 0" class="bullet-count">{{
+                descendantCount(row.node)
+              }}</span>
+            </span>
+          </span>
+
+          <button
+            v-if="row.node.content.checked !== null"
+            type="button"
+            class="row-checkbox"
+            :class="{ checked: row.node.content.checked }"
+            role="checkbox"
+            :aria-checked="row.node.content.checked"
+            :title="row.node.content.checked ? '标记为未完成' : '标记为已完成'"
+            @click="onCheckboxClick(row.node, $event)"
+          >
+            <svg v-if="row.node.content.checked" viewBox="0 0 16 16" aria-hidden="true"><path d="m3.5 8 3 3 6-6" /></svg>
+          </button>
+
+          <RichInlineEditor
+            class="row-input"
+            :class="{
+              'is-task-done': row.node.content.checked === true,
+              'is-view-mode': focusedId !== row.node.id,
+            }"
+            :editor-id="row.node.id"
+            :raw="row.node.content.image ? row.node.content.text : row.node.content.raw"
+            :active="focusedId === row.node.id"
+            :done="row.node.content.checked === true"
+            :placeholder="row.node.content.image ? '图片描述' : undefined"
+            paste-mode="outline"
+            :style="{ height: `${row.textHeight - 8}px` }"
+            @click="onInlineDisplayClick(row.node, $event)"
+            @focus="onRowInputFocus(row.node, $event)"
+            @blur="onRowInputBlur(row.node, $event)"
+            @draft-change="onRowDraftChange(row.node, row.depth, $event)"
+            @commit="commitEditorPayload(row.node, $event)"
+            @keydown="onEditKeydown(row.node, $event)"
+            @keyup="onTextSelection(row.node, $event)"
+            @mouseup="onTextSelection(row.node, $event)"
+            @select="onTextSelection(row.node, $event)"
+            @copy="onCopy(row.node, $event)"
+            @cut="onCut(row.node, $event)"
+            @paste-image="onEditorPasteImage(row.node, $event)"
+            @paste-multiline="onEditorPasteMultiline(row.node, $event)"
+            @link-enter="(link, event) => onInlineLinkEnter(row.node, link, event)"
+            @link-leave="closeLinkPopoverSoon"
+            @link-click="onInlineLinkClick"
+          />
+        </div>
+
+        <div
+          v-if="row.node.content.image"
+          class="row-image"
+          :style="{ marginLeft: `${gutterWidth(row.depth)}px` }"
         >
-        <input
-          class="row-input"
-          :class="{ 'is-task-done': row.node.content.checked === true }"
-          :value="row.node.content.raw"
-          :data-id="row.node.id"
-          spellcheck="false"
-          @focus="onRowInputFocus(row.node)"
-          @blur="onRowInputBlur(row.node, $event)"
-          @keydown="onEditKeydown(row.node, $event)"
-          @paste="onPaste(row.node, $event)"
-          @copy="onCopy(row.node, $event)"
-          @cut="onCut(row.node, $event)"
-        />
-        <span v-if="row.node.content.link" class="row-badge" title="打开链接" @click="onLinkClick(row.node, $event)">↗</span>
-        <span v-if="row.node.content.image" class="row-badge" title="查看图片" @click="onImageClick(row.node, $event)">🖼</span>
+          <div class="row-image-frame" :style="{ width: `${displayImageWidth(row.node)}px` }">
+            <img
+              class="row-image-img"
+              :src="resolvedImageSrc(row.node.content.image.src)"
+              :alt="row.node.content.image.alt"
+              draggable="false"
+              @load="onOutlineImageLoad(row.node.content.image.src, $event)"
+              @click="onImageClick(row.node, $event)"
+            />
+            <span
+              class="row-image-handle"
+              title="拖动调节宽度"
+              @pointerdown="onImageResizePointerDown(row.node, $event)"
+            />
+          </div>
+        </div>
       </div>
+
+      <div
+        v-if="drag?.dragging && drag.indicator"
+        class="drop-line"
+        :data-drop-type="drag.indicator.type"
+        :data-drop-target="drag.indicator.targetId"
+        :data-guide-depth="drag.indicator.guideDepth ?? ''"
+        :style="{
+          top: `${drag.indicator.top}px`,
+          left: `${drag.indicator.left}px`,
+          width: `${drag.indicator.width}px`,
+        }"
+      />
     </div>
 
     <div
-      v-if="drag?.dragging && drag.indicator"
-      class="drop-indicator"
-      :class="`is-${drag.indicator.type}`"
-      :style="{ top: `${drag.indicator.top}px`, left: `${drag.indicator.left}px`, width: drag.indicator.type === 'child' ? '160px' : `${drag.indicator.width}px` }"
+      v-if="drag?.dragging"
+      class="outline-drag-widget"
+      :style="{ left: `${drag.pointerX}px`, top: `${drag.pointerY}px` }"
+    >
+      <i class="bullet-dot" />
+    </div>
+
+    <input ref="imagePickerRef" type="file" accept="image/*" hidden @change="onSelectionImagePicked" />
+
+    <SelectionToolbar
+      v-if="textSelection && !linkEditor"
+      mode="text"
+      :position="textSelection.position"
+      :active-formats="selectedTextFormats"
+      @format="applyTextFormat"
+      @task="toggleSelectionTask"
+      @image="requestSelectionImage"
+      @link="openSelectionLinkEditor"
+      @clear="clearTextFormat"
+      @delete="removeToolbarSelection"
+    />
+    <SelectionToolbar
+      v-else-if="multiSelectionPosition && !linkEditor"
+      mode="nodes"
+      :position="multiSelectionPosition"
+      @format="applyNodeFormat"
+      @task="toggleSelectionTask"
+      @copy="copySelectedFromToolbar"
+      @clear="clearNodeFormats"
+      @delete="removeToolbarSelection"
+    />
+    <LinkPopover
+      v-if="linkEditor"
+      ref="linkPopoverRef"
+      :url="linkEditor.url"
+      :position="linkEditor.position"
+      :start-editing="linkEditor.mode === 'selection'"
+      @save="saveLink"
+      @remove="removeLink"
+      @keep="keepLinkPopover"
+      @leave="closeLinkPopoverSoon"
+      @close="linkEditor = null"
     />
   </div>
 </template>
@@ -640,7 +2103,53 @@ function onDragUp() {
   overflow: auto;
   outline: none;
   background: var(--mm-panel-bg);
-  padding: 8px 0;
+  padding: 12px 24px 48px;
+}
+.outline-view.is-dragging,
+.outline-view.is-dragging *,
+.outline-view.is-range-selecting,
+.outline-view.is-range-selecting * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  caret-color: transparent;
+}
+.outline-title {
+  position: relative;
+  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+.outline-title.has-image {
+  min-height: auto;
+}
+.title-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--mm-text);
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.3;
+  padding: 4px 0;
+  font-family: inherit;
+  resize: none;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.title-input::placeholder {
+  color: var(--mm-text-dim);
+  font-weight: 500;
+}
+.title-input.is-view-mode { cursor: text; }
+.title-image {
+  flex: none;
+  padding: 0 0 8px;
 }
 .outline-spacer {
   position: relative;
@@ -650,82 +2159,217 @@ function onDragUp() {
   left: 0;
   right: 0;
   display: flex;
-  align-items: center;
-  gap: 4px;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 0;
   padding-right: 12px;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--mm-text);
-  user-select: none;
-  white-space: nowrap;
+  overflow: hidden;
 }
-.outline-row:hover {
-  background: var(--mm-hover);
+.row-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 32px;
+  flex: none;
+}
+.row-image {
+  flex: none;
+  padding: 0 0 8px;
+}
+.row-image-frame {
+  position: relative;
+  max-width: 100%;
+  line-height: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--mm-text-dim) 12%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--mm-text-dim) 25%, transparent);
+}
+.row-image-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 480px;
+  object-fit: contain;
+  object-position: left top;
+  cursor: zoom-in;
+  user-select: none;
+}
+.row-image-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  cursor: ew-resize;
+  background: linear-gradient(135deg, transparent 50%, var(--mm-accent) 50%);
+  opacity: 0.85;
+}
+.row-image-frame:hover .row-image-handle {
+  opacity: 1;
 }
 .outline-row.is-selected {
   background: var(--mm-selected-bg);
+  border-radius: 4px;
+}
+.outline-row:hover:not(.is-selected) {
+  background: transparent;
 }
 .outline-row.is-matched .row-input {
-  background: rgb(255 213 79 / 0.4);
+  background: rgb(255 213 79 / 0.35);
   border-radius: 3px;
 }
-.outline-row.is-focus-root .row-input {
-  font-weight: 700;
-  font-size: 15px;
+.row-indents {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 0;
+  pointer-events: none;
 }
-.row-indent {
+.row-gutter {
+  position: relative;
   flex: none;
-  height: 100%;
+  height: 32px;
   cursor: grab;
 }
-.row-arrow {
-  width: 16px;
-  flex: none;
-  text-align: center;
-  color: var(--mm-text-dim);
-  font-size: 11px;
-  display: inline-block;
-  transition: transform 0.12s;
-  transform: rotate(90deg);
-  cursor: pointer;
+.indent-guide {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-left: 1px solid color-mix(in srgb, var(--mm-text-dim) 70%, transparent);
+  pointer-events: none;
 }
-.row-arrow.collapsed {
+.indent-guide.is-drop-highlight {
+  border-left-width: 2px;
+  border-left-color: var(--mm-accent);
+}
+.outline-row.is-drag-source {
+  opacity: 0.45;
+}
+.outline-row.is-drag-source .row-input {
+  pointer-events: none;
+}
+.drop-line {
+  position: absolute;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--mm-accent);
+  pointer-events: none;
+  z-index: 10;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--mm-accent) 35%, transparent);
+}
+.outline-drag-widget {
+  position: fixed;
+  z-index: 40;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--mm-panel-bg) 85%, var(--mm-accent));
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.35);
+}
+.outline-drag-widget .bullet-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mm-accent);
+}
+.row-collapse {
+  position: absolute;
+  top: 9px;
+  width: 18px;
+  height: 14px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0;
+  z-index: 1;
+}
+.row-collapse.visible,
+.outline-row:hover .row-collapse {
+  opacity: 1;
+}
+.row-collapse::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 3px;
+  border-style: solid;
+  border-width: 4px 0 4px 6px;
+  border-color: transparent transparent transparent var(--mm-text-dim);
+  transform: rotate(90deg);
+  transform-origin: 3px 4px;
+  transition: transform 0.12s;
+}
+.row-collapse.collapsed::before {
   transform: rotate(0deg);
 }
-.row-arrow-placeholder {
-  width: 16px;
-  flex: none;
-}
 .row-bullet {
-  flex: none;
+  position: absolute;
+  top: 5px;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  justify-content: center;
+  gap: 2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  cursor: pointer;
   color: var(--mm-text-dim);
   font-size: 11px;
-  cursor: pointer;
-  border-radius: 8px;
-  padding: 1px 4px;
+  z-index: 1;
 }
-.row-bullet i {
+.row-bullet:hover {
+  background: color-mix(in srgb, var(--mm-text-dim) 22%, transparent);
+}
+.bullet-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: var(--mm-text-dim);
 }
-.row-bullet:hover {
-  background: var(--mm-hover);
+.row-bullet.has-children .bullet-dot {
+  background: var(--mm-text);
 }
-.row-bullet.has-children i {
-  background: var(--mm-accent);
+.bullet-count {
+  font-size: 10px;
+  color: var(--mm-text-dim);
+  line-height: 1;
 }
 .row-checkbox {
+  display: inline-flex;
+  width: 17px;
+  height: 17px;
   flex: none;
+  align-items: center;
+  justify-content: center;
+  margin: 7px 3px 0 0;
+  padding: 0;
+  border: 1.5px solid color-mix(in srgb, var(--mm-text-dim) 86%, transparent);
+  border-radius: 4px;
+  outline: 0;
+  background: transparent;
   cursor: pointer;
   color: var(--mm-text-dim);
+  transition: border-color .12s, background .12s, box-shadow .12s;
 }
 .row-checkbox.checked {
-  color: var(--mm-accent);
+  border-color: var(--mm-accent);
+  background: var(--mm-accent);
+  color: white;
 }
+.row-checkbox:hover { border-color: var(--mm-accent); }
+.row-checkbox:focus-visible { box-shadow: 0 0 0 2px color-mix(in srgb, var(--mm-accent) 28%, transparent); }
+.row-checkbox svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .row-input {
   flex: 1;
   min-width: 60px;
@@ -735,39 +2379,22 @@ function onDragUp() {
   font-size: inherit;
   font-family: inherit;
   color: inherit;
-  padding: 2px 4px;
-  border-radius: 4px;
+  padding: 4px 2px;
+  border-radius: 0;
+  caret-color: var(--mm-text);
+  resize: none;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.45;
 }
 .row-input:focus {
-  background: var(--mm-canvas-bg);
-  box-shadow: 0 0 0 1px var(--mm-accent);
+  background: transparent;
+  box-shadow: none;
 }
+.row-input.is-view-mode { cursor: text; }
 .row-input.is-task-done {
   text-decoration: line-through;
   color: var(--mm-text-dim);
-}
-.row-badge {
-  flex: none;
-  color: var(--mm-text-dim);
-  font-size: 11px;
-  cursor: pointer;
-}
-.row-badge:hover {
-  color: var(--mm-accent);
-}
-.drop-indicator {
-  position: absolute;
-  height: 3px;
-  border-radius: 1.5px;
-  background: var(--mm-accent);
-  pointer-events: none;
-  z-index: 10;
-}
-.drop-indicator.is-child {
-  height: 22px;
-  background: transparent;
-  border: 2px dashed var(--mm-accent);
-  border-radius: 6px;
-  transform: translateY(-11px);
 }
 </style>

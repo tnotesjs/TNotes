@@ -1,5 +1,5 @@
 {
-  "name": "mindmap-web",
+  "name": "@tnotesjs/mindmap-web",
   "version": "0.1.0",
   "description": "TNotes 思维导图 Web 应用 —— 数据即 Markdown（*.tn-mindmap.md）",
   "type": "module",
@@ -19,7 +19,16 @@
     "node": ">=18.0.0"
   },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tnotesjs/mindmap-web.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tnotesjs/mindmap-web/issues"
+  },
+  "homepage": "https://github.com/tnotesjs/mindmap-web#readme",
   "dependencies": {
+    "@tnotesjs/mindmap-core": "0.1.0",
     "vue": "^3.5.41"
   },
   "devDependencies": {

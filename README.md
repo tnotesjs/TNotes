@@ -7,7 +7,7 @@
 ```bash
 pnpm install
 pnpm dev        # 本地开发
-pnpm test       # 引擎单元测试（vitest）
+pnpm test       # Web 组件与集成测试（vitest）
 pnpm typecheck  # vue-tsc 类型检查
 pnpm lint       # eslint
 pnpm build      # 生产构建
@@ -17,15 +17,19 @@ pnpm build      # 生产构建
 
 幕布式视图切换：一次只展示一个视图；折叠状态、聚焦路径、选中节点保存在无头会话层，跨视图同步。
 
-- **大纲**：DOM 列表。回车新增同级并连续录入、Tab 降级 / Shift+Tab 升级、Delete 删除、拖拽移动、点击 bullet 进入主题、双击编辑、空行提交即删；万级节点虚拟滚动
-- **脑图**：Canvas 渲染。Tab 新增子节点、Enter 新增同级、双击/F2 编辑、拖拽挂接、折叠/展开（位置补偿）、Cmd/Ctrl+Z 撤销、滚轮平移、Cmd/Ctrl+滚轮缩放
-- **源码**：全屏 Markdown 编辑，300ms 防抖双向同步
+- **大纲**：DOM 列表。回车新增同级并连续录入、Tab 降级 / Shift+Tab 升级、连续多选与批量结构操作、从 bullet 拖拽移动、点击 bullet 进入主题；查看和编辑使用同一个行内富文本编辑面，输入时仍保留粗体、斜体、删除线等视觉样式，并支持链接 hover 更新、选区 / 多主题浮动工具栏；空节点允许保留，万级节点虚拟滚动
+- **脑图**：Canvas 渲染。Tab 新增子节点、非编辑态 Enter 新增同级、编辑态 Enter 提交、Shift+Tab 插入上级主题、拖拽挂接、折叠/展开、进入任意主题；节点拖动时保留并弱化原子树占位，指针下显示浮动副本，候选父级 / 同级落点同步展示目标强调和临时连线，松手后才提交树结构；短文本编辑优先横向增长，不会因覆盖层测量错误提前换行，编辑中的 DOM 覆盖层会与 Canvas 节点同步平移和缩放；选中或编辑节点时右侧显示 `+`，普通 hover 有子节点的主题时显示 `<` 收起控件，折叠后显示全部后代数量；单选 / 多选均默认在底部展示操作工具栏，并提供各自对应的右键菜单；空白拖拽框选，按住 Space 拖拽画布，Cmd/Ctrl+点击离散多选并批量格式化 / 删除；链接支持精确 hover 更新与单击跳转，编辑态保留完整行内样式；父子相对布局让每组子主题紧跟自己的父主题，长文案只影响自身后代，不再把其它分支的同层节点推到统一远端列
+- **源码**：全屏 Markdown 编辑，300ms 防抖双向同步；格式非法时保留原文并锁定在源码视图，提供行列诊断
 
-通用：Cmd/Ctrl+F 搜索定位、聚焦子树（头部面包屑返回上级）、明暗色跟随系统。
+通用：Cmd/Ctrl+F 打开当前文档搜索结果视图（从脑图触发时自动切换到大纲结果视图，结果复用同一富文本编辑面，可直接编辑，并支持替换 / 全部替换）；头部提供相对于当前聚焦根主题的“全部主题 / 1 级 / 2 级 / 3 级”快速折叠菜单，其中“全部主题”递归处理当前子树，Cmd/Ctrl+Alt+1/2/3 切换对应层级，Cmd/Ctrl+Alt+Shift+`.` 切换全部主题；进入任意主题后展示不截断的完整真实祖先路径，悬停任一级可从同层主题菜单快速切换，长路径保持单行并自动横向滚到当前主题；明暗色跟随系统。
+
+行内方言与幕布主快捷键：`**粗体**`（Cmd/Ctrl+B）、`*斜体*`（Cmd/Ctrl+I）、`***粗斜体***`、`<u>下划线</u>`（Cmd/Ctrl+U）、`~~删除线~~`（选中文字后 Cmd/Ctrl+Enter）、`==高亮==`、`` `行内代码` ``（Alt/Option+L）、`[链接](url)`（Cmd/Ctrl+K），Cmd/Ctrl+Shift+L 添加 / 取消待办，Cmd/Ctrl+`\\` 清除样式。高亮与行内代码在同一段文字上互斥；图片入口为 Alt/Option+Enter。
+
+当前桌面端自动化基线（2026-08-20）：Web 侧 12 个测试文件、75 项测试，Core 侧 10 个测试文件、146 项测试，合计 221 项全部通过；两侧的类型检查、lint 与构建均通过。现阶段继续优先验收最新版 Chrome 的桌面编辑体验；桌面端交互验收完成后，再启动移动端 / 小屏适配并主动提醒进入下一阶段。
 
 ## 脑图格式（`*.tn-mindmap.md`）
 
-文件即脑图：只包含「H1 + 无序列表」，解析只读这部分，回写也只输出这部分。
+文件即脑图：合法文件必须恰好包含一个 H1 根节点；除空行外，H1 前不能有内容，H1 后只能是无序列表。
 
 ```markdown
 # 根节点（H1）
@@ -38,27 +42,31 @@ pnpm build      # 生产构建
   - ![图片节点|300](https://example.com/a.png)   # |300 为宽度 px（Obsidian 风格）
 ```
 
-- 无 H1 时以文件名作虚拟根，多个顶级列表项并列其下
-- 非脑图内容（frontmatter、附录段落等）解析时忽略、回写时丢弃；导入非 `*.tn-mindmap.md` 文件会提示
+- 无 H1、第二个 H1、frontmatter、普通段落、表格等均视为非法格式
+- 非法源码不会被自动规范化或丢弃；修复前大纲 / 脑图入口禁用，导出仍返回原始源码
+
+## 本地作品与截图
+
+- 首次进入使用合法的内存文档 `# 未命名`，不会预先申请目录权限
+- 首次粘贴截图或点击“保存”时，输入作品名并选择本地父目录；应用创建 `<作品名>/<作品名>.tn-mindmap.md` 与 `<作品名>/assets/`
+- 截图以文件写入 `assets/`，Markdown 只保存相对路径，不写 base64
+- 图片文件与主 Markdown 都写入成功后才提交编辑器节点；落盘作品后使用 500ms 防抖自动保存
+- 非法源码会暂停自动保存；用户主动保存并确认后可以原样写入
+- 当前只以最新版 Chrome 的 File System Access API 为兼容目标；应用保持纯静态，可部署到 GitHub Pages
 
 ## 结构
 
 ```text
 src/
-├── engine/     # 【抽离边界】纯 TS 引擎，零 Vue 依赖
-│   ├── model/          # 文档模型（树 + 编辑操作 + 快照）
-│   ├── markdown/       # parser / serializer（文件即脑图）
-│   ├── commands/       # 历史栈（快照式）
-│   ├── layout/         # 右向紧凑树布局（measurer 注入，可测）
-│   ├── render/         # canvasRenderer（视口内重绘）+ hitTest（纯函数命中检测）
-│   ├── session.ts      # MindmapSession 无头会话（三视图共享的状态与操作）
-│   └── canvasEditor.ts # CanvasEditor 脑图视图控制器（交互 + 内联编辑覆盖层）
-├── ui/         # 互斥视图：OutlineView / MindmapView / MarkdownView + SearchBar
-└── App.vue     # 工具栏 + 视图切换 Tab + 聚焦面包屑 + 导入导出
+├── app/        # Web 本地作品、文件系统授权与图片落盘适配
+├── ui/         # 互斥视图、搜索、完整聚焦路径导航与交互组件
+└── App.vue     # 工具栏 + 视图切换 + 聚焦面包屑 + 导入导出
 ```
 
-性能设计：布局 O(n)（实测千级 < 100ms）；Canvas 每帧只画视口内元素（恒定 < 200 个）；大纲万级虚拟滚动；文本测量走 canvas `measureText`。
+纯 TypeScript 引擎已独立为 [`@tnotesjs/mindmap-core`](https://www.npmjs.com/package/@tnotesjs/mindmap-core)，包含 Markdown 解析 / 序列化、文档模型、会话与历史、树布局、Canvas 渲染和编辑控制器；Web 仅保留 Vue UI 与浏览器应用层。
+
+性能设计：Core 布局 O(n)（实测千级 < 100ms）；Canvas 每帧只画视口内元素（恒定 < 200 个）；大纲万级虚拟滚动；文本测量走 canvas `measureText`。
 
 ## 演进
 
-验收通过后：`src/engine/` 整目录抽离为 `tnotesjs/mindmap-core`（npm 包），再由 mindmap-web、`@tnotesjs/core`（VitePress MarkMap 组件）、`mindmap-vscode`（Custom Editor，`filenamePattern: "*.tn-mindmap.md"`）三方依赖。
+`mindmap-core` 已抽离并以 `@tnotesjs/mindmap-core` 发布。后续由 mindmap-web、`@tnotesjs/core`（VitePress MarkMap 组件）与 `mindmap-vscode`（Custom Editor，`filenamePattern: "*.tn-mindmap.md"`）共同依赖，平台特有的文件系统和 UI 能力留在各消费端。

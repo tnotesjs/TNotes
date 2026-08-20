@@ -19,7 +19,7 @@ export const SAMPLE_MARKDOWN = `# 读书笔记：《原则》
   - [ ] 每周复盘一次决策
   - [x] 建立问题记录习惯
   - 参考资料
-    - ![示例图片|240](https://fastly.picsum.photos/id/106/400/250.jpg)
+    - ![示例头像|200](https://avatars.githubusercontent.com/u/83686346?v=4)
 `
 
 /** 生成约 count 个节点的压力测试脑图 */
