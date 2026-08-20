@@ -26,7 +26,7 @@
   "bugs": {
     "url": "https://github.com/tnotesjs/mindmap-web/issues"
   },
-  "homepage": "https://github.com/tnotesjs/mindmap-web#readme",
+  "homepage": "https://tnotesjs.github.io/mindmap-web/",
   "dependencies": {
     "@tnotesjs/mindmap-core": "0.1.0",
     "vue": "^3.5.41"

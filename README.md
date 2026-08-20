@@ -2,6 +2,8 @@
 
 极简思维导图 Web 应用，交互复刻幕布。**数据即 Markdown**：一个 `.md` 文件 = 一张脑图，脑图格式文件约定命名为 `*.tn-mindmap.md`。
 
+在线体验：<https://tnotesjs.github.io/mindmap-web/>
+
 ## 开发
 
 ```bash
