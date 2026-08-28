@@ -216,6 +216,14 @@ export class CanvasRenderer {
     const ch = this.container.clientHeight
     this.canvas.width = Math.max(1, Math.round(cw * dpr))
     this.canvas.height = Math.max(1, Math.round(ch * dpr))
+    // Keep the canvas element at the container's CSS size (retina-sharp bitmap via
+    // width/height * dpr). Without this the canvas renders at the dpr-scaled size,
+    // and a clipping container (e.g. desk's overflow:hidden diagram host) shows
+    // only a corner, so zoomToFit content appears off-center.
+    if (cw > 0 && ch > 0) {
+      this.canvas.style.width = `${cw}px`
+      this.canvas.style.height = `${ch}px`
+    }
     this.scheduleDraw()
   }
 
