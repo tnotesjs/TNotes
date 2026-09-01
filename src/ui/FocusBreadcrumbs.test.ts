@@ -3,7 +3,7 @@ import { createApp, defineComponent, h, nextTick, ref } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { MindmapNode } from '@tnotesjs/mindmap-core'
 import { MindmapSession, resetNodeIdCounter } from '@tnotesjs/mindmap-core'
-import FocusBreadcrumbs from './FocusBreadcrumbs.vue'
+import FocusBreadcrumbs from '@tnotesjs/ui/FocusBreadcrumbs.vue'
 
 interface DeepFixture {
   session: MindmapSession

@@ -4,11 +4,21 @@ import AppIcon from './AppIcon.vue'
 import type { InlineFormat } from '@tnotesjs/mindmap-core'
 import { altShortcut, primaryShortcut } from './platform'
 
-const props = defineProps<{
-  mode: 'text' | 'nodes'
-  position: { left: number; top: number }
-  activeFormats?: Partial<Record<InlineFormat, boolean>>
-}>()
+const props = withDefaults(
+  defineProps<{
+    mode: 'text' | 'nodes'
+    /** Viewport coords for `fixed` placement (outline / text selection). */
+    position?: { left: number; top: number }
+    /**
+     * `canvas-bottom`: pin to the mindmap canvas (absolute) so page scroll cannot
+     * leave a floating orphan over foreign content.
+     * `fixed`: follow `position` in viewport space (outline / text carets).
+     */
+    placement?: 'fixed' | 'canvas-bottom'
+    activeFormats?: Partial<Record<InlineFormat, boolean>>
+  }>(),
+  { placement: 'fixed', position: undefined, activeFormats: undefined },
+)
 
 const emit = defineEmits<{
   format: [format: InlineFormat]
@@ -34,14 +44,17 @@ const VIEWPORT_MARGIN = 8
 const ANCHOR_GAP = 8
 
 const toolbarStyle = computed(() => {
+  if (props.placement === 'canvas-bottom') return undefined
+  const point = props.position
+  if (!point) return undefined
   const viewportWidth = typeof window === 'undefined' ? 1024 : window.innerWidth
   const viewportHeight = typeof window === 'undefined' ? 768 : window.innerHeight
   const { width, height } = toolbarSize.value
   const maxLeft = Math.max(VIEWPORT_MARGIN, viewportWidth - width - VIEWPORT_MARGIN)
   const maxTop = Math.max(VIEWPORT_MARGIN, viewportHeight - height - VIEWPORT_MARGIN)
-  const left = Math.min(maxLeft, Math.max(VIEWPORT_MARGIN, props.position.left - width / 2))
-  const preferredTop = props.position.top - height - ANCHOR_GAP
-  const belowTop = props.position.top + ANCHOR_GAP
+  const left = Math.min(maxLeft, Math.max(VIEWPORT_MARGIN, point.left - width / 2))
+  const preferredTop = point.top - height - ANCHOR_GAP
+  const belowTop = point.top + ANCHOR_GAP
   const top = Math.min(maxTop, Math.max(VIEWPORT_MARGIN, preferredTop < VIEWPORT_MARGIN ? belowTop : preferredTop))
   return { left: `${left}px`, top: `${top}px` }
 })
@@ -54,7 +67,10 @@ function measureToolbar() {
   })
 }
 
-watch(() => [props.mode, props.position.left, props.position.top], measureToolbar)
+watch(
+  () => [props.mode, props.placement, props.position?.left, props.position?.top],
+  measureToolbar,
+)
 onMounted(() => {
   measureToolbar()
   window.addEventListener('resize', measureToolbar)
@@ -63,15 +79,15 @@ onBeforeUnmount(() => window.removeEventListener('resize', measureToolbar))
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      ref="toolbarRef"
-      class="selection-toolbar"
-      :style="toolbarStyle"
-      role="toolbar"
-      :aria-label="mode === 'text' ? '文字格式工具栏' : '多主题工具栏'"
-      @pointerdown.prevent
-    >
+  <div
+    ref="toolbarRef"
+    class="selection-toolbar"
+    :class="{ 'is-canvas-anchored': placement === 'canvas-bottom' }"
+    :style="toolbarStyle"
+    role="toolbar"
+    :aria-label="mode === 'text' ? '文字格式工具栏' : '多主题工具栏'"
+    @pointerdown.prevent
+  >
       <button
         v-for="item in formats"
         :key="item.id"
@@ -99,7 +115,6 @@ onBeforeUnmount(() => window.removeEventListener('resize', measureToolbar))
       <button type="button" class="tool-button" :data-tooltip="`清除样式 (${primaryShortcut('\\')})`" aria-label="清除样式" @click="emit('clear')"><AppIcon name="clearFormat" :size="20" /></button>
       <button type="button" class="tool-button danger" :data-tooltip="`删除 (${primaryShortcut('D', { shift: true })})`" aria-label="删除" @click="emit('delete')"><AppIcon name="trash" :size="20" /></button>
     </div>
-  </Teleport>
 </template>
 
 <style scoped>
@@ -116,6 +131,14 @@ onBeforeUnmount(() => window.removeEventListener('resize', measureToolbar))
   background: color-mix(in srgb, var(--mm-panel-bg) 94%, #545760 6%);
   color: var(--mm-text);
   box-shadow: 0 10px 30px rgb(0 0 0 / .24);
+}
+.selection-toolbar.is-canvas-anchored {
+  position: absolute;
+  left: 50%;
+  right: auto;
+  top: auto;
+  bottom: 18px;
+  transform: translateX(-50%);
 }
 .format-button, .tool-button {
   position: relative;

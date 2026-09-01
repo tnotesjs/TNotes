@@ -11,7 +11,7 @@ import OutlineView from './ui/OutlineView.vue'
 import SearchBar from './ui/SearchBar.vue'
 import AppIcon from './ui/AppIcon.vue'
 import CollapseMenu from './ui/CollapseMenu.vue'
-import FocusBreadcrumbs from './ui/FocusBreadcrumbs.vue'
+import FocusBreadcrumbs from '@tnotesjs/ui/FocusBreadcrumbs.vue'
 import IconButton from './ui/IconButton.vue'
 import { primaryShortcut } from './ui/platform'
 

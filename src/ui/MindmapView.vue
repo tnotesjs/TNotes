@@ -5,7 +5,7 @@ import type { CanvasContextRequest, CanvasLinkHover, InlineFormat, MindmapNode, 
 import CanvasContextMenu from './CanvasContextMenu.vue'
 import LinkPopover from './LinkPopover.vue'
 import SelectionToolbar from './SelectionToolbar.vue'
-import { pasteCanvasOutline } from './canvasClipboard'
+import { pasteCanvasOutline, readMindmapClipboard, writeMindmapClipboard } from './mindmapClipboard'
 
 const props = defineProps<{ session: MindmapSession; resolveImageSrc?: (src: string) => string }>()
 
@@ -18,7 +18,6 @@ const emit = defineEmits<{
 
 const host = ref<HTMLElement>()
 let editor: CanvasEditor | null = null
-const selectionPosition = ref<{ left: number; top: number } | null>(null)
 const selectedCount = ref(0)
 const linkEditor = ref<CanvasLinkHover | null>(null)
 const contextMenu = ref<CanvasContextRequest | null>(null)
@@ -78,37 +77,35 @@ function selectedMarkdown() {
   return selectedRoots().map((node) => serializeSubtree(node)).join('\n')
 }
 
-async function copySelected() {
+async function copySelected(event?: ClipboardEvent | null) {
   const text = selectedMarkdown()
   if (!text) return
-  try {
-    await navigator.clipboard.writeText(text)
-  } catch {
-    // 剪贴板权限被浏览器拒绝时保持文档不变。
-  }
+  writeMindmapClipboard(text, event)
 }
 
-async function cutSelected() {
+async function cutSelected(event?: ClipboardEvent | null) {
   const text = selectedMarkdown()
   if (!text) return
   const ids = [...props.session.selectionIds]
-  try {
-    await navigator.clipboard.writeText(text)
-    props.session.removeNodesByIds(ids)
-  } catch {
-    // 写入失败不能继续删除，避免“剪切”造成数据丢失。
-  }
+  writeMindmapClipboard(text, event)
+  props.session.removeNodesByIds(ids)
+}
+
+async function pasteAtSelection(anchorId?: string, event?: ClipboardEvent | null) {
+  const targetId = anchorId ?? props.session.selectedNode?.id ?? props.session.focusRootNode.id
+  const text = await readMindmapClipboard(event)
+  if (text) pasteCanvasOutline(props.session, targetId, text)
 }
 
 async function pasteAtContextNode() {
   const target = contextMenu.value
   if (!target) return
-  try {
-    const text = await navigator.clipboard.readText()
-    if (text) pasteCanvasOutline(props.session, target.nodeId, text)
-  } catch {
-    // 无剪贴板读取权限时不修改文档。
-  }
+  await pasteAtSelection(target.nodeId)
+}
+
+function pasteTextAt(text: string, anchorId: string) {
+  writeMindmapClipboard(text)
+  pasteCanvasOutline(props.session, anchorId, text)
 }
 
 function editCreated(node: MindmapNode | null) {
@@ -151,8 +148,7 @@ onMounted(() => {
     onImagePreview: (src) => emit('imagePreview', src),
     onPasteImage: (anchorId, blob) => emit('pasteImage', anchorId, blob),
     resolveImageSrc: (src) => props.resolveImageSrc?.(src) ?? src,
-    onSelectionPositionChange: (position, count) => {
-      selectionPosition.value = position
+    onSelectionPositionChange: (_position, count) => {
       selectedCount.value = count
     },
     onLinkHover: onCanvasLinkHover,
@@ -160,8 +156,16 @@ onMounted(() => {
       contextMenu.value = request
       if (request) linkEditor.value = null
     },
-    onCopySelection: copySelected,
-    onCutSelection: cutSelected,
+    onCopySelection: (event) => {
+      void copySelected(event)
+    },
+    onCutSelection: (event) => {
+      void cutSelected(event)
+    },
+    onPasteSelection: (event) => {
+      void pasteAtSelection(undefined, event)
+    },
+    onPasteText: pasteTextAt,
   })
   emit('ready', editor)
   // 切回脑图视图：居中当前选中节点（无选中则保持 zoomToFit）
@@ -180,17 +184,18 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="host" class="mindmap-view-host" />
-  <SelectionToolbar
-    v-if="selectionPosition && selectedCount > 0"
-    mode="nodes"
-    :position="selectionPosition"
-    @format="applyNodeFormat"
-    @task="props.session.toggleTaskSelectedNodes()"
-    @copy="copySelected"
-    @clear="props.session.clearSelectedNodeFormats()"
-    @delete="props.session.removeSelectedNodes()"
-  />
+  <div class="mindmap-view-root">
+    <div ref="host" class="mindmap-view-host" />
+    <SelectionToolbar
+      v-if="selectedCount > 0"
+      mode="nodes"
+      placement="canvas-bottom"
+      @format="applyNodeFormat"
+      @task="props.session.toggleTaskSelectedNodes()"
+      @copy="copySelected"
+      @clear="props.session.clearSelectedNodeFormats()"
+      @delete="props.session.removeSelectedNodes()"
+    />
   <LinkPopover
     v-if="linkEditor"
     :url="linkEditor.url"
@@ -225,10 +230,17 @@ onBeforeUnmount(() => {
     @toggle-siblings="toggleContextSiblings"
     @focus="focusContextNode"
     @close="contextMenu = null"
-  />
+    />
+  </div>
 </template>
 
 <style scoped>
+.mindmap-view-root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
 .mindmap-view-host {
   position: relative;
   width: 100%;
