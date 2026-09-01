@@ -2,7 +2,7 @@
   "name": "tnotes-mindmap-vscode",
   "displayName": "TNotes Mindmap",
   "description": "在 VS Code 中编辑 Markdown-first 的 *.tn-mindmap.md 大纲和思维导图",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "publisher": "tnotesjs",
   "license": "MIT",
