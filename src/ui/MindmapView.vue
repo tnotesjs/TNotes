@@ -5,7 +5,7 @@ import type { CanvasContextRequest, CanvasLinkHover, InlineFormat, MindmapNode, 
 import CanvasContextMenu from './CanvasContextMenu.vue'
 import LinkPopover from './LinkPopover.vue'
 import SelectionToolbar from './SelectionToolbar.vue'
-import { pasteCanvasOutline } from './canvasClipboard'
+import { pasteCanvasOutline, readMindmapClipboard, writeMindmapClipboard } from './canvasClipboard'
 
 const props = defineProps<{ session: MindmapSession; resolveImageSrc?: (src: string) => string }>()
 
@@ -78,37 +78,35 @@ function selectedMarkdown() {
   return selectedRoots().map((node) => serializeSubtree(node)).join('\n')
 }
 
-async function copySelected() {
+async function copySelected(event?: ClipboardEvent | null) {
   const text = selectedMarkdown()
   if (!text) return
-  try {
-    await navigator.clipboard.writeText(text)
-  } catch {
-    // 剪贴板权限被浏览器拒绝时保持文档不变。
-  }
+  writeMindmapClipboard(text, event)
 }
 
-async function cutSelected() {
+async function cutSelected(event?: ClipboardEvent | null) {
   const text = selectedMarkdown()
   if (!text) return
   const ids = [...props.session.selectionIds]
-  try {
-    await navigator.clipboard.writeText(text)
-    props.session.removeNodesByIds(ids)
-  } catch {
-    // 写入失败不能继续删除，避免“剪切”造成数据丢失。
-  }
+  writeMindmapClipboard(text, event)
+  props.session.removeNodesByIds(ids)
+}
+
+async function pasteAtSelection(anchorId?: string, event?: ClipboardEvent | null) {
+  const targetId = anchorId ?? props.session.selectedNode?.id ?? props.session.focusRootNode.id
+  const text = await readMindmapClipboard(event)
+  if (text) pasteCanvasOutline(props.session, targetId, text)
 }
 
 async function pasteAtContextNode() {
   const target = contextMenu.value
   if (!target) return
-  try {
-    const text = await navigator.clipboard.readText()
-    if (text) pasteCanvasOutline(props.session, target.nodeId, text)
-  } catch {
-    // 无剪贴板读取权限时不修改文档。
-  }
+  await pasteAtSelection(target.nodeId)
+}
+
+function pasteTextAt(text: string, anchorId: string) {
+  writeMindmapClipboard(text)
+  pasteCanvasOutline(props.session, anchorId, text)
 }
 
 function editCreated(node: MindmapNode | null) {
@@ -160,8 +158,16 @@ onMounted(() => {
       contextMenu.value = request
       if (request) linkEditor.value = null
     },
-    onCopySelection: copySelected,
-    onCutSelection: cutSelected,
+    onCopySelection: (event) => {
+      void copySelected(event)
+    },
+    onCutSelection: (event) => {
+      void cutSelected(event)
+    },
+    onPasteSelection: (event) => {
+      void pasteAtSelection(undefined, event)
+    },
+    onPasteText: pasteTextAt,
   })
   emit('ready', editor)
   // 切回脑图视图：居中当前选中节点（无选中则保持 zoomToFit）

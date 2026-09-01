@@ -3,6 +3,9 @@ import type { MindmapNode, MindmapSession } from '@tnotesjs/mindmap-core'
 
 const LIST_LINE_RE = /^\s*[-*+]\s+/
 
+/** In-app fallback when the webview Clipboard API is unavailable. */
+let mindmapClipboardBuffer = ''
+
 function clipboardNodes(text: string): MindmapNode[] {
   const fragment = text
     .split(/\r?\n/)
@@ -19,6 +22,52 @@ function clipboardNodes(text: string): MindmapNode[] {
   return parsed.doc.root.children.map((node) => cloneSubtree(node))
 }
 
+/** Sync write that survives missing clipboard permission in the webview. */
+export function writeMindmapClipboard(text: string, event?: ClipboardEvent | null): void {
+  mindmapClipboardBuffer = text
+  if (event?.clipboardData) {
+    event.clipboardData.setData('text/plain', text)
+    return
+  }
+  try {
+    const textarea = document.createElement('textarea')
+    textarea.value = text
+    textarea.setAttribute('readonly', '')
+    textarea.style.position = 'fixed'
+    textarea.style.left = '-9999px'
+    textarea.style.top = '0'
+    textarea.style.opacity = '0'
+    document.body.append(textarea)
+    textarea.focus()
+    textarea.select()
+    document.execCommand('copy')
+    textarea.remove()
+  } catch {
+    // fall through to async API
+  }
+  void navigator.clipboard?.writeText(text).catch(() => {
+    // Buffer above still enables in-app Cmd+V.
+  })
+}
+
+export async function readMindmapClipboard(event?: ClipboardEvent | null): Promise<string> {
+  const fromEvent = event?.clipboardData?.getData('text/plain') ?? ''
+  if (fromEvent.trim()) {
+    mindmapClipboardBuffer = fromEvent
+    return fromEvent
+  }
+  try {
+    const fromApi = (await navigator.clipboard?.readText?.()) ?? ''
+    if (fromApi.trim()) {
+      mindmapClipboardBuffer = fromApi
+      return fromApi
+    }
+  } catch {
+    // Webview often denies readText without an explicit permission grant.
+  }
+  return mindmapClipboardBuffer
+}
+
 /** 把剪贴板中的普通文字 / Markdown 列表作为当前主题后的同级子树插入。 */
 export function pasteCanvasOutline(session: MindmapSession, anchorId: string, text: string): string[] {
   const nodes = clipboardNodes(text)
@@ -29,7 +78,11 @@ export function pasteCanvasOutline(session: MindmapSession, anchorId: string, te
     const parent = anchor === session.focusRootNode ? anchor : (anchor.parent ?? session.focusRootNode)
     let index = anchor === session.focusRootNode ? parent.children.length : parent.children.indexOf(anchor) + 1
     for (const source of nodes) {
-      const inserted = doc.addNode(parent, { ...source.content, image: source.content.image ? { ...source.content.image } : null }, index++)
+      const inserted = doc.addNode(
+        parent,
+        { ...source.content, image: source.content.image ? { ...source.content.image } : null },
+        index++,
+      )
       inserted.collapsed = source.collapsed
       for (const child of [...source.children]) doc.move(child, inserted, inserted.children.length)
       insertedIds.push(inserted.id)

@@ -8,6 +8,17 @@
   --mm-selected-bg: var(--vscode-list-activeSelectionBackground, rgb(79 142 247 / 0.26));
   --mm-accent: var(--vscode-focusBorder, #4f8ef7);
   --mm-edit-bg: var(--vscode-input-background, #2e323a);
+
+  /* @tnotesjs/ui FocusBreadcrumbs aliases */
+  --tn-c-brand: var(--mm-accent);
+  --tn-c-text: var(--mm-text);
+  --tn-c-text-2: var(--mm-text-dim);
+  --tn-c-bg: var(--mm-canvas-bg);
+  --tn-c-bg-soft: var(--mm-panel-bg);
+  --tn-c-bg-elv: var(--mm-panel-bg);
+  --tn-c-divider: var(--mm-border);
+  --tn-c-default-soft: var(--mm-hover);
+  --tn-shadow-2: 0 14px 38px rgb(0 0 0 / .24);
 }
 
 html,

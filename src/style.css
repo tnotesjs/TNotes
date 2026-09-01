@@ -8,6 +8,17 @@
   --mm-selected-bg: rgb(79 142 247 / 0.14);
   --mm-accent: #4f8ef7;
   --mm-edit-bg: #ffffff;
+
+  /* @tnotesjs/ui FocusBreadcrumbs aliases */
+  --tn-c-brand: var(--mm-accent);
+  --tn-c-text: var(--mm-text);
+  --tn-c-text-2: var(--mm-text-dim);
+  --tn-c-bg: var(--mm-canvas-bg);
+  --tn-c-bg-soft: var(--mm-panel-bg);
+  --tn-c-bg-elv: var(--mm-panel-bg);
+  --tn-c-divider: var(--mm-border);
+  --tn-c-default-soft: var(--mm-hover);
+  --tn-shadow-2: 0 14px 38px rgb(0 0 0 / .24);
 }
 
 @media (prefers-color-scheme: dark) {

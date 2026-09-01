@@ -1,6 +1,13 @@
-import { resolve } from 'node:path'
+import { createRequire } from 'node:module'
+import { dirname, join, resolve } from 'node:path'
 import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vitest/config'
+
+const require = createRequire(import.meta.url)
+const uiFocusBreadcrumbs = join(
+  dirname(require.resolve('@tnotesjs/ui')),
+  'components/Mindmap/FocusBreadcrumbs.vue',
+)
 
 export default defineConfig({
   plugins: [vue()],
@@ -10,6 +17,12 @@ export default defineConfig({
   // replace the compile-time environment check while bundling.
   define: {
     'process.env.NODE_ENV': JSON.stringify('production'),
+  },
+  resolve: {
+    // Avoid the package barrel — it re-exports WordList (needs sass) and Mermaid.
+    alias: {
+      '@tnotesjs/ui/FocusBreadcrumbs.vue': uiFocusBreadcrumbs,
+    },
   },
   build: {
     emptyOutDir: false,
