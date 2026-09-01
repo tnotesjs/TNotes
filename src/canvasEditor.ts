@@ -100,9 +100,13 @@ export interface CanvasEditorEvents {
   /** 节点右键菜单。null 表示关闭当前菜单。 */
   onContextMenu?: (request: CanvasContextRequest | null) => void
   /** 请求把当前节点选择复制到系统剪贴板。 */
-  onCopySelection?: () => void
+  onCopySelection?: (event?: ClipboardEvent) => void
   /** 请求把当前节点选择剪切到系统剪贴板。 */
-  onCutSelection?: () => void
+  onCutSelection?: (event?: ClipboardEvent) => void
+  /** 请求把系统剪贴板文本粘贴为当前选中主题后的同级子树。 */
+  onPasteSelection?: (event?: ClipboardEvent) => void
+  /** 画布 paste 事件中的纯文本（非图片）插入请求。 */
+  onPasteText?: (text: string, anchorId: string) => void
 }
 
 export interface CanvasEditorOptions {
@@ -197,11 +201,17 @@ export class CanvasEditor {
     if (!this.readOnly) container.addEventListener('contextmenu', this.onContextMenu)
     container.addEventListener('keydown', this.onKeydown)
     container.addEventListener('keyup', this.onKeyup)
-    if (!this.readOnly) container.addEventListener('paste', this.onPaste)
+    if (!this.readOnly) {
+      container.addEventListener('paste', this.onPaste)
+      container.addEventListener('copy', this.onCopy)
+      container.addEventListener('cut', this.onCut)
+    }
     container.addEventListener('wheel', this.onWheel, { passive: false })
     window.addEventListener('pointermove', this.onPointerMove)
     window.addEventListener('pointerup', this.onPointerUp)
     window.addEventListener('resize', this.onViewportResize)
+    // Nested editors (Desk / VitePress) scroll ancestors; keep fixed chrome glued to the canvas.
+    document.addEventListener('scroll', this.onViewportResize, true)
 
     session.on('change', this.onSessionChange)
     session.on('collapseChange', this.onSessionViewChange)
@@ -338,9 +348,26 @@ export class CanvasEditor {
     const rect = this.container.getBoundingClientRect()
     const width = rect.width || this.container.clientWidth
     const height = rect.height || this.container.clientHeight
+    const top = rect.top
+    const left = rect.left
+    const bottom = top + height
+    const right = left + width
+    const viewportHeight = typeof window === 'undefined' ? height : window.innerHeight
+    const viewportWidth = typeof window === 'undefined' ? width : window.innerWidth
+    // Off-screen canvas: drop the fixed toolbar so it cannot float over foreign content.
+    // Prefer laid-out size (clientWidth/Height) when getBoundingClientRect is still empty.
+    if (
+      bottom < 8 ||
+      top > viewportHeight - 8 ||
+      right < 8 ||
+      left > viewportWidth - 8
+    ) {
+      this.events.onSelectionPositionChange?.(null, ids.size)
+      return
+    }
     this.events.onSelectionPositionChange?.({
-      left: rect.left + width / 2,
-      top: rect.top + height - 18,
+      left: left + width / 2,
+      top: bottom - 18,
     }, ids.size)
   }
 
@@ -611,12 +638,16 @@ export class CanvasEditor {
           this.session.duplicateSelectedNodes()
           this.container.focus()
         } else if (mod && key === 'a') {
+          // Nested under ProseMirror contenteditable: native Cmd+A selects the whole
+          // document. Always preventDefault and select within this node first.
+          e.preventDefault()
           const fullySelected = input.selectionStart === 0 && input.selectionEnd === input.value.length
           if (fullySelected) {
-            e.preventDefault()
             this.commitEdit()
             this.selectAllVisible()
             this.container.focus()
+          } else {
+            input.setSelectionRange(0, input.value.length)
           }
         } else if (!mod && e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
           e.preventDefault()
@@ -825,7 +856,36 @@ export class CanvasEditor {
   // ---------- 键盘 ----------
 
   private onKeydown = (e: KeyboardEvent): void => {
-    if (this.editingInput) return
+    if (this.editingInput) {
+      // Edit overlay exists but focus may still be on the canvas (Desk host).
+      const mod = e.metaKey || e.ctrlKey
+      const key = e.key.toLowerCase()
+      if (mod && !e.altKey && (key === 'a' || key === 'z' || key === 'y')) {
+        e.preventDefault()
+        e.stopPropagation()
+        if (key === 'a') {
+          const input = this.editingInput
+          const fullySelected = input.selectionStart === 0 && input.selectionEnd === input.value.length
+          if (fullySelected) {
+            this.commitEdit()
+            this.selectAllVisible()
+            this.container.focus()
+          } else {
+            input.focus()
+            input.setSelectionRange(0, input.value.length)
+          }
+        } else if (key === 'z' && !e.shiftKey) {
+          this.commitEdit()
+          this.session.undo()
+          this.container.focus()
+        } else {
+          this.commitEdit()
+          this.session.redo()
+          this.container.focus()
+        }
+      }
+      return
+    }
     const mod = e.metaKey || e.ctrlKey
     const key = e.key.toLowerCase()
     const session = this.session
@@ -879,12 +939,20 @@ export class CanvasEditor {
     }
     if (mod && !e.shiftKey && key === 'c' && session.selectionIds.size > 0) {
       e.preventDefault()
+      e.stopPropagation()
       this.events.onCopySelection?.()
       return
     }
     if (mod && !e.shiftKey && key === 'x' && session.selectionIds.size > 0) {
       e.preventDefault()
+      e.stopPropagation()
       this.events.onCutSelection?.()
+      return
+    }
+    if (mod && !e.shiftKey && key === 'v') {
+      e.preventDefault()
+      e.stopPropagation()
+      this.events.onPasteSelection?.()
       return
     }
     if (mod && key === 'a') {
@@ -1045,6 +1113,59 @@ export class CanvasEditor {
       .filter((item) => item.dy > 1)
       .sort((a, b) => a.score - b.score)
     if (candidates[0]) this.session.select(candidates[0].box.id)
+  }
+
+  /** Host (Desk) can call this when Mod+A is intercepted outside the canvas focus target. */
+  selectAllFromHost(): void {
+    if (this.editingInput) {
+      const input = this.editingInput
+      const fullySelected = input.selectionStart === 0 && input.selectionEnd === input.value.length
+      if (!fullySelected) {
+        input.focus()
+        input.setSelectionRange(0, input.value.length)
+        return
+      }
+      this.commitEdit()
+    }
+    this.selectAllVisible()
+    this.container.focus()
+  }
+
+  /** Host Mod+Z — commit in-flight edit then undo session history (not ProseMirror). */
+  undoFromHost(): void {
+    if (this.editingInput) this.commitEdit()
+    this.session.undo()
+    this.container.focus()
+  }
+
+  /** Host Mod+Shift+Z / Mod+Y. */
+  redoFromHost(): void {
+    if (this.editingInput) this.commitEdit()
+    this.session.redo()
+    this.container.focus()
+  }
+
+  /** Host Mod+V — paste clipboard outline after the selected node (not while text-editing). */
+  pasteFromHost(): void {
+    if (this.editingInput) return
+    this.events.onPasteSelection?.()
+    this.container.focus()
+  }
+
+  /** Host Mod+C — copy selected nodes when ProseMirror stole focus. */
+  copyFromHost(): void {
+    if (this.editingInput) return
+    if (this.session.selectionIds.size === 0) return
+    this.events.onCopySelection?.()
+    this.container.focus()
+  }
+
+  /** Host Mod+X. */
+  cutFromHost(): void {
+    if (this.editingInput) return
+    if (this.session.selectionIds.size === 0) return
+    this.events.onCutSelection?.()
+    this.container.focus()
   }
 
   private selectAllVisible(): void {
@@ -1545,16 +1666,46 @@ export class CanvasEditor {
     }
   }
 
+  private onCopy = (e: ClipboardEvent): void => {
+    if (this.readOnly || this.editingInput) return
+    if (this.session.selectionIds.size === 0) return
+    e.preventDefault()
+    e.stopPropagation()
+    this.events.onCopySelection?.(e)
+  }
+
+  private onCut = (e: ClipboardEvent): void => {
+    if (this.readOnly || this.editingInput) return
+    if (this.session.selectionIds.size === 0) return
+    e.preventDefault()
+    e.stopPropagation()
+    this.events.onCutSelection?.(e)
+  }
+
   private onPaste = (e: ClipboardEvent): void => {
     if (this.readOnly) return
     const image = [...(e.clipboardData?.items ?? [])]
       .find((item) => item.kind === 'file' && item.type.startsWith('image/'))
       ?.getAsFile()
-    if (!image) return
-    const anchorId = this.editingNode?.id ?? this.session.selectedNode?.id ?? this.session.focusRootNode.id
+    if (image) {
+      const anchorId = this.editingNode?.id ?? this.session.selectedNode?.id ?? this.session.focusRootNode.id
+      e.preventDefault()
+      this.commitEdit()
+      this.events.onPasteImage?.(anchorId, image)
+      return
+    }
+    // Text while editing is owned by the overlay input; skip so we don't also insert siblings.
+    if (this.editingInput) return
+    const text = e.clipboardData?.getData('text/plain') ?? ''
+    if (!text.trim()) {
+      // Keydown already preventDefault'd native paste; still try the host buffer path.
+      e.preventDefault()
+      this.events.onPasteSelection?.(e)
+      return
+    }
+    const anchorId = this.session.selectedNode?.id ?? this.session.focusRootNode.id
     e.preventDefault()
-    this.commitEdit()
-    this.events.onPasteImage?.(anchorId, image)
+    this.events.onPasteText?.(text, anchorId)
   }
 
   private zoomAt(px: number, py: number, factor: number): void {
@@ -1581,11 +1732,16 @@ export class CanvasEditor {
     if (!this.readOnly) this.container.removeEventListener('contextmenu', this.onContextMenu)
     this.container.removeEventListener('keydown', this.onKeydown)
     this.container.removeEventListener('keyup', this.onKeyup)
-    if (!this.readOnly) this.container.removeEventListener('paste', this.onPaste)
+    if (!this.readOnly) {
+      this.container.removeEventListener('paste', this.onPaste)
+      this.container.removeEventListener('copy', this.onCopy)
+      this.container.removeEventListener('cut', this.onCut)
+    }
     this.container.removeEventListener('wheel', this.onWheel)
     window.removeEventListener('pointermove', this.onPointerMove)
     window.removeEventListener('pointerup', this.onPointerUp)
     window.removeEventListener('resize', this.onViewportResize)
+    document.removeEventListener('scroll', this.onViewportResize, true)
     this.renderer.destroy()
     if (this.linkHoverTimer) clearTimeout(this.linkHoverTimer)
     this.events.onContextMenu?.(null)

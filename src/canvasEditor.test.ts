@@ -511,16 +511,46 @@ describe('脑图节点底部菜单定位', () => {
     expect(onSelectionPositionChange).toHaveBeenLastCalledWith({ left: 500, top: 682 }, 1)
     editor.destroy()
   })
+
+  it('外层滚动后根据最新画布矩形更新菜单位置', () => {
+    const onSelectionPositionChange = vi.fn()
+    const { editor, host } = mountEditor('# T\n\n- alpha\n', { onSelectionPositionChange })
+    onSelectionPositionChange.mockClear()
+
+    vi.spyOn(host, 'getBoundingClientRect').mockReturnValue(
+      DOMRect.fromRect({ x: 0, y: -120, width: 1000, height: 700 }),
+    )
+
+    document.dispatchEvent(new Event('scroll', { bubbles: true }))
+    expect(onSelectionPositionChange).toHaveBeenLastCalledWith({ left: 500, top: 562 }, 1)
+    editor.destroy()
+  })
+
+  it('画布滚出视口后隐藏菜单', () => {
+    const onSelectionPositionChange = vi.fn()
+    const { editor, host } = mountEditor('# T\n\n- alpha\n', { onSelectionPositionChange })
+    onSelectionPositionChange.mockClear()
+
+    vi.spyOn(host, 'getBoundingClientRect').mockReturnValue(
+      DOMRect.fromRect({ x: 0, y: -900, width: 1000, height: 700 }),
+    )
+
+    document.dispatchEvent(new Event('scroll', { bubbles: true }))
+    expect(onSelectionPositionChange).toHaveBeenLastCalledWith(null, 1)
+    editor.destroy()
+  })
 })
 
 describe('脑图节点剪贴板快捷键', () => {
   it.each([
     ['c', 'onCopySelection'],
     ['x', 'onCutSelection'],
+    ['v', 'onPasteSelection'],
   ] as const)('节点选择态 Cmd+%s 发出对应剪贴板请求', (key, eventName) => {
     const events = {
       onCopySelection: vi.fn(),
       onCutSelection: vi.fn(),
+      onPasteSelection: vi.fn(),
     }
     const { editor, host, input } = mountEditor('# T\n\n- alpha\n', events)
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
@@ -530,6 +560,16 @@ describe('脑图节点剪贴板快捷键', () => {
 
     expect(event.defaultPrevented).toBe(true)
     expect(events[eventName]).toHaveBeenCalledOnce()
+    editor.destroy()
+  })
+
+  it('编辑态 Cmd+V 不触发节点粘贴（留给输入框）', () => {
+    const onPasteSelection = vi.fn()
+    const { editor, host, input } = mountEditor('# T\n\n- alpha\n', { onPasteSelection })
+    const event = new KeyboardEvent('keydown', { key: 'v', metaKey: true, bubbles: true, cancelable: true })
+    host.dispatchEvent(event)
+    expect(onPasteSelection).not.toHaveBeenCalled()
+    expect(document.activeElement).toBe(input)
     editor.destroy()
   })
 })
@@ -649,6 +689,23 @@ describe('脑图编辑态链接与待办快捷键', () => {
     const { editor, input, node } = mountEditor()
     shortcut(input, 'l', true)
     expect(node.content.checked).toBe(false)
+    editor.destroy()
+  })
+
+  it('Cmd+A 先选中节点文本，再次按下选中可见节点且不依赖浏览器默认全选', () => {
+    const { editor, host, input, session } = mountEditor('# T\n\n- alpha\n- beta\n')
+    input.setSelectionRange(2, 2)
+
+    const first = shortcut(input, 'a')
+    expect(first.defaultPrevented).toBe(true)
+    expect([input.selectionStart, input.selectionEnd]).toEqual([0, input.value.length])
+    expect(host.querySelector('.mm-edit-input')).toBeTruthy()
+
+    const second = shortcut(input, 'a')
+    expect(second.defaultPrevented).toBe(true)
+    expect(host.querySelector('.mm-edit-input')).toBeNull()
+    expect(session.selectionIds.has(session.document.root.children[0].id)).toBe(true)
+    expect(session.selectionIds.has(session.document.root.children[1].id)).toBe(true)
     editor.destroy()
   })
 })
