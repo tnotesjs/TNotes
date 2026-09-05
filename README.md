@@ -55,7 +55,7 @@ fence metadata, line numbering, titles, or generated markup cannot drift silentl
 | Shiki diff / highlight / focus / error annotations        | Yes                                    | Preview output                                          | Yes                   | Byte-preserved     |
 | Inline `<Badge>`                                          | Shared `Badge`                         | Shared inline projection                                | Shared                | Byte-preserved     |
 | `NotesTable`                                              | Shared component via Core data adapter | Shared component projection                             | Shared                | Byte-preserved     |
-| Math                                                      | VitePress math pipeline                | Milkdown/KaTeX                                          | Milkdown/KaTeX        | Byte-preserved     |
+| Math                                                      | TNotes SSG MathJax pipeline            | Milkdown/KaTeX                                          | Milkdown/KaTeX        | Byte-preserved     |
 | Image lightbox, navigation, zoom, and pan                 | Shared `ImagePreview`                  | Shared `ImagePreview`                                   | Shared `ImagePreview` | N/A                |
 | Mermaid / Mindmap / Footprints / BilibiliVideo / WordList | Shared                                 | Shared projection                                       | Shared                | Byte-preserved     |
 
