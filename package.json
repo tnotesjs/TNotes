@@ -1,0 +1,44 @@
+{
+  "name": "@tnotesjs/kb",
+  "version": "0.1.0",
+  "description": "Workspace layer for TNotes single-file knowledge bases (notes/, TOC.md, assets/, tnotes.json).",
+  "type": "module",
+  "packageManager": "pnpm@11.10.0",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist/"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "lint": "eslint . --max-warnings=0",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build"
+  },
+  "dependencies": {
+    "gray-matter": "4.0.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.4",
+    "@types/node": "24.6.2",
+    "eslint": "9.39.4",
+    "globals": "17.6.0",
+    "tsup": "8.5.1",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.59.1",
+    "vitest": "4.1.6"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tnotesjs/kb.git"
+  }
+}
