@@ -109,7 +109,7 @@ describe("notes", () => {
     });
     expect(doc.index).toBe("0004");
     expect(doc.frontmatter.id).toBeTruthy();
-    expect(doc.content).toContain("# 全新笔记");
+    expect(doc.content).toContain("# 0004. 全新笔记");
     expect(changedFiles.map((f) => f.kind).sort()).toEqual(["created", "updated"]);
 
     const toc = await read("TOC.md");
@@ -136,7 +136,7 @@ describe("notes", () => {
       kind: "renamed",
       previousPath: "notes/0002. 第二篇.md",
     });
-    expect(await read("notes/0002. 第二篇（改）.md")).toContain("# 第二篇");
+    expect(await read("notes/0002. 第二篇（改）.md")).toContain("# 0002. 第二篇（改）");
     expect(await read("TOC.md")).toContain("- [ ] 0002. 第二篇（改）");
   });
 
@@ -162,9 +162,9 @@ describe("notes", () => {
     const ws = createWorkspace({ rootPath: root });
     const { value } = await ws.notes.setFrontmatter({
       index: "0002",
-      updates: { description: "新增描述", draft: true },
+      updates: { description: "新增描述" },
     });
-    expect(value.frontmatter).toMatchObject({ description: "新增描述", draft: true });
+    expect(value.frontmatter).toMatchObject({ description: "新增描述" });
     expect(value.body).toContain("# 第二篇");
   });
 });

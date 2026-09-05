@@ -4,11 +4,18 @@
   "description": "Workspace layer for TNotes single-file knowledge bases (notes/, TOC.md, assets/, tnotes.json).",
   "type": "module",
   "packageManager": "pnpm@11.10.0",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     }
+  },
+  "bin": {
+    "tnotes-kb-migrate": "./dist/codemod-cli.js"
   },
   "files": [
     "dist/"

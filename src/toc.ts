@@ -172,11 +172,12 @@ export function parseTocToTree(lines: string[]): TocNode[] {
     const parent = stack[stack.length - 1];
     const node: TocNode =
       entry.kind === "group"
-        ? { kind: "group", title: entry.title!, children: [] }
+        ? { kind: "group", title: entry.title!, lineIndex: entry.lineIndex, children: [] }
         : {
             kind: "note",
             index: entry.noteIndex!,
             done: entry.done ?? false,
+            lineIndex: entry.lineIndex,
             children: [],
           };
     parent.children.push(node);

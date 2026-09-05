@@ -29,7 +29,6 @@ export function parseNoteContent(content: string): ParsedNoteContent {
   if (id) frontmatter.id = id;
   const description = cleanString(data.description);
   if (description) frontmatter.description = description;
-  if (data.draft === true) frontmatter.draft = true;
   return { frontmatter, body };
 }
 
@@ -45,7 +44,6 @@ export function serializeNoteContent(
   for (const key of FRONTMATTER_KEYS) {
     const value = frontmatter[key];
     if (typeof value === "string" && value.trim()) ordered[key] = value.trim();
-    else if (value === true) ordered[key] = true;
   }
   const normalizedBody = body.startsWith("\n") ? body.slice(1) : body;
   if (Object.keys(ordered).length === 0) {
@@ -64,7 +62,7 @@ export function updateNoteFrontmatter(
   for (const key of FRONTMATTER_KEYS) {
     if (!(key in updates)) continue;
     const value = updates[key];
-    if (value === undefined || value === "" || value === false) {
+    if (value === undefined || value === "") {
       delete next[key];
     } else {
       (next as Record<string, unknown>)[key] = value;

@@ -32,8 +32,14 @@ export {
   normalizeTocBlankLines,
 } from "./toc";
 export type { ParsedTocLine, TocLineKind } from "./toc";
-export { scanKnowledgeBase, contentRevision } from "./scanner";
+export { scanKnowledgeBase, readKbConfig, readTocLines, contentRevision } from "./scanner";
 export { createWorkspace, validateTitle } from "./workspace";
+export {
+  migrateKnowledgeBase,
+  stripGeneratedRegions,
+  inlineIncludes,
+} from "./codemod";
+export type { MigrateReport } from "./codemod";
 export type {
   TNotesKbWorkspace,
   CreateWorkspaceOptions,

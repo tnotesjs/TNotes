@@ -11,7 +11,7 @@ describe("parseNoteContent", () => {
     const { frontmatter, body } = parseNoteContent(
       `---\nid: abc-123\ndescription: 描述\ndraft: true\ntitle: 忽略我\nfoo: 1\n---\n# 正文\n`,
     );
-    expect(frontmatter).toEqual({ id: "abc-123", description: "描述", draft: true });
+    expect(frontmatter).toEqual({ id: "abc-123", description: "描述" });
     expect(body.trim()).toBe("# 正文");
   });
 
@@ -21,9 +21,9 @@ describe("parseNoteContent", () => {
     expect(body).toBe("# 标题\n\n正文\n");
   });
 
-  it("ignores empty strings and non-true draft", () => {
+  it("ignores empty strings and unknown keys", () => {
     const { frontmatter } = parseNoteContent(
-      `---\nid: ""\ndescription: "  "\ndraft: false\n---\nx\n`,
+      `---\nid: ""\ndescription: "  "\ndraft: true\n---\nx\n`,
     );
     expect(frontmatter).toEqual({});
   });
@@ -32,10 +32,10 @@ describe("parseNoteContent", () => {
 describe("serializeNoteContent", () => {
   it("writes keys in whitelist order", () => {
     const content = serializeNoteContent(
-      { draft: true, id: "abc", description: "d" },
+      { id: "abc", description: "d" },
       "# 正文\n",
     );
-    expect(content).toBe(`---\nid: abc\ndescription: d\ndraft: true\n---\n\n# 正文\n`);
+    expect(content).toBe(`---\nid: abc\ndescription: d\n---\n\n# 正文\n`);
   });
 
   it("omits the frontmatter block when empty", () => {
@@ -61,8 +61,8 @@ describe("updateNoteFrontmatter", () => {
 
   it("deletes keys set to undefined/empty/false", () => {
     const next = updateNoteFrontmatter(
-      `---\nid: x\ndescription: d\ndraft: true\n---\n\nb\n`,
-      { description: "", draft: false },
+      `---\nid: x\ndescription: d\n---\n\nb\n`,
+      { description: "" },
     );
     expect(parseNoteContent(next).frontmatter).toEqual({ id: "x" });
   });

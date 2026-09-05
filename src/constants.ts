@@ -31,4 +31,4 @@ export const TOC_LEGACY_NOTE_LINE_REGEX =
   /^( *)(-\s+\[(x|X| )\])\s+\[(\d{4})(?:\.[^\]]*)?\]\(([^)]+)\)/;
 
 /** Frontmatter whitelist — everything else is stripped by migrations. */
-export const FRONTMATTER_KEYS = ["id", "description", "draft"] as const;
+export const FRONTMATTER_KEYS = ["id", "description"] as const;

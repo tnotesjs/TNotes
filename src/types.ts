@@ -10,8 +10,6 @@ export interface NoteFrontmatter {
   id?: string;
   /** Shown by NotesTable blocks; future SEO description. */
   description?: string;
-  /** Draft notes are skipped by builds. */
-  draft?: boolean;
 }
 
 /** A note as seen by the scanner (file + frontmatter + TOC placement). */
@@ -39,6 +37,8 @@ export type TocNode = TocGroupNode | TocNoteNode;
 export interface TocGroupNode {
   kind: "group";
   title: string;
+  /** 0-based line number in TOC.md (drag/CRUD key). */
+  lineIndex: number;
   children: TocNode[];
 }
 
@@ -46,6 +46,8 @@ export interface TocNoteNode {
   kind: "note";
   index: string;
   done: boolean;
+  /** 0-based line number in TOC.md (drag/CRUD key). */
+  lineIndex: number;
   children: TocNode[];
 }
 

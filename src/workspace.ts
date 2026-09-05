@@ -110,6 +110,24 @@ function noteFileName(index: string, title: string): string {
   return `${index}. ${title}.md`;
 }
 
+/** File-stem heading, e.g. `0001. 标题`. */
+function noteHeading(index: string, title: string): string {
+  return `${index}. ${title}`;
+}
+
+/** Keep the first-line H1 in sync with `{index}. {title}`. */
+function syncLeadingH1(content: string, index: string, title: string): string {
+  const heading = noteHeading(index, title);
+  const { frontmatter, body } = parseNoteContent(content);
+  const lines = body.replace(/^\n+/, "").split("\n");
+  if (/^#\s+.+$/.test(lines[0] ?? "")) {
+    lines[0] = `# ${heading}`;
+  } else {
+    lines.unshift(`# ${heading}`, "");
+  }
+  return serializeNoteContent(frontmatter, `${lines.join("\n")}\n`);
+}
+
 function toDoc(rootPath: string, meta: NoteMeta, content: string): NoteDoc {
   const { frontmatter, body } = parseNoteContent(content);
   return {
@@ -267,7 +285,7 @@ export function createWorkspace(options: CreateWorkspaceOptions): TNotesKbWorksp
           id: randomUUID(),
           ...input.frontmatter,
         };
-        const body = input.body ?? `# ${title}\n`;
+        const body = input.body ?? `# ${noteHeading(index, title)}\n`;
         const content = serializeNoteContent(frontmatter, body);
 
         const lines = await readTocLines(rootPath);
@@ -320,6 +338,7 @@ export function createWorkspace(options: CreateWorkspaceOptions): TNotesKbWorksp
         }
         const nextFileName = noteFileName(input.index, title);
         const nextRelPath = `${NOTES_DIR}/${nextFileName}`;
+        const nextContent = syncLeadingH1(content, input.index, title);
         const lines = await readTocLines(rootPath);
 
         await applyAtomicWrites([
@@ -332,10 +351,11 @@ export function createWorkspace(options: CreateWorkspaceOptions): TNotesKbWorksp
           path.join(rootPath, meta.relPath),
           path.join(rootPath, nextRelPath),
         );
+        await writeFileAtomic(path.join(rootPath, nextRelPath), nextContent);
 
         const nextMeta: NoteMeta = { ...meta, title, fileName: nextFileName, relPath: nextRelPath };
         return {
-          value: toDoc(rootPath, nextMeta, content),
+          value: toDoc(rootPath, nextMeta, nextContent),
           changedFiles: [
             { path: nextRelPath, kind: "renamed", previousPath: meta.relPath },
             { path: TOC_FILE, kind: "updated" },
