@@ -2,6 +2,8 @@ import MarkdownIt from 'markdown-it'
 import taskLists from 'markdown-it-task-lists'
 import linkAttributes from 'markdown-it-link-attributes'
 import DOMPurify from 'dompurify'
+import CodeGroup from '@tnotesjs/ui/code-group'
+import { createApp, h, type App } from 'vue'
 
 import {
   bodyHasIncludeLines,
@@ -150,20 +152,8 @@ function renderBody(body: string, resolveImage: ResolveImage): string {
 interface CodeFence {
   filename: string
   lang: string
+  info: string
   code: string
-}
-
-function buildFencePanel(fence: CodeFence): HTMLElement {
-  const panel = document.createElement('div')
-  panel.className = 'code-group-panel'
-
-  const pre = document.createElement('pre')
-  const code = document.createElement('code')
-  if (fence.lang) code.className = `language-${fence.lang}`
-  code.textContent = fence.code
-  pre.append(code)
-  panel.append(pre)
-  return panel
 }
 
 function collectFences(bodyMarkdown: string): CodeFence[] {
@@ -175,7 +165,7 @@ function collectFences(bodyMarkdown: string): CodeFence[] {
     const lang = info.match(/^\S+/)?.[0] ?? ''
     const meta = info.slice(lang.length).trim()
     const filename = meta.replace(/^\[|\]$/g, '').trim()
-    fences.push({ filename, lang, code: token.content.replace(/\n$/, '') })
+    fences.push({ filename, lang, info, code: token.content.replace(/\n$/, '') })
   }
   return fences
 }
@@ -189,54 +179,36 @@ function collectIncludePlaceholders(bodyMarkdown: string): CodeFence[] {
     fences.push({
       filename: includeTabTitle(include),
       lang: '',
+      info: `[${includeTabTitle(include)}]`,
       code: '加载中…'
     })
   }
   return fences
 }
 
+const mountedCodeGroups = new WeakMap<HTMLElement, App>()
+
+export function destroyContainerPreview(element: HTMLElement | null | undefined): void {
+  if (!element) return
+  const app = mountedCodeGroups.get(element)
+  if (!app) return
+  app.unmount()
+  mountedCodeGroups.delete(element)
+}
+
 function assembleCodeGroup(fences: CodeFence[]): HTMLElement {
   const group = document.createElement('div')
   group.className = 'custom-block custom-block-code-group'
-
-  if (fences.length <= 1) {
-    const body = document.createElement('div')
-    body.className = 'custom-block-body'
-    body.append(fences[0] ? buildFencePanel(fences[0]) : document.createTextNode(''))
-    group.append(body)
-    return group
-  }
-
-  const tabs = document.createElement('div')
-  tabs.className = 'code-group-tabs'
-  const contents = document.createElement('div')
-  contents.className = 'code-group-panels'
-  const tabEls: HTMLButtonElement[] = []
-  const panelEls: HTMLDivElement[] = []
-
-  fences.forEach((fence, index) => {
-    const tab = document.createElement('button')
-    tab.type = 'button'
-    tab.className = 'code-group-tab'
-    tab.textContent = fence.filename || `代码 ${index + 1}`
-    const panelEl = buildFencePanel(fence) as HTMLDivElement
-    if (index === 0) {
-      tab.classList.add('active')
-      panelEl.classList.add('active')
-    }
-    tab.addEventListener('click', () => {
-      tabEls.forEach((button, buttonIndex) =>
-        button.classList.toggle('active', buttonIndex === index)
-      )
-      panelEls.forEach((pane, paneIndex) => pane.classList.toggle('active', paneIndex === index))
-    })
-    tabEls.push(tab)
-    panelEls.push(panelEl)
-    tabs.append(tab)
-    contents.append(panelEl)
-  })
-
-  group.append(tabs, contents)
+  const items = fences.map((fence, index) => ({
+    code: fence.code,
+    info:
+      fence.info ||
+      [fence.lang, fence.filename ? `[${fence.filename}]` : ''].filter(Boolean).join(' '),
+    key: `${fence.filename || fence.lang || 'code'}-${index}`
+  }))
+  const app = createApp({ render: () => h(CodeGroup, { items }) })
+  app.mount(group)
+  mountedCodeGroups.set(group, app)
   return group
 }
 

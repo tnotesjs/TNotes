@@ -50,3 +50,7 @@ jobs:
       - name: Build
         working-directory: desk
         run: pnpm build
+
+      - name: Check formatting
+        working-directory: desk
+        run: pnpm exec prettier --check .

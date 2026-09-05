@@ -3,6 +3,12 @@
  */
 
 const HIGHLIGHT_BLOCK_RE = /\{([0-9,\s-]+)\}/
+const LINE_NUMBERS_RE = /:(?:no-)?line-numbers(?:=\d+)?\b/
+
+/** Preserve the exact VitePress per-fence line-number modifier. */
+export function parseFenceLineNumbers(info?: string | null): string {
+  return info?.match(LINE_NUMBERS_RE)?.[0] ?? ''
+}
 
 /** Parse `{1,2,5-7}` (or any fence meta containing it) into a Set of line numbers. */
 export function parseHighlightRanges(meta?: string | null): Set<number> {
@@ -118,8 +124,13 @@ export function applyFenceHighlights(info: string, lines: Set<number>): string {
  * Returns the `meta` string only (without language), or language+meta combined
  * helpers use `buildFenceInfo`.
  */
-export function buildFenceInfo(language: string, highlights: Set<number>, title: string): string {
-  const lang = language.trim()
+export function buildFenceInfo(
+  language: string,
+  highlights: Set<number>,
+  title: string,
+  lineNumbers = ''
+): string {
+  const lang = `${language.trim()}${lineNumbers}`
   const highlight = formatHighlightRanges(highlights)
   const trimmedTitle = title.trim()
   const titlePart = trimmedTitle ? `[${trimmedTitle}]` : ''

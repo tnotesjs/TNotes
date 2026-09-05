@@ -2,83 +2,40 @@
    brand accent follows TNotes VitePress (--vp-c-brand-1/2). */
 
 :root {
-  --app-bg: #161618;
-  --titlebar-bg: #161618;
-  --sidebar-bg: #161618;
-  --panel: #202127;
-  --tabs-bg: #161618;
-  --editor-bg: #1b1b1f;
-  --document-bg: #202127;
-  --raised: #202127;
-  --input-bg: #161618;
-  --text: #dfdfd6;
-  --editor-text: #dfdfd6;
-  --document-text: #dfdfd6;
-  --muted: #98989f;
-  --border: #2e2e32;
-  --border-strong: #3c3f44;
-  --hover: rgba(101, 117, 133, 0.16);
-  --selected: rgba(100, 108, 255, 0.16);
-  --accent: #646cff;
-  --accent-strong: #a8b1ff;
-  --success: #3dd68c;
-  --success-soft: rgba(16, 185, 129, 0.16);
-  --warning: #f9b44e;
-  --warning-soft: rgba(234, 179, 8, 0.16);
-  --danger: #f66f81;
-  --danger-soft: rgba(244, 63, 94, 0.16);
-  --font-sans:
-    'Punctuation SC', Inter, ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
-    'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-  --font-mono: 'SFMono-Regular', 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
-  color-scheme: dark;
+  --app-bg: var(--tn-c-bg-chrome);
+  --titlebar-bg: var(--tn-c-bg-chrome);
+  --sidebar-bg: var(--tn-c-bg-chrome);
+  --panel: var(--tn-c-bg-soft);
+  --tabs-bg: var(--tn-c-bg-chrome);
+  --editor-bg: var(--tn-c-bg);
+  --document-bg: var(--tn-c-bg-soft);
+  --raised: var(--tn-c-bg-elv);
+  --input-bg: var(--tn-c-bg-input);
+  --text: var(--tn-c-text);
+  --editor-text: var(--tn-c-text);
+  --document-text: var(--tn-c-text);
+  --muted: var(--tn-c-text-2);
+  --border: var(--tn-c-divider);
+  --border-strong: var(--tn-c-divider-strong);
+  --hover: var(--tn-c-hover);
+  --selected: var(--tn-c-highlight);
+  --accent: var(--tn-c-brand);
+  --accent-strong: var(--tn-c-brand-strong);
+  --success: var(--tn-c-success);
+  --success-soft: var(--tn-c-success-soft);
+  --warning: var(--tn-c-warning);
+  --warning-soft: var(--tn-c-warning-soft);
+  --danger: var(--tn-c-danger);
+  --danger-soft: var(--tn-c-danger-soft);
+  --font-sans: var(--tn-font-sans);
+  --font-mono: var(--tn-font-mono);
   font-family: var(--font-sans);
   font-optical-sizing: auto;
   font-size: 14px;
   line-height: 1.4;
-
-  /* @tnotesjs/ui tokens */
-  --tn-c-brand: var(--accent-strong);
-  --tn-c-text: var(--editor-text);
-  --tn-c-text-2: var(--muted);
-  --tn-c-bg: var(--editor-bg);
-  --tn-c-bg-soft: var(--panel);
-  --tn-c-bg-elv: var(--raised);
-  --tn-c-divider: var(--border);
-  --tn-c-danger: var(--danger);
-  --tn-c-danger-soft: var(--danger-soft);
-  --tn-c-success-soft: var(--success-soft);
-  --tn-c-default-soft: var(--hover);
-  --tn-shadow-2: 0 4px 12px rgb(0 0 0 / 0.35);
-  --tn-font-mono: var(--font-mono);
 }
 
 :root[data-theme='light'] {
-  --app-bg: #f6f6f7;
-  --titlebar-bg: #f6f6f7;
-  --sidebar-bg: #f6f6f7;
-  --panel: #ffffff;
-  --tabs-bg: #f6f6f7;
-  --editor-bg: #ffffff;
-  --document-bg: #ffffff;
-  --raised: #ffffff;
-  --input-bg: #f6f6f7;
-  --text: #3c3c43;
-  --editor-text: #3c3c43;
-  --document-text: #3c3c43;
-  --muted: #67676c;
-  --border: #e2e2e3;
-  --border-strong: #c2c2c4;
-  --hover: rgba(142, 150, 170, 0.14);
-  --selected: rgba(100, 108, 255, 0.14);
-  --accent: #646cff;
-  --accent-strong: #3451b2;
-  --success: #18794e;
-  --success-soft: rgba(16, 185, 129, 0.14);
-  --warning: #915930;
-  --warning-soft: rgba(234, 179, 8, 0.14);
-  --danger: #b8272c;
-  --danger-soft: rgba(244, 63, 94, 0.14);
   color-scheme: light;
 }
 

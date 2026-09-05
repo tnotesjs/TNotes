@@ -1,6 +1,8 @@
 // @vitest-environment happy-dom
 
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
+import { SHARED_CODE_GROUP_CONTRACT } from '@tnotesjs/ui/code'
 import {
   isStructuredCalloutSource,
   parseContainerSource,
@@ -137,7 +139,7 @@ describe('renderContainerFromSource', () => {
     expect(el.open).toBe(true)
   })
 
-  it('builds a tabbed code group with the first tab active', () => {
+  it('builds a tabbed code group with the first tab active', async () => {
     const el = renderContainerFromSource(
       [
         '::: code-group',
@@ -163,8 +165,34 @@ describe('renderContainerFromSource', () => {
     expect(panels[1].classList.contains('active')).toBe(false)
     // Clicking the second tab switches the active panel.
     tabs[1].dispatchEvent(new Event('click', { bubbles: true, cancelable: true }))
+    await nextTick()
     expect(panels[1].classList.contains('active')).toBe(true)
     expect(panels[0].classList.contains('active')).toBe(false)
+  })
+
+  it('matches the shared Core/Desk code-group contract', async () => {
+    const el = renderContainerFromSource(SHARED_CODE_GROUP_CONTRACT.source)
+    await vi.waitFor(() => {
+      expect(el.querySelectorAll('.tn-code-highlight')).toHaveLength(2)
+    })
+
+    const tabs = [...el.querySelectorAll('.code-group-tab')].map((tab) => tab.textContent)
+    expect(tabs).toEqual(SHARED_CODE_GROUP_CONTRACT.items.map((item) => item.title))
+    const blocks = [...el.querySelectorAll('.tn-code-block')]
+    expect(blocks).toHaveLength(2)
+    expect(blocks[0]?.classList.contains('has-line-numbers')).toBe(true)
+    expect(blocks[1]?.classList.contains('has-line-numbers')).toBe(false)
+    expect(
+      [...blocks[0]!.querySelectorAll('[data-line]')].map((line) => ({
+        line: line.getAttribute('data-line'),
+        highlighted: line.classList.contains('highlighted')
+      }))
+    ).toEqual([
+      { line: '4', highlighted: false },
+      { line: '5', highlighted: true }
+    ])
+    expect(blocks[0]?.textContent).toContain('console.log(1)')
+    expect(blocks[1]?.textContent).toContain('const value: number = 2')
   })
 
   it('expands <<< includes inside code-group when content is provided', () => {

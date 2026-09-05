@@ -928,7 +928,7 @@ onBeforeUnmount(() => {
 <template>
   <div
     ref="host"
-    class="milkdown-markdown-editor"
+    class="milkdown-markdown-editor tn-prose"
     :class="{
       'is-readonly': isEffectivelyReadOnly(),
       'is-wide': pageWidth === 'wide',

@@ -5,6 +5,7 @@ import {
   isStructuredCalloutSource,
   parseContainerSource,
   rebuildContainerSource,
+  destroyContainerPreview,
   renderContainerFromSource
 } from '../../editor/markdown/containerBody'
 import {
@@ -93,6 +94,7 @@ export function mountRawContainer(ctx: DeskRawBlockMountContext): void {
     let rawSourceEditor: RawSourceEditorHandle | null = null
     cleanupTasks.push(() => {
       cancelledIncludes = true
+      destroyContainerPreview(previewEl)
       codeGroupTabEditors.splice(0).forEach((handle) => handle?.destroy())
       includeSessionStops.splice(0).forEach((stop) => stop())
     })
@@ -160,6 +162,7 @@ export function mountRawContainer(ctx: DeskRawBlockMountContext): void {
       if (!previewEl) return
       const fresh = await mountEditableCodeGroup(currentContainerSource)
       if (cancelledIncludes || !previewEl || !fresh) return
+      destroyContainerPreview(previewEl)
       previewEl.replaceWith(fresh)
       previewEl = fresh
     }
@@ -560,6 +563,7 @@ export function mountRawContainer(ctx: DeskRawBlockMountContext): void {
         activeIndex: activeIndex ?? readActiveSwiperIndex()
       })
       if (cancelledIncludes || !previewEl || !fresh) return
+      destroyContainerPreview(previewEl)
       previewEl.replaceWith(fresh)
       previewEl = fresh
     }
@@ -860,6 +864,7 @@ export function mountRawContainer(ctx: DeskRawBlockMountContext): void {
         if (entries.length > 0) {
           const fresh = await mountEditableCodeGroup(source)
           if (cancelledIncludes || !previewEl || !fresh) return
+          destroyContainerPreview(previewEl)
           previewEl.replaceWith(fresh)
           previewEl = fresh
           return
@@ -872,6 +877,7 @@ export function mountRawContainer(ctx: DeskRawBlockMountContext): void {
           const activeIndex = readActiveSwiperIndex()
           const fresh = mountEditableSwiper(source, { activeIndex })
           if (cancelledIncludes || !previewEl || !fresh) return
+          destroyContainerPreview(previewEl)
           previewEl.replaceWith(fresh)
           previewEl = fresh
           return
@@ -890,6 +896,7 @@ export function mountRawContainer(ctx: DeskRawBlockMountContext): void {
       const fresh = renderContainerFromSource(source, resolveImage, {
         resolveIncludeContent
       })
+      destroyContainerPreview(previewEl)
       previewEl.replaceWith(fresh)
       previewEl = fresh
     }

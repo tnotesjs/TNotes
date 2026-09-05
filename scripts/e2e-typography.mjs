@@ -219,7 +219,7 @@ try {
     assert.equal(styles.body.synthesis, 'style')
     assert.equal(styles.toc.font, baseFont)
     assert.equal(styles.toc.size, '16px')
-    assert.equal(styles.toc.line, '24px')
+    assert.equal(styles.toc.line, '28px')
     assert.deepEqual(
       styles.headings.map((h) => h.font),
       Array(6).fill(baseFont)

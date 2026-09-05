@@ -15,6 +15,10 @@ export default defineConfig({
   },
   preload: {},
   renderer: {
+    server: {
+      // Support the documented sibling-package override used while developing @tnotesjs/ui.
+      fs: { allow: [resolve('..')] }
+    },
     resolve: {
       alias: {
         '@renderer': resolve('src/renderer/src')

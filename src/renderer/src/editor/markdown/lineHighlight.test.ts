@@ -6,6 +6,7 @@ import {
   clampHighlightRanges,
   formatHighlightRanges,
   parseHighlightRanges,
+  parseFenceLineNumbers,
   toggleHighlightLine
 } from './lineHighlight'
 
@@ -54,5 +55,8 @@ describe('toggle / clamp / buildFenceInfo', () => {
     expect(buildFenceInfo('ts', new Set([1, 2, 3]), 'App')).toBe('ts {1-3} [App]')
     expect(buildFenceInfo('js', new Set(), '')).toBe('js')
     expect(buildFenceInfo('', new Set([1]), 'X')).toBe('{1} [X]')
+    expect(buildFenceInfo('ts', new Set(), 'X', ':line-numbers=30')).toBe('ts:line-numbers=30 [X]')
+    expect(parseFenceLineNumbers('ts:line-numbers=30 {2}')).toBe(':line-numbers=30')
+    expect(parseFenceLineNumbers('ts:no-line-numbers')).toBe(':no-line-numbers')
   })
 })

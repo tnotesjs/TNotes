@@ -252,7 +252,7 @@
 
 .milkdown-markdown-editor :deep(.ProseMirror td p),
 .milkdown-markdown-editor :deep(.ProseMirror th p) {
-  line-height: 1.5;
+  line-height: 24px;
 }
 
 .milkdown-markdown-editor.is-wide :deep(.ProseMirror) {
@@ -2056,6 +2056,29 @@
 
 .milkdown-markdown-editor :deep(.milkdown-code-block .cm-activeLineGutter) {
   background: transparent;
+}
+
+.milkdown-markdown-editor :deep(.desk-code-no-line-numbers .cm-gutters),
+.milkdown-markdown-editor :deep(.desk-code-custom-line-start .cm-gutters) {
+  display: none;
+}
+
+.milkdown-markdown-editor :deep(.desk-code-custom-line-start .cm-content) {
+  counter-reset: desk-code-line var(--desk-code-line-start);
+}
+
+.milkdown-markdown-editor :deep(.desk-code-custom-line-start .cm-line) {
+  counter-increment: desk-code-line;
+}
+
+.milkdown-markdown-editor :deep(.desk-code-custom-line-start .cm-line::before) {
+  content: counter(desk-code-line);
+  display: inline-block;
+  width: 3ch;
+  margin-right: 16px;
+  color: var(--muted);
+  text-align: right;
+  user-select: none;
 }
 
 .milkdown-markdown-editor :deep(.milkdown-code-block .cm-editor:focus-within .cm-activeLineGutter) {

@@ -1,6 +1,9 @@
 import { Plugin } from '@milkdown/kit/prose/state'
+import { Decoration, DecorationSet } from '@milkdown/kit/prose/view'
 import { $nodeSchema, $prose, $remark } from '@milkdown/kit/utils'
 import { codeBlockSchema } from '@milkdown/kit/preset/commonmark'
+import Badge from '@tnotesjs/ui/badge'
+import { createApp, h } from 'vue'
 
 import { renderContainerFromSource, type ResolveImage } from './containerBody'
 import { parseFencedCode } from './diagramRenderer'
@@ -9,6 +12,7 @@ import {
   buildFenceInfo,
   decodeHighlightsAttr,
   encodeHighlightsAttr,
+  parseFenceLineNumbers,
   parseHighlightRanges
 } from './lineHighlight'
 import {
@@ -507,16 +511,21 @@ export const sourcePreservingCodeBlockSchema = codeBlockSchema.extendSchema((bas
       deskMathSource: { default: null },
       title: { default: '' },
       /** Encoded VitePress highlight ranges, e.g. `{1-3,7}` or `''`. */
-      highlights: { default: '' }
+      highlights: { default: '' },
+      /** `:line-numbers`, `:line-numbers=30`, `:no-line-numbers`, or empty. */
+      lineNumbers: { default: '' }
     },
     parseMarkdown: {
       match: schema.parseMarkdown.match,
       runner: (state, node, type) => {
         const meta = typeof node.meta === 'string' ? node.meta : ''
+        const rawLanguage = String(node.lang ?? '')
+        const combinedInfo = `${rawLanguage} ${meta}`.trim()
         state.openNode(type, {
-          language: node.lang ?? '',
+          language: rawLanguage.replace(/:(?:no-)?line-numbers(?:=\d+)?\b/, ''),
           title: parseFenceTitleFromMeta(meta),
           highlights: encodeHighlightsAttr(parseHighlightRanges(meta)),
+          lineNumbers: parseFenceLineNumbers(combinedInfo),
           deskMathSource: node.deskMathSource === true
         })
         if (typeof node.value === 'string' && node.value) state.addText(node.value)
@@ -536,8 +545,9 @@ export const sourcePreservingCodeBlockSchema = codeBlockSchema.extendSchema((bas
         const language = String(node.attrs.language ?? '')
         const title = String(node.attrs.title ?? '').trim()
         const highlights = decodeHighlightsAttr(String(node.attrs.highlights ?? ''))
+        const lineNumbers = String(node.attrs.lineNumbers ?? '')
         const value = node.content.firstChild?.text ?? ''
-        const info = buildFenceInfo(language, highlights, title)
+        const info = buildFenceInfo(language, highlights, title, lineNumbers)
         // remark code node: lang is first token; meta is the rest.
         const langMatch = info.match(/^(\S+)(?:\s+([\s\S]*))?$/)
         const lang = langMatch?.[1] ?? language
@@ -607,9 +617,87 @@ export const immutableRawBlockPlugin = $prose(
     })
 )
 
+/** Reflect VitePress line-number meta onto Crepe's code-block DOM. */
+export const codeLineNumberMetaPlugin = $prose(
+  () =>
+    new Plugin({
+      props: {
+        decorations(state) {
+          const decorations: Decoration[] = []
+          state.doc.descendants((node, position) => {
+            if (node.type.name !== 'code_block') return
+            const meta = String(node.attrs.lineNumbers ?? '')
+            if (meta === ':no-line-numbers') {
+              decorations.push(
+                Decoration.node(position, position + node.nodeSize, {
+                  class: 'desk-code-no-line-numbers'
+                })
+              )
+              return
+            }
+            const start = Number(meta.match(/:line-numbers=(\d+)/)?.[1] ?? 1)
+            if (start > 1) {
+              decorations.push(
+                Decoration.node(position, position + node.nodeSize, {
+                  class: 'desk-code-custom-line-start',
+                  style: `--desk-code-line-start: ${start - 1}`
+                })
+              )
+            }
+          })
+          return DecorationSet.create(state.doc, decorations)
+        }
+      }
+    })
+)
+
+function parseInlineBadge(
+  source: string
+): { text: string; type: 'info' | 'tip' | 'warning' | 'danger' } | null {
+  if (!/^<Badge\b[^>]*\/?>(?:<\/Badge>)?$/i.test(source.trim())) return null
+  const template = document.createElement('template')
+  template.innerHTML = source.trim()
+  const element = template.content.firstElementChild
+  if (!element || element.tagName.toLowerCase() !== 'badge') return null
+  const requested = element.getAttribute('type')?.toLowerCase() ?? 'info'
+  const type = ['info', 'tip', 'warning', 'danger'].includes(requested)
+    ? (requested as 'info' | 'tip' | 'warning' | 'danger')
+    : 'info'
+  return { text: element.getAttribute('text') ?? element.textContent ?? '', type }
+}
+
+/** Render the low-frequency inline `<Badge>` syntax without changing its Markdown bytes. */
+export const inlineBadgePlugin = $prose(
+  () =>
+    new Plugin({
+      props: {
+        nodeViews: {
+          html(node) {
+            const source = String(node.attrs.value ?? '')
+            const badge = parseInlineBadge(source)
+            const dom = document.createElement('span')
+            dom.dataset.value = source
+            dom.dataset.type = 'html'
+            dom.contentEditable = 'false'
+            if (!badge) {
+              dom.textContent = source
+              return { dom }
+            }
+            dom.className = 'desk-inline-badge'
+            const app = createApp({ render: () => h(Badge, badge) })
+            app.mount(dom)
+            return { dom, destroy: () => app.unmount() }
+          }
+        }
+      }
+    })
+)
+
 export const rawBlockProjectionPlugins: MilkdownPlugin[] = [
   ...rawBlockProjectionRemark,
   ...rawBlockSchema,
   ...sourcePreservingCodeBlockSchema,
-  immutableRawBlockPlugin
+  immutableRawBlockPlugin,
+  codeLineNumberMetaPlugin,
+  inlineBadgePlugin
 ]

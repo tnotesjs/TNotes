@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import ImagePreview from '@tnotesjs/ui/image-preview'
 
 import EditorPane from './components/EditorPane.vue'
 import KnowledgeSidebar from './components/KnowledgeSidebar.vue'
@@ -722,6 +723,7 @@ onUnmounted(() => {
   </div>
 
   <ToastHost />
+  <ImagePreview />
   <div
     v-if="store.closingTabs"
     class="tab-close-blocker"
