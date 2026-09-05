@@ -1,35 +1,70 @@
-/**
- * Host-neutral design tokens for @tnotesjs/ui.
- * VitePress themes should alias these to --vp-*; Desk aliases to --editor-*.
- */
+/* Canonical palette: hosts map their variables TO these tokens, never back. */
 :root {
-  --tn-c-brand: #3451b2;
-  --tn-c-text: #213547;
-  --tn-c-text-2: #476582;
+  --tn-c-brand: #646cff;
+  --tn-c-brand-hover: #747bff;
+  --tn-c-brand-strong: #3451b2;
+  --tn-c-text: #3c3c43;
+  --tn-c-text-2: #67676c;
   --tn-c-bg: #ffffff;
   --tn-c-bg-soft: #f6f6f7;
   --tn-c-bg-elv: #ffffff;
+  --tn-c-bg-chrome: #f6f6f7;
+  --tn-c-bg-input: #f6f6f7;
   --tn-c-divider: #e2e2e3;
-  --tn-c-danger: #cb2a2a;
-  --tn-c-success-soft: #e3f9e5;
-  --tn-c-danger-soft: #fde8e8;
+  --tn-c-divider-strong: #c2c2c4;
+  --tn-c-hover: rgba(142, 150, 170, 0.14);
+  --tn-c-highlight: rgba(100, 108, 255, 0.16);
+  --tn-c-success: #18794e;
+  --tn-c-warning: #915930;
+  --tn-c-danger: #b8272c;
+  --tn-c-success-soft: rgba(16, 185, 129, 0.14);
+  --tn-c-warning-soft: rgba(234, 179, 8, 0.14);
+  --tn-c-danger-soft: rgba(244, 63, 94, 0.14);
   --tn-c-default-soft: #e8e8e9;
   --tn-shadow-2: 0 4px 12px rgba(0, 0, 0, 0.12);
-  --tn-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --tn-font-sans:
+    "Punctuation SC", Inter, ui-sans-serif, system-ui, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --tn-font-mono:
+    "SFMono-Regular", "Cascadia Code", "Roboto Mono", Consolas, monospace;
+  --tn-prose-size: 16px;
+  --tn-prose-line-height: 28px;
+  --tn-heading-weight: 600;
+  --tn-heading-1-size: 32px;
+  --tn-heading-1-line: 40px;
+  --tn-heading-2-size: 24px;
+  --tn-heading-2-line: 32px;
+  --tn-heading-3-size: 20px;
+  --tn-heading-3-line: 28px;
+  --tn-heading-4-size: 18px;
+  --tn-heading-4-line: 24px;
+  --tn-heading-5-size: 16px;
+  --tn-heading-5-line: 24px;
+  --tn-heading-6-size: 16px;
+  --tn-heading-6-line: 24px;
+  color-scheme: light;
 }
 
-html.dark,
-html[data-theme='dark'] {
-  --tn-c-brand: #a8b1ff;
+:root.dark:not([data-theme="light"]),
+:root[data-theme="dark"] {
+  --tn-c-brand-strong: #a8b1ff;
   --tn-c-text: #dfdfd6;
   --tn-c-text-2: #98989f;
   --tn-c-bg: #1b1b1f;
-  --tn-c-bg-soft: #161618;
+  --tn-c-bg-soft: #202127;
   --tn-c-bg-elv: #202127;
+  --tn-c-bg-chrome: #161618;
+  --tn-c-bg-input: #161618;
   --tn-c-divider: #2e2e32;
+  --tn-c-divider-strong: #3c3f44;
+  --tn-c-hover: rgba(101, 117, 133, 0.16);
+  --tn-c-success: #3dd68c;
+  --tn-c-warning: #f9b44e;
   --tn-c-danger: #f66f81;
-  --tn-c-success-soft: #1c3b2a;
-  --tn-c-danger-soft: #3b1c1c;
+  --tn-c-success-soft: rgba(16, 185, 129, 0.16);
+  --tn-c-warning-soft: rgba(234, 179, 8, 0.16);
+  --tn-c-danger-soft: rgba(244, 63, 94, 0.14);
   --tn-c-default-soft: #2e2e32;
-  --tn-shadow-2: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --tn-shadow-2: 0 4px 12px rgb(0 0 0 / 0.35);
+  color-scheme: dark;
 }

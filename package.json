@@ -14,9 +14,21 @@
       "import": "./src/components/Footprints/parse.ts",
       "default": "./src/components/Footprints/parse.ts"
     },
-    "./styles/tokens.css": "./src/styles/tokens.css"
+    "./styles/tokens.css": "./src/styles/tokens.css",
+    "./styles/prose.css": "./src/styles/prose.css",
+    "./styles/code.css": "./src/styles/code.css",
+    "./code": {
+      "types": "./src/code/highlight.ts",
+      "node": "./dist/code/highlight.js",
+      "import": "./src/code/highlight.ts"
+    },
+    "./code-block": "./src/components/CodeBlock/CodeBlock.vue",
+    "./code-group": "./src/components/CodeGroup/CodeGroup.vue",
+    "./badge": "./src/components/Badge/Badge.vue",
+    "./image-preview": "./src/components/ImagePreview/ImagePreview.vue"
   },
   "files": [
+    "dist/code",
     "src",
     "README.md",
     "LICENSE"
@@ -28,14 +40,17 @@
     "vue": "^3.5.0"
   },
   "dependencies": {
+    "@shikijs/transformers": "4.4.2",
     "@tnotesjs/mindmap-core": "^0.2.2",
     "marked": "^15.0.11",
-    "mermaid": "^11.17.0"
+    "mermaid": "^11.17.0",
+    "shiki": "4.4.2"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.8",
     "happy-dom": "^20.12.0",
     "sass": "^1.90.0",
+    "tsup": "8.5.1",
     "typescript": "^5.9.3",
     "vitest": "^4.1.11",
     "vue": "^3.5.25"
@@ -63,8 +78,9 @@
   "license": "MIT",
   "packageManager": "pnpm@11.10.0",
   "scripts": {
+    "build": "tsup src/code/highlight.ts --format esm --dts --out-dir dist/code --clean",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
-    "prepublishOnly": "pnpm test && pnpm typecheck"
+    "prepublishOnly": "pnpm test && pnpm typecheck && pnpm build"
   }
 }
