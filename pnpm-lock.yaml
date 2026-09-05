@@ -4,8 +4,8 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-patchedDependencies:
-  '@tnotesjs/ui@0.1.1': 15d1e86dd9c3e3fb6e646092776a2d7d1f9f7752fd69cbe79a9260bd560cbd16
+overrides:
+  '@tnotesjs/ui': link:../ui
 
 importers:
 
@@ -57,8 +57,8 @@ importers:
         specifier: ^0.2.2
         version: 0.2.2
       '@tnotesjs/ui':
-        specifier: ^0.1.1
-        version: 0.1.1(patch_hash=15d1e86dd9c3e3fb6e646092776a2d7d1f9f7752fd69cbe79a9260bd560cbd16)(vue@3.5.41(typescript@5.9.3))
+        specifier: link:../ui
+        version: link:../ui
       '@types/markdown-it':
         specifier: ^14.2.0
         version: 14.2.0
@@ -1507,12 +1507,6 @@ packages:
   '@tnotesjs/mindmap-core@0.2.2':
     resolution: {integrity: sha512-uDMllL2l7zq0d63K8i1cnzdBZfwnkXLw+t48cXIhYg3tvVCpb38YOy0QFAhHTg8xRreV+Jdh3jBaf+wo0FAEFg==}
     engines: {node: '>=18.0.0'}
-
-  '@tnotesjs/ui@0.1.1':
-    resolution: {integrity: sha512-BuVmFzwkT/HdbttL4QBziycpgoTA6sLWIj7HkOge3sw3ULdvy/jM72vOYxfrc31RAgAiXUZ+DhFl2b0X8hzQrg==}
-    engines: {node: '>=18.0.0'}
-    peerDependencies:
-      vue: ^3.5.0
 
   '@types/cacheable-request@6.0.3':
     resolution: {integrity: sha512-IQ3EbTzGxIigb1I3qPZc1rWJnH0BmSKv5QYTalEwweFvyBDLSAe24zP0le/hyi7ecGfZVlIVAg4BZqb8WBwKqw==}
@@ -6163,7 +6157,7 @@ snapshots:
   '@tnotesjs/core@0.8.0(vite@7.3.6(@types/node@22.20.1)(jiti@2.7.0)(sass-embedded@1.103.1)(sass@1.103.1)(yaml@2.9.0))(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@22.20.1)(markdown-it-mathjax3@4.3.2)(postcss@8.5.26)(sass-embedded@1.103.1)(sass@1.103.1)(search-insights@2.17.3)(typescript@5.9.3))(vue@3.5.41(typescript@5.9.3))':
     dependencies:
       '@tnotesjs/mindmap-core': 0.2.2
-      '@tnotesjs/ui': 0.1.1(patch_hash=15d1e86dd9c3e3fb6e646092776a2d7d1f9f7752fd69cbe79a9260bd560cbd16)(vue@3.5.41(typescript@5.9.3))
+      '@tnotesjs/ui': link:../ui
       echarts: 6.1.0
       github-slugger: 2.0.0
       markdown-it-container: 4.0.0
@@ -6185,13 +6179,6 @@ snapshots:
       - encoding
 
   '@tnotesjs/mindmap-core@0.2.2': {}
-
-  '@tnotesjs/ui@0.1.1(patch_hash=15d1e86dd9c3e3fb6e646092776a2d7d1f9f7752fd69cbe79a9260bd560cbd16)(vue@3.5.41(typescript@5.9.3))':
-    dependencies:
-      '@tnotesjs/mindmap-core': 0.2.2
-      marked: 15.0.12
-      mermaid: 11.17.0
-      vue: 3.5.41(typescript@5.9.3)
 
   '@types/cacheable-request@6.0.3':
     dependencies:

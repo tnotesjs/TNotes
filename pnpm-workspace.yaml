@@ -13,5 +13,6 @@ onlyBuiltDependencies:
   - esbuild
   - electron-winstaller
   - vue-demi
-patchedDependencies:
-  '@tnotesjs/ui@0.1.1': patches/@tnotesjs__ui@0.1.1.patch
+overrides:
+  # 开发期临时指向本地 ui 源码（含未发布的 0.1.2 共享组件）；发版前改回 ^0.1.2 并移除本行。
+  '@tnotesjs/ui': 'link:../ui'
