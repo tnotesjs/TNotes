@@ -6,12 +6,6 @@ import CodeGroup from '@tnotesjs/ui/code-group'
 import { createApp, h, type App } from 'vue'
 
 import {
-  bodyHasIncludeLines,
-  expandIncludeLinesToFences,
-  includeTabTitle,
-  parseDeskIncludeLine
-} from './deskInclude'
-import {
   applySwiperTabsPadding,
   createSwiperTabNav,
   parseSwiperSlides,
@@ -170,22 +164,6 @@ function collectFences(bodyMarkdown: string): CodeFence[] {
   return fences
 }
 
-/** Placeholder tabs from unresolved `<<<` lines (before async hydrate). */
-function collectIncludePlaceholders(bodyMarkdown: string): CodeFence[] {
-  const fences: CodeFence[] = []
-  for (const line of bodyMarkdown.replace(/\r\n?/g, '\n').split('\n')) {
-    const include = parseDeskIncludeLine(line)
-    if (!include) continue
-    fences.push({
-      filename: includeTabTitle(include),
-      lang: '',
-      info: `[${includeTabTitle(include)}]`,
-      code: '加载中…'
-    })
-  }
-  return fences
-}
-
 const mountedCodeGroups = new WeakMap<HTMLElement, App>()
 
 export function destroyContainerPreview(element: HTMLElement | null | undefined): void {
@@ -212,22 +190,8 @@ function assembleCodeGroup(fences: CodeFence[]): HTMLElement {
   return group
 }
 
-function buildCodeGroup(
-  bodyMarkdown: string,
-  resolveIncludeContent?: (path: string) => string | null | undefined
-): HTMLElement {
-  let body = bodyMarkdown
-  if (resolveIncludeContent && bodyHasIncludeLines(body)) {
-    body = expandIncludeLinesToFences(body, (path) => {
-      const content = resolveIncludeContent(path)
-      return content == null ? `// 引用失败：${path}` : content
-    })
-  }
-  let fences = collectFences(body)
-  if (fences.length === 0 && bodyHasIncludeLines(bodyMarkdown)) {
-    fences = collectIncludePlaceholders(bodyMarkdown)
-  }
-  return assembleCodeGroup(fences)
+function buildCodeGroup(bodyMarkdown: string): HTMLElement {
+  return assembleCodeGroup(collectFences(bodyMarkdown))
 }
 
 function buildSwiper(bodyMarkdown: string, resolveImage: ResolveImage): HTMLElement {
@@ -358,14 +322,10 @@ const defaultResolveImage: ResolveImage = (src) =>
  */
 export function renderContainerFromSource(
   source: string,
-  resolveImage: ResolveImage = defaultResolveImage,
-  options?: {
-    /** Sync lookup for `<<<` paths inside code-group bodies. */
-    resolveIncludeContent?: (path: string) => string | null | undefined
-  }
+  resolveImage: ResolveImage = defaultResolveImage
 ): HTMLElement {
   const { name, title, body, hasBody } = parseContainerSource(source)
-  if (name === 'code-group') return buildCodeGroup(body, options?.resolveIncludeContent)
+  if (name === 'code-group') return buildCodeGroup(body)
   if (name === 'swiper') return buildSwiper(body, resolveImage)
   if (name === 'footprints') {
     // Desk mounts the shared Vue Footprints; return a lightweight host shell here.

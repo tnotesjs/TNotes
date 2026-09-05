@@ -71,7 +71,7 @@ describe('container source editing', () => {
   })
 
   it('keeps non-container raw blocks immutable', async () => {
-    const source = '<<< ./shared.md\n\nplain\n'
+    const source = '<aside data-x="1">raw</aside>\n\nplain\n'
     const { root, crepe } = await createEditor(source)
     try {
       const pos = crepe.editor.action((ctx) => {
@@ -93,7 +93,7 @@ describe('container source editing', () => {
       })
       expect(blocked).toBeUndefined() // dispatch is void; note the transaction was rejected
       const markdown = crepe.editor.action(getMarkdown())
-      expect(markdown).toContain('<<< ./shared.md')
+      expect(markdown).toContain('<aside data-x="1">raw</aside>')
     } finally {
       await crepe.destroy()
       root.remove()

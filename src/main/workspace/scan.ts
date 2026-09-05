@@ -1,15 +1,14 @@
 import { EventEmitter } from 'node:events'
+import { randomUUID } from 'node:crypto'
 import { watch, type FSWatcher } from 'node:fs'
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { createWorkspace } from '@tnotesjs/core/workspace'
+import { createWorkspace } from '@tnotesjs/kb'
 
 import { deskLog } from '../log'
 
-import { stablePathSuffix } from './dto'
+import { knowledgeBaseId } from './dto'
 import { KNOWLEDGE_BASE_NAME, type KnowledgeBaseHandle, type WorkspaceManagerEvents } from './types'
-
-import type { ChangedFile } from '@tnotesjs/core/workspace'
 
 /** Mutable runtime state shared between WorkspaceManager and scan/watch helpers. */
 export interface WorkspaceScanState {
@@ -25,7 +24,10 @@ export interface WorkspaceScanState {
   emitChanged: () => void
 }
 
-export function markInternalWrites(state: WorkspaceScanState, changedFiles: ChangedFile[]): void {
+export function markInternalWrites(
+  state: WorkspaceScanState,
+  changedFiles: Array<{ path: string; previousPath?: string }>
+): void {
   const until = Date.now() + 1500
   for (const changed of changedFiles) {
     state.internalWriteUntil.set(path.normalize(changed.path), until)
@@ -35,18 +37,29 @@ export function markInternalWrites(state: WorkspaceScanState, changedFiles: Chan
   }
 }
 
-/** 笔记配置缺失/损坏 → 触发 files→TOC 对齐（0004）。 */
-export async function reconcileIfNeeded(handle: KnowledgeBaseHandle): Promise<void> {
-  const snapshot = handle.snapshot
-  const hasConfigDiagnostics = snapshot.health.diagnostics.some(
-    (d) => d.code === 'NOTE_CONFIG_MISSING' || d.code === 'NOTE_CONFIG_INVALID'
-  )
-  if (!hasConfigDiagnostics) return
-  try {
-    const result = await handle.workspace.toc.reconcileFromFiles()
-    handle.snapshot = result.value
-  } catch (error) {
-    deskLog('workspace', 'reconcile failed', error instanceof Error ? error.message : String(error))
+/**
+ * Hand-written notes may lack a frontmatter id (the renderer identity and the
+ * comment mapping key). Backfill once, logged, idempotent.
+ */
+async function backfillMissingNoteIds(handle: KnowledgeBaseHandle): Promise<void> {
+  const missing = handle.snapshot.notes.filter((note) => !note.frontmatter.id)
+  for (const note of missing) {
+    try {
+      await handle.workspace.notes.setFrontmatter({
+        index: note.index,
+        updates: { id: randomUUID() }
+      })
+      deskLog('workspace', 'backfilled note id', { relPath: note.relPath })
+    } catch (error) {
+      deskLog(
+        'workspace',
+        'note id backfill failed',
+        error instanceof Error ? error.message : String(error)
+      )
+    }
+  }
+  if (missing.length > 0) {
+    handle.snapshot = await handle.workspace.scan()
   }
 }
 
@@ -65,24 +78,18 @@ export async function scan(state: WorkspaceScanState): Promise<void> {
     const rootPath = path.join(state.workspacePath, candidate.name)
     const existing = previousByPath.get(rootPath)
     const workspace = existing?.workspace ?? createWorkspace({ rootPath })
-    const snapshot = await workspace.inspect()
-    let id = existing?.id ?? snapshot.id
-    if (next.has(id)) id = `${snapshot.id}:${stablePathSuffix(rootPath)}`
-    const handle = {
-      id,
+    const handle: KnowledgeBaseHandle = {
+      id: existing?.id ?? knowledgeBaseId(rootPath),
       name: candidate.name,
       rootPath,
       workspace,
-      snapshot
+      snapshot: await workspace.scan()
     }
-    next.set(id, handle)
-    // 0004：文件系统为准——笔记配置缺失/损坏时先做 files→TOC 对齐
-    // （自动软删无效笔记到 notes/.trash/ 并恢复健康）。
-    await reconcileIfNeeded(handle)
+    await backfillMissingNoteIds(handle)
+    next.set(handle.id, handle)
     previousByPath.delete(rootPath)
   }
 
-  await Promise.all([...previousByPath.values()].map((handle) => handle.workspace.dispose()))
   state.handles = next
   syncKnowledgeBaseWatchers(state)
   deskLog('workspace', 'scan complete', {
@@ -150,7 +157,7 @@ export function syncKnowledgeBaseWatchers(state: WorkspaceScanState): void {
       if (!fileName) return
       const relativePath = fileName.toString()
       if (shouldIgnoreKnowledgeBasePath(relativePath)) return
-      handleWatchedPath(state, path.join(handle.rootPath, relativePath))
+      handleWatchedPath(state, handle, path.join(handle.rootPath, relativePath))
     })
   }
 
@@ -164,63 +171,35 @@ export function syncKnowledgeBaseWatchers(state: WorkspaceScanState): void {
 
 function shouldIgnoreKnowledgeBasePath(relativePath: string): boolean {
   const segments = relativePath.split(path.sep).filter(Boolean)
-  return segments.some((segment, index) => {
-    if (segment === '.git' || segment === 'node_modules' || segment === 'dist') return true
-    return segment === 'cache' && segments[index - 1] === '.vitepress'
+  return segments.some((segment) => {
+    return (
+      segment === '.git' ||
+      segment === 'node_modules' ||
+      segment === 'dist' ||
+      segment === '.tnotes'
+    )
   })
 }
 
-function handleWatchedPath(state: WorkspaceScanState, changedPath: string): void {
+function handleWatchedPath(
+  state: WorkspaceScanState,
+  handle: KnowledgeBaseHandle,
+  changedPath: string
+): void {
   const normalizedPath = path.normalize(changedPath)
   const internalUntil = state.internalWriteUntil.get(normalizedPath) ?? 0
-  if (internalUntil < Date.now()) {
-    state.internalWriteUntil.delete(normalizedPath)
-    for (const handle of state.handles.values()) {
-      for (const note of handle.snapshot.notes) {
-        if (path.normalize(note.readmePath) === normalizedPath) {
-          state.events.emit('noteExternalChanged', {
-            knowledgeBaseId: handle.id,
-            noteUuid: note.uuid
-          })
-          return scheduleRefresh(state)
-        }
-        const relativePath = path.relative(path.normalize(note.directoryPath), normalizedPath)
-        if (
-          !relativePath ||
-          relativePath === '..' ||
-          relativePath.startsWith(`..${path.sep}`) ||
-          path.isAbsolute(relativePath)
-        ) {
-          continue
-        }
-        const segments = relativePath.split(path.sep)
-        if (segments.some((segment) => segment.startsWith('.') || segment === 'node_modules')) {
-          continue
-        }
-        void fs.stat(normalizedPath).then(
-          (stat) => {
-            if (!stat.isFile()) return
-            state.events.emit('noteFileExternalChanged', {
-              knowledgeBaseId: handle.id,
-              noteUuid: note.uuid,
-              path: segments.join('/'),
-              kind: 'changed'
-            })
-          },
-          () => {
-            state.events.emit('noteFileExternalChanged', {
-              knowledgeBaseId: handle.id,
-              noteUuid: note.uuid,
-              path: segments.join('/'),
-              kind: 'deleted'
-            })
-          }
-        )
-        break
-      }
+  if (internalUntil >= Date.now()) return
+  state.internalWriteUntil.delete(normalizedPath)
+
+  for (const note of handle.snapshot.notes) {
+    if (path.normalize(path.join(handle.rootPath, note.relPath)) === normalizedPath) {
+      state.events.emit('noteExternalChanged', {
+        knowledgeBaseId: handle.id,
+        noteUuid: note.frontmatter.id ?? note.index
+      })
+      break
     }
   }
-
   scheduleRefresh(state)
 }
 
@@ -238,6 +217,5 @@ export async function stopWatcher(state: WorkspaceScanState): Promise<void> {
 }
 
 export async function disposeHandles(state: WorkspaceScanState): Promise<void> {
-  await Promise.all([...state.handles.values()].map((handle) => handle.workspace.dispose()))
   state.handles.clear()
 }

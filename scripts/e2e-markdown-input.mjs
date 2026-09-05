@@ -16,46 +16,19 @@ const fixtureRoot = mkdtempSync(join(tmpdir(), 'desk-markdown-input-e2e-'))
 const workspace = join(fixtureRoot, 'workspace')
 const profile = join(fixtureRoot, 'profile')
 const kb = join(workspace, 'TNotes.input-e2e')
-const note = join(kb, 'notes', '0001. input-rules')
+const noteFile = join(kb, 'notes', '0001. input-rules.md')
 const shots = join(deskDir, 'scripts', 'shots', 'markdown-input')
 
-mkdirSync(note, { recursive: true })
+mkdirSync(join(kb, 'notes'), { recursive: true })
 mkdirSync(profile, { recursive: true })
 mkdirSync(shots, { recursive: true })
 
-const kbConfig = JSON.parse(
-  readFileSync(join(deskDir, 'playground', 'TNotes.docs', '.tnotes.json'), 'utf8')
-)
-kbConfig.id = '00000000-0000-4000-8000-000000000001'
-kbConfig.repoName = 'TNotes.input-e2e'
-kbConfig.sidebarShowNoteId = false
-kbConfig.root_item = { ...kbConfig.root_item, title: 'input-e2e', details: 'isolated e2e' }
-writeFileSync(join(kb, '.tnotes.json'), `${JSON.stringify(kbConfig, null, 2)}\n`)
+writeFileSync(join(kb, 'tnotes.json'), `${JSON.stringify({ title: 'input-e2e' }, null, 2)}\n`)
 writeFileSync(join(kb, 'TOC.md'), '- [ ] 0001. input-rules\n')
 writeFileSync(
-  join(kb, 'sidebar.json'),
-  `${JSON.stringify(
-    [
-      {
-        text: '⏰ input-rules',
-        link: '/notes/0001. input-rules/README',
-        tocLineIndex: 0,
-        nodeId: 'note:0001'
-      }
-    ],
-    null,
-    2
-  )}\n`
+  noteFile,
+  '---\nid: 10000000-0000-4000-8000-000000000002\n---\n\n# Input rules\n\n测试起点\n'
 )
-const noteConfig = JSON.parse(
-  readFileSync(
-    join(deskDir, 'playground', 'TNotes.docs', 'notes', '0041. new', '.tnotes.json'),
-    'utf8'
-  )
-)
-noteConfig.id = '00000000-0000-4000-8000-000000000002'
-writeFileSync(join(note, '.tnotes.json'), `${JSON.stringify(noteConfig, null, 2)}\n`)
-writeFileSync(join(note, 'README.md'), '# Input rules\n\n测试起点\n')
 writeFileSync(
   join(profile, 'workspace.v1.json'),
   `${JSON.stringify({ path: workspace }, null, 2)}\n`
@@ -306,7 +279,7 @@ try {
   await page.screenshot({ path: join(shots, '03-inline-results.png') })
   await page.keyboard.press('ControlOrMeta+s')
   await page.waitForTimeout(250)
-  const savedMarkdown = readFileSync(join(note, 'README.md'), 'utf8')
+  const savedMarkdown = readFileSync(noteFile, 'utf8')
   assert.equal(savedMarkdown.includes('::: tip 💡 TIP\n\n:::'), true)
   assert.equal(savedMarkdown.includes('```mermaid\n\n```'), true)
   assert.equal(savedMarkdown.includes('<BilibiliVideo id="BV1E2E" />'), true)

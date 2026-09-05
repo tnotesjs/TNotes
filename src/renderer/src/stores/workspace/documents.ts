@@ -269,30 +269,23 @@ export function createDocuments(ctx: DocumentsContext) {
 
   async function writeLocalAttachment(
     knowledgeBaseId: string,
-    noteUuid: string,
     file: File
   ): Promise<AttachmentWriteLocalResult> {
     const data = new Uint8Array(await file.arrayBuffer())
     return resultValue(
       await window.desk.attachments.writeLocal({
         knowledgeBaseId,
-        noteUuid,
         fileName: file.name || `image-${Date.now()}.png`,
         data
       })
     )
   }
 
-  async function uploadImage(
-    knowledgeBaseId: string,
-    noteUuid: string,
-    file: File
-  ): Promise<ImageUploadResult> {
+  async function uploadImage(knowledgeBaseId: string, file: File): Promise<ImageUploadResult> {
     const data = new Uint8Array(await file.arrayBuffer())
     const result = resultValue(
       await window.desk.attachments.uploadImage({
         knowledgeBaseId,
-        noteUuid,
         fileName: file.name || `image-${Date.now()}.png`,
         data
       })
@@ -306,7 +299,7 @@ export function createDocuments(ctx: DocumentsContext) {
   async function copyNoteDirectoryPath(
     tab: Pick<NoteEditorTab, 'knowledgeBaseId' | 'noteUuid'>
   ): Promise<void> {
-    const result = await window.desk.notes.copyDirectoryPath(tab.knowledgeBaseId, tab.noteUuid)
+    const result = await window.desk.notes.copyPath(tab.knowledgeBaseId, tab.noteUuid)
     if (!result.ok) {
       ctx.error.value = result.error.message
       return

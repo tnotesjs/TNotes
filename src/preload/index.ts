@@ -6,8 +6,6 @@ import type {
   AppSettings,
   AttachmentWriteLocalRequest,
   AttachmentWriteLocalResult,
-  AttachmentReadTextRequest,
-  AttachmentWriteTextRequest,
   ImageSettingsValidateResult,
   ImageTokenStatus,
   ImageUploadResult,
@@ -18,15 +16,10 @@ import type {
   DeskApi,
   DeskResult,
   ExternalNoteChangeEvent,
-  ExternalNoteFileChangeEvent,
+  KbBuildResult,
   KnowledgeBaseDetail,
   NoteCreateRequest,
   NoteDocumentDto,
-  NoteFileEntryDto,
-  NoteFileReadTextRequest,
-  NoteFileSaveTextRequest,
-  NoteFilesListRequest,
-  NoteTextFileDto,
   NotesTableResolveRequest,
   NotesTableResolveResult,
   NoteMutationDto,
@@ -126,8 +119,8 @@ const api: DeskApi = {
       invoke<NoteMutationDto>(IPC_CHANNELS.noteRename, request),
     updateConfig: (request: NoteUpdateConfigRequest) =>
       invoke<NoteMutationDto>(IPC_CHANNELS.noteUpdateConfig, request),
-    copyDirectoryPath: (knowledgeBaseId, noteUuid) =>
-      invoke<string>(IPC_CHANNELS.noteCopyDirectoryPath, { knowledgeBaseId, noteUuid }),
+    copyPath: (knowledgeBaseId, noteUuid) =>
+      invoke<string>(IPC_CHANNELS.noteCopyPath, { knowledgeBaseId, noteUuid }),
     revealInFileManager: (knowledgeBaseId, noteUuid) =>
       invoke<void>(IPC_CHANNELS.noteRevealInFileManager, { knowledgeBaseId, noteUuid }),
     onExternalChanged: (callback) => {
@@ -139,32 +132,12 @@ const api: DeskApi = {
       return () => ipcRenderer.removeListener(IPC_CHANNELS.noteExternalChanged, listener)
     }
   },
-  noteFiles: {
-    list: (request: NoteFilesListRequest) =>
-      invoke<NoteFileEntryDto[]>(IPC_CHANNELS.noteFilesList, request),
-    readText: (request: NoteFileReadTextRequest) =>
-      invoke<NoteTextFileDto>(IPC_CHANNELS.noteFileReadText, request),
-    saveText: (request: NoteFileSaveTextRequest) =>
-      invoke<NoteTextFileDto>(IPC_CHANNELS.noteFileSaveText, request),
-    onExternalChanged: (callback) => {
-      const listener = (
-        _event: Electron.IpcRendererEvent,
-        payload: ExternalNoteFileChangeEvent
-      ): void => callback(payload)
-      ipcRenderer.on(IPC_CHANNELS.noteFileExternalChanged, listener)
-      return () => ipcRenderer.removeListener(IPC_CHANNELS.noteFileExternalChanged, listener)
-    }
-  },
   attachments: {
     writeLocal: (request: AttachmentWriteLocalRequest) =>
       invoke<AttachmentWriteLocalResult>(IPC_CHANNELS.attachmentWriteLocal, request),
-    uploadImage: (request) =>
-      invoke<ImageUploadResult>(IPC_CHANNELS.attachmentUploadImage, request),
-    readText: (request: AttachmentReadTextRequest) =>
-      invoke<string>(IPC_CHANNELS.attachmentReadText, request),
-    writeText: (request: AttachmentWriteTextRequest) =>
-      invoke<void>(IPC_CHANNELS.attachmentWriteText, request)
+    uploadImage: (request) => invoke<ImageUploadResult>(IPC_CHANNELS.attachmentUploadImage, request)
   },
+  build: (knowledgeBaseId) => invoke<KbBuildResult>(IPC_CHANNELS.kbBuild, knowledgeBaseId),
   search: (request) => invoke<SearchResultDto[]>(IPC_CHANNELS.searchQuery, request),
   git: {
     list: () => invoke<GitRepositoryStateDto[]>(IPC_CHANNELS.gitList),

@@ -23,7 +23,7 @@ export function registerWorkspace(getWindow: GetWindow): () => void {
       z.object({ kind: z.literal('group') }),
       z.object({
         kind: z.literal('tab'),
-        tabType: z.enum(['note', 'note-file', 'web']),
+        tabType: z.enum(['note', 'web']),
         pinned: z.boolean()
       })
     ]),
@@ -97,6 +97,9 @@ export function registerWorkspace(getWindow: GetWindow): () => void {
   handle(IPC_CHANNELS.knowledgeBaseRead, getWindow, z.string().min(1), (knowledgeBaseId) =>
     workspaceManager.getDetail(knowledgeBaseId)
   )
+  handle(IPC_CHANNELS.kbBuild, getWindow, z.string().min(1), (knowledgeBaseId) =>
+    workspaceManager.buildKnowledgeBase(knowledgeBaseId)
+  )
   handle(
     IPC_CHANNELS.searchQuery,
     getWindow,
@@ -126,16 +129,9 @@ export function registerWorkspace(getWindow: GetWindow): () => void {
       window.webContents.send(IPC_CHANNELS.noteExternalChanged, event)
     }
   })
-  const offFileExternalChanged = workspaceManager.onNoteFileExternalChanged((event) => {
-    const window = getWindow()
-    if (window && !window.isDestroyed()) {
-      window.webContents.send(IPC_CHANNELS.noteFileExternalChanged, event)
-    }
-  })
 
   return () => {
     offChanged()
     offExternalChanged()
-    offFileExternalChanged()
   }
 }

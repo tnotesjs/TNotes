@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict'
 import { _electron } from 'playwright-core'
 import { createRequire } from 'node:module'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -13,32 +13,21 @@ const fixture = mkdtempSync(join(tmpdir(), 'desk-block-ranges-'))
 const workspace = join(fixture, 'workspace')
 const profile = join(fixture, 'profile')
 const kb = join(workspace, 'TNotes.block-ranges')
-const note = join(kb, 'notes', '0001. block-ranges')
-const readme = join(note, 'README.md')
+const noteFile = join(kb, 'notes', '0001. block-ranges.md')
 const shots = join(deskDir, 'scripts', 'shots', 'block-ranges')
-mkdirSync(note, { recursive: true })
+mkdirSync(join(kb, 'notes'), { recursive: true })
+mkdirSync(join(kb, 'assets'), { recursive: true })
 mkdirSync(profile, { recursive: true })
 mkdirSync(shots, { recursive: true })
-const kbConfig = JSON.parse(
-  readFileSync(join(deskDir, 'playground/TNotes.docs/.tnotes.json'), 'utf8')
-)
-kbConfig.id = '10000000-0000-4000-8000-000000000051'
-kbConfig.repoName = 'TNotes.block-ranges'
-kbConfig.root_item = { ...kbConfig.root_item, title: 'block-ranges' }
-writeFileSync(join(kb, '.tnotes.json'), JSON.stringify(kbConfig))
+writeFileSync(join(kb, 'tnotes.json'), JSON.stringify({ title: 'block-ranges' }))
 writeFileSync(join(kb, 'TOC.md'), '- [ ] 0001. block-ranges\n')
-writeFileSync(join(kb, 'sidebar.json'), '[]\n')
-const noteConfig = JSON.parse(
-  readFileSync(join(deskDir, 'playground/TNotes.docs/notes/0041. new/.tnotes.json'), 'utf8')
-)
-noteConfig.id = '10000000-0000-4000-8000-000000000052'
-writeFileSync(join(note, '.tnotes.json'), JSON.stringify(noteConfig))
 writeFileSync(
-  join(note, 'pixel.svg'),
+  join(kb, 'assets', 'pixel.svg'),
   '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="40"><rect width="80" height="40" fill="gray"/></svg>'
 )
 writeFileSync(
-  readme,
+  noteFile,
+  `---\nid: 10000000-0000-4000-8000-000000000052\n---\n\n` +
   [
     '# Block ranges',
     '',
@@ -72,7 +61,7 @@ writeFileSync(
     '',
     'IMAGE-BEFORE',
     '',
-    '![Image](./pixel.svg)',
+    '![Image](../assets/pixel.svg)',
     '',
     'IMAGE-AFTER',
     '',

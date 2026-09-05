@@ -75,7 +75,6 @@ const LIST_ITEM = /^ {0,3}(?:[*+-]|\d{1,9}[.)])[ \t]+/
 const SETEXT_UNDERLINE = /^ {0,3}(?:=+|-+)[ \t]*$/
 const THEMATIC_BREAK = /^ {0,3}(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,})$/
 const TABLE_DELIMITER = /^ {0,3}\|?(?:[ \t]*:?-{3,}:?[ \t]*\|)+[ \t]*:?-{3,}:?[ \t]*\|?[ \t]*$/
-const RAW_INCLUDE = /^ {0,3}<<<(?:[ \t]+|$)/
 const COMPONENT_OPEN = /^ {0,3}<([A-Z][\w.-]*)(?=[\s/>])/
 const REFERENCE_DEFINITION = /^ {0,3}\[(?:\\.|[^\]\\])+\]:[ \t]*(?:\S.*)?$/
 const REFERENCE_TITLE_CONTINUATION =
@@ -237,7 +236,6 @@ function isTopLevelStart(lines: SourceLine[], index: number): boolean {
   return (
     Boolean(containerOpening(line)) ||
     Boolean(fenceOpening(line)) ||
-    RAW_INCLUDE.test(line) ||
     COMPONENT_OPEN.test(line) ||
     REFERENCE_DEFINITION.test(line) ||
     /^ {0,3}\$\$/.test(line) ||
@@ -327,8 +325,6 @@ function blockBoundary(
   if (fence) {
     return { endLine: findRawFenceEnd(lines, start, fence), kind: 'raw-fence', raw: true }
   }
-
-  if (RAW_INCLUDE.test(line)) return { endLine: start, kind: 'raw-include', raw: true }
 
   if (REFERENCE_DEFINITION.test(line)) {
     return {

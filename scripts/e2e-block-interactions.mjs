@@ -15,48 +15,18 @@ const fixtureRoot = mkdtempSync(join(tmpdir(), 'desk-block-interactions-e2e-'))
 const workspace = join(fixtureRoot, 'workspace')
 const profile = join(fixtureRoot, 'profile')
 const kb = join(workspace, 'TNotes.block-e2e')
-const note = join(kb, 'notes', '0001. blocks')
+const noteFile = join(kb, 'notes', '0001. blocks.md')
 const shots = join(deskDir, 'scripts', 'shots', 'block-interactions')
 
-mkdirSync(note, { recursive: true })
+mkdirSync(join(kb, 'notes'), { recursive: true })
 mkdirSync(profile, { recursive: true })
 mkdirSync(shots, { recursive: true })
 
-const kbConfig = JSON.parse(
-  readFileSync(join(deskDir, 'playground', 'TNotes.docs', '.tnotes.json'), 'utf8')
-)
-kbConfig.id = '00000000-0000-4000-8000-000000000011'
-kbConfig.repoName = 'TNotes.block-e2e'
-kbConfig.sidebarShowNoteId = false
-kbConfig.root_item = { ...kbConfig.root_item, title: 'block-e2e', details: 'isolated e2e' }
-writeFileSync(join(kb, '.tnotes.json'), `${JSON.stringify(kbConfig, null, 2)}\n`)
+writeFileSync(join(kb, 'tnotes.json'), `${JSON.stringify({ title: 'block-e2e' }, null, 2)}\n`)
 writeFileSync(join(kb, 'TOC.md'), '- [ ] 0001. blocks\n')
 writeFileSync(
-  join(kb, 'sidebar.json'),
-  `${JSON.stringify(
-    [
-      {
-        text: '⏰ blocks',
-        link: '/notes/0001. blocks/README',
-        tocLineIndex: 0,
-        nodeId: 'note:0001'
-      }
-    ],
-    null,
-    2
-  )}\n`
-)
-const noteConfig = JSON.parse(
-  readFileSync(
-    join(deskDir, 'playground', 'TNotes.docs', 'notes', '0041. new', '.tnotes.json'),
-    'utf8'
-  )
-)
-noteConfig.id = '00000000-0000-4000-8000-000000000012'
-writeFileSync(join(note, '.tnotes.json'), `${JSON.stringify(noteConfig, null, 2)}\n`)
-writeFileSync(
-  join(note, 'README.md'),
-  `# Block interactions\n\n顶部段落\n\n组件上方\n\n<B id="selection-e2e" />\n\n组件下方\n\n${Array.from({ length: 28 }, (_, i) => `填充段落 ${i + 1}`).join('\n\n')}\n\n底部段落\n\n<br />\n\n<br />\n\n<br />\n`
+  noteFile,
+  `---\nid: 10000000-0000-4000-8000-000000000012\n---\n\n# Block interactions\n\n顶部段落\n\n组件上方\n\n<B id="selection-e2e" />\n\n组件下方\n\n${Array.from({ length: 28 }, (_, i) => `填充段落 ${i + 1}`).join('\n\n')}\n\n底部段落\n\n<br />\n\n<br />\n\n<br />\n`
 )
 writeFileSync(
   join(profile, 'workspace.v1.json'),
@@ -285,7 +255,7 @@ try {
   await page.waitForTimeout(400)
   await page.keyboard.press('ControlOrMeta+s')
   await page.waitForTimeout(220)
-  const savedAfterDrag = readFileSync(join(note, 'README.md'), 'utf8')
+  const savedAfterDrag = readFileSync(noteFile, 'utf8')
   assert.equal((savedAfterDrag.match(/<B id="selection-e2e" \/>/g) ?? []).length, 1)
   const domOrder = await pm.evaluate((element) =>
     [...element.children]

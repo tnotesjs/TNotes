@@ -26,13 +26,8 @@ export function handleAssetProtocol(): void {
       const url = new URL(request.url)
       if (url.hostname !== 'asset') return new Response('Not found', { status: 404 })
       const knowledgeBaseId = url.searchParams.get('knowledgeBaseId') ?? ''
-      const noteUuid = url.searchParams.get('noteUuid') ?? ''
       const requestedPath = url.searchParams.get('path') ?? ''
-      const absolutePath = await workspaceManager.resolveNoteAsset(
-        knowledgeBaseId,
-        noteUuid,
-        requestedPath
-      )
+      const absolutePath = await workspaceManager.resolveNoteAsset(knowledgeBaseId, requestedPath)
       return net.fetch(pathToFileURL(absolutePath).toString())
     } catch (error) {
       deskLog(

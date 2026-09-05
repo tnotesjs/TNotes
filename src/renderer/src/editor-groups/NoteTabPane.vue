@@ -122,11 +122,7 @@ function insertTemplate(text: string): void {
 async function pasteImage(file: File, insertAt: number): Promise<void> {
   const targetEditor = markdownSourceEditor.value
   try {
-    const attachment = await workspace.uploadImage(
-      props.tab.knowledgeBaseId,
-      props.tab.noteUuid,
-      file
-    )
+    const attachment = await workspace.uploadImage(props.tab.knowledgeBaseId, file)
     const alt =
       file.name
         .replace(/\.[^.]+$/, '')
@@ -140,11 +136,7 @@ async function pasteImage(file: File, insertAt: number): Promise<void> {
 
 async function uploadVisualImage(file: File): Promise<{ src: string; alt: string }> {
   try {
-    const attachment = await workspace.uploadImage(
-      props.tab.knowledgeBaseId,
-      props.tab.noteUuid,
-      file
-    )
+    const attachment = await workspace.uploadImage(props.tab.knowledgeBaseId, file)
     const alt =
       file.name
         .replace(/\.[^.]+$/, '')
@@ -185,7 +177,7 @@ function openLink(url: string): void {
     </div>
 
     <div class="document-toolbar">
-      <div class="document-path" :title="session.document.readmePath">
+      <div class="document-path" :title="session.document.filePath">
         <span class="note-index">{{ session.document.index }}.</span>
         <input
           v-if="editingTitle"

@@ -25,23 +25,15 @@ import type {
 } from './workspace/types'
 
 import type { SearchIndexDocument } from './searchModel'
-import type { ChangedFile } from '@tnotesjs/core/workspace'
 import type {
   DeletePreviewDto,
   AttachmentWriteLocalRequest,
   AttachmentWriteLocalResult,
-  AttachmentReadTextRequest,
-  AttachmentWriteTextRequest,
   ExternalNoteChangeEvent,
-  ExternalNoteFileChangeEvent,
+  KbBuildResult,
   KnowledgeBaseDetail,
   NoteCreateRequest,
   NoteDocumentDto,
-  NoteFileEntryDto,
-  NoteFileReadTextRequest,
-  NoteFileSaveTextRequest,
-  NoteFilesListRequest,
-  NoteTextFileDto,
   NoteMutationDto,
   NoteRenameRequest,
   NoteSaveRequest,
@@ -73,11 +65,11 @@ export class WorkspaceManager {
   }
 
   private mutationEffects(): {
-    markInternalWrites: (changedFiles: ChangedFile[]) => void
+    markInternalWrites: (changedFiles: Array<{ path: string; previousPath?: string }>) => void
     emitChanged: () => void
   } {
     return {
-      markInternalWrites: (changedFiles: ChangedFile[]) =>
+      markInternalWrites: (changedFiles: Array<{ path: string; previousPath?: string }>) =>
         markInternalWrites(this.scanState, changedFiles),
       emitChanged: () => this.emitChanged()
     }
@@ -91,11 +83,6 @@ export class WorkspaceManager {
   onNoteExternalChanged(listener: (event: ExternalNoteChangeEvent) => void): () => void {
     this.events.on('noteExternalChanged', listener)
     return () => this.events.off('noteExternalChanged', listener)
-  }
-
-  onNoteFileExternalChanged(listener: (event: ExternalNoteFileChangeEvent) => void): () => void {
-    this.events.on('noteFileExternalChanged', listener)
-    return () => this.events.off('noteFileExternalChanged', listener)
   }
 
   async initialize(): Promise<WorkspaceOverview> {
@@ -152,23 +139,25 @@ export class WorkspaceManager {
 
   getNoteLocation(knowledgeBaseId: string, noteUuid: string): string {
     const handle = this.getHandle(knowledgeBaseId)
-    const note = handle.snapshot.notes.find((item) => item.uuid === noteUuid)
+    const note = handle.snapshot.notes.find(
+      (item) => item.frontmatter.id === noteUuid || item.index === noteUuid
+    )
     if (!note) throw new Error(`笔记不存在：${noteUuid}`)
-    return note.directoryPath
+    return path.join(handle.rootPath, note.relPath)
   }
 
   getGitRepositories(): GitRepositoryDescriptor[] {
     return [...this.scanState.handles.values()].map((handle) => ({
       knowledgeBaseId: handle.id,
       knowledgeBaseName: handle.name,
-      configId: handle.snapshot.id,
+      configId: handle.id,
       rootPath: handle.rootPath,
       notes: handle.snapshot.notes.map((note) => ({
-        uuid: note.uuid,
+        uuid: note.frontmatter.id ?? note.index,
         index: note.index,
         title: note.title,
-        dirName: note.dirName,
-        directoryPath: note.directoryPath
+        dirName: note.fileName.replace(/\.md$/i, ''),
+        filePath: path.join(handle.rootPath, note.relPath)
       }))
     }))
   }
@@ -183,13 +172,15 @@ export class WorkspaceManager {
       while (cursor < pending.length) {
         const current = pending[cursor]
         cursor += 1
+        const noteUuid = current.note.frontmatter.id ?? current.note.index
+        const filePath = path.join(current.handle.rootPath, current.note.relPath)
         try {
-          const content = await fs.readFile(current.note.readmePath, 'utf8')
+          const content = await fs.readFile(filePath, 'utf8')
           documents.push({
-            id: `${current.handle.id}:${current.note.uuid}`,
+            id: `${current.handle.id}:${noteUuid}`,
             knowledgeBaseId: current.handle.id,
             knowledgeBaseName: current.handle.name,
-            noteUuid: current.note.uuid,
+            noteUuid,
             noteIndex: current.note.index,
             title: current.note.title,
             content,
@@ -197,7 +188,7 @@ export class WorkspaceManager {
           })
         } catch (error) {
           deskLog('search', 'note skipped', {
-            path: current.note.readmePath,
+            path: filePath,
             error: error instanceof Error ? error.message : String(error)
           })
         }
@@ -213,7 +204,7 @@ export class WorkspaceManager {
 
   /**
    * Resolve NotesTable ids against the current knowledge-base snapshot
-   * (title + `.tnotes.json` description), same data VitePress notesConfig uses.
+   * (title + frontmatter description).
    */
   resolveNotesTable(
     knowledgeBaseId: string,
@@ -268,40 +259,15 @@ export class WorkspaceManager {
     )
   }
 
-  async resolveNoteAsset(
-    knowledgeBaseId: string,
-    noteUuid: string,
-    requestedPath: string
-  ): Promise<string> {
-    return noteIo.resolveNoteAsset(this.getHandle(knowledgeBaseId), noteUuid, requestedPath)
+  async resolveNoteAsset(knowledgeBaseId: string, requestedPath: string): Promise<string> {
+    return noteIo.resolveNoteAsset(this.getHandle(knowledgeBaseId), requestedPath)
   }
 
-  async readNoteTextAsset(request: AttachmentReadTextRequest): Promise<string> {
-    return noteIo.readNoteTextAsset(this.getHandle(request.knowledgeBaseId), request)
-  }
-
-  async writeNoteTextAsset(request: AttachmentWriteTextRequest): Promise<void> {
-    return noteIo.writeNoteTextAsset(
-      this.getHandle(request.knowledgeBaseId),
-      request,
-      (changedFiles) => markInternalWrites(this.scanState, changedFiles)
-    )
-  }
-
-  async listNoteFiles(request: NoteFilesListRequest): Promise<NoteFileEntryDto[]> {
-    return noteIo.listNoteFiles(this.getHandle(request.knowledgeBaseId), request)
-  }
-
-  async readNoteTextFile(request: NoteFileReadTextRequest): Promise<NoteTextFileDto> {
-    return noteIo.readNoteTextFile(this.getHandle(request.knowledgeBaseId), request)
-  }
-
-  async saveNoteTextFile(request: NoteFileSaveTextRequest): Promise<NoteTextFileDto> {
-    return noteIo.saveNoteTextFile(
-      this.getHandle(request.knowledgeBaseId),
-      request,
-      this.mutationEffects()
-    )
+  async buildKnowledgeBase(knowledgeBaseId: string): Promise<KbBuildResult> {
+    const handle = this.getHandle(knowledgeBaseId)
+    const { buildSite } = await import('@tnotesjs/ssg')
+    const result = await buildSite(handle.rootPath)
+    return { outDir: result.config.outDir, pageCount: result.pageCount }
   }
 
   async moveToc(request: TocMoveRequest): Promise<KnowledgeBaseDetail> {

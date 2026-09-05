@@ -4,7 +4,6 @@ import { computed, ref } from 'vue'
 import KnowledgeBaseIcon from '../components/KnowledgeBaseIcon.vue'
 import UiTooltip from '../components/UiTooltip.vue'
 import NoteTabPane from './NoteTabPane.vue'
-import NoteFileTabPane from './NoteFileTabPane.vue'
 import WebTabPane from './WebTabPane.vue'
 import { useEditorStore } from '../stores/editor'
 import { useWorkspaceStore } from '../stores/workspace'
@@ -126,8 +125,7 @@ function isDirty(tab: EditorTab): boolean {
 
 function tabAriaLabel(tab: EditorTab): string {
   if (tab.type === 'web') return tab.url
-  if (tab.type === 'note') return `${tab.knowledgeBaseName} · ${tab.title}`
-  return `${tab.noteTitle} · ${tab.path}`
+  return `${tab.knowledgeBaseName} · ${tab.title}`
 }
 
 function closeTab(tab: EditorTab): void {
@@ -221,7 +219,6 @@ async function runTabAction(action: ContextMenuAction, tab: EditorTab): Promise<
           <span v-else-if="tab.type === 'note'" class="tab-icon knowledge-tab-icon">
             <KnowledgeBaseIcon :icon="tab.icon" :fallback="tab.knowledgeBaseName" />
           </span>
-          <span v-else-if="tab.type === 'note-file'" class="tab-icon file-tab-icon">&lt;/&gt;</span>
           <span v-else class="tab-icon">⌘</span>
           <span class="tab-title">{{ tab.title }}</span>
           <span v-if="isDirty(tab)" class="dirty-dot">●</span>
@@ -257,7 +254,6 @@ async function runTabAction(action: ContextMenuAction, tab: EditorTab): Promise<
           <span v-else-if="tab.type === 'note'" class="tab-icon knowledge-tab-icon">
             <KnowledgeBaseIcon :icon="tab.icon" :fallback="tab.knowledgeBaseName" />
           </span>
-          <span v-else-if="tab.type === 'note-file'" class="tab-icon file-tab-icon">&lt;/&gt;</span>
           <span v-else class="tab-icon">⌘</span>
           <span class="tab-title">{{ tab.title }}</span>
           <span v-if="isDirty(tab)" class="dirty-dot">●</span>
@@ -301,12 +297,6 @@ async function runTabAction(action: ContextMenuAction, tab: EditorTab): Promise<
       >
         <NoteTabPane
           v-if="tab.type === 'note'"
-          :tab="tab"
-          :group-id="group.id"
-          :active="tab.id === group.activeTabId"
-        />
-        <NoteFileTabPane
-          v-else-if="tab.type === 'note-file'"
           :tab="tab"
           :group-id="group.id"
           :active="tab.id === group.activeTabId"

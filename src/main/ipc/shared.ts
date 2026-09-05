@@ -4,7 +4,7 @@ import { z } from 'zod'
 
 import { deskLog } from '../log'
 
-import type { WorkspaceError } from '@tnotesjs/core/workspace'
+import type { KbError } from '@tnotesjs/kb'
 import type { DeskError, DeskResult } from '../../shared/contracts'
 
 export function assertSender(
@@ -28,7 +28,7 @@ export function toDeskError(error: unknown): DeskError {
     }
   }
 
-  const workspaceError = error as Partial<WorkspaceError>
+  const workspaceError = error as Partial<KbError>
   const code = typeof workspaceError?.code === 'string' ? workspaceError.code : 'INTERNAL_ERROR'
   const message = error instanceof Error ? error.message : '发生了无法识别的内部错误'
   deskLog('ipc:error', diagnosticId, { code, message })

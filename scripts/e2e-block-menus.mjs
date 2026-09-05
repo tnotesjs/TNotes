@@ -13,28 +13,16 @@ const fixture = mkdtempSync(join(tmpdir(), 'desk-block-menus-'))
 const workspace = join(fixture, 'workspace')
 const profile = join(fixture, 'profile')
 const kb = join(workspace, 'TNotes.block-menus')
-const note = join(kb, 'notes', '0001. menus')
+const noteFile = join(kb, 'notes', '0001. menus.md')
 const shots = join(deskDir, 'scripts', 'shots', 'block-menus')
-mkdirSync(note, { recursive: true })
+mkdirSync(join(kb, 'notes'), { recursive: true })
+mkdirSync(join(kb, 'assets'), { recursive: true })
 mkdirSync(profile, { recursive: true })
 mkdirSync(shots, { recursive: true })
-const kbConfig = JSON.parse(
-  readFileSync(join(deskDir, 'playground/TNotes.docs/.tnotes.json'), 'utf8')
-)
-kbConfig.id = '10000000-0000-4000-8000-000000000021'
-kbConfig.repoName = 'TNotes.block-menus'
-kbConfig.sidebarShowNoteId = false
-kbConfig.root_item = { ...kbConfig.root_item, title: 'block-menus' }
-writeFileSync(join(kb, '.tnotes.json'), JSON.stringify(kbConfig))
+writeFileSync(join(kb, 'tnotes.json'), JSON.stringify({ title: 'block-menus' }))
 writeFileSync(join(kb, 'TOC.md'), '- [ ] 0001. menus\n')
-writeFileSync(join(kb, 'sidebar.json'), '[]\n')
-const noteConfig = JSON.parse(
-  readFileSync(join(deskDir, 'playground/TNotes.docs/notes/0041. new/.tnotes.json'), 'utf8')
-)
-noteConfig.id = '10000000-0000-4000-8000-000000000022'
-writeFileSync(join(note, '.tnotes.json'), JSON.stringify(noteConfig))
 const markdown = [
-  '# [Menus](https://github.com/tnotesjs/desk)',
+  '# Menus',
   '<!-- region:toc -->\n- [1. 概述](#1-概述)\n<!-- endregion:toc -->',
   '## 1. 概述',
   '<B id="menu-component" />',
@@ -45,14 +33,15 @@ const markdown = [
   '> Quoted text',
   '```js\nconst value = 1\n```',
   '| Column |\n| --- |\n| Cell |',
-  '![Pixel](./pixel.svg)',
+  '![Pixel](../assets/pixel.svg)',
   '---',
   'Last paragraph',
   ''
 ].join('\n\n')
-writeFileSync(join(note, 'README.md'), markdown)
+const source = `---\nid: 10000000-0000-4000-8000-000000000022\n---\n\n${markdown}`
+writeFileSync(noteFile, source)
 writeFileSync(
-  join(note, 'pixel.svg'),
+  join(kb, 'assets', 'pixel.svg'),
   '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="blue"/></svg>'
 )
 writeFileSync(join(profile, 'workspace.v1.json'), JSON.stringify({ path: workspace }))
@@ -151,7 +140,7 @@ try {
   await expectHeadingCaret(headingText.length - 1)
   await page.screenshot({ path: join(shots, 'heading-arrow-left.png') })
   await tocToggle.click()
-  assert.equal(readFileSync(join(note, 'README.md'), 'utf8'), markdown)
+  assert.equal(readFileSync(noteFile, 'utf8'), source)
   console.log(
     '✓ heading arrows move character-by-character; only true boundaries select adjacent blocks; Shift selection stays native'
   )
@@ -198,7 +187,7 @@ try {
     [
       'image',
       pm.locator(':scope > p').filter({ has: page.locator('img') }),
-      /!\[Pixel\]\(\.\/pixel\.svg\)/
+      /!\[Pixel\]\(\.\.\/assets\/pixel\.svg\)/
     ],
     ['separator', pm.locator('hr'), /^(?:-{3,}|\*{3,}|_{3,})\s*$/],
     ['component', pm.locator('[data-kind="raw-component"]'), /<B id="menu-component" \/>/]
@@ -214,7 +203,7 @@ try {
     if (kind.includes('list-item'))
       assert.doesNotMatch(copied, /Item two|Ordered first|Task pending/)
   }
-  assert.equal(readFileSync(join(note, 'README.md'), 'utf8'), markdown)
+  assert.equal(readFileSync(noteFile, 'utf8'), source)
   console.log('✓ every visible six-dot button opens the same menu and copies its Markdown')
 
   await openMenu(item('Item one'))

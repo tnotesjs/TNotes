@@ -6,14 +6,9 @@ import { imageBedManager } from '../imageBed'
 import { workspaceManager } from '../workspaceManager'
 import { IPC_CHANNELS } from '../../shared/contracts'
 import {
-  attachmentReadTextSchema,
   attachmentWriteLocalSchema,
-  attachmentWriteTextSchema,
   entryRefSchema,
   noteCreateSchema,
-  noteFileReadTextSchema,
-  noteFileSaveTextSchema,
-  noteFilesListSchema,
   noteRenameSchema,
   noteSaveSchema,
   noteUpdateConfigSchema,
@@ -26,13 +21,8 @@ import { handle, type GetWindow } from './shared'
 
 import type {
   AttachmentWriteLocalRequest,
-  AttachmentReadTextRequest,
-  AttachmentWriteTextRequest,
   ImageUploadRequest,
   NoteCreateRequest,
-  NoteFileReadTextRequest,
-  NoteFileSaveTextRequest,
-  NoteFilesListRequest,
   NoteRenameRequest,
   NoteSaveRequest,
   NoteUpdateConfigRequest,
@@ -74,23 +64,14 @@ export function registerNotes(getWindow: GetWindow): void {
   handle(IPC_CHANNELS.noteUpdateConfig, getWindow, noteUpdateConfigSchema, (input) =>
     workspaceManager.updateNoteConfig(input as NoteUpdateConfigRequest)
   )
-  handle(IPC_CHANNELS.noteFilesList, getWindow, noteFilesListSchema, (input) =>
-    workspaceManager.listNoteFiles(input as NoteFilesListRequest)
-  )
-  handle(IPC_CHANNELS.noteFileReadText, getWindow, noteFileReadTextSchema, (input) =>
-    workspaceManager.readNoteTextFile(input as NoteFileReadTextRequest)
-  )
-  handle(IPC_CHANNELS.noteFileSaveText, getWindow, noteFileSaveTextSchema, (input) =>
-    workspaceManager.saveNoteTextFile(input as NoteFileSaveTextRequest)
-  )
   handle(
-    IPC_CHANNELS.noteCopyDirectoryPath,
+    IPC_CHANNELS.noteCopyPath,
     getWindow,
     z.object({ knowledgeBaseId: z.string().min(1), noteUuid: z.string().min(1) }),
     ({ knowledgeBaseId, noteUuid }) => {
-      const directoryPath = workspaceManager.getNoteLocation(knowledgeBaseId, noteUuid)
-      clipboard.writeText(directoryPath)
-      return directoryPath
+      const filePath = workspaceManager.getNoteLocation(knowledgeBaseId, noteUuid)
+      clipboard.writeText(filePath)
+      return filePath
     }
   )
   handle(
@@ -99,7 +80,7 @@ export function registerNotes(getWindow: GetWindow): void {
     z.object({ knowledgeBaseId: z.string().min(1), noteUuid: z.string().min(1) }),
     async ({ knowledgeBaseId, noteUuid }) => {
       const note = await workspaceManager.readNote(knowledgeBaseId, noteUuid)
-      shell.showItemInFolder(note.readmePath)
+      shell.showItemInFolder(note.filePath)
     }
   )
   handle(IPC_CHANNELS.attachmentWriteLocal, getWindow, attachmentWriteLocalSchema, (input) =>
@@ -107,12 +88,6 @@ export function registerNotes(getWindow: GetWindow): void {
   )
   handle(IPC_CHANNELS.attachmentUploadImage, getWindow, attachmentWriteLocalSchema, (input) =>
     imageBedManager.upload(input as ImageUploadRequest)
-  )
-  handle(IPC_CHANNELS.attachmentReadText, getWindow, attachmentReadTextSchema, (input) =>
-    workspaceManager.readNoteTextAsset(input as AttachmentReadTextRequest)
-  )
-  handle(IPC_CHANNELS.attachmentWriteText, getWindow, attachmentWriteTextSchema, (input) =>
-    workspaceManager.writeNoteTextAsset(input as AttachmentWriteTextRequest)
   )
 
   handle(IPC_CHANNELS.tocMove, getWindow, tocMoveSchema, (input) =>

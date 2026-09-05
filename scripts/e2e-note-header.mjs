@@ -13,29 +13,17 @@ const fixture = mkdtempSync(join(tmpdir(), 'desk-note-header-'))
 const workspace = join(fixture, 'workspace')
 const profile = join(fixture, 'profile')
 const kb = join(workspace, 'TNotes.note-header')
-const note = join(kb, 'notes', '0001. 概述')
+const noteFile = join(kb, 'notes', '0001. 概述.md')
+const noteUuid = '10000000-0000-4000-8000-000000000032'
 const shots = join(deskDir, 'scripts', 'shots', 'note-header')
-mkdirSync(note, { recursive: true })
+mkdirSync(join(kb, 'notes'), { recursive: true })
 mkdirSync(profile, { recursive: true })
 mkdirSync(shots, { recursive: true })
-const kbConfig = JSON.parse(
-  readFileSync(join(deskDir, 'playground/TNotes.docs/.tnotes.json'), 'utf8')
-)
-kbConfig.id = '10000000-0000-4000-8000-000000000031'
-kbConfig.repoName = 'TNotes.note-header'
-kbConfig.sidebarShowNoteId = false
-kbConfig.root_item = { ...kbConfig.root_item, title: 'note-header' }
-writeFileSync(join(kb, '.tnotes.json'), JSON.stringify(kbConfig))
+writeFileSync(join(kb, 'tnotes.json'), JSON.stringify({ title: 'note-header' }))
 writeFileSync(join(kb, 'TOC.md'), '- [ ] 0001. 概述\n')
-writeFileSync(join(kb, 'sidebar.json'), '[]\n')
-const noteConfig = JSON.parse(
-  readFileSync(join(deskDir, 'playground/TNotes.docs/notes/0041. new/.tnotes.json'), 'utf8')
-)
-noteConfig.id = '10000000-0000-4000-8000-000000000032'
-writeFileSync(join(note, '.tnotes.json'), JSON.stringify(noteConfig))
 writeFileSync(
-  join(note, 'README.md'),
-  '# [0001. 概述](https://github.com/tnotesjs/desk)\n\n## 正文\n\nInitial content.\n'
+  noteFile,
+  `---\nid: ${noteUuid}\n---\n\n# 0001. 概述\n\n## 正文\n\nInitial content.\n`
 )
 writeFileSync(join(profile, 'workspace.v1.json'), JSON.stringify({ path: workspace }))
 writeFileSync(
@@ -309,21 +297,17 @@ try {
   await title.click()
   await input.fill('  新的名称  ')
   await page.screenshot({ path: join(shots, 'inline-title.png') })
-  assert.equal(existsSync(note), true)
+  assert.equal(existsSync(noteFile), true)
   await page.getByRole('button', { name: '只读视图', exact: true }).click()
-  const renamedNote = join(kb, 'notes', '0001. 新的名称')
-  await waitUntil(() => existsSync(join(renamedNote, 'README.md')))
+  const renamedNoteFile = join(kb, 'notes', '0001. 新的名称.md')
+  await waitUntil(() => existsSync(renamedNoteFile))
   await page.waitForFunction(
     () => document.querySelector('.note-title-button')?.textContent.trim() === '新的名称'
   )
-  assert.equal(existsSync(note), false)
-  assert.match(readFileSync(join(renamedNote, 'README.md'), 'utf8'), /KEEP-DRAFT/)
-  assert.match(readFileSync(join(renamedNote, 'README.md'), 'utf8'), /0001\. 新的名称/)
+  assert.equal(existsSync(noteFile), false)
+  assert.match(readFileSync(renamedNoteFile, 'utf8'), /KEEP-DRAFT/)
   assert.match(readFileSync(join(kb, 'TOC.md'), 'utf8'), /0001\. 新的名称/)
-  assert.equal(
-    JSON.parse(readFileSync(join(renamedNote, '.tnotes.json'), 'utf8')).id,
-    noteConfig.id
-  )
+  assert.match(readFileSync(renamedNoteFile, 'utf8'), new RegExp(`^id: ${noteUuid}$`, 'm'))
   assert.equal(await page.locator('.tab').filter({ hasText: '新的名称' }).count(), 1)
   assert.equal(
     (await page.locator('.toc-nodes .node-label').filter({ hasText: '新的名称' }).count()) > 0,
@@ -331,7 +315,7 @@ try {
   )
   assert.equal(await page.locator('.document-path .note-index').innerText(), '0001.')
   console.log(
-    '✓ blur trims/renames directory, generated title, TOC and tab; index/UUID and unsaved text preserved'
+    '✓ blur trims/renames the note file, TOC and tab; index/UUID and unsaved text preserved'
   )
 
   // Rename works in readonly view too: the view mode does not lock metadata.
@@ -339,8 +323,8 @@ try {
   await title.click()
   await input.fill('最终名称')
   await input.press('Enter')
-  const finalNote = join(kb, 'notes', '0001. 最终名称')
-  await waitUntil(() => existsSync(join(finalNote, 'README.md')))
+  const finalNoteFile = join(kb, 'notes', '0001. 最终名称.md')
+  await waitUntil(() => existsSync(finalNoteFile))
   await page.waitForFunction(
     () => document.querySelector('.note-title-button')?.textContent.trim() === '最终名称'
   )
@@ -350,7 +334,7 @@ try {
   await page.waitForFunction(() => document.querySelector('.tab.is-dirty, .tab .dirty-dot'))
   await page.keyboard.press('ControlOrMeta+s')
   await waitUntil(() =>
-    readFileSync(join(finalNote, 'README.md'), 'utf8').includes('SHORTCUT-SAVED')
+    readFileSync(finalNoteFile, 'utf8').includes('SHORTCUT-SAVED')
   )
   await page.getByRole('button', { name: '标准页宽', exact: true }).click()
   await page.getByRole('button', { name: '超宽显示', exact: true }).waitFor()
@@ -367,13 +351,13 @@ try {
   await pm.locator('li .unchecked').waitFor()
   await page.keyboard.press('ControlOrMeta+s')
   await waitUntil(() =>
-    /^- \[ \] .*KEEP-DRAFT/m.test(readFileSync(join(finalNote, 'README.md'), 'utf8'))
+    /^- \[ \] .*KEEP-DRAFT/m.test(readFileSync(finalNoteFile, 'utf8'))
   )
   await pm.locator('li .unchecked').click()
   await pm.locator('li .checked').waitFor()
   await page.keyboard.press('ControlOrMeta+s')
   await waitUntil(() =>
-    /^- \[x\] .*KEEP-DRAFT/m.test(readFileSync(join(finalNote, 'README.md'), 'utf8'))
+    /^- \[x\] .*KEEP-DRAFT/m.test(readFileSync(finalNoteFile, 'utf8'))
   )
   console.log(
     '✓ task checkboxes save as native GFM Markdown and support checked/unchecked interaction'
@@ -454,7 +438,7 @@ try {
   await page.keyboard.press('ControlOrMeta+s')
   await waitUntil(
     () =>
-      (readFileSync(join(finalNote, 'README.md'), 'utf8').match(/^\|[^\n]*\|$/gm) ?? []).length ===
+      (readFileSync(finalNoteFile, 'utf8').match(/^\|[^\n]*\|$/gm) ?? []).length ===
       6
   )
   await page.screenshot({ path: join(shots, 'matching-tables.png') })

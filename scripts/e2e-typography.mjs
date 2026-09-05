@@ -13,26 +13,14 @@ const fixture = mkdtempSync(join(tmpdir(), 'desk-typography-'))
 const workspace = join(fixture, 'workspace')
 const profile = join(fixture, 'profile')
 const kb = join(workspace, 'TNotes.typography')
-const note = join(kb, 'notes', '0001. typography')
+const noteFile = join(kb, 'notes', '0001. typography.md')
 const shots = join(deskDir, 'scripts', 'shots', 'typography')
-mkdirSync(note, { recursive: true })
+mkdirSync(join(kb, 'notes'), { recursive: true })
 mkdirSync(profile, { recursive: true })
 mkdirSync(shots, { recursive: true })
-const kbConfig = JSON.parse(
-  readFileSync(join(deskDir, 'playground/TNotes.docs/.tnotes.json'), 'utf8')
-)
-kbConfig.id = '10000000-0000-4000-8000-000000000071'
-kbConfig.repoName = 'TNotes.typography'
-kbConfig.root_item = { ...kbConfig.root_item, title: 'typography' }
-writeFileSync(join(kb, '.tnotes.json'), JSON.stringify(kbConfig))
+writeFileSync(join(kb, 'tnotes.json'), JSON.stringify({ title: 'typography' }))
 writeFileSync(join(kb, 'TOC.md'), '- [ ] 0001. typography\n')
-writeFileSync(join(kb, 'sidebar.json'), '[]\n')
-const noteConfig = JSON.parse(
-  readFileSync(join(deskDir, 'playground/TNotes.docs/notes/0041. new/.tnotes.json'), 'utf8')
-)
-noteConfig.id = '10000000-0000-4000-8000-000000000072'
-writeFileSync(join(note, '.tnotes.json'), JSON.stringify(noteConfig))
-const source = [
+const markdown = [
   '# 0001. 使用 contextBridge 暴露 API 给渲染进程',
   '',
   '<!-- region:toc -->',
@@ -80,7 +68,8 @@ const source = [
   '| Cell A | Cell B |',
   ''
 ].join('\n')
-writeFileSync(join(note, 'README.md'), source)
+const source = `---\nid: 10000000-0000-4000-8000-000000000072\n---\n\n${markdown}`
+writeFileSync(noteFile, source)
 writeFileSync(join(profile, 'workspace.v1.json'), JSON.stringify({ path: workspace }))
 writeFileSync(
   join(profile, '.tn-desk-config.json'),
@@ -282,7 +271,7 @@ try {
       document.documentElement.dataset.theme = 'dark'
     })
   }
-  assert.equal(readFileSync(join(note, 'README.md'), 'utf8'), source)
+  assert.equal(readFileSync(noteFile, 'utf8'), source)
   console.log(
     '✓ visual/readonly typography matches; code stays monospace, UI density and Markdown are unchanged'
   )

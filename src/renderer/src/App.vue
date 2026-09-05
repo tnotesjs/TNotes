@@ -329,9 +329,6 @@ watch(
     () => editor.knowledgeSidebarCollapsed,
     () => editor.navigatorSidebarCollapsed,
     () => editor.expandedTocNodes,
-    () => editor.noteFileSidebarWidth,
-    () => editor.noteFileSidebarCollapsed,
-    () => editor.expandedNoteFileDirectories,
     () => editor.lastNoteByGroup
   ],
   () => {

@@ -9,7 +9,6 @@ import {
 import type { ProjectedRawBlockKind } from '../editor/markdown/rawBlockProjection'
 import { attachRawBlockBoundaryControls } from './rawBlockInteractions'
 import { resolveMarkdownImageUrl } from './markdownAssetUrl'
-import { mountRawInclude } from './deskRawBlockView/include'
 import { mountRawContainer } from './deskRawBlockView/container'
 import { mountRawComponent } from './deskRawBlockView/component'
 import { mountRawDiagram } from './deskRawBlockView/diagram'
@@ -50,7 +49,6 @@ export function createDeskRawBlockView(deps: DeskRawBlockViewDeps) {
         deps
       }
 
-      if (block.kind === 'raw-include') mountRawInclude(ctx)
       if (block.kind === 'raw-container') {
         // Callouts/code-group/swiper mount immediately; footprints (heavy) is deferred inside.
         mountRawContainer(ctx)

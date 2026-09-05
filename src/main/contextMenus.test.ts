@@ -68,7 +68,7 @@ describe('native context menus', () => {
     expect(selected).not.toHaveBeenCalled()
   })
 
-  it.each(['note', 'note-file', 'web'] as const)(
+  it.each(['note', 'web'] as const)(
     'preserves applicable actions and shortcut hints for %s tabs',
     (tabType) => {
       const template = contextMenuTemplate(

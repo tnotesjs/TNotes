@@ -1,5 +1,4 @@
 import { parseFootprintsSource, type FootprintsPayload } from '@tnotesjs/ui'
-import { watch } from 'vue'
 
 import {
   isStructuredCalloutSource,
@@ -9,11 +8,8 @@ import {
   renderContainerFromSource
 } from '../../editor/markdown/containerBody'
 import {
-  bodyHasIncludeLines,
   codeGroupEntryTabTitle,
-  includeLanguage,
   parseCodeGroupEntries,
-  parseDeskIncludeLine,
   serializeCodeGroupEntries,
   withCodeGroupEntryHighlights,
   withCodeGroupEntryLanguage,
@@ -35,8 +31,6 @@ import {
   type CodeTabEditorHandle
 } from '../../editor/markdown/deskCodeTabEditor'
 import { mountFootprintsPreview } from '../../editor/markdown/componentPreview'
-import { useWorkspaceStore } from '../../stores/workspace'
-import { noteFileKey } from '../../stores/workspace/helpers'
 import { attachRawSourceEditor, type RawSourceEditorHandle } from '../attachRawSourceEditor'
 import { deferUntilVisible } from './deferUntilVisible'
 import type { DeskRawBlockMountContext } from './types'
@@ -90,46 +84,12 @@ export function mountRawContainer(ctx: DeskRawBlockMountContext): void {
     let codeGroupEntries: CodeGroupEntry[] = []
     let swiperSlides: SwiperSlideEntry[] = []
     const codeGroupTabEditors: Array<CodeTabEditorHandle | null> = []
-    const includeSessionStops: Array<() => void> = []
     let rawSourceEditor: RawSourceEditorHandle | null = null
     cleanupTasks.push(() => {
       cancelledIncludes = true
       destroyContainerPreview(previewEl)
       codeGroupTabEditors.splice(0).forEach((handle) => handle?.destroy())
-      includeSessionStops.splice(0).forEach((stop) => stop())
     })
-
-    const loadIncludeCache = async (body: string): Promise<Map<string, string>> => {
-      const cache = new Map<string, string>()
-      const paths: string[] = []
-      for (const line of body.replace(/\r\n?/g, '\n').split('\n')) {
-        const include = parseDeskIncludeLine(line)
-        if (!include || cache.has(include.path) || paths.includes(include.path)) continue
-        paths.push(include.path)
-      }
-      await Promise.all(
-        paths.map(async (includePath) => {
-          if (cancelledIncludes) return
-          try {
-            const workspace = useWorkspaceStore()
-            const result = await workspace.ensureNoteFile(
-              deps.knowledgeBaseId(),
-              deps.noteUuid(),
-              includePath
-            )
-            if (cancelledIncludes) return
-            cache.set(includePath, result.content)
-          } catch (error) {
-            if (cancelledIncludes) return
-            cache.set(
-              includePath,
-              `// 引用失败：${error instanceof Error ? error.message : String(error)}`
-            )
-          }
-        })
-      )
-      return cache
-    }
 
     const applyContainerSource = (nextSource: string): boolean => {
       const position = getPos()
@@ -173,11 +133,9 @@ export function mountRawContainer(ctx: DeskRawBlockMountContext): void {
       const entries = parseCodeGroupEntries(parsed.body)
       if (entries.length === 0) return null
 
-      const cache = await loadIncludeCache(parsed.body)
       if (cancelledIncludes) return null
 
       codeGroupTabEditors.splice(0).forEach((handle) => handle?.destroy())
-      includeSessionStops.splice(0).forEach((stop) => stop())
       codeGroupEntries = entries
 
       const group = document.createElement('div')
@@ -410,49 +368,27 @@ export function mountRawContainer(ctx: DeskRawBlockMountContext): void {
         editorHost.className = 'desk-raw-block__include-body'
         panel.append(editorHost)
 
-        let initialContent = ''
-        let language = ''
-        if (entry.kind === 'include') {
-          initialContent = cache.get(entry.include.path) ?? `// 引用失败：${entry.include.path}`
-          language = includeLanguage(entry.include)
-        } else {
-          initialContent = entry.code
-          language = entry.lang
-        }
-
         const tabEditor = mountCodeTabEditor(editorHost, {
-          initialContent,
-          saveOnBlur: entry.kind !== 'include',
-          language,
+          initialContent: entry.code,
+          saveOnBlur: true,
+          language: entry.lang,
           onCopy: (text) => deps.writeClipboard(text),
-          onChange: (content) => {
-            if (entry.kind !== 'include') return
-            const workspace = useWorkspaceStore()
-            workspace.updateNoteFileContent(
-              noteFileKey(deps.knowledgeBaseId(), deps.noteUuid(), entry.include.path),
-              content
-            )
-          },
           onDirtyChange: (dirty) => {
             tabButtons[index]?.classList.toggle('is-tab-dirty', dirty)
-            panel.classList.toggle('is-include-dirty', dirty)
           },
-          lineHighlight:
-            entry.kind === 'fence'
-              ? {
-                  initial: entry.highlights,
-                  readOnly: () => deps.isEffectivelyReadOnly(),
-                  onChange: (encoded) => {
-                    if (deps.isEffectivelyReadOnly()) return
-                    const current = codeGroupEntries[index]
-                    if (!current || current.kind !== 'fence') return
-                    const nextEntries = codeGroupEntries.map((item, itemIndex) =>
-                      itemIndex === index ? withCodeGroupEntryHighlights(item, encoded) : item
-                    )
-                    commitCodeGroupEntries(nextEntries)
-                  }
-                }
-              : undefined,
+          lineHighlight: {
+            initial: entry.highlights,
+            readOnly: () => deps.isEffectivelyReadOnly(),
+            onChange: (encoded) => {
+              if (deps.isEffectivelyReadOnly()) return
+              const current = codeGroupEntries[index]
+              if (!current) return
+              const nextEntries = codeGroupEntries.map((item, itemIndex) =>
+                itemIndex === index ? withCodeGroupEntryHighlights(item, encoded) : item
+              )
+              commitCodeGroupEntries(nextEntries)
+            }
+          },
           onLanguageChange: async (nextLanguage) => {
             const current = codeGroupEntries[index]
             if (!current) return
@@ -460,34 +396,14 @@ export function mountRawContainer(ctx: DeskRawBlockMountContext): void {
               itemIndex === index ? withCodeGroupEntryLanguage(item, nextLanguage) : item
             )
             if (!commitCodeGroupEntries(nextEntries)) {
-              const revertLang =
-                current.kind === 'include'
-                  ? includeLanguage(current.include)
-                  : current.lang || 'text'
-              codeGroupTabEditors[index]?.setLanguage(revertLang)
+              codeGroupTabEditors[index]?.setLanguage(current.lang || 'text')
             }
           },
           onSave: async (content) => {
             const current = codeGroupEntries[index]
             if (!current) return { ok: false, message: '代码块已失效' }
-            if (current.kind === 'include') {
-              const workspace = useWorkspaceStore()
-              const key = noteFileKey(deps.knowledgeBaseId(), deps.noteUuid(), current.include.path)
-              workspace.updateNoteFileContent(key, content)
-              try {
-                await workspace.saveNoteFile(key)
-                return { ok: true }
-              } catch (cause) {
-                return {
-                  ok: false,
-                  message: cause instanceof Error ? cause.message : String(cause)
-                }
-              }
-            }
             const nextEntries = codeGroupEntries.map((item, itemIndex) =>
-              itemIndex === index && item.kind === 'fence'
-                ? { ...item, code: content.replace(/\n$/, '') }
-                : item
+              itemIndex === index ? { ...item, code: content.replace(/\n$/, '') } : item
             )
             if (!commitCodeGroupEntries(nextEntries)) {
               return { ok: false, message: '无法更新笔记节点' }
@@ -496,22 +412,6 @@ export function mountRawContainer(ctx: DeskRawBlockMountContext): void {
           }
         })
         codeGroupTabEditors[index] = tabEditor
-        if (entry.kind === 'include') {
-          const workspace = useWorkspaceStore()
-          const knowledgeBaseId = deps.knowledgeBaseId()
-          const noteUuid = deps.noteUuid()
-          includeSessionStops.push(
-            watch(
-              () => workspace.getNoteFileSession(knowledgeBaseId, noteUuid, entry.include.path),
-              (next) => {
-                if (!next) return
-                tabEditor.setValue(next.content)
-                tabEditor.setSavedValue(next.document.content)
-              },
-              { deep: true }
-            )
-          )
-        }
 
         if (useTabs) {
           const tab = document.createElement('button')
@@ -884,18 +784,9 @@ export function mountRawContainer(ctx: DeskRawBlockMountContext): void {
         }
       }
 
-      let resolveIncludeContent: ((path: string) => string | null) | undefined
-      if (parsed.name === 'code-group' && bodyHasIncludeLines(parsed.body)) {
-        const cache = await loadIncludeCache(parsed.body)
-        if (cancelledIncludes) return
-        resolveIncludeContent = (path) => cache.get(path) ?? null
-      }
       if (cancelledIncludes || !previewEl) return
       codeGroupTabEditors.splice(0).forEach((handle) => handle?.destroy())
-      includeSessionStops.splice(0).forEach((stop) => stop())
-      const fresh = renderContainerFromSource(source, resolveImage, {
-        resolveIncludeContent
-      })
+      const fresh = renderContainerFromSource(source, resolveImage)
       destroyContainerPreview(previewEl)
       previewEl.replaceWith(fresh)
       previewEl = fresh
@@ -912,21 +803,12 @@ export function mountRawContainer(ctx: DeskRawBlockMountContext): void {
           for (let i = 0; i < codeGroupEntries.length; i++) {
             const prev = codeGroupEntries[i]
             const next = nextEntries[i]
-            if (!prev || !next || prev.kind !== next.kind) return false
-            if (
-              prev.kind === 'include' &&
-              next.kind === 'include' &&
-              prev.include.path !== next.include.path
-            ) {
-              return false
-            }
+            if (!prev || !next) return false
           }
           currentContainerSource = nextSource
           codeGroupEntries = nextEntries
           nextEntries.forEach((entry, index) => {
-            if (entry.kind === 'fence') {
-              codeGroupTabEditors[index]?.setSavedValue(entry.code)
-            }
+            codeGroupTabEditors[index]?.setSavedValue(entry.code)
           })
           rawSourceEditor?.syncFromAtom()
           return true

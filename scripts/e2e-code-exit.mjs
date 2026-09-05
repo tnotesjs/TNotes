@@ -13,28 +13,14 @@ const fixture = mkdtempSync(join(tmpdir(), 'desk-code-exit-'))
 const workspace = join(fixture, 'workspace')
 const profile = join(fixture, 'profile')
 const kb = join(workspace, 'TNotes.code-exit')
-const note = join(kb, 'notes', '0001. code-exit')
-const readme = join(note, 'README.md')
+const noteFile = join(kb, 'notes', '0001. code-exit.md')
 const shots = join(deskDir, 'scripts', 'shots', 'code-exit')
-mkdirSync(note, { recursive: true })
+mkdirSync(join(kb, 'notes'), { recursive: true })
 mkdirSync(profile, { recursive: true })
 mkdirSync(shots, { recursive: true })
-const kbConfig = JSON.parse(
-  readFileSync(join(deskDir, 'playground/TNotes.docs/.tnotes.json'), 'utf8')
-)
-kbConfig.id = '10000000-0000-4000-8000-000000000061'
-kbConfig.repoName = 'TNotes.code-exit'
-kbConfig.root_item = { ...kbConfig.root_item, title: 'code-exit' }
-writeFileSync(join(kb, '.tnotes.json'), JSON.stringify(kbConfig))
+writeFileSync(join(kb, 'tnotes.json'), JSON.stringify({ title: 'code-exit' }))
 writeFileSync(join(kb, 'TOC.md'), '- [ ] 0001. code-exit\n')
-writeFileSync(join(kb, 'sidebar.json'), '[]\n')
-const noteConfig = JSON.parse(
-  readFileSync(join(deskDir, 'playground/TNotes.docs/notes/0041. new/.tnotes.json'), 'utf8')
-)
-noteConfig.id = '10000000-0000-4000-8000-000000000062'
-writeFileSync(join(note, '.tnotes.json'), JSON.stringify(noteConfig))
-writeFileSync(join(note, 'included.js'), 'const included = 1\nconsole.log(included)')
-const source = [
+const markdown = [
   '# Code exit',
   '',
   '```js',
@@ -58,7 +44,10 @@ const source = [
   'console.log(inline)',
   '```',
   '',
-  '<<< ./included.js',
+  '```js [included.js]',
+  'const included = 1',
+  'console.log(included)',
+  '```',
   '',
   ':::',
   '',
@@ -75,7 +64,10 @@ const source = [
   '',
   '## GROUP-HEADING',
   '',
-  '<<< ./included.js',
+  '```js',
+  'const included = 1',
+  'console.log(included)',
+  '```',
   '',
   '- INCLUDE-LIST',
   '',
@@ -102,7 +94,8 @@ const source = [
   ':::',
   ''
 ].join('\n')
-writeFileSync(readme, source)
+const source = `---\nid: 10000000-0000-4000-8000-000000000062\n---\n\n${markdown}`
+writeFileSync(noteFile, source)
 writeFileSync(join(profile, 'workspace.v1.json'), JSON.stringify({ path: workspace }))
 writeFileSync(
   join(profile, '.tn-desk-config.json'),
@@ -165,7 +158,7 @@ try {
     [pm.locator(':scope > .milkdown-code-block').nth(1), 'NATIVE-HEADING'],
     [groups.nth(0), 'GROUP-PARAGRAPH'],
     [groups.nth(1), 'GROUP-HEADING'],
-    [pm.locator(':scope > .desk-raw-block--include'), 'INCLUDE-LIST'],
+    [pm.locator(':scope > .milkdown-code-block').nth(2), 'INCLUDE-LIST'],
     [groups.nth(2), '']
   ]
   for (const [block, text] of cases) {
@@ -177,7 +170,7 @@ try {
       console.log(`✓ ${key}: code → ${text || 'empty paragraph'} start`)
     }
   }
-  // The screenshot uses a referenced file inside a code group; test that tab too.
+  // The screenshot uses the second fenced tab inside a code group; test that tab too.
   await groups.nth(0).locator('.code-group-tab').filter({ hasText: 'included.js' }).click()
   for (const key of ['ArrowDown', 'ArrowRight']) {
     await enterEnd(groups.nth(0))
@@ -185,7 +178,7 @@ try {
     await settle()
     await assertCaret('GROUP-PARAGRAPH')
   }
-  console.log('✓ referenced-file tab exits the entire code group')
+  console.log('✓ second fenced tab exits the entire code group')
 
   await enterEnd(groups.nth(0))
   await page.keyboard.press('ArrowLeft')
@@ -208,14 +201,10 @@ try {
   )
   console.log('✓ interior movement and Shift selection retain CodeMirror focus')
 
-  // Navigation without edits must not change canonical Markdown or included files.
+  // Navigation without edits must not change canonical Markdown.
   await page.keyboard.press('ControlOrMeta+s')
   await settle()
-  assert.equal(readFileSync(readme, 'utf8'), source)
-  assert.equal(
-    readFileSync(join(note, 'included.js'), 'utf8'),
-    'const included = 1\nconsole.log(included)'
-  )
+  assert.equal(readFileSync(noteFile, 'utf8'), source)
 
   // A dirty inline tab flushes on blur without reclaiming focus from the paragraph.
   await groups.nth(0).locator('.code-group-tab').filter({ hasText: 'inline.js' }).click()
@@ -230,8 +219,8 @@ try {
   assert.ok((await groups.nth(0).locator('.cm-content:visible').innerText()).endsWith(' // edited'))
   await page.keyboard.press('ControlOrMeta+s')
   await page.locator('.dirty-dot').waitFor({ state: 'hidden' })
-  assert.ok(readFileSync(readme, 'utf8').includes('console.log(inline) // edited'))
-  assert.ok(readFileSync(readme, 'utf8').includes('BODY-GROUP-PARAGRAPH'))
+  assert.ok(readFileSync(noteFile, 'utf8').includes('console.log(inline) // edited'))
+  assert.ok(readFileSync(noteFile, 'utf8').includes('BODY-GROUP-PARAGRAPH'))
   console.log('✓ blur preserves code edits; subsequent typing edits the following paragraph')
 
   await enterEnd(groups.nth(3))

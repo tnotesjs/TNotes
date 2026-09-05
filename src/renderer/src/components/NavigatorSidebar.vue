@@ -169,10 +169,30 @@ async function togglePreview(): Promise<void> {
   }
 }
 
-function chooseHeaderAction(action: 'group' | 'preview' | 'reveal' | 'ide'): void {
+const buildBusy = ref(false)
+
+async function buildSite(): Promise<void> {
+  if (!store.selectedKnowledgeBaseId || buildBusy.value) return
+  buildBusy.value = true
+  try {
+    const result = await window.desk.build(store.selectedKnowledgeBaseId)
+    if (!result.ok) {
+      store.error = result.error.message
+      return
+    }
+    store.status = `构建完成：${result.value.pageCount} 页 → ${result.value.outDir}`
+  } catch (cause) {
+    store.error = cause instanceof Error ? cause.message : String(cause)
+  } finally {
+    buildBusy.value = false
+  }
+}
+
+function chooseHeaderAction(action: 'group' | 'preview' | 'build' | 'reveal' | 'ide'): void {
   createMenuOpen.value = false
   if (action === 'group') emit('createGroup')
   else if (action === 'preview') void togglePreview()
+  else if (action === 'build') void buildSite()
   else if (action === 'reveal') void revealKnowledgeBase()
   else showKnowledgeBaseMenu()
 }
@@ -221,6 +241,9 @@ const previewLabel = computed(() => {
         <div v-if="createMenuOpen" class="create-menu">
           <button type="button" @click="chooseHeaderAction('group')">新建分组</button>
           <button type="button" @click="chooseHeaderAction('preview')">{{ previewLabel }}</button>
+          <button type="button" :disabled="buildBusy" @click="chooseHeaderAction('build')">
+            {{ buildBusy ? '正在构建站点' : '构建站点' }}
+          </button>
           <hr />
           <button type="button" @click="chooseHeaderAction('ide')">使用 IDE 打开</button>
           <button type="button" @click="chooseHeaderAction('reveal')">打开知识库目录</button>

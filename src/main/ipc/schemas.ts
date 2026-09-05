@@ -34,26 +34,7 @@ const webTabSchema = z.object({
   openedAt: z.number().finite().optional()
 })
 
-const noteFileTabSchema = z.object({
-  id: z.string().min(1),
-  type: z.literal('note-file'),
-  knowledgeBaseId: z.string().min(1),
-  knowledgeBaseName: z.string(),
-  noteUuid: z.string().min(1),
-  noteTitle: z.string(),
-  path: z.string().min(1).max(1024),
-  title: z.string(),
-  fileKind: z.enum(['text', 'image', 'unsupported']),
-  pinned: z.boolean().optional(),
-  openedAt: z.number().finite().optional(),
-  dirty: z.boolean().optional()
-})
-
-const editorTabSchema = z.discriminatedUnion('type', [
-  noteTabSchema,
-  noteFileTabSchema,
-  webTabSchema
-])
+const editorTabSchema = z.discriminatedUnion('type', [noteTabSchema, webTabSchema])
 
 const editorLayoutSchema: z.ZodType<WorkspaceSession['layout']> = z.lazy(() =>
   z.discriminatedUnion('type', [
@@ -92,10 +73,7 @@ export const workspaceSessionSchema = z.object({
   navigatorSidebarWidth: z.number().min(160).max(700),
   knowledgeSidebarCollapsed: z.boolean(),
   navigatorSidebarCollapsed: z.boolean(),
-  expandedTocNodes: z.record(z.string(), z.array(z.string())),
-  noteFileSidebarWidth: z.number().min(160).max(520).default(240),
-  noteFileSidebarCollapsed: z.boolean().default(false),
-  expandedNoteFileDirectories: z.record(z.string(), z.array(z.string())).default({})
+  expandedTocNodes: z.record(z.string(), z.array(z.string()))
 })
 
 export const webBoundsSchema = z.object({
@@ -163,8 +141,7 @@ export const noteUpdateConfigSchema = z.object({
   updates: z
     .object({
       done: z.boolean().optional(),
-      description: z.string().optional(),
-      enableDiscussions: z.boolean().optional()
+      description: z.string().optional()
     })
     .refine((value) => Object.keys(value).length > 0, '没有可更新字段')
 })
@@ -184,43 +161,12 @@ export const recoveryDeleteSchema = z.object({
   path: z.string().min(1).max(1024).optional()
 })
 
-export const noteFilesListSchema = z.object({
-  knowledgeBaseId: z.string().min(1),
-  noteUuid: z.string().min(1),
-  directory: z.string().max(1024).optional()
-})
-
-export const noteFileReadTextSchema = z.object({
-  knowledgeBaseId: z.string().min(1),
-  noteUuid: z.string().min(1),
-  path: z.string().min(1).max(1024)
-})
-
-export const noteFileSaveTextSchema = noteFileReadTextSchema.extend({
-  content: z.string().max(2 * 1024 * 1024),
-  expectedRevision: z.string().min(1)
-})
-
 export const attachmentWriteLocalSchema = z.object({
   knowledgeBaseId: z.string().min(1),
-  noteUuid: z.string().min(1),
   fileName: z.string().min(1).max(240),
   data: z.instanceof(Uint8Array).refine((data) => data.byteLength <= 25 * 1024 * 1024, {
     message: '图片不能超过 25 MB'
   })
-})
-
-export const attachmentReadTextSchema = z.object({
-  knowledgeBaseId: z.string().min(1),
-  noteUuid: z.string().min(1),
-  path: z.string().min(1).max(1024)
-})
-
-export const attachmentWriteTextSchema = z.object({
-  knowledgeBaseId: z.string().min(1),
-  noteUuid: z.string().min(1),
-  path: z.string().min(1).max(1024),
-  content: z.string().max(2 * 1024 * 1024)
 })
 
 export const githubImageSettingsSchema = z.object({

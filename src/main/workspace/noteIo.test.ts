@@ -1,163 +1,119 @@
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import { createWorkspace } from '@tnotesjs/core/workspace'
-import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { listNoteFiles, readNoteTextFile, saveNoteTextFile } from './noteIo'
-import { descriptor } from './dto'
+import { afterEach, describe, expect, it } from 'vitest'
 
+import { createWorkspace } from '@tnotesjs/kb'
+
+import { toNoteDocument } from './dto'
+import { readNote, resolveNoteAsset, resolveNoteIndex, saveNote } from './noteIo'
 import type { KnowledgeBaseHandle } from './types'
 
-const temporaryDirectories: string[] = []
-
-async function createHandle(): Promise<KnowledgeBaseHandle> {
-  const rootPath = await fs.mkdtemp(path.join(os.tmpdir(), 'desk-note-files-'))
-  temporaryDirectories.push(rootPath)
-  const notePath = path.join(rootPath, 'notes', '0001. Alpha')
-  await fs.mkdir(path.join(notePath, 'demos'), { recursive: true })
-  await fs.mkdir(path.join(notePath, 'node_modules'))
-  await fs.writeFile(
-    path.join(rootPath, '.tnotes.json'),
-    JSON.stringify({
-      id: 'kb-fixture',
-      author: 'tnotesjs',
-      repoName: 'TNotes.fixture',
-      keywords: [],
-      sidebarShowNoteId: false,
-      ignore_dirs: [],
-      socialLinks: [],
-      menuItems: [],
-      root_item: {
-        title: 'Fixture',
-        completed_notes_count: {},
-        details: '',
-        link: 'https://tnotesjs.github.io/TNotes.fixture/'
-      }
-    })
-  )
-  await fs.writeFile(path.join(rootPath, 'README.md'), '# Fixture\n')
-  await fs.writeFile(path.join(rootPath, 'TOC.md'), '- [ ] 0001. Alpha\n')
-  await fs.writeFile(path.join(rootPath, 'sidebar.json'), '[]\n')
-  await fs.writeFile(
-    path.join(notePath, '.tnotes.json'),
-    JSON.stringify({
-      id: 'note-alpha',
-      bilibili: [],
-      tnotes: [],
-      yuque: [],
-      done: false,
-      enableDiscussions: false,
-      description: ''
-    })
-  )
-  await fs.writeFile(path.join(notePath, 'README.md'), '# Alpha\n')
-  await fs.writeFile(path.join(notePath, '.env'), 'SECRET=1\n')
-  const sourcePath = path.join(notePath, 'demos', 'index.js')
-  await fs.writeFile(sourcePath, 'export const value = 1\n')
-  await fs.chmod(sourcePath, 0o755)
-
-  const workspace = createWorkspace({ rootPath })
-  // Force the adapter path even after Desk upgrades to a Core version with noteFiles.
-  ;(workspace as unknown as { noteFiles?: unknown }).noteFiles = undefined
-  const snapshot = await workspace.inspect()
-  return {
-    id: snapshot.id,
-    name: 'TNotes.fixture',
-    rootPath,
-    workspace,
-    snapshot
-  }
-}
+const cleanups: Array<() => Promise<void>> = []
 
 afterEach(async () => {
-  await Promise.all(
-    temporaryDirectories
-      .splice(0)
-      .map((directory) => fs.rm(directory, { recursive: true, force: true }))
-  )
+  while (cleanups.length > 0) {
+    await cleanups.pop()?.()
+  }
 })
 
-describe('note-file Core compatibility adapter', () => {
-  it('exposes configured GitHub repository and Page links', async () => {
-    const handle = await createHandle()
+async function makeHandle(): Promise<KnowledgeBaseHandle> {
+  const rootPath = await fs.mkdtemp(path.join(os.tmpdir(), 'desk-kb-'))
+  cleanups.push(async () => fs.rm(rootPath, { recursive: true, force: true }))
+  await fs.mkdir(path.join(rootPath, 'notes'), { recursive: true })
+  await fs.writeFile(path.join(rootPath, 'tnotes.json'), '{ "title": "测试库" }\n')
+  await fs.writeFile(path.join(rootPath, 'TOC.md'), '- [ ] 0001. 第一篇\n- [x] 0002. 第二篇\n')
+  await fs.writeFile(path.join(rootPath, 'notes', '0001. 第一篇.md'), '# 第一篇\n\n正文。\n')
+  await fs.writeFile(
+    path.join(rootPath, 'notes', '0002. 第二篇.md'),
+    '---\nid: note-uuid-2\n---\n\n# 第二篇\n'
+  )
+  const workspace = createWorkspace({ rootPath })
+  const handle: KnowledgeBaseHandle = {
+    id: 'kb-test',
+    name: 'TNotes.test',
+    rootPath,
+    workspace,
+    snapshot: await workspace.scan()
+  }
+  return handle
+}
 
-    expect(descriptor(handle)).toMatchObject({
-      repositoryUrl: 'https://github.com/tnotesjs/TNotes.fixture',
-      pageUrl: 'https://tnotesjs.github.io/TNotes.fixture/'
-    })
+const noopEffects = {
+  markInternalWrites: () => {},
+  emitChanged: () => {}
+}
 
-    await handle.workspace.dispose()
+describe('desk noteIo over @tnotesjs/kb', () => {
+  it('resolves renderer uuid (frontmatter id) to the note index', async () => {
+    const handle = await makeHandle()
+    expect(resolveNoteIndex(handle, 'note-uuid-2')).toBe('0002')
+    // 无 id 的笔记回退到索引号
+    expect(resolveNoteIndex(handle, '0001')).toBe('0001')
+    expect(() => resolveNoteIndex(handle, 'missing')).toThrowError()
   })
 
-  it('lists lazily, saves by revision, and protects canonical metadata paths', async () => {
-    const handle = await createHandle()
-    const effects = { markInternalWrites: vi.fn(), emitChanged: vi.fn() }
+  it('reads a note document with the new single-file shape', async () => {
+    const handle = await makeHandle()
+    const doc = await readNote(handle, 'note-uuid-2')
+    expect(doc.fileName).toBe('0002. 第二篇.md')
+    expect(doc.relPath).toBe('notes/0002. 第二篇.md')
+    expect(doc.filePath).toBe(path.join(handle.rootPath, 'notes', '0002. 第二篇.md'))
+    expect(doc.config.done).toBe(true)
+    expect(doc.content).toContain('# 第二篇')
+  })
 
-    await expect(
-      listNoteFiles(handle, { knowledgeBaseId: handle.id, noteUuid: 'note-alpha' })
-    ).resolves.toEqual([
-      { name: 'demos', path: 'demos', kind: 'directory', fileKind: null, size: null },
-      expect.objectContaining({ name: 'README.md', fileKind: 'text' })
-    ])
-    const before = await readNoteTextFile(handle, {
-      knowledgeBaseId: handle.id,
-      noteUuid: 'note-alpha',
-      path: 'demos/index.js'
-    })
-    const saved = await saveNoteTextFile(
+  it('saves note content with revision conflict detection', async () => {
+    const handle = await makeHandle()
+    const doc = await readNote(handle, '0001')
+    const saved = await saveNote(
       handle,
       {
         knowledgeBaseId: handle.id,
-        noteUuid: 'note-alpha',
-        path: 'demos/index.js',
-        content: 'export const value = 2\n',
-        expectedRevision: before.revision
+        noteUuid: '0001',
+        content: '# 第一篇\n\n改过的正文。\n',
+        expectedRevision: doc.revision,
+        prettier: false
       },
-      effects
+      noopEffects
     )
-
-    expect(saved.content).toBe('export const value = 2\n')
-    expect(saved.revision).not.toBe(before.revision)
-    expect(
-      (await fs.stat(path.join(handle.rootPath, 'notes', '0001. Alpha', 'demos', 'index.js')))
-        .mode & 0o111
-    ).toBe(0o111)
-    expect(effects.markInternalWrites).toHaveBeenCalledOnce()
-    expect(effects.emitChanged).toHaveBeenCalledOnce()
-
+    expect(saved.note.content).toContain('改过的正文')
     await expect(
-      saveNoteTextFile(
+      saveNote(
         handle,
         {
           knowledgeBaseId: handle.id,
-          noteUuid: 'note-alpha',
-          path: 'demos/../README.md',
-          content: '# bypass\n',
-          expectedRevision: before.revision
+          noteUuid: '0001',
+          content: 'stale',
+          expectedRevision: doc.revision,
+          prettier: false
         },
-        effects
+        noopEffects
       )
-    ).rejects.toThrow('笔记文件路径无效')
-    const readme = await readNoteTextFile(handle, {
-      knowledgeBaseId: handle.id,
-      noteUuid: 'note-alpha',
-      path: 'README.md'
+    ).rejects.toThrowError(/外部修改/)
+  })
+
+  it('resolves kb-level asset references and rejects traversal', async () => {
+    const handle = await makeHandle()
+    await fs.mkdir(path.join(handle.rootPath, 'assets'), { recursive: true })
+    await fs.writeFile(path.join(handle.rootPath, 'assets', 'pic.png'), 'png')
+    await expect(resolveNoteAsset(handle, '../assets/pic.png')).resolves.toBe(
+      path.join(handle.rootPath, 'assets', 'pic.png')
+    )
+    await expect(resolveNoteAsset(handle, '../outside/pic.png')).rejects.toThrowError()
+    await expect(resolveNoteAsset(handle, '../assets/pic.exe')).rejects.toThrowError()
+  })
+
+  it('maps note documents without leaking legacy fields', async () => {
+    const handle = await makeHandle()
+    const doc = await readNote(handle, '0001')
+    const dto = toNoteDocument(handle, {
+      ...(await handle.workspace.notes.read('0001'))
     })
-    await expect(
-      saveNoteTextFile(
-        handle,
-        {
-          knowledgeBaseId: handle.id,
-          noteUuid: 'note-alpha',
-          path: 'demos%2F..%2FREADME.md',
-          content: '# bypass\n',
-          expectedRevision: readme.revision
-        },
-        effects
-      )
-    ).rejects.toThrow('README.md 必须通过笔记保存接口修改')
-
-    await handle.workspace.dispose()
+    expect(dto).not.toHaveProperty('directoryPath')
+    expect(dto).not.toHaveProperty('readmePath')
+    expect(dto).not.toHaveProperty('configPath')
+    expect(doc.dirName).toBe('0001. 第一篇')
   })
 })

@@ -1,27 +1,31 @@
 import { createHash } from 'node:crypto'
 
-import type { KnowledgeBaseSnapshot, NoteDocument, TocEntryRef } from '@tnotesjs/core/workspace'
+import type { KbSnapshot, NoteDoc, TocNode } from '@tnotesjs/kb'
 import type {
   DeskTocNode,
   KnowledgeBaseDescriptor,
   KnowledgeBaseDetail,
-  NoteDocumentDto,
-  TocEntryRefDto
+  NoteDocumentDto
 } from '../../shared/contracts'
 
-import type { CoreTocNode, KnowledgeBaseHandle } from './types'
+import type { KnowledgeBaseHandle } from './types'
 
 export function stablePathSuffix(rootPath: string): string {
   return createHash('sha256').update(rootPath).digest('hex').slice(0, 10)
 }
 
-export function iconFromSnapshot(snapshot: KnowledgeBaseSnapshot): KnowledgeBaseDescriptor['icon'] {
-  const rootItem = snapshot.config?.root_item
-  const icon = rootItem?.icon
+/** desk-stable kb id: derived from the root path (survives config edits). */
+export function knowledgeBaseId(rootPath: string): string {
+  return stablePathSuffix(rootPath)
+}
+
+function iconFromConfig(snapshot: KbSnapshot): KnowledgeBaseDescriptor['icon'] {
+  const icon = snapshot.config.icon
   if (!icon || typeof icon !== 'object') return null
+  const value = icon as Record<string, unknown>
   return {
-    src: typeof icon.src === 'string' ? icon.src : undefined,
-    svg: typeof icon.svg === 'string' ? icon.svg : undefined
+    src: typeof value.src === 'string' ? value.src : undefined,
+    svg: typeof value.svg === 'string' ? value.svg : undefined
   }
 }
 
@@ -35,104 +39,87 @@ function httpUrl(value: unknown): string | undefined {
   }
 }
 
-export function externalLinksFromSnapshot(
-  snapshot: KnowledgeBaseSnapshot
-): Pick<KnowledgeBaseDescriptor, 'repositoryUrl' | 'pageUrl'> {
-  const author = snapshot.config?.author?.trim()
-  const repoName = snapshot.config?.repoName?.trim()
-  return {
-    repositoryUrl:
-      author && repoName
-        ? `https://github.com/${encodeURIComponent(author)}/${encodeURIComponent(repoName)}`
-        : undefined,
-    pageUrl: httpUrl(snapshot.config?.root_item?.link)
-  }
-}
-
 export function descriptor(handle: KnowledgeBaseHandle): KnowledgeBaseDescriptor {
   const snapshot = handle.snapshot
+  const hasError = snapshot.diagnostics.some((d) => d.severity === 'error')
   return {
     id: handle.id,
-    configId: snapshot.id,
+    configId: handle.id,
     name: handle.name,
     rootPath: handle.rootPath,
-    displayName: snapshot.config?.root_item?.title || handle.name.replace(/^TNotes\./, ''),
-    icon: iconFromSnapshot(snapshot),
-    ...externalLinksFromSnapshot(snapshot),
-    health: snapshot.health.status,
-    diagnostics: snapshot.health.diagnostics,
+    displayName: snapshot.config.title?.trim() || handle.name.replace(/^TNotes\./, ''),
+    icon: iconFromConfig(snapshot),
+    repositoryUrl: httpUrl(snapshot.config.repositoryUrl),
+    pageUrl: httpUrl(snapshot.config.pageUrl),
+    health: hasError ? 'invalid' : 'ready',
+    diagnostics: snapshot.diagnostics,
     noteCount: snapshot.notes.length,
     snapshotRevision: snapshot.revision
   }
 }
 
-export function mapToc(
-  nodes: CoreTocNode[],
-  snapshot: KnowledgeBaseSnapshot,
-  folderPath: string[] = []
-): DeskTocNode[] {
+export function mapToc(nodes: TocNode[], snapshot: KbSnapshot): DeskTocNode[] {
   const noteByIndex = new Map(snapshot.notes.map((note) => [note.index, note]))
-  return nodes.flatMap((node): DeskTocNode[] => {
-    if (node.kind === 'folder') {
-      const title = node.title ?? '未命名分组'
-      const currentPath = [...folderPath, title]
+  const walk = (items: TocNode[], folderPath: string[]): DeskTocNode[] =>
+    items.flatMap((node): DeskTocNode[] => {
+      const tocLineIndex = node.lineIndex
+      if (node.kind === 'group') {
+        const currentPath = [...folderPath, node.title]
+        return [
+          {
+            type: 'group',
+            title: node.title,
+            tocLineIndex,
+            nodeId: `folder:${tocLineIndex}:${currentPath.join('/')}`,
+            folderPath: currentPath,
+            children: walk(node.children, currentPath)
+          }
+        ]
+      }
+      const note = noteByIndex.get(node.index)
+      if (!note) return []
+      const uuid = note.frontmatter.id ?? note.index
       return [
         {
-          type: 'group',
-          title,
-          tocLineIndex: node.tocLineIndex,
-          nodeId: `folder:${node.tocLineIndex}:${currentPath.join('/')}`,
-          folderPath: currentPath,
-          children: mapToc(node.children, snapshot, currentPath)
+          type: 'note',
+          uuid,
+          title: note.title,
+          dirName: note.fileName.replace(/\.md$/i, ''),
+          noteIndex: note.index,
+          tocLineIndex,
+          nodeId: `note:${uuid}`,
+          completed: node.done,
+          children: walk(node.children, folderPath)
         }
       ]
-    }
-    if (!node.noteIndex) return []
-    const note = noteByIndex.get(node.noteIndex)
-    if (!note) return []
-    return [
-      {
-        type: 'note',
-        uuid: note.uuid,
-        title: note.title,
-        dirName: note.dirName,
-        noteIndex: note.index,
-        tocLineIndex: node.tocLineIndex,
-        nodeId: `note:${note.uuid}`,
-        completed: Boolean(note.config.done),
-        children: mapToc(node.children, snapshot, folderPath)
-      }
-    ]
-  })
+    })
+  return walk(nodes, [])
 }
 
 export function toDetail(handle: KnowledgeBaseHandle): KnowledgeBaseDetail {
   return {
     ...descriptor(handle),
-    toc: mapToc(handle.snapshot.toc as CoreTocNode[], handle.snapshot)
+    toc: mapToc(handle.snapshot.toc, handle.snapshot)
   }
 }
 
-export function toNoteDocument(
-  handle: KnowledgeBaseHandle,
-  document: NoteDocument
-): NoteDocumentDto {
+export function toNoteDocument(handle: KnowledgeBaseHandle, doc: NoteDoc): NoteDocumentDto {
+  const readOnly = handle.snapshot.diagnostics.some((d) => d.severity === 'error')
   return {
     knowledgeBaseId: handle.id,
-    uuid: document.uuid,
-    index: document.index,
-    title: document.title,
-    dirName: document.dirName,
-    directoryPath: document.directoryPath,
-    readmePath: document.readmePath,
-    configPath: document.configPath,
-    content: document.content,
-    revision: document.revision,
-    config: document.config,
-    readOnly: handle.snapshot.health.status !== 'ready'
+    uuid: doc.frontmatter.id ?? doc.index,
+    index: doc.index,
+    title: doc.title,
+    dirName: doc.fileName.replace(/\.md$/i, ''),
+    fileName: doc.fileName,
+    relPath: doc.relPath,
+    filePath: `${handle.rootPath}/${doc.relPath}`,
+    content: doc.content,
+    revision: doc.revision,
+    config: {
+      done: doc.done,
+      description: doc.frontmatter.description
+    },
+    readOnly
   }
-}
-
-export function coreEntryRef(entry: TocEntryRefDto): TocEntryRef {
-  return entry
 }

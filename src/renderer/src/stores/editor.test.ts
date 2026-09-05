@@ -127,24 +127,11 @@ describe('editor store tab semantics', () => {
     expect(editor.activeTab).toMatchObject({ noteUuid: 'note-b', pageWidth: 'standard' })
   })
 
-  it('opens note files as stable tabs and keeps the last note scope while a web tab is active', () => {
+  it('keeps the last note scope while a web tab is active', () => {
     const editor = useEditorStore()
     editor.configure(settings)
     editor.openNote(knowledgeBase, 'note-a', 'A', 'visual', undefined, 'permanent')
-
-    const fileTabId = editor.openNoteFile(knowledgeBase, 'note-a', 'A', 'demos/17/1.js', 'text')
-    expect(editor.activeTab).toMatchObject({
-      id: fileTabId,
-      type: 'note-file',
-      noteUuid: 'note-a',
-      path: 'demos/17/1.js'
-    })
     expect(editor.activeNoteScope).toEqual({ noteUuid: 'note-a', noteTitle: 'A' })
-
-    expect(editor.openNoteFile(knowledgeBase, 'note-a', 'A', 'demos/17/1.js', 'text')).toBe(
-      fileTabId
-    )
-    expect(editor.activeGroup?.tabs).toHaveLength(2)
 
     editor.openWeb('https://example.com')
     expect(editor.activeTab?.type).toBe('web')

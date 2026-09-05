@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { watch } from 'vue'
 import EditorLayoutNode from '../editor-groups/EditorLayoutNode.vue'
-import NoteFileTree from './NoteFileTree.vue'
 import { useEditorStore } from '../stores/editor'
 import { useTabDragLifecycle, useTabDragStore } from '../editor-groups/tabDrag'
 
@@ -19,7 +18,6 @@ watch(
 
 <template>
   <section class="editor-workspace">
-    <NoteFileTree />
     <div class="editor-layout-shell">
       <EditorLayoutNode :node="editor.layout" />
     </div>

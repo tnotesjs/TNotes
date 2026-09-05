@@ -12,13 +12,10 @@ import type {
   DeskResult,
   KnowledgeBaseDetail,
   NoteDocumentDto,
-  NoteFileSaveTextRequest,
   NoteMutationDto,
   NoteRenameRequest,
-  NoteSaveRequest,
-  NoteTextFileDto
+  NoteSaveRequest
 } from '../../../shared/contracts'
-import { noteFileKey } from './workspace/helpers'
 
 const autosaveSettings: AppSettings = {
   version: 1,
@@ -93,12 +90,12 @@ function note(content: string, revision: string): NoteDocumentDto {
     index: '0001',
     title: 'A',
     dirName: '0001',
-    directoryPath: '/tmp/TNotes.docs/notes/0001',
-    readmePath: '/tmp/TNotes.docs/notes/0001/README.md',
-    configPath: '/tmp/TNotes.docs/notes/0001/config.yaml',
+    fileName: '0001. A.md',
+    relPath: 'notes/0001. A.md',
+    filePath: '/tmp/TNotes.docs/notes/0001. A.md',
     content,
     revision,
-    config: {},
+    config: { done: false },
     readOnly: false
   }
 }
@@ -172,11 +169,10 @@ describe('inline note rename', () => {
     await workspace.ensureDocument('kb-a', 'note-a')
     const editor = useEditorStore()
     editor.openNote(knowledgeBase, 'note-a', 'A', 'visual', undefined, 'permanent')
-    editor.openNoteFile(knowledgeBase, 'note-a', 'A', 'demo.js', 'text')
     return { workspace, editor }
   }
 
-  it('saves existing drafts, keeps the index immutable and synchronizes note/file tab titles', async () => {
+  it('saves existing drafts, keeps the index immutable and synchronizes note tab titles', async () => {
     const { workspace, editor } = await setup()
     workspace.updateDocumentContent(key, 'unsaved draft')
     await workspace.renameNote('kb-a', 'note-a', '  Renamed  ')
@@ -196,8 +192,7 @@ describe('inline note rename', () => {
     })
     expect(editor.activeGroup?.tabs).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ type: 'note', title: 'Renamed', dirty: false }),
-        expect.objectContaining({ type: 'note-file', noteTitle: 'Renamed' })
+        expect.objectContaining({ type: 'note', title: 'Renamed', dirty: false })
       ])
     )
   })
@@ -263,20 +258,9 @@ describe('inline note rename', () => {
 describe('workspace unsaved tab close integration', () => {
   const confirm = vi.fn()
   const save = vi.fn()
-  const saveFile = vi.fn()
   const recoveryWrite = vi.fn(async () => ({ ok: true, value: undefined }))
   const recoveryDelete = vi.fn(async () => ({ ok: true, value: undefined }))
-  const file = (content = 'disk file', revision = 'v1'): NoteTextFileDto => ({
-    knowledgeBaseId: knowledgeBase.id,
-    noteUuid: 'note-a',
-    path: 'demo.js',
-    content,
-    revision,
-    size: content.length,
-    readOnly: false
-  })
   const key = `${knowledgeBase.id}:note-a`
-  const fileKey = noteFileKey(knowledgeBase.id, 'note-a', 'demo.js')
 
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -285,10 +269,6 @@ describe('workspace unsaved tab close integration', () => {
     save
       .mockReset()
       .mockImplementation(async (request: NoteSaveRequest) => mutation(request.content, 'v2'))
-    saveFile.mockReset().mockImplementation(async (request: NoteFileSaveTextRequest) => ({
-      ok: true,
-      value: file(request.content, 'v2')
-    }))
     recoveryWrite.mockClear()
     recoveryDelete.mockClear()
     Object.defineProperty(window, 'desk', {
@@ -296,10 +276,6 @@ describe('workspace unsaved tab close integration', () => {
       value: {
         app: { confirmTabClose: confirm },
         notes: { read: vi.fn(async () => ({ ok: true, value: note('disk note', 'v1') })), save },
-        noteFiles: {
-          readText: vi.fn(async () => ({ ok: true, value: file() })),
-          saveText: saveFile
-        },
         recovery: { write: recoveryWrite, delete: recoveryDelete }
       }
     })
@@ -375,46 +351,6 @@ describe('workspace unsaved tab close integration', () => {
     expect(await closing).toBe(true)
     expect(save).toHaveBeenCalledOnce()
     expect(editor.activeTab).toBeNull()
-  })
-
-  it('includes dirty referenced files in a README close and saves each resource once', async () => {
-    const { workspace, editor, tab } = await openDraft(false)
-    await workspace.ensureNoteFile(knowledgeBase.id, 'note-a', 'demo.js')
-    workspace.updateNoteFileContent(fileKey, 'unsaved file')
-    confirm.mockResolvedValue({ ok: true, value: 'save' })
-    expect(await workspace.requestCloseTab(tab)).toBe(true)
-    expect(confirm).toHaveBeenCalledWith(['A', 'A / demo.js'])
-    expect(save).toHaveBeenCalledOnce()
-    expect(saveFile).toHaveBeenCalledExactlyOnceWith({
-      knowledgeBaseId: knowledgeBase.id,
-      noteUuid: 'note-a',
-      path: 'demo.js',
-      content: 'unsaved file',
-      expectedRevision: 'v1'
-    })
-    expect(workspace.getNoteFileSession(knowledgeBase.id, 'note-a', 'demo.js')).toMatchObject({
-      content: 'unsaved file',
-      dirty: false
-    })
-    expect(editor.activeTab).toBeNull()
-    await vi.runAllTimersAsync()
-  })
-
-  it('discards a file tab without discarding the dirty README', async () => {
-    const { workspace, editor, tab } = await openDraft(false)
-    await workspace.ensureNoteFile(knowledgeBase.id, 'note-a', 'demo.js')
-    workspace.updateNoteFileContent(fileKey, 'unsaved file')
-    const fileTab = editor.openNoteFile(knowledgeBase, 'note-a', 'A', 'demo.js', 'text')
-    confirm.mockResolvedValue({ ok: true, value: 'discard' })
-    expect(await workspace.requestCloseTab(fileTab)).toBe(true)
-    expect(confirm).toHaveBeenCalledWith(['A / demo.js'])
-    expect(editor.activeTab).toMatchObject({ id: tab, dirty: true })
-    expect(workspace.getNoteFileSession(knowledgeBase.id, 'note-a', 'demo.js')).toMatchObject({
-      content: 'disk file',
-      dirty: false
-    })
-    expect(workspace.getDocumentSession(knowledgeBase.id, 'note-a')?.content).toBe('unsaved draft')
-    expect(saveFile).not.toHaveBeenCalled()
   })
 })
 

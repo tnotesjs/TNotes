@@ -17,36 +17,22 @@ const shots = join(deskDir, 'scripts', 'shots', 'tab-drag')
 mkdirSync(kb, { recursive: true })
 mkdirSync(profile, { recursive: true })
 mkdirSync(shots, { recursive: true })
-const kbConfig = JSON.parse(
-  readFileSync(join(deskDir, 'playground/TNotes.docs/.tnotes.json'), 'utf8')
-)
-kbConfig.id = '10000000-0000-4000-8000-000000000081'
-kbConfig.repoName = 'TNotes.tab-drag'
-kbConfig.root_item = { ...kbConfig.root_item, title: 'tab-drag' }
-writeFileSync(join(kb, '.tnotes.json'), JSON.stringify(kbConfig))
-const noteConfig = JSON.parse(
-  readFileSync(join(deskDir, 'playground/TNotes.docs/notes/0041. new/.tnotes.json'), 'utf8')
-)
+writeFileSync(join(kb, 'tnotes.json'), JSON.stringify({ title: 'tab-drag' }))
+mkdirSync(join(kb, 'notes'), { recursive: true })
 const names = ['drag-A', 'drag-B', 'drag-C']
 const sources = []
 const toc = names.map((name, index) => {
-  const dir = `${String(index + 1).padStart(4, '0')}. ${name}`
-  const note = join(kb, 'notes', dir)
-  mkdirSync(note, { recursive: true })
-  writeFileSync(
-    join(note, '.tnotes.json'),
-    JSON.stringify({ ...noteConfig, id: `10000000-0000-4000-8000-00000000009${index}` })
-  )
+  const base = `${String(index + 1).padStart(4, '0')}. ${name}`
   const source =
+    `---\nid: 10000000-0000-4000-8000-00000000009${index}\n---\n\n` +
     `# ${name}\n\n` +
     Array.from({ length: 25 }, (_, i) => `Line ${i + 1}: preserved note content.\n`).join('\n')
-  const path = join(note, 'README.md')
+  const path = join(kb, 'notes', `${base}.md`)
   writeFileSync(path, source)
   sources.push({ path, source })
-  return `- [ ] ${dir}`
+  return `- [ ] ${base}`
 })
 writeFileSync(join(kb, 'TOC.md'), `${toc.join('\n')}\n`)
-writeFileSync(join(kb, 'sidebar.json'), '[]\n')
 writeFileSync(join(profile, 'workspace.v1.json'), JSON.stringify({ path: workspace }))
 writeFileSync(
   join(profile, '.tn-desk-config.json'),

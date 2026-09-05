@@ -1,18 +1,15 @@
 allowBuilds:
+  esbuild: true
   '@parcel/watcher': true
   electron: true
   electron-winstaller: true
-  esbuild: true
-  vue-demi: true
-minimumReleaseAgeExclude:
-  - '@tnotesjs/core@0.6.0 || 0.6.1 || 0.7.0 || 0.8.0'
-  - '@tnotesjs/mindmap-core@0.2.1 || 0.2.2'
-  - '@tnotesjs/ui@0.1.0 || 0.1.1 || 0.1.2'
 onlyBuiltDependencies:
-  - electron
   - esbuild
+  - '@parcel/watcher'
+  - electron
   - electron-winstaller
-  - vue-demi
 overrides:
-  # 开发期临时指向本地 ui 源码（含未发布的 0.1.2 共享组件）；发版前改回 ^0.1.2 并移除本行。
+  # 开发期临时指向本地源码（含未发布的共享组件）；发版前改回 registry 版本并移除本段。
   '@tnotesjs/ui': 'link:../ui'
+  '@tnotesjs/kb': 'link:../kb'
+  '@tnotesjs/ssg': 'link:../ssg'

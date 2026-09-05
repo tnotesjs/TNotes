@@ -4,7 +4,6 @@ import type {
   KnowledgeBaseDetail,
   NoteCreateRequest,
   NoteDocumentDto,
-  NoteTextFileDto,
   TocEntryRefDto,
   WorkspaceOverview
 } from '../../../../shared/contracts'
@@ -15,14 +14,6 @@ export interface DocumentSession {
   dirty: boolean
   /** At least one unsaved edit came from the source-preserving visual editor. */
   preserveSourceOnSave: boolean
-  externalConflict: boolean
-  saving: boolean
-}
-
-export interface NoteFileSession {
-  document: NoteTextFileDto
-  content: string
-  dirty: boolean
   externalConflict: boolean
   saving: boolean
 }
@@ -47,18 +38,6 @@ export function ipcPlain<T>(value: T): T {
 
 export function documentKey(knowledgeBaseId: string, noteUuid: string): string {
   return `${knowledgeBaseId}:${noteUuid}`
-}
-
-export function noteFileKey(knowledgeBaseId: string, noteUuid: string, filePath: string): string {
-  return JSON.stringify([knowledgeBaseId, noteUuid, normalizeNoteFilePath(filePath)])
-}
-
-export function normalizeNoteFilePath(filePath: string): string {
-  return filePath
-    .replaceAll('\\', '/')
-    .split('/')
-    .filter((segment) => segment && segment !== '.')
-    .join('/')
 }
 
 export function tocEntry(node: DeskTocNode): TocEntryRefDto {

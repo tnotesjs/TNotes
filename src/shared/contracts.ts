@@ -21,19 +21,15 @@ export const IPC_CHANNELS = {
   noteCreate: 'note:create',
   noteRename: 'note:rename',
   noteUpdateConfig: 'note:update-config',
-  noteCopyDirectoryPath: 'note:copy-directory-path',
+  noteCopyPath: 'note:copy-path',
   noteRevealInFileManager: 'note:reveal-in-file-manager',
-  noteFilesList: 'note-files:list',
-  noteFileReadText: 'note-file:read-text',
-  noteFileSaveText: 'note-file:save-text',
   attachmentWriteLocal: 'attachment:write-local',
   attachmentUploadImage: 'attachment:upload-image',
-  attachmentReadText: 'attachment:read-text',
-  attachmentWriteText: 'attachment:write-text',
   imageTokenStatus: 'image:token-status',
   imageTokenUpdate: 'image:token-update',
   imageSettingsValidate: 'image:settings-validate',
   searchQuery: 'search:query',
+  kbBuild: 'kb:build',
   gitList: 'git:list',
   gitRefresh: 'git:refresh',
   gitFetch: 'git:fetch',
@@ -69,7 +65,6 @@ export const IPC_CHANNELS = {
   previewList: 'preview:list',
   workspaceChanged: 'workspace:changed',
   noteExternalChanged: 'note:external-changed',
-  noteFileExternalChanged: 'note-file:external-changed',
   webStateChanged: 'web:state-changed',
   webOpenRequested: 'web:open-requested',
   previewChanged: 'preview:changed',
@@ -171,7 +166,7 @@ export type ContextMenuAction =
 export type ContextMenuRequest =
   | { kind: 'note'; pinned: boolean; completed: boolean }
   | { kind: 'group' }
-  | { kind: 'tab'; tabType: 'note' | 'note-file' | 'web'; pinned: boolean }
+  | { kind: 'tab'; tabType: 'note' | 'web'; pinned: boolean }
 export type TabShortcutCommand =
   | { type: 'activate-tab-by-number'; number: number; sourceTabId?: string }
   | 'close-active-tab-or-window'
@@ -323,24 +318,7 @@ export interface WebEditorTab {
   openedAt?: number
 }
 
-export type NoteFileKind = 'text' | 'image' | 'unsupported'
-
-export interface NoteFileEditorTab {
-  id: string
-  type: 'note-file'
-  knowledgeBaseId: string
-  knowledgeBaseName: string
-  noteUuid: string
-  noteTitle: string
-  path: string
-  title: string
-  fileKind: NoteFileKind
-  pinned?: boolean
-  openedAt?: number
-  dirty?: boolean
-}
-
-export type EditorTab = NoteEditorTab | NoteFileEditorTab | WebEditorTab
+export type EditorTab = NoteEditorTab | WebEditorTab
 
 export interface EditorGroupNode {
   type: 'group'
@@ -377,9 +355,6 @@ export interface WorkspaceSession {
   knowledgeSidebarCollapsed: boolean
   navigatorSidebarCollapsed: boolean
   expandedTocNodes: Record<string, string[]>
-  noteFileSidebarWidth: number
-  noteFileSidebarCollapsed: boolean
-  expandedNoteFileDirectories: Record<string, string[]>
 }
 
 export interface WebBounds {
@@ -445,49 +420,24 @@ export interface NoteDocumentDto {
   uuid: string
   index: string
   title: string
+  /** File stem, e.g. "0001. 标题" (kept for display/preview URLs). */
   dirName: string
-  directoryPath: string
-  readmePath: string
-  configPath: string
+  /** File name inside notes/, e.g. "0001. 标题.md". */
+  fileName: string
+  /** POSIX path relative to the kb root. */
+  relPath: string
+  /** Absolute path of the single note file. */
+  filePath: string
   content: string
   revision: string
-  config: Record<string, unknown>
+  config: NoteConfigDto
   readOnly: boolean
 }
 
-export interface NoteFileEntryDto {
-  name: string
-  path: string
-  kind: 'directory' | 'file'
-  fileKind: NoteFileKind | null
-  size: number | null
-}
-
-export interface NoteFilesListRequest {
-  knowledgeBaseId: string
-  noteUuid: string
-  directory?: string
-}
-
-export interface NoteTextFileDto {
-  knowledgeBaseId: string
-  noteUuid: string
-  path: string
-  content: string
-  revision: string
-  size: number
-  readOnly: boolean
-}
-
-export interface NoteFileReadTextRequest {
-  knowledgeBaseId: string
-  noteUuid: string
-  path: string
-}
-
-export interface NoteFileSaveTextRequest extends NoteFileReadTextRequest {
-  content: string
-  expectedRevision: string
+/** Slimmed note config: description from frontmatter, done from TOC. */
+export interface NoteConfigDto {
+  done: boolean
+  description?: string
 }
 
 /** Rows for `<NotesTable>` preview — Desk adapter over workspace snapshot. */
@@ -559,13 +509,11 @@ export interface NoteUpdateConfigRequest {
   updates: {
     done?: boolean
     description?: string
-    enableDiscussions?: boolean
   }
 }
 
 export interface AttachmentWriteLocalRequest {
   knowledgeBaseId: string
-  noteUuid: string
   fileName: string
   data: Uint8Array
 }
@@ -658,17 +606,9 @@ export interface GitOperationResult {
   conflict: boolean
 }
 
-export interface AttachmentReadTextRequest {
-  knowledgeBaseId: string
-  noteUuid: string
-  path: string
-}
-
-export interface AttachmentWriteTextRequest {
-  knowledgeBaseId: string
-  noteUuid: string
-  path: string
-  content: string
+export interface KbBuildResult {
+  outDir: string
+  pageCount: number
 }
 
 export type TocEntryRefDto =
@@ -724,13 +664,6 @@ export interface ExternalNoteChangeEvent {
   noteUuid: string
 }
 
-export interface ExternalNoteFileChangeEvent {
-  knowledgeBaseId: string
-  noteUuid: string
-  path: string
-  kind: 'changed' | 'deleted'
-}
-
 export interface DeskApi {
   bootstrap(): Promise<DeskResult<BootstrapPayload>>
   app: {
@@ -775,24 +708,17 @@ export interface DeskApi {
     create(request: NoteCreateRequest): Promise<DeskResult<NoteMutationDto>>
     rename(request: NoteRenameRequest): Promise<DeskResult<NoteMutationDto>>
     updateConfig(request: NoteUpdateConfigRequest): Promise<DeskResult<NoteMutationDto>>
-    copyDirectoryPath(knowledgeBaseId: string, noteUuid: string): Promise<DeskResult<string>>
+    copyPath(knowledgeBaseId: string, noteUuid: string): Promise<DeskResult<string>>
     revealInFileManager(knowledgeBaseId: string, noteUuid: string): Promise<DeskResult<void>>
     onExternalChanged(callback: (event: ExternalNoteChangeEvent) => void): () => void
-  }
-  noteFiles: {
-    list(request: NoteFilesListRequest): Promise<DeskResult<NoteFileEntryDto[]>>
-    readText(request: NoteFileReadTextRequest): Promise<DeskResult<NoteTextFileDto>>
-    saveText(request: NoteFileSaveTextRequest): Promise<DeskResult<NoteTextFileDto>>
-    onExternalChanged(callback: (event: ExternalNoteFileChangeEvent) => void): () => void
   }
   attachments: {
     writeLocal(
       request: AttachmentWriteLocalRequest
     ): Promise<DeskResult<AttachmentWriteLocalResult>>
     uploadImage(request: ImageUploadRequest): Promise<DeskResult<ImageUploadResult>>
-    readText(request: AttachmentReadTextRequest): Promise<DeskResult<string>>
-    writeText(request: AttachmentWriteTextRequest): Promise<DeskResult<void>>
   }
+  build(knowledgeBaseId: string): Promise<DeskResult<KbBuildResult>>
   search(request: SearchRequest): Promise<DeskResult<SearchResultDto[]>>
   git: {
     list(): Promise<DeskResult<GitRepositoryStateDto[]>>

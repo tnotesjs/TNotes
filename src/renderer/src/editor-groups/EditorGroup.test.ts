@@ -64,11 +64,11 @@ describe('native tab context menu', () => {
     wrapper.unmount()
   })
 
-  it('leaves a pinned file tab unchanged when the native menu is dismissed', async () => {
+  it('leaves a pinned web tab unchanged when the native menu is dismissed', async () => {
     const editor = useEditorStore()
     const workspace = useWorkspaceStore()
     editor.switchKnowledgeBase(knowledgeBase.id)
-    const id = editor.openNoteFile(knowledgeBase, 'a', 'A', 'demo.js', 'text')
+    const id = editor.openWeb('https://example.com')
     editor.setPinned(id, true)
     const close = vi.spyOn(workspace, 'requestCloseTab').mockResolvedValue(false)
     const wrapper = shallowMount(EditorGroup, { props: { group: editor.activeGroup! } })
@@ -76,7 +76,7 @@ describe('native tab context menu', () => {
     await flushPromises()
     expect(showContextMenu).toHaveBeenCalledExactlyOnceWith({
       kind: 'tab',
-      tabType: 'note-file',
+      tabType: 'web',
       pinned: true
     })
     expect(close).not.toHaveBeenCalled()

@@ -15,49 +15,18 @@ const fixtureRoot = mkdtempSync(join(tmpdir(), 'desk-empty-break-e2e-'))
 const workspace = join(fixtureRoot, 'workspace')
 const profile = join(fixtureRoot, 'profile')
 const kb = join(workspace, 'TNotes.empty-break-e2e')
-const note = join(kb, 'notes', '0001. empty breaks')
-const readme = join(note, 'README.md')
+const noteFile = join(kb, 'notes', '0001. empty breaks.md')
 const shots = join(deskDir, 'scripts', 'shots', 'empty-break-deletion')
 
-mkdirSync(note, { recursive: true })
+mkdirSync(join(kb, 'notes'), { recursive: true })
 mkdirSync(profile, { recursive: true })
 mkdirSync(shots, { recursive: true })
 
-const kbConfig = JSON.parse(
-  readFileSync(join(deskDir, 'playground', 'TNotes.docs', '.tnotes.json'), 'utf8')
-)
-kbConfig.id = '00000000-0000-4000-8000-000000000017'
-kbConfig.repoName = 'TNotes.empty-break-e2e'
-kbConfig.sidebarShowNoteId = false
-kbConfig.root_item = { ...kbConfig.root_item, title: 'empty-break-e2e', details: 'isolated e2e' }
-writeFileSync(join(kb, '.tnotes.json'), `${JSON.stringify(kbConfig, null, 2)}\n`)
+writeFileSync(join(kb, 'tnotes.json'), `${JSON.stringify({ title: 'empty-break-e2e' }, null, 2)}\n`)
 writeFileSync(join(kb, 'TOC.md'), '- [ ] 0001. empty breaks\n')
-writeFileSync(
-  join(kb, 'sidebar.json'),
-  `${JSON.stringify(
-    [
-      {
-        text: '⏰ empty breaks',
-        link: '/notes/0001. empty breaks/README',
-        tocLineIndex: 0,
-        nodeId: 'note:0001'
-      }
-    ],
-    null,
-    2
-  )}\n`
-)
-const noteConfig = JSON.parse(
-  readFileSync(
-    join(deskDir, 'playground', 'TNotes.docs', 'notes', '0041. new', '.tnotes.json'),
-    'utf8'
-  )
-)
-noteConfig.id = '00000000-0000-4000-8000-000000000018'
-writeFileSync(join(note, '.tnotes.json'), `${JSON.stringify(noteConfig, null, 2)}\n`)
 const originalSource =
-  '# Empty break deletion\n\nbefore\n\n<br />\n\n<br />\n\n<br />\n\nafter\n\n<B id="readonly-e2e" />\n'
-writeFileSync(readme, originalSource)
+  '---\nid: 10000000-0000-4000-8000-000000000018\n---\n\n# Empty break deletion\n\nbefore\n\n<br />\n\n<br />\n\n<br />\n\nafter\n\n<B id="readonly-e2e" />\n'
+writeFileSync(noteFile, originalSource)
 writeFileSync(
   join(profile, 'workspace.v1.json'),
   `${JSON.stringify({ path: workspace }, null, 2)}\n`
@@ -106,8 +75,9 @@ try {
     ).length
   })
   assert.ok(emptyCount >= 3, `expected >= 3 empty paragraphs, got ${emptyCount}`)
-  // The generated title is also protected; standalone <br /> must not become atoms.
-  assert.equal(await pm.locator('[data-kind="raw-generated-title"]').count(), 1)
+  // Frontmatter and the component stay protected atoms; standalone <br /> must
+  // not become atoms. The H1 follows the frontmatter, so it is a regular heading.
+  assert.equal(await pm.locator('[data-kind="raw-frontmatter"]').count(), 1)
   assert.equal(await pm.locator('[data-kind="raw-component"]').count(), 1)
   assert.equal(await pm.locator('[data-type="desk-raw-block"]').count(), 2)
   await page.screenshot({ path: join(shots, '01-three-empty-lines.png') })
@@ -177,7 +147,7 @@ try {
 
   await page.keyboard.press('ControlOrMeta+s')
   await page.waitForTimeout(500)
-  const saved = readFileSync(readme, 'utf8')
+  const saved = readFileSync(noteFile, 'utf8')
   assert.equal((saved.match(/<br \/>/g) ?? []).length, 2)
   assert.equal(saved.includes('before'), true)
   assert.equal(saved.includes('after'), true)

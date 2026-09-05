@@ -1,22 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { parseDeskIncludeLine } from './deskInclude'
 import { mindmapPreviewMarkdown, rebuildMindmapFence } from './mindmapFence'
-
-describe('parseDeskIncludeLine', () => {
-  it('parses path, optional lang, and title', () => {
-    expect(parseDeskIncludeLine('<<< ./assets/1.md')).toEqual({ path: './assets/1.md' })
-    expect(parseDeskIncludeLine('<<< ./assets/2.md [学习计划]')).toEqual({
-      path: './assets/2.md',
-      title: '学习计划'
-    })
-    expect(parseDeskIncludeLine('<<< ./assets/2.js {js} [Scripty]')).toEqual({
-      path: './assets/2.js',
-      lang: 'js',
-      title: 'Scripty'
-    })
-  })
-})
 
 describe('mindmapPreviewMarkdown', () => {
   it('applies fence title as the H1 root', () => {

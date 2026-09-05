@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict'
 import { _electron } from 'playwright-core'
 import { createRequire } from 'node:module'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -24,37 +24,19 @@ const server = createServer((_request, response) => {
 })
 await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
 const webUrl = `http://127.0.0.1:${server.address().port}/`
-const kbConfig = JSON.parse(
-  readFileSync(join(deskDir, 'playground/TNotes.docs/.tnotes.json'), 'utf8')
-)
-kbConfig.id = '10000000-0000-4000-8000-000000000061'
-kbConfig.repoName = 'TNotes.numbered-tabs'
-kbConfig.root_item = { ...kbConfig.root_item, title: 'numbered-tabs' }
-writeFileSync(join(kb, '.tnotes.json'), JSON.stringify(kbConfig))
-const noteConfig = JSON.parse(
-  readFileSync(join(deskDir, 'playground/TNotes.docs/notes/0041. new/.tnotes.json'), 'utf8')
-)
+writeFileSync(join(kb, 'tnotes.json'), JSON.stringify({ title: 'numbered-tabs' }))
+mkdirSync(join(kb, 'notes'), { recursive: true })
 const names = ['tab-A', 'tab-B', 'tab-C', 'tab-D', 'tab-E', 'tab-F']
 const toc = names.map((name, index) => {
-  const dir = `${String(index + 1).padStart(4, '0')}. ${name}`
-  const note = join(kb, 'notes', dir)
-  mkdirSync(note, { recursive: true })
+  const base = `${String(index + 1).padStart(4, '0')}. ${name}`
   writeFileSync(
-    join(note, '.tnotes.json'),
-    JSON.stringify({
-      ...noteConfig,
-      id: `10000000-0000-4000-8000-00000000007${index}`
-    })
+    join(kb, 'notes', `${base}.md`),
+    `---\nid: 10000000-0000-4000-8000-00000000007${index}\n---\n\n` +
+      `# ${name}\n\nBody ${name}.\n\n[Local website](${webUrl})\n`
   )
-  writeFileSync(
-    join(note, 'README.md'),
-    `# ${name}\n\nBody ${name}.\n\n[Local website](${webUrl})\n`
-  )
-  writeFileSync(join(note, 'demo.js'), 'const example = 1\n')
-  return `- [ ] ${dir}`
+  return `- [ ] ${base}`
 })
 writeFileSync(join(kb, 'TOC.md'), `${toc.join('\n')}\n`)
-writeFileSync(join(kb, 'sidebar.json'), '[]\n')
 writeFileSync(join(profile, 'workspace.v1.json'), JSON.stringify({ path: workspace }))
 writeFileSync(
   join(profile, '.tn-desk-config.json'),
@@ -142,13 +124,9 @@ try {
   await right.locator('.cm-source-editor .cm-content:visible').click()
   await shortcut('3')
   await check('tab-C', 'tab-E', 1)
-  const expand = page.getByRole('button', { name: '展开笔记文件', exact: true })
-  if (await expand.isVisible()) await expand.click()
-  await page.locator('.note-file-sidebar .tree-row[title="demo.js"]').click()
-  await right.locator('.note-file-pane .cm-content:visible').click()
   await shortcut('4')
   await check('tab-C', 'tab-F', 1)
-  console.log('✓ shortcuts work from visual/source editors and ordinary code-file tabs')
+  console.log('✓ shortcuts work from visual and source editors')
 
   await left.locator('.tab').filter({ hasText: 'tab-C' }).click()
   await shortcut('k')
@@ -181,13 +159,11 @@ try {
   await check('tab-A', 'tab-C', 1)
   await shortcut('4')
   await check('tab-A', 'tab-F', 1)
-  await shortcut('6')
+  await shortcut('5')
   await check('tab-A', 'Local tab page', 1)
   await shortcut('9')
   await check('tab-A', 'Local tab page', 1)
   assert.equal(await right.locator('.web-pane:visible').count(), 1)
-  await shortcut('5')
-  await check('tab-A', 'demo.js', 1)
   console.log(
     '✓ native web-view origin wins over stale renderer focus; subsequent shortcuts stay in that group'
   )

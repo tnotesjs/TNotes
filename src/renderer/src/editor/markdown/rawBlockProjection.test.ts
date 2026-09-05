@@ -79,11 +79,10 @@ describe('Milkdown raw block projection', () => {
     const projected = projectRawBlocksForMilkdown(source)
     const markers = projected.match(/<!--desk-raw-block:v1:[^\n]+-->/g) ?? []
 
-    expect(markers).toHaveLength(5)
+    expect(markers).toHaveLength(4)
     expect(markers.map((marker) => readProjectedRawBlockMarker(marker)?.kind)).toEqual([
       'raw-frontmatter',
       'raw-container',
-      'raw-include',
       'raw-component',
       'html'
     ])
@@ -304,7 +303,7 @@ describe('Milkdown raw block projection', () => {
         source: ':::: details\ncontent with  spaces  \n::::',
         hidden: false
       },
-      { kind: 'raw-include', source: '<<< ./shared.md [Shared]', hidden: false },
+      { kind: 'raw-reference-definition', source: '[shared]: ./shared.md', hidden: true },
       { kind: 'raw-component', source: '<Demo value="中文" />', hidden: false },
       { kind: 'html', source: '<!-- ordinary comment -->', hidden: false },
       { kind: 'html', source: '<aside data-x="1">raw</aside>', hidden: false },
@@ -342,11 +341,12 @@ describe('Milkdown raw block projection', () => {
     rawBlocks.forEach((block) => expect(markdown).toContain(block.source))
     expect(markdown).toContain('```ts\nx = 1\n```')
     expect(document.querySelectorAll('.desk-raw-block')).toHaveLength(rawBlocks.length)
-    expect(document.querySelectorAll('.desk-raw-block--hidden')).toHaveLength(0)
+    // The reference-definition block renders hidden; the rest are visible.
+    expect(document.querySelectorAll('.desk-raw-block--hidden')).toHaveLength(1)
   })
 
   it('rejects visual transactions that delete or mutate an opaque raw block', async () => {
-    const source = 'before\n\n<<< ./shared.md\n\nafter\n'
+    const source = 'before\n\n<aside data-x="1">raw</aside>\n\nafter\n'
     const editor = await createEditor(source)
 
     editor.action((ctx) => {
@@ -361,7 +361,7 @@ describe('Milkdown raw block projection', () => {
       view.dispatch(view.state.tr.delete(rawPosition, rawPosition + rawSize))
     })
 
-    expect(editor.action(getMarkdown())).toContain('<<< ./shared.md')
+    expect(editor.action(getMarkdown())).toContain('<aside data-x="1">raw</aside>')
   })
 
   it('preserves real reference syntax and definitions when another block is edited', async () => {

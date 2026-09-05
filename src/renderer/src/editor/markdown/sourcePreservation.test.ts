@@ -83,12 +83,11 @@ describe('Markdown source preservation', () => {
 
     expect(document.blocks.map((block) => block.kind)).toEqual([
       'raw-container',
-      'raw-include',
+      'paragraph',
       'raw-component',
       'raw-component',
       'raw-fence'
     ])
-    expect(document.blocks.every((block) => block.raw)).toBe(true)
     expect(document.blocks[0].source).toContain('```ts [TypeScript]')
     expect(document.blocks[4].source).toContain('```mermaid')
     expect(serializeMarkdownSource(document)).toBe(source)

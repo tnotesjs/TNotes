@@ -8,9 +8,6 @@ export const KNOWLEDGE_SIDEBAR_COMPACT = 104
 export const NAVIGATOR_SIDEBAR_MIN = 200
 export const NAVIGATOR_SIDEBAR_DEFAULT = 292
 export const NAVIGATOR_SIDEBAR_MAX = 480
-export const NOTE_FILE_SIDEBAR_MIN = 180
-export const NOTE_FILE_SIDEBAR_DEFAULT = 240
-export const NOTE_FILE_SIDEBAR_MAX = 420
 
 export function clampSidebarWidth(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
@@ -39,8 +36,6 @@ import type {
   KnowledgeBaseEditorSession,
   KnowledgeBaseDescriptor,
   NoteEditorTab,
-  NoteFileEditorTab,
-  NoteFileKind,
   NotePageWidth,
   NoteViewMode,
   PreviewStateDto,
@@ -187,9 +182,6 @@ export const useEditorStore = defineStore('editor', () => {
   const knowledgeSidebarCollapsed = ref(false)
   const navigatorSidebarCollapsed = ref(false)
   const expandedTocNodes = ref<Record<string, string[]>>({})
-  const noteFileSidebarWidth = ref(NOTE_FILE_SIDEBAR_DEFAULT)
-  const noteFileSidebarCollapsed = ref(false)
-  const expandedNoteFileDirectories = ref<Record<string, string[]>>({})
   const maxOpenTabCount = ref(10)
   const wrapTabs = ref(true)
   const defaultNotePageWidth = ref<NotePageWidth>('standard')
@@ -216,7 +208,6 @@ export const useEditorStore = defineStore('editor', () => {
   const activeNoteScope = computed(() => {
     const tab = activeTab.value
     if (tab?.type === 'note') return { noteUuid: tab.noteUuid, noteTitle: tab.title }
-    if (tab?.type === 'note-file') return { noteUuid: tab.noteUuid, noteTitle: tab.noteTitle }
     return lastNoteByGroup.value[activeGroupId.value] ?? null
   })
   const tabCount = computed(() =>
@@ -408,9 +399,6 @@ export const useEditorStore = defineStore('editor', () => {
     knowledgeSidebarCollapsed.value = session.knowledgeSidebarCollapsed
     navigatorSidebarCollapsed.value = session.navigatorSidebarCollapsed
     expandedTocNodes.value = session.expandedTocNodes
-    noteFileSidebarWidth.value = session.noteFileSidebarWidth ?? NOTE_FILE_SIDEBAR_DEFAULT
-    noteFileSidebarCollapsed.value = session.noteFileSidebarCollapsed ?? false
-    expandedNoteFileDirectories.value = session.expandedNoteFileDirectories ?? {}
     trimToLimit()
   }
 
@@ -439,23 +427,17 @@ export const useEditorStore = defineStore('editor', () => {
   function activate(groupId: string, tabId: string): void {
     const beforeGroup = findGroup(layout.value, groupId)
     const before = beforeGroup?.tabs.find((tab) => tab.id === beforeGroup.activeTabId)
-    if (before?.type === 'note' || before?.type === 'note-file') {
+    if (before?.type === 'note') {
       lastNoteByGroup.value = {
         ...lastNoteByGroup.value,
-        [groupId]: {
-          noteUuid: before.noteUuid,
-          noteTitle: before.type === 'note' ? before.title : before.noteTitle
-        }
+        [groupId]: { noteUuid: before.noteUuid, noteTitle: before.title }
       }
     }
     activeGroupId.value = groupId
     layout.value = activateTabInLayout(layout.value, groupId, tabId)
     const tab = findTab(layout.value, tabId)?.tab
-    if (tab?.type === 'note' || tab?.type === 'note-file') {
-      const scope = {
-        noteUuid: tab.noteUuid,
-        noteTitle: tab.type === 'note' ? tab.title : tab.noteTitle
-      }
+    if (tab?.type === 'note') {
+      const scope = { noteUuid: tab.noteUuid, noteTitle: tab.title }
       lastNoteByGroup.value = { ...lastNoteByGroup.value, [groupId]: scope }
     }
   }
@@ -467,13 +449,10 @@ export const useEditorStore = defineStore('editor', () => {
     const next = findGroup(layout.value, group.id)?.tabs.find(
       (tab) => tab.id === findGroup(layout.value, group.id)?.activeTabId
     )
-    if (next?.type === 'note' || next?.type === 'note-file') {
+    if (next?.type === 'note') {
       lastNoteByGroup.value = {
         ...lastNoteByGroup.value,
-        [group.id]: {
-          noteUuid: next.noteUuid,
-          noteTitle: next.type === 'note' ? next.title : next.noteTitle
-        }
+        [group.id]: { noteUuid: next.noteUuid, noteTitle: next.title }
       }
     }
   }
@@ -560,12 +539,11 @@ export const useEditorStore = defineStore('editor', () => {
       for (const group of listGroups(editorLayout)) {
         for (const tab of group.tabs) {
           if (
-            tab.type !== 'web' &&
+            tab.type === 'note' &&
             tab.knowledgeBaseId === knowledgeBaseId &&
             tab.noteUuid === noteUuid
           ) {
-            if (tab.type === 'note') tab.title = title
-            else tab.noteTitle = title
+            tab.title = title
             changed = true
           }
         }
@@ -702,64 +680,15 @@ export const useEditorStore = defineStore('editor', () => {
     return tab.id
   }
 
-  function openNoteFile(
-    knowledgeBase: KnowledgeBaseDescriptor,
-    noteUuid: string,
-    noteTitle: string,
-    filePath: string,
-    fileKind: NoteFileKind,
-    targetGroupId = activeGroupId.value
-  ): string {
-    if (activeKnowledgeBaseId.value !== knowledgeBase.id) switchKnowledgeBase(knowledgeBase.id)
-    for (const group of groups.value) {
-      const existing = group.tabs.find(
-        (tab) =>
-          tab.type === 'note-file' &&
-          tab.knowledgeBaseId === knowledgeBase.id &&
-          tab.noteUuid === noteUuid &&
-          tab.path === filePath
-      )
-      if (existing) {
-        activate(group.id, existing.id)
-        return existing.id
-      }
-    }
-    ensureRoomForTab()
-    const tab: NoteFileEditorTab = {
-      id: createId('note-file'),
-      type: 'note-file',
-      knowledgeBaseId: knowledgeBase.id,
-      knowledgeBaseName: knowledgeBase.displayName,
-      noteUuid,
-      noteTitle,
-      path: filePath,
-      title: filePath,
-      fileKind,
-      pinned: false,
-      openedAt: Date.now(),
-      dirty: false
-    }
-    layout.value = insertTab(layout.value, targetGroupId, tab)
-    activeGroupId.value = targetGroupId
-    lastNoteByGroup.value = {
-      ...lastNoteByGroup.value,
-      [targetGroupId]: { noteUuid, noteTitle }
-    }
-    return tab.id
-  }
-
   function openWeb(url = DEFAULT_WEB_URL, targetGroupId?: string): string {
     const groupId = targetGroupId ?? activeGroupId.value
     const current = findGroup(layout.value, groupId)?.tabs.find(
       (tab) => tab.id === findGroup(layout.value, groupId)?.activeTabId
     )
-    if (current?.type === 'note' || current?.type === 'note-file') {
+    if (current?.type === 'note') {
       lastNoteByGroup.value = {
         ...lastNoteByGroup.value,
-        [groupId]: {
-          noteUuid: current.noteUuid,
-          noteTitle: current.type === 'note' ? current.title : current.noteTitle
-        }
+        [groupId]: { noteUuid: current.noteUuid, noteTitle: current.title }
       }
     }
     ensureRoomForTab()
@@ -857,48 +786,6 @@ export const useEditorStore = defineStore('editor', () => {
     }
   }
 
-  function closeNoteFile(knowledgeBaseId: string, noteUuid: string, filePath: string): void {
-    const stored = knowledgeBaseEditors.value[knowledgeBaseId]
-    if (stored && knowledgeBaseId !== activeKnowledgeBaseId.value) {
-      let next = stored.layout
-      let changed = false
-      for (const group of listGroups(stored.layout)) {
-        for (const tab of group.tabs) {
-          if (tab.type === 'note-file' && tab.noteUuid === noteUuid && tab.path === filePath) {
-            next = removeTab(next, group.id, tab.id)
-            changed = true
-          }
-        }
-      }
-      if (changed) {
-        next = collapseEmptyGroups(next)
-        const remainingGroups = listGroups(next)
-        knowledgeBaseEditors.value = {
-          ...knowledgeBaseEditors.value,
-          [knowledgeBaseId]: {
-            ...stored,
-            layout: next,
-            activeGroupId: remainingGroups.some((group) => group.id === stored.activeGroupId)
-              ? stored.activeGroupId
-              : remainingGroups[0].id
-          }
-        }
-      }
-    }
-    for (const group of [...groups.value]) {
-      for (const tab of [...group.tabs]) {
-        if (
-          tab.type === 'note-file' &&
-          tab.knowledgeBaseId === knowledgeBaseId &&
-          tab.noteUuid === noteUuid &&
-          tab.path === filePath
-        ) {
-          close(group.id, tab.id)
-        }
-      }
-    }
-  }
-
   function setNoteViewMode(tabId: string, viewMode: NoteViewMode): void {
     const located = findTab(layout.value, tabId)
     if (located?.tab.type !== 'note') return
@@ -917,38 +804,6 @@ export const useEditorStore = defineStore('editor', () => {
     const located = findTab(layout.value, tabId)
     if (located?.tab.type !== 'note') return
     setNotePageWidth(tabId, located.tab.pageWidth === 'wide' ? 'standard' : 'wide')
-  }
-
-  function setNoteFileDirty(
-    knowledgeBaseId: string,
-    noteUuid: string,
-    filePath: string,
-    dirty: boolean
-  ): void {
-    const updateLayout = (editorLayout: EditorLayoutNode): boolean => {
-      let changed = false
-      for (const group of listGroups(editorLayout)) {
-        for (const tab of group.tabs) {
-          if (
-            tab.type === 'note-file' &&
-            tab.knowledgeBaseId === knowledgeBaseId &&
-            tab.noteUuid === noteUuid &&
-            tab.path === filePath
-          ) {
-            tab.dirty = dirty
-            changed = true
-          }
-        }
-      }
-      return changed
-    }
-    if (updateLayout(layout.value)) layout.value = { ...layout.value }
-    let storedChanged = false
-    for (const [storedKnowledgeBaseId, session] of Object.entries(knowledgeBaseEditors.value)) {
-      if (storedKnowledgeBaseId === activeKnowledgeBaseId.value) continue
-      if (updateLayout(session.layout)) storedChanged = true
-    }
-    if (storedChanged) knowledgeBaseEditors.value = { ...knowledgeBaseEditors.value }
   }
 
   function moveTab(tabId: string, targetGroupId: string, targetIndex?: number): void {
@@ -1022,12 +877,7 @@ export const useEditorStore = defineStore('editor', () => {
       navigatorSidebarWidth: navigatorSidebarWidth.value,
       knowledgeSidebarCollapsed: knowledgeSidebarCollapsed.value,
       navigatorSidebarCollapsed: navigatorSidebarCollapsed.value,
-      expandedTocNodes: serializedExpandedNodes,
-      noteFileSidebarWidth: noteFileSidebarWidth.value,
-      noteFileSidebarCollapsed: noteFileSidebarCollapsed.value,
-      expandedNoteFileDirectories: JSON.parse(
-        JSON.stringify(expandedNoteFileDirectories.value)
-      ) as Record<string, string[]>
+      expandedTocNodes: serializedExpandedNodes
     }
   }
 
@@ -1047,9 +897,6 @@ export const useEditorStore = defineStore('editor', () => {
     knowledgeSidebarCollapsed,
     navigatorSidebarCollapsed,
     expandedTocNodes,
-    noteFileSidebarWidth,
-    noteFileSidebarCollapsed,
-    expandedNoteFileDirectories,
     maxOpenTabCount,
     wrapTabs,
     defaultNotePageWidth,
@@ -1067,7 +914,6 @@ export const useEditorStore = defineStore('editor', () => {
     activate,
     cycleActiveTab,
     openNote,
-    openNoteFile,
     openWeb,
     startPreview,
     stopPreview,
@@ -1076,13 +922,11 @@ export const useEditorStore = defineStore('editor', () => {
     closeAllTabs,
     closeAllWebTabs,
     closeNote,
-    closeNoteFile,
     renameNote,
     setNoteViewMode,
     setNotePageWidth,
     toggleNotePageWidth,
     setNoteDirty,
-    setNoteFileDirty,
     keepOpen,
     setPinned,
     togglePinned,

@@ -1,26 +1,21 @@
-import type {
-  ChangedFile,
-  KnowledgeBaseSnapshot,
-  MutationResult,
-  NoteDocument
-} from '@tnotesjs/core/workspace'
+import type { KbSnapshot, MutationResult, NoteDoc } from '@tnotesjs/kb'
 import type { KnowledgeBaseDetail, NoteMutationDto } from '../../shared/contracts'
 
 import { toDetail, toNoteDocument } from './dto'
 import type { KnowledgeBaseHandle } from './types'
 
 export type MutationSideEffects = {
-  markInternalWrites: (changedFiles: ChangedFile[]) => void
+  markInternalWrites: (changedFiles: Array<{ path: string; previousPath?: string }>) => void
   emitChanged: () => void
 }
 
 export async function applyNoteMutation(
   handle: KnowledgeBaseHandle,
-  result: MutationResult<NoteDocument>,
+  result: MutationResult<NoteDoc>,
   effects: MutationSideEffects
 ): Promise<NoteMutationDto> {
   effects.markInternalWrites(result.changedFiles)
-  handle.snapshot = await handle.workspace.refresh()
+  handle.snapshot = await handle.workspace.scan()
   effects.emitChanged()
   return {
     note: toNoteDocument(handle, result.value),
@@ -31,7 +26,7 @@ export async function applyNoteMutation(
 
 export function applySnapshotMutation(
   handle: KnowledgeBaseHandle,
-  result: MutationResult<KnowledgeBaseSnapshot>,
+  result: MutationResult<KbSnapshot>,
   effects: MutationSideEffects
 ): KnowledgeBaseDetail {
   effects.markInternalWrites(result.changedFiles)
