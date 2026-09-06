@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  createEmptyCodeGroupEntry,
   parseCodeGroupEntries,
   serializeCodeGroupEntries,
   withCodeGroupEntryHighlights,
@@ -52,6 +53,22 @@ describe('code-group entries', () => {
       kind: 'fence',
       highlights: '{1,4}',
       info: 'js {1,4} [demo]'
+    })
+  })
+
+  it('creates an empty tab that reuses the last language and a free numeric title', () => {
+    const entries = parseCodeGroupEntries('```ts [setup.ts]\nexport {}\n```\n')
+    expect(createEmptyCodeGroupEntry(entries)).toMatchObject({
+      kind: 'fence',
+      filename: '2',
+      lang: 'ts',
+      info: 'ts [2]',
+      code: '',
+      highlights: ''
+    })
+    expect(createEmptyCodeGroupEntry([...entries, createEmptyCodeGroupEntry(entries)])).toMatchObject({
+      filename: '3',
+      lang: 'ts'
     })
   })
 

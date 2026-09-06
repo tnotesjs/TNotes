@@ -1,30 +1,25 @@
 import { autocompletion, completionKeymap } from '@codemirror/autocomplete'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
-import {
-  bracketMatching,
-  defaultHighlightStyle,
-  foldGutter,
-  indentOnInput,
-  syntaxHighlighting
-} from '@codemirror/language'
+import { bracketMatching, foldGutter, indentOnInput } from '@codemirror/language'
 import { languages } from '@codemirror/language-data'
 import { searchKeymap } from '@codemirror/search'
 import { Compartment, EditorState, type Extension } from '@codemirror/state'
 import {
   crosshairCursor,
   dropCursor,
+  drawSelection,
   EditorView,
   highlightActiveLine,
   highlightActiveLineGutter,
   highlightSpecialChars,
   keymap,
   lineNumbers,
-  placeholder,
-  rectangularSelection
+  placeholder
 } from '@codemirror/view'
 import { githubDark, githubLight } from '@uiw/codemirror-theme-github'
 
+import { codeMirrorRectangularSelection } from './codeMirrorMultiCursor'
 import { createCodeLineHighlightExtension } from './codeLineHighlightExtension'
 import { isEmptyRawBlockSource } from './rawBlockEmpty'
 
@@ -144,17 +139,14 @@ export function createContainerSourceEditor(
       extensions: [
         highlightSpecialChars(),
         history(),
-        // Prefer native ::selection so multi-line highlights wrap characters
-        // only — same as MarkdownSourceEditor. drawSelection() paints full-width
-        // line rectangles.
+        drawSelection(),
         dropCursor(),
         indentOnInput(),
         bracketMatching(),
-        rectangularSelection(),
+        ...codeMirrorRectangularSelection(),
         crosshairCursor(),
         highlightActiveLine(),
         autocompletion({ activateOnTyping: true, icons: false, maxRenderedOptions: 60 }),
-        syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
         languageCompartment.of(initialLanguage),
         EditorState.allowMultipleSelections.of(true),
         ...(options.placeholder ? [placeholder(options.placeholder)] : []),

@@ -94,7 +94,8 @@ function sanitizeLayout(
               pageWidth:
                 tab.pageWidth === 'standard' || tab.pageWidth === 'wide'
                   ? tab.pageWidth
-                  : defaultNotePageWidth
+                  : defaultNotePageWidth,
+              outlineVisible: tab.outlineVisible !== false
             }
           : {})
       }))
@@ -629,6 +630,7 @@ export const useEditorStore = defineStore('editor', () => {
       icon: knowledgeBase.icon,
       viewMode,
       pageWidth: defaultNotePageWidth.value,
+      outlineVisible: true,
       preview: openBehavior === 'preview',
       pinned: false,
       openedAt: Date.now(),
@@ -806,6 +808,18 @@ export const useEditorStore = defineStore('editor', () => {
     setNotePageWidth(tabId, located.tab.pageWidth === 'wide' ? 'standard' : 'wide')
   }
 
+  function toggleNoteOutlineVisible(tabId: string): void {
+    const located = findTab(layout.value, tabId)
+    if (located?.tab.type !== 'note') return
+    const outlineVisible = located.tab.outlineVisible === false
+    layout.value = updateGroup(layout.value, located.group.id, (group) => ({
+      ...group,
+      tabs: group.tabs.map((tab) =>
+        tab.id === tabId && tab.type === 'note' ? { ...tab, outlineVisible } : tab
+      )
+    }))
+  }
+
   function moveTab(tabId: string, targetGroupId: string, targetIndex?: number): void {
     const located = findTab(layout.value, tabId)
     if (!located) return
@@ -926,6 +940,7 @@ export const useEditorStore = defineStore('editor', () => {
     setNoteViewMode,
     setNotePageWidth,
     toggleNotePageWidth,
+    toggleNoteOutlineVisible,
     setNoteDirty,
     keepOpen,
     setPinned,

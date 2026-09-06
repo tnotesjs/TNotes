@@ -127,6 +127,18 @@ describe('editor store tab semantics', () => {
     expect(editor.activeTab).toMatchObject({ noteUuid: 'note-b', pageWidth: 'standard' })
   })
 
+  it('toggles the side outline independently of page width', () => {
+    const editor = useEditorStore()
+    editor.configure(settings)
+    const firstId = editor.openNote(knowledgeBase, 'note-a', 'A', 'visual', undefined, 'permanent')
+    expect(editor.activeTab).toMatchObject({ id: firstId, outlineVisible: true })
+
+    editor.toggleNoteOutlineVisible(firstId)
+    expect(editor.activeTab).toMatchObject({ id: firstId, outlineVisible: false })
+    editor.toggleNoteOutlineVisible(firstId)
+    expect(editor.activeTab).toMatchObject({ id: firstId, outlineVisible: true })
+  })
+
   it('keeps the last note scope while a web tab is active', () => {
     const editor = useEditorStore()
     editor.configure(settings)

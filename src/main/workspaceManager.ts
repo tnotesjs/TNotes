@@ -182,6 +182,7 @@ export class WorkspaceManager {
             knowledgeBaseName: current.handle.name,
             noteUuid,
             noteIndex: current.note.index,
+            fileName: current.note.fileName.replace(/\.md$/i, ''),
             title: current.note.title,
             content,
             revision: createHash('sha256').update(content).digest('hex')

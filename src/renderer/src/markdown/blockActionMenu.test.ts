@@ -86,19 +86,17 @@ describe('block handle click controller', () => {
     cleanup()
   })
 
-  it('keeps body blocks and lower-level headings operable but excludes level-one headings', async () => {
+  it('keeps headings and body blocks operable', async () => {
     const { view } = await setup()
     const { schema } = view.state
-    expect(canShowBlockHandle(schema.nodes.heading.create({ level: 1 }))).toBe(false)
+    expect(canShowBlockHandle(schema.nodes.heading.create({ level: 1 }))).toBe(true)
     expect(canShowBlockHandle(schema.nodes.heading.create({ level: 2 }))).toBe(true)
     expect(canShowBlockHandle(schema.nodes.paragraph.create())).toBe(true)
     expect(canShowBlockHandle(view.state.doc.firstChild!)).toBe(true)
   })
 
-  it.each([
-    '# [0001. 标题](https://github.com/tnotesjs/desk)\n',
-    '<!-- region:toc -->\n- [正文](#正文)\n<!-- endregion:toc -->\n'
-  ])('excludes generated navigation and ignores stale handle clicks for %s', async (source) => {
+  it('excludes generated navigation and ignores stale handle clicks', async () => {
+    const source = '<!-- region:toc -->\n- [正文](#正文)\n<!-- endregion:toc -->\n'
     const { root, view, grip } = await setup(source)
     expect(canShowBlockHandle(view.state.doc.firstChild!)).toBe(false)
     const onClick = vi.fn()
@@ -189,8 +187,10 @@ describe('block menu actions', () => {
     expect(view.state.doc.textContent).toBe('新段落后续段落')
   })
 
-  it('does not copy or delete protected generated headings', async () => {
-    const { view, serialize } = await setup('# 自动标题\n')
+  it('does not copy or delete protected generated navigation', async () => {
+    const { view, serialize } = await setup(
+      '<!-- region:toc -->\n- [正文](#正文)\n<!-- endregion:toc -->\n'
+    )
     expect(serializeBlockForClipboard(view.state, 0, serialize)).toBeNull()
     expect(createBlockDeleteTransaction(view.state, 0)).toBeNull()
   })

@@ -16,6 +16,7 @@ const documents: SearchIndexDocument[] = [
     knowledgeBaseName: 'docs',
     noteUuid: 'note-a',
     noteIndex: '0038',
+    fileName: '0038. 后台搜索索引',
     title: '后台搜索索引',
     content: '# 后台搜索索引\n\nDesk 使用独立线程维护全文搜索，不阻塞编辑器。',
     revision: 'a'
@@ -26,6 +27,7 @@ const documents: SearchIndexDocument[] = [
     knowledgeBaseName: 'other',
     noteUuid: 'note-b',
     noteIndex: '0001',
+    fileName: '0001. 编辑器说明',
     title: '编辑器说明',
     content: '这里也提到了搜索，但属于另一个知识库。',
     revision: 'b'
@@ -46,6 +48,9 @@ describe('search model', () => {
     ])
     expect(querySearchIndex(index, '搜索', 'kb-b')).toMatchObject([
       { knowledgeBaseId: 'kb-b', noteUuid: 'note-b' }
+    ])
+    expect(querySearchIndex(index, '0038. 后台', 'kb-a')).toMatchObject([
+      { knowledgeBaseId: 'kb-a', noteUuid: 'note-a', fileName: '0038. 后台搜索索引' }
     ])
   })
 

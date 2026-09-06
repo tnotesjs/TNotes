@@ -4,6 +4,7 @@ import type { EditorView } from '@milkdown/kit/prose/view'
 import { $prose } from '@milkdown/kit/utils'
 import { EditorView as CodeMirrorView } from '@codemirror/view'
 
+import { codeMirrorMultiCursorExtensions } from '../editor/markdown/codeMirrorMultiCursor'
 import { createCodeLineHighlightExtension } from '../editor/markdown/codeLineHighlightExtension'
 
 function findCodeBlockPos(view: EditorView, dom: HTMLElement): number | null {
@@ -103,5 +104,5 @@ export function createCodeBlockHighlightBundle(): {
     })
   })
 
-  return { extensions: highlight.extensions, plugin }
+  return { extensions: [...codeMirrorMultiCursorExtensions(), ...highlight.extensions], plugin }
 }

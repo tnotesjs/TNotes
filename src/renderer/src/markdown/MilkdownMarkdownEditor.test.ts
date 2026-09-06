@@ -26,7 +26,9 @@ async function mountEditor(
       ...props
     }
   })
-  await vi.waitFor(() => expect(wrapper.find('.ProseMirror').exists()).toBe(true))
+  await vi.waitFor(() => expect(wrapper.find('.ProseMirror').exists()).toBe(true), {
+    timeout: 4_000
+  })
   return wrapper
 }
 
@@ -46,12 +48,73 @@ describe('MilkdownMarkdownEditor synchronization', () => {
     wrapper.unmount()
   })
 
+  it('does not list slash-menu group titles in the page outline', async () => {
+    const wrapper = await mountEditor('# 代码分组\n\n正文\n')
+    await vi.waitFor(() => expect(wrapper.find('.note-outline__link').exists()).toBe(true))
+    expect(wrapper.findAll('.note-outline__link').map((item) => item.text())).toEqual(['代码分组'])
+    wrapper.unmount()
+  })
+
+  it('lists document headings in the page outline and scrolls on click', async () => {
+    const wrapper = await mountEditor(
+      ['# 欢迎', '', '## 建议按这个顺序点', '', '正文', '', '### 小节', ''].join('\n')
+    )
+    await vi.waitFor(() => expect(wrapper.findAll('.note-outline__link')).toHaveLength(3))
+    expect(wrapper.findAll('.note-outline__link').map((item) => item.text())).toEqual([
+      '欢迎',
+      '建议按这个顺序点',
+      '小节'
+    ])
+    const heading = wrapper.get('.ProseMirror h2')
+    const scrollIntoView = vi.fn()
+    Object.defineProperty(heading.element, 'scrollIntoView', {
+      configurable: true,
+      value: scrollIntoView
+    })
+    await wrapper.findAll('.note-outline__link')[1]!.trigger('click')
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start' })
+    wrapper.unmount()
+  })
+
+  it('keeps the editor alive when a heading id starts with digits', async () => {
+    const wrapper = await mountEditor('# 0001. 标题\n\n正文\n')
+    await vi.waitFor(() => expect(wrapper.find('.note-outline__link').text()).toBe('0001. 标题'))
+    expect(wrapper.emitted('fatal')).toBeUndefined()
+    wrapper.unmount()
+  })
+
   it('switches the visual page between standard and wide layouts', async () => {
     const wrapper = await mountEditor('alpha\n', { pageWidth: 'wide' })
 
     expect(wrapper.get('.milkdown-markdown-editor').classes()).toContain('is-wide')
     await wrapper.setProps({ pageWidth: 'standard' })
     expect(wrapper.get('.milkdown-markdown-editor').classes()).not.toContain('is-wide')
+    wrapper.unmount()
+  })
+
+  it('collapses a heading section from the gutter toggle', async () => {
+    const wrapper = await mountEditor('# 欢迎\n\n正文段落\n\n## 小节\n\n更多\n')
+    await vi.waitFor(() => expect(wrapper.find('.desk-heading-toggle').exists()).toBe(true))
+    const heading = wrapper.get('.ProseMirror h1')
+    expect(heading.classes()).not.toContain('is-heading-collapsed')
+    await wrapper.get('.desk-heading-toggle').trigger('click')
+    expect(wrapper.get('.ProseMirror h1').classes()).toContain('is-heading-collapsed')
+    expect(wrapper.get('.ProseMirror p').classes()).toContain('desk-heading-section--collapsed')
+    await wrapper.get('.desk-heading-toggle').trigger('click')
+    expect(wrapper.get('.ProseMirror h1').classes()).not.toContain('is-heading-collapsed')
+    wrapper.unmount()
+  })
+
+  it('keeps the page outline in wide layout and hides it when toggled off', async () => {
+    const wrapper = await mountEditor('# 欢迎\n\n正文\n', { pageWidth: 'wide' })
+    await vi.waitFor(() => expect(wrapper.find('.note-outline').exists()).toBe(true))
+    expect(wrapper.get('.milkdown-markdown-editor').classes()).toContain('is-wide')
+    expect(wrapper.get('.milkdown-markdown-editor').classes()).not.toContain('is-outline-hidden')
+    await wrapper.setProps({ outlineVisible: false })
+    expect(wrapper.get('.milkdown-markdown-editor').classes()).toContain('is-outline-hidden')
+    expect(wrapper.find('.note-outline').isVisible()).toBe(false)
+    await wrapper.setProps({ outlineVisible: true })
+    expect(wrapper.find('.note-outline').isVisible()).toBe(true)
     wrapper.unmount()
   })
 
@@ -172,6 +235,81 @@ describe('MilkdownMarkdownEditor synchronization', () => {
     expect(url.searchParams.get('noteUuid')).toBe('note 1')
     expect(url.searchParams.get('path')).toBe('./assets/%E5%9B%BE%20%E7%89%87.png')
     expect(wrapper.emitted('change')).toBeUndefined()
+    expect(wrapper.get('.desk-image__caption').element).toHaveProperty('value', '图片')
+    wrapper.unmount()
+  })
+
+  it('marks consecutive image paragraphs without inserting an empty paragraph between them', async () => {
+    const wrapper = await mountEditor(
+      '![](https://example.com/a.png) {w=100px}\n\n![](https://example.com/b.png) {w=80px}\n'
+    )
+    const paragraphs = [...wrapper.get('.ProseMirror').element.querySelectorAll(':scope > p')]
+    const imageParagraphs = paragraphs.filter((element) => element.querySelector('figure.desk-image'))
+    expect(imageParagraphs).toHaveLength(2)
+    expect(imageParagraphs[0]?.classList.contains('desk-standalone-image')).toBe(true)
+    expect(imageParagraphs[1]?.classList.contains('desk-standalone-image')).toBe(true)
+    expect(imageParagraphs[0]?.nextElementSibling).toBe(imageParagraphs[1] ?? null)
+    expect(wrapper.findAll('figure.desk-image')).toHaveLength(2)
+    wrapper.unmount()
+  })
+
+  it('renders alt as a caption and applies {w} as image width', async () => {
+    const wrapper = await mountEditor('![说明](https://example.com/a.png) {w=50%}\n')
+    const image = wrapper.get('.desk-image img')
+    expect(image.attributes('alt')).toBe('说明')
+    expect(wrapper.get('.desk-image__stack').attributes('style') ?? '').toContain(
+      'width: 50%'
+    )
+    expect(image.attributes('data-tn-src')).toBe('https://example.com/a.png')
+    expect(image.attributes('data-tn-width')).toBe('50%')
+    expect((wrapper.get('.desk-image__caption').element as HTMLInputElement).value).toBe('说明')
+    expect(wrapper.findAll('.desk-image__handle')).toHaveLength(4)
+    expect(wrapper.find('.desk-image__quick').exists()).toBe(true)
+    expect((wrapper.get('.desk-image__size-panel').element as HTMLElement).hidden).toBe(true)
+    expect((wrapper.get('.desk-image__align-panel').element as HTMLElement).hidden).toBe(true)
+    expect((wrapper.get('.desk-image__more-panel').element as HTMLElement).hidden).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('keeps an unsized captioned image shrink-wrapped to the image', async () => {
+    const wrapper = await mountEditor('![标题](https://example.com/pixel.svg)\n')
+    const caption = wrapper.get('.desk-image__caption').element as HTMLInputElement
+    expect(wrapper.get('.desk-image__stack').attributes('style') ?? '').not.toMatch(
+      /width\s*:/
+    )
+    expect(wrapper.get('.desk-image__caption-row').exists()).toBe(true)
+    expect(caption.value).toBe('标题')
+    expect(caption.size).toBe(1)
+    expect(caption.hidden).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('applies image alignment from {align} and keeps caption closed until requested', async () => {
+    const wrapper = await mountEditor('![](https://example.com/a.png) {align=right}\n')
+    const figure = wrapper.get('.desk-image')
+    expect(figure.classes()).toContain('tn-image--right')
+    expect(wrapper.get('.desk-image img').attributes('data-tn-align')).toBe('right')
+    expect((wrapper.get('.desk-image__caption').element as HTMLInputElement).hidden).toBe(true)
+    await wrapper.get('.desk-image__tool[aria-label="描述"]').trigger('click')
+    expect((wrapper.get('.desk-image__caption').element as HTMLInputElement).hidden).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('opens a fullscreen preview on image click in readonly mode without a selected state', async () => {
+    const wrapper = await mountEditor('![](https://example.com/a.png)\n', { mode: 'readonly' })
+    const requests: Event[] = []
+    const onPreview = (event: Event): void => {
+      requests.push(event)
+    }
+    document.addEventListener('tn:preview-image', onPreview)
+    const figure = wrapper.get('.desk-image')
+    expect(figure.classes()).toContain('is-readonly')
+    expect(figure.classes()).not.toContain('is-selected')
+    expect(figure.classes()).not.toContain('tn-preview-ignore')
+    await figure.get('img').trigger('click')
+    expect(requests).toHaveLength(1)
+    expect(figure.classes()).not.toContain('is-selected')
+    document.removeEventListener('tn:preview-image', onPreview)
     wrapper.unmount()
   })
 

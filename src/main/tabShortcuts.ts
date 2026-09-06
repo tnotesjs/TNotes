@@ -31,6 +31,11 @@ export class TabShortcutResolver {
       return { handled: true, command: { type: 'activate-tab-by-number', number: Number(key) } }
     }
 
+    if (primaryModifier && !input.alt && key === 'p') {
+      this.chordExpiresAt = 0
+      return { handled: true, command: input.shift ? 'open-command-palette' : 'open-quick-open' }
+    }
+
     if (primaryModifier && !input.alt) {
       const command =
         key === '+' || key === '='

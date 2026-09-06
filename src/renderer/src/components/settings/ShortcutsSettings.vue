@@ -23,7 +23,9 @@ const shortcutGroups = computed(() => [
       ['下一个 / 上一个标签', 'Ctrl Tab / Ctrl Shift Tab'],
       ['切换当前标签组内第 1–9 个标签（含固定标签）', `${primaryKey.value} 1…9`],
       ['复制笔记目录路径', `${altKey.value} ${primaryKey.value} C`],
-      ['在系统文件管理器中显示', `${altKey.value} ${primaryKey.value} R`]
+      ['在系统文件管理器中显示', `${altKey.value} ${primaryKey.value} R`],
+      ['搜索当前知识库中的笔记', `${primaryKey.value} P`],
+      ['命令面板', `${primaryKey.value} Shift P`]
     ]
   },
   {

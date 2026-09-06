@@ -329,6 +329,148 @@ describe('raw block keyboard selection', () => {
     })
   })
 
+  it('ArrowDown from an empty line selects the next standalone image, then exits past it', async () => {
+    const editor = await createEditor(
+      '上方段落\n\n<br />\n\n![](https://example.com/a.png)\n\n下方段落\n'
+    )
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      let emptyStart = -1
+      let imagePos = -1
+      let afterStart = -1
+      view.state.doc.descendants((node, position) => {
+        if (node.type.name === 'image') imagePos = position
+        if (node.type.name !== 'paragraph') return
+        if (node.childCount === 0) emptyStart = position + 1
+        else if (node.childCount === 1 && node.firstChild?.type.name === 'image') return
+        else if (node.textContent.includes('下方')) afterStart = position + 1
+      })
+      expect(emptyStart).toBeGreaterThan(-1)
+      expect(imagePos).toBeGreaterThan(-1)
+      view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, emptyStart)))
+      expect(adjacentRawBlockSelectionPosition(view.state, 'down')).toBe(imagePos - 1)
+      view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+      expect(view.state.selection).toBeInstanceOf(NodeSelection)
+      expect((view.state.selection as NodeSelection).from).toBe(imagePos)
+      expect((view.state.selection as NodeSelection).node.type.name).toBe('image')
+      view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+      expect(view.state.selection).toBeInstanceOf(TextSelection)
+      expect(view.state.selection.from).toBe(afterStart)
+    })
+  })
+
+  it('ArrowDown from the last image inserts a visible empty line instead of hiding the caret', async () => {
+    const editor = await createEditor('![](https://example.com/a.png)\n')
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      let imagePos = -1
+      view.state.doc.descendants((node, position) => {
+        if (node.type.name === 'image') imagePos = position
+      })
+      expect(imagePos).toBeGreaterThan(-1)
+      view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, imagePos)))
+      view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+      expect(view.state.selection).toBeInstanceOf(TextSelection)
+      const $head = view.state.selection.$head
+      expect($head.parent.type.name).toBe('paragraph')
+      expect($head.parent.content.size).toBe(0)
+      expect($head.parentOffset).toBe(0)
+    })
+  })
+
+  it('ArrowUp from a selected image returns to the empty line, not the previous image', async () => {
+    const editor = await createEditor(
+      '![](https://example.com/a.png)\n\n<br />\n\n![](https://example.com/b.png)\n'
+    )
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      const images: number[] = []
+      let emptyStart = -1
+      view.state.doc.descendants((node, position) => {
+        if (node.type.name === 'image') images.push(position)
+        if (node.type.name === 'paragraph' && node.childCount === 0) emptyStart = position + 1
+      })
+      expect(images).toHaveLength(2)
+      expect(emptyStart).toBeGreaterThan(-1)
+      view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, images[1]!)))
+      view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }))
+      expect(view.state.selection).toBeInstanceOf(TextSelection)
+      expect(view.state.selection.from).toBe(emptyStart)
+      view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }))
+      expect(view.state.selection).toBeInstanceOf(NodeSelection)
+      expect((view.state.selection as NodeSelection).from).toBe(images[0])
+    })
+  })
+
+  it('Enter on a selected image deletes it and leaves one empty line', async () => {
+    const editor = await createEditor('上方段落\n\n![](https://example.com/a.png)\n\n下方段落\n')
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      let imagePos = -1
+      view.state.doc.descendants((node, position) => {
+        if (node.type.name === 'image') imagePos = position
+      })
+      expect(imagePos).toBeGreaterThan(-1)
+      view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, imagePos)))
+      view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+      expect(view.state.doc.toString()).not.toContain('image')
+      expect(view.state.doc.textContent).toBe('上方段落下方段落')
+      expect(view.state.selection).toBeInstanceOf(TextSelection)
+      expect(view.state.selection.$head.parent.type.name).toBe('paragraph')
+      expect(view.state.selection.$head.parent.content.size).toBe(0)
+      let emptyParagraphs = 0
+      view.state.doc.forEach((node) => {
+        if (node.type.name === 'paragraph' && node.content.size === 0) emptyParagraphs += 1
+      })
+      expect(emptyParagraphs).toBe(1)
+    })
+  })
+
+  it('Enter on two range-selected images deletes both and leaves one empty line', async () => {
+    const editor = await createEditor(
+      '上方段落\n\n![](https://example.com/a.png)\n\n![](https://example.com/b.png)\n\n下方段落\n'
+    )
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      const { doc } = view.state
+      const anchor = doc.firstChild!.nodeSize - 1
+      view.dispatch(view.state.tr.setSelection(TextSelection.create(doc, anchor)))
+      view.dom.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowDown', shiftKey: true, bubbles: true })
+      )
+      view.dom.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowDown', shiftKey: true, bubbles: true })
+      )
+      expect(view.state.selection).toBeInstanceOf(BlockRangeSelection)
+      expect(view.dom.querySelectorAll('.desk-block--range-selected')).toHaveLength(2)
+      view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+      expect(view.state.doc.toString()).not.toContain('image')
+      expect(view.state.doc.textContent).toBe('上方段落下方段落')
+      expect(view.state.selection.$head.parent.content.size).toBe(0)
+      let emptyParagraphs = 0
+      view.state.doc.forEach((node) => {
+        if (node.type.name === 'paragraph' && node.content.size === 0) emptyParagraphs += 1
+      })
+      expect(emptyParagraphs).toBe(1)
+    })
+  })
+
+  it('Enter in an image caption does not delete the image', async () => {
+    const editor = await createEditor('![](https://example.com/a.png)\n\n下方段落\n')
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      let imagePos = -1
+      view.state.doc.descendants((node, position) => {
+        if (node.type.name === 'image') imagePos = position
+      })
+      view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, imagePos)))
+      const input = document.createElement('input')
+      view.dom.append(input)
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+      expect(view.state.doc.toString()).toContain('image')
+    })
+  })
+
   it('ArrowDown selects the whole atom; Delete removes it', async () => {
     const editor = await createEditor()
     const pos = positions(editor)
@@ -688,6 +830,34 @@ describe('contiguous vertical block ranges', () => {
     }
   )
 
+  it('mouse-drag onto the last standalone image includes the whole image', async () => {
+    const editor = await createEditor('上方段落\n\n![](https://example.com/a.png)\n')
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      const { doc } = view.state
+      const textEnd = doc.firstChild!.nodeSize - 1
+      const imageBlock = doc.firstChild!.nodeSize
+      expect(doc.childCount).toBe(2)
+      const $anchor = doc.resolve(textEnd)
+      const fromLeadingEdge = view.someProp('createSelectionBetween', (create) =>
+        create(view, $anchor, doc.resolve(imageBlock))
+      )
+      expect(fromLeadingEdge?.to).toBe(doc.content.size)
+      expect(fromLeadingEdge?.content().content.toString()).toContain('image')
+      const imagePos = imageBlock + 1
+      expect(doc.nodeAt(imagePos)?.type.name).toBe('image')
+      const fromImageNode = view.someProp('createSelectionBetween', (create) =>
+        create(view, $anchor, doc.resolve(imagePos))
+      )
+      expect(fromImageNode?.to).toBe(doc.content.size)
+      expect(fromImageNode?.content().content.toString()).toContain('image')
+      const insideText = view.someProp('createSelectionBetween', (create) =>
+        create(view, doc.resolve(1), doc.resolve(Math.max(2, textEnd - 1)))
+      )
+      expect(insideText ?? null).toBeNull()
+    })
+  })
+
   it('expands upward from below a table without moving the anchor, then collapses downward', async () => {
     const editor = await createEditor(`before\n\n${tableMarkdown}\n\nafter\n`)
     editor.action((ctx) => {
@@ -890,6 +1060,21 @@ describe('code_block keyboard selection', () => {
     })
   })
 
+  it('whole-selected code block: Enter deletes it and leaves one empty line', async () => {
+    const editor = await createEditor('上方段落\n\n```js\nconst x = 1\n```\n\n下方段落\n')
+    const pos = codePositions(editor)
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, pos.beforeEnd)))
+      view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+      expect(codeBlockWholeSelectPosition(view.state)).toBe(pos.code)
+      view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+      expect(view.state.doc.toString()).not.toContain('code_block')
+      expect(view.state.doc.textContent).toBe('上方段落下方段落')
+      expect(view.state.selection.$head.parent.content.size).toBe(0)
+    })
+  })
+
   it('whole-selected code block: Delete and Backspace both remove it', async () => {
     const editor = await createEditor('上方段落\n\n```js\nconst x = 1\n```\n\n下方段落\n')
     const pos = codePositions(editor)
@@ -913,6 +1098,57 @@ describe('code_block keyboard selection', () => {
       expect(codeBlockWholeSelectPosition(view.state)).toBe(pos2.code)
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true }))
       expect(view.state.doc.toString()).not.toContain('code_block')
+    })
+  })
+
+  it('ArrowDown from a selected code-group lands on the empty line before the next fence', async () => {
+    const editor = await createEditor(
+      [
+        '上方段落',
+        '',
+        '::: code-group',
+        '',
+        '```js [setup.js]',
+        'export const title = "docs";',
+        '```',
+        '',
+        ':::',
+        '',
+        '<br />',
+        '',
+        '```txt',
+        'next',
+        '```',
+        ''
+      ].join('\n')
+    )
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      let groupPos = -1
+      let emptyPos = -1
+      let codePos = -1
+      view.state.doc.descendants((node, position) => {
+        if (node.type.name === 'deskRawBlock' && groupPos < 0) groupPos = position
+        if (node.type.name === 'code_block' && codePos < 0) codePos = position
+        if (
+          node.type.name === 'paragraph' &&
+          node.content.size === 0 &&
+          groupPos >= 0 &&
+          emptyPos < 0
+        ) {
+          emptyPos = position
+        }
+      })
+      expect(groupPos).toBeGreaterThan(-1)
+      expect(emptyPos).toBeGreaterThan(-1)
+      expect(codePos).toBeGreaterThan(-1)
+      view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, groupPos)))
+      view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+      expect(view.state.selection).toBeInstanceOf(TextSelection)
+      expect(view.state.selection.$head.parent.type.name).toBe('paragraph')
+      expect(view.state.selection.$head.parent.content.size).toBe(0)
+      expect(view.state.selection.$head.before()).toBe(emptyPos)
+      expect(codeBlockWholeSelectPosition(view.state)).toBeNull()
     })
   })
 

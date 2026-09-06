@@ -4,7 +4,10 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { Editor, defaultValueCtx, editorStateCtx, editorViewCtx, rootCtx } from '@milkdown/kit/core'
 import { commonmark } from '@milkdown/kit/preset/commonmark'
 
-import { createReadonlyTransactionGuard } from './readonlyGuard'
+import {
+  DESK_RAW_BLOCK_COMMIT_META,
+  createReadonlyTransactionGuard
+} from './readonlyGuard'
 
 const editors: Editor[] = []
 
@@ -51,6 +54,33 @@ describe('readonly transaction guard', () => {
       readOnly = false
       view.dispatch(view.state.tr.insertText('edit-', 1))
       expect(view.state.doc.textContent).toBe('edit-external-alpha')
+    })
+  })
+
+  it('allows a marked raw-block draft commit while readonly', async () => {
+    const root = document.createElement('div')
+    document.body.append(root)
+    const editor = Editor.make()
+      .config((ctx) => {
+        ctx.set(rootCtx, root)
+        ctx.set(defaultValueCtx, 'alpha')
+      })
+      .use(commonmark)
+      .use(
+        createReadonlyTransactionGuard({
+          isReadOnly: () => true,
+          isExternalSync: () => false
+        })
+      )
+    editors.push(editor)
+    await editor.create()
+
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      view.dispatch(
+        view.state.tr.insertText('draft-', 1).setMeta(DESK_RAW_BLOCK_COMMIT_META, true)
+      )
+      expect(view.state.doc.textContent).toBe('draft-alpha')
     })
   })
 })

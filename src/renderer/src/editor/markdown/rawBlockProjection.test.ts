@@ -88,9 +88,13 @@ describe('Milkdown raw block projection', () => {
     ])
     expect(projected).toContain('```ts\r\nconst editable = true\r\n```')
     expect(projected).not.toContain('const value = 1')
+    expect(readProjectedRawBlockMarker(markers[0] ?? '')).toMatchObject({
+      kind: 'raw-frontmatter',
+      hidden: true
+    })
   })
 
-  it('projects a generated title and complete TOC region as single immutable atoms', async () => {
+  it('leaves the leading H1 editable and projects only the TOC region as an immutable atom', async () => {
     const source = [
       '# 0001. 标题  ',
       '',
@@ -108,7 +112,6 @@ describe('Milkdown raw block projection', () => {
       .filter((block): block is ProjectedRawBlock => Boolean(block))
 
     expect(blocks).toEqual([
-      { kind: 'raw-generated-title', source: '# 0001. 标题  ', hidden: false },
       {
         kind: 'raw-generated-toc',
         source: [
@@ -120,6 +123,7 @@ describe('Milkdown raw block projection', () => {
         hidden: false
       }
     ])
+    expect(projected).toContain('# 0001. 标题  ')
     expect(projected).not.toContain('- [1. 第一节](#1-第一节)')
 
     const editor = await createEditor(source)
@@ -130,45 +134,28 @@ describe('Milkdown raw block projection', () => {
       const view = ctx.get(editorViewCtx)
       const generatedPositions: Array<{ position: number; size: number }> = []
       view.state.doc.descendants((node, position) => {
-        if (!['raw-generated-title', 'raw-generated-toc'].includes(node.attrs.kind)) return
+        if (node.attrs.kind !== 'raw-generated-toc') return
         generatedPositions.push({ position, size: node.nodeSize })
       })
-      const title = generatedPositions[0]
-      const toc = generatedPositions[1]
-      view.dispatch(view.state.tr.delete(title.position, title.position + title.size))
+      const toc = generatedPositions[0]
       view.dispatch(view.state.tr.delete(toc.position, toc.position + toc.size))
-      view.dispatch(view.state.tr.setNodeAttribute(title.position, 'source', '# changed'))
       view.dispatch(view.state.tr.setNodeAttribute(toc.position, 'source', 'changed'))
     })
 
     expect(editor.action(getMarkdown())).toBe(baseline)
   })
 
-  it('adds the GitHub tooltip to generated title links without changing their source', async () => {
+  it('renders a leading H1 as a normal heading, not a generated-title atom', async () => {
     const href = 'https://github.com/tnotesjs/TNotes.demo/tree/main/notes/0001.%20demo'
     const source = `# [0001. 标题](${href})  \r\n\r\n正文\r\n`
     const editor = await createEditor(source)
-    const heading = document.querySelector('.desk-generated-title')
-    const anchor = heading?.querySelector('a')
+    const heading = document.querySelector('h1')
 
-    expect(heading?.getAttribute('contenteditable')).toBe('false')
-    expect(anchor?.textContent).toBe('0001. 标题')
-    expect(anchor?.getAttribute('href')).toBe(href)
-    expect(anchor?.getAttribute('data-tooltip')).toBe('在 Github 中打开')
+    expect(document.querySelector('.desk-generated-title')).toBeNull()
+    expect(heading?.textContent).toContain('0001. 标题')
+    expect(heading?.querySelector('a')?.getAttribute('href')).toBe(href)
     const baseline = editor.action(getMarkdown())
     expect(reconcileMarkdownSource(source, baseline, baseline)).toBe(source)
-    expect(baseline).not.toContain('data-tooltip')
-  })
-
-  it('does not label non-GitHub title links as GitHub or turn unsafe links into anchors', async () => {
-    await createEditor(
-      '# [外部链接](https://example.com) [页内链接](#section) [非 GitHub](https://github.com.example.com) [不安全](javascript:alert)\n'
-    )
-    const heading = document.querySelector('.desk-generated-title')
-
-    expect(heading?.querySelectorAll('a')).toHaveLength(3)
-    expect(heading?.querySelector('[data-tooltip]')).toBeNull()
-    expect(heading?.textContent).toContain('不安全')
   })
 
   it('leaves standalone HTML breaks for Milkdown empty paragraphs', async () => {
@@ -297,7 +284,7 @@ describe('Milkdown raw block projection', () => {
 
   it('parses projected constructs into block atoms and serializes their exact source', async () => {
     const rawBlocks: ProjectedRawBlock[] = [
-      { kind: 'raw-frontmatter', source: '---\ntitle: "A"  \n---', hidden: false },
+      { kind: 'raw-frontmatter', source: '---\ntitle: "A"  \n---', hidden: true },
       {
         kind: 'raw-container',
         source: ':::: details\ncontent with  spaces  \n::::',
@@ -341,8 +328,8 @@ describe('Milkdown raw block projection', () => {
     rawBlocks.forEach((block) => expect(markdown).toContain(block.source))
     expect(markdown).toContain('```ts\nx = 1\n```')
     expect(document.querySelectorAll('.desk-raw-block')).toHaveLength(rawBlocks.length)
-    // The reference-definition block renders hidden; the rest are visible.
-    expect(document.querySelectorAll('.desk-raw-block--hidden')).toHaveLength(1)
+    // Frontmatter and reference-definition blocks render hidden; the rest are visible.
+    expect(document.querySelectorAll('.desk-raw-block--hidden')).toHaveLength(2)
   })
 
   it('rejects visual transactions that delete or mutate an opaque raw block', async () => {

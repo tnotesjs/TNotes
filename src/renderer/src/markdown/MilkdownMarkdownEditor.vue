@@ -21,13 +21,13 @@ import {
 import { clearRawBlockSelectionState, createRawBlockSelectionPlugin } from './rawBlockInteractions'
 import { createReadonlyTransactionGuard } from './readonlyGuard'
 import { clearLineStylesPlugin } from './clearLineStyles'
+import { createInlineCodeInteractionPlugin, toggleDeskInlineCode } from './inlineCodeInteractions'
 import { wrapInTaskList } from './taskList'
 import { insertDefaultTable } from './insertDefaultTable'
 import { formatIconSvg } from '../components/formatIcons'
 import {
   createCodeBlockCommand,
   toggleEmphasisCommand,
-  toggleInlineCodeCommand,
   toggleLinkCommand,
   toggleStrongCommand,
   turnIntoTextCommand,
@@ -35,14 +35,20 @@ import {
   wrapInBulletListCommand,
   wrapInHeadingCommand,
   wrapInOrderedListCommand,
-  clearTextInCurrentBlockCommand,
-  imageSchema
+  clearTextInCurrentBlockCommand
 } from '@milkdown/kit/preset/commonmark'
 import { strikethroughKeymap, toggleStrikethroughCommand } from '@milkdown/kit/preset/gfm'
-import { $prose, $view, callCommand, insert, insertPos, replaceAll } from '@milkdown/kit/utils'
+import { $prose, callCommand, insert, insertPos, replaceAll } from '@milkdown/kit/utils'
 import GithubSlugger from 'github-slugger'
 
 import BlockActionMenu from './BlockActionMenu.vue'
+import NoteOutline from './NoteOutline.vue'
+import {
+  activeOutlineHeadingId,
+  collectNoteOutlineHeadings,
+  headingElementById,
+  type NoteOutlineHeading
+} from './noteOutline'
 import type { BlockAction } from './BlockActionMenu.vue'
 import {
   canShowBlockHandle,
@@ -54,14 +60,27 @@ import {
 } from './blockActionMenu'
 import { createCodeBlockTitlePlugin } from './codeBlockTitlePlugin'
 import { createCodeBlockHighlightBundle } from './codeBlockHighlightPlugin'
+import { CHECK_ICON, COPY_ICON } from './copyIcons'
+import { exitCodeBlockFullscreen, toggleCodeBlockFullscreen } from './codeBlockFullscreen'
+import { githubDark, githubLight } from '@uiw/codemirror-theme-github'
 
 import {
   projectRawBlocksForMilkdown,
   rawBlockProjectionPlugins
 } from '../editor/markdown/rawBlockProjection'
 import { reconcileMarkdownSource } from '../editor/markdown/sourcePreservation'
-import { resolveMarkdownImageUrl } from './markdownAssetUrl'
+import { flushPendingEdits } from '../editor/markdown/pendingEdits'
 import { createDeskRawBlockView } from './createDeskRawBlockView'
+import { imageAttrPlugins } from '../editor/markdown/imageAttrs'
+import { createDeskImageView } from '../editor/markdown/deskImageView'
+import { resolvePastedImageWidth } from '../editor/markdown/pasteImageWidth'
+import { standaloneImageParagraphPlugin } from '../editor/markdown/standaloneImageParagraph'
+import {
+  applyHeadingFoldCommand,
+  createHeadingSectionCollapsePlugin,
+  expandCollapsedSectionsContaining,
+  type HeadingFoldCommand
+} from './headingSectionCollapse'
 
 import type { NotePageWidth, NoteTocDisplay, NoteViewMode } from '../../../shared/contracts'
 
@@ -70,6 +89,7 @@ const props = withDefaults(
     content: string
     mode: NoteViewMode
     pageWidth?: NotePageWidth
+    outlineVisible?: boolean
     tocDisplay?: NoteTocDisplay
     readOnly: boolean
     knowledgeBaseId: string
@@ -77,7 +97,7 @@ const props = withDefaults(
     active: boolean
     uploadImage: (file: File) => Promise<{ src: string; alt: string }>
   }>(),
-  { pageWidth: 'standard', tocDisplay: 'expanded' }
+  { pageWidth: 'standard', outlineVisible: true, tocDisplay: 'expanded' }
 )
 
 const emit = defineEmits<{
@@ -89,6 +109,8 @@ const emit = defineEmits<{
 }>()
 
 const host = ref<HTMLElement | null>(null)
+const outlineHeadings = ref<NoteOutlineHeading[]>([])
+const outlineActiveId = ref<string | null>(null)
 let crepe: Crepe | null = null
 let destroyed = false
 let ready = false
@@ -300,7 +322,12 @@ function wrapSelection(prefix: string, suffix: string, placeholder = '文字'): 
     return
   }
   if (marker === '`\u0000`') {
-    command(toggleInlineCodeCommand)
+    run((editor) => {
+      editor.editor.action((ctx) => {
+        const view = ctx.get(editorViewCtx)
+        toggleDeskInlineCode(view.state, view.dispatch)
+      })
+    })
     return
   }
   if (marker === '~~\u0000~~') {
@@ -505,6 +532,10 @@ function focus(): void {
 
 function applyReadonlyState(): void {
   const readOnly = isEffectivelyReadOnly()
+  if (readOnly) {
+    flushPendingEdits(props.knowledgeBaseId, props.noteUuid, { requireClean: false })
+    flushCurrentContent()
+  }
   crepe?.setReadonly(readOnly)
   rawSourceReadonlyListeners.forEach((listener) => listener(readOnly))
   if (!readOnly) return
@@ -537,7 +568,9 @@ defineExpose({
   setLinePrefix,
   insertCodeBlock,
   insertTable,
-  focus
+  applyHeadingFold,
+  focus,
+  flush
 })
 
 const githubSlugger = new GithubSlugger()
@@ -568,12 +601,58 @@ function resolveHeadingTarget(targetId: string): HTMLElement | null {
   return fallback
 }
 
+function refreshOutline(): void {
+  if (!ready || destroyed) return
+  const root = host.value
+  if (!root) {
+    outlineHeadings.value = []
+    outlineActiveId.value = null
+    return
+  }
+  try {
+    outlineHeadings.value = collectNoteOutlineHeadings(root)
+    outlineActiveId.value = activeOutlineHeadingId(root, outlineHeadings.value)
+  } catch {
+    // Outline is decorative; never take down the editor.
+  }
+}
+
+function syncOutlineActive(): void {
+  const root = host.value
+  if (!root) return
+  outlineActiveId.value = activeOutlineHeadingId(root, outlineHeadings.value)
+}
+
+function scrollToOutlineHeading(id: string): void {
+  const root = host.value
+  const target = (root ? headingElementById(root, id) : null) ?? resolveHeadingTarget(id)
+  const view = editorView()
+  if (view && target) {
+    try {
+      expandCollapsedSectionsContaining(view, view.posAtDOM(target, 0))
+    } catch {
+      // posAtDOM can throw if the heading is mid-remap; scrolling still helps.
+    }
+  }
+  target?.scrollIntoView({ block: 'start' })
+  outlineActiveId.value = id
+}
+
 function handleClick(event: MouseEvent): void {
   if (!(event.target instanceof Element)) return
 
   // Crepe/Milkdown Copy uses navigator.clipboard.writeText and only sync-catches
   // failures, so Electron's async NotAllowedError never falls back. Intercept
   // in capture and use Desk's permission-safe path instead.
+  const expandButton = event.target.closest('.milkdown-code-block .desk-code-expand')
+  if (expandButton instanceof HTMLElement) {
+    event.preventDefault()
+    event.stopPropagation()
+    const block = expandButton.closest('.milkdown-code-block')
+    if (block instanceof HTMLElement) toggleCodeBlockFullscreen(block, expandButton)
+    return
+  }
+
   const copyButton = event.target.closest('.milkdown-code-block .copy-button')
   if (copyButton instanceof HTMLElement) {
     event.preventDefault()
@@ -583,8 +662,12 @@ function handleClick(event: MouseEvent): void {
     void writeClipboard(text)
       .then(() => {
         copyButton.dataset.copied = 'true'
+        copyButton.innerHTML = CHECK_ICON
+        copyButton.setAttribute('aria-label', '已复制')
         window.setTimeout(() => {
           delete copyButton.dataset.copied
+          copyButton.innerHTML = COPY_ICON
+          copyButton.setAttribute('aria-label', '复制代码')
         }, 1200)
       })
       .catch(() => {
@@ -628,6 +711,14 @@ function handleClick(event: MouseEvent): void {
   emit('openLink', href)
 }
 
+function handleKeydown(event: KeyboardEvent): void {
+  if (event.key !== 'Escape' || event.defaultPrevented) return
+  const root = host.value
+  if (!root?.querySelector('.milkdown-code-block.is-fullscreen')) return
+  event.preventDefault()
+  exitCodeBlockFullscreen(root)
+}
+
 function flushCurrentContent(editor = crepe): void {
   if (!editor || !ready || synchronizing || destroyed) return
   const markdown = editor.getMarkdown()
@@ -635,6 +726,21 @@ function flushCurrentContent(editor = crepe): void {
   if (preserved === props.content || preserved === lastEmitted) return
   lastEmitted = preserved
   emit('change', preserved)
+}
+
+/** Commit block-local Edit drafts, then emit. Call before leaving visual mode. */
+function flush(): void {
+  flushPendingEdits(props.knowledgeBaseId, props.noteUuid, { requireClean: false })
+  flushCurrentContent()
+}
+
+function applyHeadingFold(command: HeadingFoldCommand): boolean {
+  const view = editorView()
+  if (!view) return false
+  const transaction = applyHeadingFoldCommand(view.state, command)
+  if (!transaction) return false
+  view.dispatch(transaction)
+  return true
 }
 
 function queueCurrentContentSync(): void {
@@ -655,6 +761,7 @@ async function syncExternalContent(content: string): Promise<void> {
     crepe.editor.action(replaceAll(projectRawBlocksForMilkdown(content), true))
     baselineCanonical = crepe.getMarkdown()
     applyGeneratedTocDisplay()
+    refreshOutline()
   } finally {
     synchronizing = false
   }
@@ -673,7 +780,10 @@ onMounted(async () => {
     },
     featureConfigs: {
       [Crepe.Feature.CodeMirror]: {
-        extensions: codeBlockHighlights.extensions
+        extensions: codeBlockHighlights.extensions,
+        theme: document.documentElement.dataset.theme === 'light' ? githubLight : githubDark,
+        copyText: '\u200b',
+        copyIcon: COPY_ICON
       },
       [Crepe.Feature.Placeholder]: {
         text: '输入 / 插入内容',
@@ -713,9 +823,12 @@ onMounted(async () => {
     }
   })
   editor.editor.use(rawBlockProjectionPlugins)
+  editor.editor.use(imageAttrPlugins)
+  editor.editor.use(standaloneImageParagraphPlugin)
   editor.editor.use(createCodeBlockTitlePlugin())
   editor.editor.use(codeBlockHighlights.plugin)
   editor.editor.use(createMarkdownShortcutInputRules())
+  editor.editor.use(createInlineCodeInteractionPlugin())
   editor.editor.use(clearLineStylesPlugin)
   editor.editor.use(
     createBlockShortcutPlugin({
@@ -723,6 +836,7 @@ onMounted(async () => {
     })
   )
   editor.editor.use(createRawBlockSelectionPlugin())
+  editor.editor.use(createHeadingSectionCollapsePlugin())
   editor.editor.use(
     createReadonlyTransactionGuard({
       isReadOnly: isEffectivelyReadOnly,
@@ -740,40 +854,11 @@ onMounted(async () => {
     })
   )
   editor.editor.use(
-    $view(imageSchema.node, () => (node) => {
-      const dom = document.createElement('img')
-      let currentNode = node
-
-      const render = (): void => {
-        const source = String(currentNode.attrs.src ?? '')
-        const presentationUrl = resolveMarkdownImageUrl(
-          source,
-          props.knowledgeBaseId,
-          props.noteUuid
-        )
-        if (presentationUrl) dom.setAttribute('src', presentationUrl)
-        else dom.removeAttribute('src')
-        dom.classList.toggle('is-unavailable', !presentationUrl)
-        dom.setAttribute('alt', String(currentNode.attrs.alt ?? ''))
-        const title = String(currentNode.attrs.title ?? '')
-        if (title) dom.setAttribute('title', title)
-        else dom.removeAttribute('title')
-        dom.draggable = true
-      }
-
-      render()
-      return {
-        dom,
-        update: (nextNode) => {
-          if (nextNode.type !== currentNode.type) return false
-          currentNode = nextNode
-          render()
-          return true
-        },
-        selectNode: () => dom.classList.add('ProseMirror-selectednode'),
-        deselectNode: () => dom.classList.remove('ProseMirror-selectednode'),
-        ignoreMutation: () => true
-      }
+    createDeskImageView({
+      knowledgeBaseId: () => props.knowledgeBaseId,
+      noteUuid: () => props.noteUuid,
+      isReadOnly: isEffectivelyReadOnly,
+      writeClipboard
     })
   )
   editor.editor.use(
@@ -784,7 +869,10 @@ onMounted(async () => {
             reportHeadingLevel(view)
             return {
               update: (view, previousState) => {
-                if (!view.state.doc.eq(previousState.doc)) queueCurrentContentSync()
+                if (!view.state.doc.eq(previousState.doc)) {
+                  queueCurrentContentSync()
+                  if (ready) queueMicrotask(refreshOutline)
+                }
                 if (
                   !view.state.selection.eq(previousState.selection) ||
                   !view.state.doc.eq(previousState.doc)
@@ -831,7 +919,11 @@ onMounted(async () => {
         return Promise.all(
           images.map(async (file) => {
             const uploaded = await props.uploadImage(file)
-            return imageType.create({ src: uploaded.src, alt: uploaded.alt })
+            return imageType.create({
+              src: uploaded.src,
+              alt: '',
+              width: await resolvePastedImageWidth(file)
+            })
           })
         )
       }
@@ -861,9 +953,11 @@ onMounted(async () => {
       document.addEventListener('pointerup', handleBlockMenuDocumentPointerUp, {
         capture: true
       })
+      document.addEventListener('keydown', handleKeydown)
     }
     if (props.content !== originalSource) await syncExternalContent(props.content)
     if (props.active) focus()
+    refreshOutline()
   } catch (cause) {
     try {
       await editor.destroy()
@@ -900,11 +994,20 @@ watch(
 watch(
   () => props.active,
   (active) => {
-    if (active) focus()
+    if (active) {
+      host.value
+        ?.querySelector('.ProseMirror')
+        ?.dispatchEvent(new Event('desk-code-chrome-sync'))
+      focus()
+    }
   }
 )
 
 onBeforeUnmount(() => {
+  if (host.value) exitCodeBlockFullscreen(host.value)
+  // Tip/warning Edit drafts live on the atom only after commit. Switching to
+  // source unmounts Crepe; flush first or getMarkdown() still sees empty bodies.
+  flushPendingEdits(props.knowledgeBaseId, props.noteUuid, { requireClean: false })
   flushCurrentContent()
   destroyed = true
   ready = false
@@ -918,6 +1021,7 @@ onBeforeUnmount(() => {
   document.removeEventListener('pointerup', handleBlockMenuDocumentPointerUp, {
     capture: true
   })
+  document.removeEventListener('keydown', handleKeydown)
   closeBlockActionMenu(false)
   const editor = crepe
   crepe = null
@@ -927,25 +1031,38 @@ onBeforeUnmount(() => {
 
 <template>
   <div
-    ref="host"
     class="milkdown-markdown-editor tn-prose"
     :class="{
       'is-readonly': isEffectivelyReadOnly(),
       'is-wide': pageWidth === 'wide',
+      'is-outline-hidden': !props.outlineVisible,
       'is-toc-hidden': tocDisplay === 'hidden'
     }"
-    @click.capture="handleClick"
-  />
-  <Teleport to="body">
-    <BlockActionMenu
-      v-if="blockActionMenu"
-      :x="blockActionMenu.x"
-      :y="blockActionMenu.y"
-      @action="handleBlockAction"
-      @add-below="openAddBelowMenu"
-      @close="closeBlockActionMenu"
+  >
+    <div
+      ref="host"
+      class="milkdown-markdown-editor__canvas"
+      v-once
+      @click.capture="handleClick"
+      @scroll.passive="syncOutlineActive"
     />
-  </Teleport>
+    <NoteOutline
+      v-show="props.outlineVisible"
+      :headings="outlineHeadings"
+      :active-id="outlineActiveId"
+      @select="scrollToOutlineHeading"
+    />
+    <Teleport to="body">
+      <BlockActionMenu
+        v-if="blockActionMenu"
+        :x="blockActionMenu.x"
+        :y="blockActionMenu.y"
+        @action="handleBlockAction"
+        @add-below="openAddBelowMenu"
+        @close="closeBlockActionMenu"
+      />
+    </Teleport>
+  </div>
 </template>
 
 <style scoped src="./milkdownMarkdownEditor.scoped.css"></style>

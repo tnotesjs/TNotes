@@ -8,6 +8,7 @@ export interface SearchIndexDocument {
   knowledgeBaseName: string
   noteUuid: string
   noteIndex: string
+  fileName: string
   title: string
   content: string
   revision: string
@@ -24,12 +25,13 @@ export function tokenizeSearchText(value: string): string[] {
 
 export function searchOptions(): ConstructorParameters<typeof MiniSearch<SearchIndexDocument>>[0] {
   return {
-    fields: ['title', 'noteIndex', 'content'],
+    fields: ['fileName', 'title', 'noteIndex', 'content'],
     storeFields: [
       'knowledgeBaseId',
       'knowledgeBaseName',
       'noteUuid',
       'noteIndex',
+      'fileName',
       'title',
       'content'
     ],
@@ -81,7 +83,7 @@ export function querySearchIndex(
   if (!normalized) return []
   return index
     .search(normalized, {
-      boost: { title: 4, noteIndex: 5, content: 1 },
+      boost: { fileName: 6, title: 4, noteIndex: 5, content: 1 },
       combineWith: 'AND',
       prefix: true,
       fuzzy: (term) => (term.length >= 5 ? 0.16 : false),
@@ -93,6 +95,7 @@ export function querySearchIndex(
       knowledgeBaseName: result.knowledgeBaseName as string,
       noteUuid: result.noteUuid as string,
       noteIndex: result.noteIndex as string,
+      fileName: result.fileName as string,
       title: result.title as string,
       snippet: searchSnippet(result.content as string, normalized),
       score: result.score

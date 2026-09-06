@@ -5,6 +5,7 @@ import TocNodeList from './TocNodeList.vue'
 import UiTooltip from './UiTooltip.vue'
 import { classifyChangePath } from './changeCategory'
 import { mergeRenameChanges } from './mergeRenameChanges'
+import { noteFileName } from '../commands/noteFileName'
 import { useEditorStore } from '../stores/editor'
 import { useWorkspaceStore } from '../stores/workspace'
 
@@ -518,8 +519,7 @@ const previewLabel = computed(() => {
           @click="store.openNoteByUuid(result.knowledgeBaseId, result.noteUuid)"
         >
           <span
-            ><em>{{ result.noteIndex }}</em
-            ><strong>{{ result.title }}</strong></span
+            ><strong>{{ noteFileName(result) }}</strong></span
           >
           <small>{{ result.snippet }}</small>
         </button>

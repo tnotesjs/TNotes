@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { NoteEditorTab } from '../../../shared/contracts'
 import { useEditorStore } from '../stores/editor'
 import { useWorkspaceStore } from '../stores/workspace'
+import FormatOverflowBar from './FormatOverflowBar.vue'
 import NoteTabPane from './NoteTabPane.vue'
 
 vi.mock('../markdown/MilkdownMarkdownEditor.vue', () => ({ default: { template: '<div />' } }))
@@ -62,30 +63,42 @@ beforeEach(() => setActivePinia(createPinia()))
 afterEach(() => document.body.replaceChildren())
 
 describe('note header', () => {
-  it('puts width before the divider and view modes, with a separate visual-only formatting row', async () => {
+  it('puts formatting on the same row as the title and view modes', async () => {
     const { wrapper, editor } = setup()
     const controls = wrapper.get('.view-controls')
     expect(controls.findAll('button').map((button) => button.attributes('aria-label'))).toEqual([
       '标准页宽',
+      '隐藏目录',
       '可视化编辑',
       '只读视图',
       '源码视图'
     ])
     expect(controls.element.children[1].className).toBe('view-divider')
-    expect(wrapper.get('.document-toolbar').find('.format-actions').exists()).toBe(false)
-    expect(wrapper.get('.document-toolbar').element.nextElementSibling?.className).toBe(
-      'format-actions'
-    )
+    expect(wrapper.get('.outline-toggle').classes()).toContain('active')
+    const toolbar = wrapper.get('.document-toolbar')
+    expect([...toolbar.element.children].map((node) => node.classList[0] ?? node.nodeName.toLowerCase())).toEqual([
+      'document-path',
+      'format-overflow-bar-stub',
+      'view-controls'
+    ])
     expect(wrapper.find('.save-button').exists()).toBe(false)
     const width = vi.spyOn(editor, 'toggleNotePageWidth')
+    const outline = vi.spyOn(editor, 'toggleNoteOutlineVisible')
     const view = vi.spyOn(editor, 'setNoteViewMode')
     await wrapper.get('.page-width-toggle').trigger('click')
+    await wrapper.get('.outline-toggle').trigger('click')
     await wrapper.get('[aria-label="源码视图"]').trigger('click')
     expect(width).toHaveBeenCalledWith('tab-a')
+    expect(outline).toHaveBeenCalledWith('tab-a')
     expect(view).toHaveBeenCalledWith('tab-a', 'source')
+    await wrapper.setProps({ tab: { ...tab, outlineVisible: false } })
+    expect(wrapper.get('.outline-toggle').classes()).not.toContain('active')
+    expect(wrapper.get('.outline-toggle').attributes('aria-label')).toBe('显示目录')
     for (const viewMode of ['source', 'readonly', 'visual'] as const) {
       await wrapper.setProps({ tab: { ...tab, viewMode } })
-      expect(wrapper.find('.format-actions').exists()).toBe(viewMode === 'visual')
+      const bar = wrapper.getComponent(FormatOverflowBar)
+      expect(bar.exists()).toBe(true)
+      expect(bar.props('disabled')).toBe(viewMode === 'readonly')
       expect(wrapper.find('.view-controls').exists()).toBe(true)
       expect(wrapper.find('.save-button').exists()).toBe(false)
     }
@@ -156,6 +169,12 @@ describe('note header', () => {
     await wrapper.get('.note-title-button').trigger('click')
     expect(wrapper.find('input').exists()).toBe(false)
     expect(rename).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('keeps formatting visible but disabled for a read-only document', () => {
+    const { wrapper } = setup(true)
+    expect(wrapper.getComponent(FormatOverflowBar).props('disabled')).toBe(true)
     wrapper.unmount()
   })
 })

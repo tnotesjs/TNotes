@@ -11,6 +11,7 @@ interface EditorHandle {
   wrapSelection(prefix: string, suffix: string, placeholder?: string): void
   prefixSelection(prefix: string): void
   setLinePrefix(prefix: string): void
+  insertTable(): void
 }
 
 function mountEditor(
@@ -88,6 +89,13 @@ describe('MarkdownSourceEditor', () => {
     editorHandle(quoted).prefixSelection('> ')
     expect(quoted.emitted<string[]>('change')?.at(-1)?.[0]).toBe('> one\ntwo')
     quoted.unmount()
+
+    const table = mountEditor()
+    editorHandle(table).insertTable()
+    expect(table.emitted<string[]>('change')?.at(-1)?.[0]).toBe(
+      '\n|  |  |\n| --- | --- |\n|  |  |\nalpha'
+    )
+    table.unmount()
   })
 
   it('retains the Markdown formatting keymap', async () => {

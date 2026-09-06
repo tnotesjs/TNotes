@@ -7,9 +7,10 @@ import {
 import { Fragment, type Node as ProseMirrorNode } from '@milkdown/kit/prose/model'
 import type { EditorView } from '@milkdown/kit/prose/view'
 
-/** Generated navigation and level-one titles have no block editing controls. */
+import { collapsedHeadingSectionRange } from './headingSectionCollapse'
+
+/** Generated navigation regions have no block editing controls. */
 export function canShowBlockHandle(node: ProseMirrorNode): boolean {
-  if (node.type.name === 'heading' && node.attrs.level === 1) return false
   return !(
     node.type.name === 'deskRawBlock' &&
     ['raw-generated-title', 'raw-generated-toc'].includes(node.attrs.kind)
@@ -58,6 +59,13 @@ export function serializeBlockForClipboard(
   if (!node || !isBlockMenuTarget(node)) return null
   if (node.type.name === 'deskRawBlock') return String(node.attrs.source ?? '')
 
+  const collapsedSection = collapsedHeadingSectionRange(state, position)
+  if (collapsedSection) {
+    return serialize(
+      state.doc.type.create(state.doc.attrs, state.doc.slice(collapsedSection.from, collapsedSection.to).content)
+    )
+  }
+
   // A list item cannot be serialized at the document root: retain its list
   // type (including task state / ordered numbering) without copying siblings.
   let content = Fragment.from(node)
@@ -79,8 +87,9 @@ export function createBlockDeleteTransaction(
 ): Transaction | null {
   const node = state.doc.nodeAt(position)
   if (!node || !isBlockMenuTarget(node)) return null
-  let from = position
-  let to = position + node.nodeSize
+  const collapsedSection = collapsedHeadingSectionRange(state, position)
+  let from = collapsedSection?.from ?? position
+  let to = collapsedSection?.to ?? position + node.nodeSize
   const $pos = state.doc.resolve(position)
   // Deleting a list's last item should remove its now-empty list, not let
   // ProseMirror synthesize a replacement empty item to satisfy listItem+.

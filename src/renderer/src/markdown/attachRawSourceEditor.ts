@@ -1,5 +1,6 @@
 import type { EditorView } from '@milkdown/kit/prose/view'
 import { registerPendingEdit } from '../editor/markdown/pendingEdits'
+import { DESK_RAW_BLOCK_COMMIT_META } from './readonlyGuard'
 
 import {
   createContainerSourceEditor,
@@ -73,6 +74,15 @@ export function attachRawSourceEditor(
 ): RawSourceEditorHandle {
   const { isEffectivelyReadOnly, rawSourceReadonlyListeners } = deps
   const liveSource = (): string => ctx.getSource?.() ?? ctx.source
+  /** Document atom — preview cache (`getSource`) can be ahead of this. */
+  const atomSource = (): string => {
+    const position = ctx.getPos()
+    if (position != null) {
+      const node = ctx.view.state.doc.nodeAt(position)
+      if (node?.type.name === 'deskRawBlock') return String(node.attrs.source ?? '')
+    }
+    return ctx.source
+  }
   const structured = Boolean(
     ctx.structuredCallout ||
     ctx.structuredBilibili ||
@@ -88,13 +98,9 @@ export function attachRawSourceEditor(
   editButton.className = useEditPill
     ? 'desk-raw-block__edit desk-raw-block__edit--pill'
     : 'desk-raw-block__edit'
-  if (useEditPill) {
-    editButton.innerHTML = `${EDIT_PILL_ICON}<span>Edit</span>`
-    editButton.setAttribute('aria-label', 'Edit')
-    editButton.title = 'Edit'
-  } else {
-    editButton.textContent = '编辑源码'
-  }
+  editButton.innerHTML = EDIT_PILL_ICON
+  editButton.setAttribute('aria-label', '编辑源码')
+  editButton.title = '编辑源码'
   const editorHost = document.createElement('div')
   editorHost.className = structured
     ? 'desk-raw-block__editor desk-raw-block__editor--structured'
@@ -103,6 +109,7 @@ export function attachRawSourceEditor(
   ctx.dom.append(editButton, editorHost)
 
   let editorValue = liveSource()
+  let lastCommitted = editorValue
   /** Skip publishDraft while pulling atom → Edit panel (avoids preview remount). */
   let suppressPublish = false
   let draftTitle = ''
@@ -155,7 +162,7 @@ export function attachRawSourceEditor(
         clearTimeout(syncTimer)
         syncTimer = null
       }
-      if (editing) ctx.renderPreview(liveSource())
+      if (editing) writeAtom()
       closeEditing()
       editButton.hidden = true
       editButton.disabled = true
@@ -167,26 +174,52 @@ export function attachRawSourceEditor(
     }
   }
 
+  const pullLatestDraft = (): void => {
+    if (!editorHandle) return
+    const latest = editorHandle.getValue()
+    if (ctx.structuredCallout) draftBody = latest
+    else if (ctx.structuredContainerBody) draftContainerBody = latest
+    else if (ctx.structuredMermaid) draftMermaidBody = latest
+    else if (ctx.structuredMindmap) draftMindmapBody = latest
+    else if (ctx.structuredNotesTable) draftNotesTableIds = latest
+    else if (!structured) editorValue = latest
+  }
+
+  /** Write the open draft onto the ProseMirror atom. Preview cache is not the atom. */
+  const writeAtom = (): boolean => {
+    if (!editing) return false
+    pullLatestDraft()
+    if (ctx.structuredCallout || ctx.structuredContainerBody || structured) {
+      publishDraft({ ignoreReadOnly: true })
+    }
+    if (syncTimer != null) {
+      clearTimeout(syncTimer)
+      syncTimer = null
+    }
+    if (editorValue === atomSource()) return false
+    const position = ctx.getPos()
+    if (position == null) return false
+    const currentNode = ctx.view.state.doc.nodeAt(position)
+    if (currentNode?.type.name !== 'deskRawBlock') return false
+    lastCommitted = editorValue
+    ctx.view.dispatch(
+      ctx.view.state.tr
+        .setNodeMarkup(position, undefined, {
+          ...(currentNode.attrs as Record<string, unknown>),
+          source: editorValue
+        })
+        .setMeta(DESK_RAW_BLOCK_COMMIT_META, true)
+    )
+    return true
+  }
+
   const commit = (): void => {
     if (!editing) return
     if (isEffectivelyReadOnly()) {
       applyReadonly(true)
       return
     }
-    if (editorValue === liveSource()) {
-      setTimeout(closeEditing, 0)
-      return
-    }
-    const position = ctx.getPos()
-    if (position == null) return
-    const currentNode = ctx.view.state.doc.nodeAt(position)
-    if (currentNode?.type.name !== 'deskRawBlock') return
-    ctx.view.dispatch(
-      ctx.view.state.tr.setNodeMarkup(position, undefined, {
-        ...(currentNode.attrs as Record<string, unknown>),
-        source: editorValue
-      })
-    )
+    writeAtom()
     setTimeout(closeEditing, 0)
   }
 
@@ -207,8 +240,9 @@ export function attachRawSourceEditor(
     return deleteDeskRawBlockAt(ctx.view, position)
   }
 
-  const publishDraft = (): void => {
-    if (suppressPublish || isEffectivelyReadOnly()) return
+  const publishDraft = (options?: { ignoreReadOnly?: boolean }): void => {
+    if (suppressPublish) return
+    if (!options?.ignoreReadOnly && isEffectivelyReadOnly()) return
     if (ctx.structuredBilibili) {
       const parsed = parseBilibiliVideoSource(liveSource())
       editorValue = rebuildBilibiliVideoSource({
@@ -303,6 +337,7 @@ export function attachRawSourceEditor(
     if (editing || isEffectivelyReadOnly()) return
     editing = true
     editorValue = liveSource()
+    lastCommitted = editorValue
     editButton.hidden = true
     editButton.disabled = true
     expandDetailsPreview()
@@ -319,9 +354,9 @@ export function attachRawSourceEditor(
       const done = document.createElement('button')
       done.type = 'button'
       done.className = 'desk-raw-block__edit desk-raw-block__edit--pill desk-raw-block__editor-done'
-      done.innerHTML = `${DONE_PILL_ICON}<span>Done</span>`
-      done.setAttribute('aria-label', 'Done')
-      done.title = 'Done'
+      done.innerHTML = DONE_PILL_ICON
+      done.setAttribute('aria-label', '完成编辑')
+      done.title = '完成编辑'
       done.addEventListener('click', (event) => {
         event.preventDefault()
         event.stopPropagation()
@@ -399,9 +434,9 @@ export function attachRawSourceEditor(
       const done = document.createElement('button')
       done.type = 'button'
       done.className = 'desk-raw-block__edit desk-raw-block__edit--pill desk-raw-block__editor-done'
-      done.innerHTML = `${DONE_PILL_ICON}<span>Done</span>`
-      done.setAttribute('aria-label', 'Done')
-      done.title = 'Done'
+      done.innerHTML = DONE_PILL_ICON
+      done.setAttribute('aria-label', '完成编辑')
+      done.title = '完成编辑'
       done.addEventListener('click', (event) => {
         event.preventDefault()
         event.stopPropagation()
@@ -455,9 +490,9 @@ export function attachRawSourceEditor(
       const done = document.createElement('button')
       done.type = 'button'
       done.className = 'desk-raw-block__edit desk-raw-block__edit--pill desk-raw-block__editor-done'
-      done.innerHTML = `${DONE_PILL_ICON}<span>Done</span>`
-      done.setAttribute('aria-label', 'Done')
-      done.title = 'Done'
+      done.innerHTML = DONE_PILL_ICON
+      done.setAttribute('aria-label', '完成编辑')
+      done.title = '完成编辑'
       done.addEventListener('click', (event) => {
         event.preventDefault()
         event.stopPropagation()
@@ -500,9 +535,9 @@ export function attachRawSourceEditor(
       const done = document.createElement('button')
       done.type = 'button'
       done.className = 'desk-raw-block__edit desk-raw-block__edit--pill desk-raw-block__editor-done'
-      done.innerHTML = `${DONE_PILL_ICON}<span>Done</span>`
-      done.setAttribute('aria-label', 'Done')
-      done.title = 'Done'
+      done.innerHTML = DONE_PILL_ICON
+      done.setAttribute('aria-label', '完成编辑')
+      done.title = '完成编辑'
       done.addEventListener('click', (event) => {
         event.preventDefault()
         event.stopPropagation()
@@ -541,9 +576,9 @@ export function attachRawSourceEditor(
       const done = document.createElement('button')
       done.type = 'button'
       done.className = 'desk-raw-block__edit desk-raw-block__edit--pill desk-raw-block__editor-done'
-      done.innerHTML = `${DONE_PILL_ICON}<span>Done</span>`
-      done.setAttribute('aria-label', 'Done')
-      done.title = 'Done'
+      done.innerHTML = DONE_PILL_ICON
+      done.setAttribute('aria-label', '完成编辑')
+      done.title = '完成编辑'
       done.addEventListener('click', (event) => {
         event.preventDefault()
         event.stopPropagation()
@@ -585,9 +620,9 @@ export function attachRawSourceEditor(
       const done = document.createElement('button')
       done.type = 'button'
       done.className = 'desk-raw-block__edit desk-raw-block__edit--pill desk-raw-block__editor-done'
-      done.innerHTML = `${DONE_PILL_ICON}<span>Done</span>`
-      done.setAttribute('aria-label', 'Done')
-      done.title = 'Done'
+      done.innerHTML = DONE_PILL_ICON
+      done.setAttribute('aria-label', '完成编辑')
+      done.title = '完成编辑'
       done.addEventListener('click', (event) => {
         event.preventDefault()
         event.stopPropagation()
@@ -634,8 +669,10 @@ export function attachRawSourceEditor(
       label.textContent = ctx.label
       const done = document.createElement('button')
       done.type = 'button'
-      done.className = 'desk-raw-block__editor-done'
-      done.textContent = '完成'
+      done.className = 'desk-raw-block__edit desk-raw-block__edit--pill desk-raw-block__editor-done'
+      done.innerHTML = DONE_PILL_ICON
+      done.setAttribute('aria-label', '完成编辑')
+      done.title = '完成编辑'
       header.append(label, done)
       done.addEventListener('click', (event) => {
         event.preventDefault()
@@ -674,13 +711,26 @@ export function attachRawSourceEditor(
   const pendingEdit = registerPendingEdit({
     knowledgeBaseId: deps.knowledgeBaseId,
     noteUuid: deps.noteUuid,
-    dirty: () => editing && editorValue !== liveSource(),
+    dirty: () => {
+      if (!editing) return false
+      if (editorHandle) {
+        const latest = editorHandle.getValue()
+        if (ctx.structuredCallout && latest !== draftBody) return true
+        if (ctx.structuredContainerBody && latest !== draftContainerBody) return true
+        if (ctx.structuredMermaid && latest !== draftMermaidBody) return true
+        if (ctx.structuredMindmap && latest !== draftMindmapBody) return true
+        if (ctx.structuredNotesTable && latest !== draftNotesTableIds) return true
+        if (!structured && latest !== editorValue) return true
+      }
+      return editorValue !== atomSource()
+    },
     flush: commit
   })
   rawSourceReadonlyListeners.add(applyReadonly)
   applyReadonly(isEffectivelyReadOnly())
 
   const destroy = (): void => {
+    if (editing) writeAtom()
     pendingEdit.dispose()
     rawSourceReadonlyListeners.delete(applyReadonly)
     if (structured) {

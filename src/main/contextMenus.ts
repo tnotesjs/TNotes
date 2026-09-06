@@ -37,6 +37,9 @@ export function contextMenuTemplate(
   if (request.kind === 'group') {
     return [item('rename', '重命名'), ...creationAndDeletion]
   }
+  if (request.kind === 'code-group-tab') {
+    return [item('rename', '重命名'), item('request-delete', '删除代码块')]
+  }
   const pinLabel = request.pinned ? '解除固定' : '固定'
   if (request.kind === 'note') {
     return [

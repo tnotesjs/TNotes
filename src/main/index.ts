@@ -11,6 +11,7 @@ import { loadSettings } from './settings'
 import { updateManager } from './updateManager'
 import { previewManager } from './preview'
 import { searchManager } from './searchManager'
+import { applicationMenuTemplate } from './applicationMenu'
 import { TabShortcutResolver } from './tabShortcuts'
 import { webContentsManager } from './webContentsManager'
 import { workspaceManager } from './workspaceManager'
@@ -61,92 +62,17 @@ function sendTabShortcut(window: BrowserWindow, command: TabShortcutCommand): vo
 }
 
 function configureApplicationMenu(): void {
-  const template: Electron.MenuItemConstructorOptions[] = []
-  if (process.platform === 'darwin') {
-    template.push({
-      label: app.name,
-      submenu: [
-        { role: 'about' },
-        { type: 'separator' },
-        { role: 'services' },
-        { type: 'separator' },
-        { role: 'hide' },
-        { role: 'hideOthers' },
-        { role: 'unhide' },
-        { type: 'separator' },
-        { role: 'quit' }
-      ]
-    })
-  }
-  template.push(
-    {
-      label: 'File',
-      submenu: [
-        {
-          label: 'Close Tab',
-          accelerator: 'CmdOrCtrl+W',
-          click: () => {
-            if (mainWindow) sendTabShortcut(mainWindow, 'close-active-tab-or-window')
-          }
-        },
-        {
-          label: 'Next Tab',
-          accelerator: 'Ctrl+Tab',
-          click: () => {
-            if (mainWindow) sendTabShortcut(mainWindow, 'next-tab')
-          }
-        },
-        {
-          label: 'Previous Tab',
-          accelerator: 'Ctrl+Shift+Tab',
-          click: () => {
-            if (mainWindow) sendTabShortcut(mainWindow, 'previous-tab')
-          }
-        },
-        ...(process.platform === 'darwin'
-          ? []
-          : ([
-              { type: 'separator' },
-              { role: 'quit' }
-            ] satisfies Electron.MenuItemConstructorOptions[]))
-      ]
-    },
-    { role: 'editMenu' },
-    {
-      label: 'View',
-      submenu: [
-        { role: 'reload' },
-        { role: 'forceReload' },
-        { role: 'toggleDevTools' },
-        { type: 'separator' },
-        {
-          label: '实际大小（应用）',
-          accelerator: 'CmdOrCtrl+0',
-          click: () => {
-            if (mainWindow) sendTabShortcut(mainWindow, 'reset-app-zoom')
-          }
-        },
-        {
-          label: '放大应用',
-          accelerator: 'CmdOrCtrl+Plus',
-          click: () => {
-            if (mainWindow) sendTabShortcut(mainWindow, 'increase-app-zoom')
-          }
-        },
-        {
-          label: '缩小应用',
-          accelerator: 'CmdOrCtrl+-',
-          click: () => {
-            if (mainWindow) sendTabShortcut(mainWindow, 'decrease-app-zoom')
-          }
-        },
-        { type: 'separator' },
-        { role: 'togglefullscreen' }
-      ]
-    },
-    { role: 'windowMenu' }
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate(
+      applicationMenuTemplate({
+        appName: app.name,
+        platform: process.platform,
+        send: (command) => {
+          if (mainWindow) sendTabShortcut(mainWindow, command)
+        }
+      })
+    )
   )
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }
 
 function createWindow(): BrowserWindow {

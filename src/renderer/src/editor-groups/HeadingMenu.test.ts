@@ -34,14 +34,14 @@ describe('heading menu', () => {
     editor.focus()
     const wrapper = mountMenu()
     await wrapper.get('button').trigger('mouseenter')
-    expect(options()).toHaveLength(6)
+    expect(options()).toHaveLength(7)
     expect(document.activeElement).toBe(editor)
     await wrapper.get('button').trigger('mouseleave')
     vi.advanceTimersByTime(100)
     document.querySelector('[role="menu"]')?.dispatchEvent(new MouseEvent('mouseenter'))
     vi.advanceTimersByTime(300)
     await wrapper.vm.$nextTick()
-    expect(options()).toHaveLength(6)
+    expect(options()).toHaveLength(7)
     document.querySelector('[role="menu"]')?.dispatchEvent(new MouseEvent('mouseleave'))
     vi.advanceTimersByTime(201)
     await wrapper.vm.$nextTick()
@@ -53,7 +53,7 @@ describe('heading menu', () => {
     const wrapper = mountMenu()
     await wrapper.get('button').trigger('mouseenter')
     await wrapper.get('button').trigger('click')
-    expect(options()).toHaveLength(6)
+    expect(options()).toHaveLength(7)
     expect(document.activeElement).toBe(options()[0])
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
     await wrapper.vm.$nextTick()
@@ -63,12 +63,13 @@ describe('heading menu', () => {
     await wrapper.vm.$nextTick()
     expect(options()).toHaveLength(0)
   })
-  it('offers paragraph and H2–H6 with platform shortcuts, never H1', async () => {
+  it('offers paragraph and H1–H6 with platform shortcuts', async () => {
     const wrapper = mountMenu()
     await wrapper.get('button').trigger('click')
 
     expect(options().map((button) => button.getAttribute('aria-label'))).toEqual([
       '正文',
+      '标题 1',
       '标题 2',
       '标题 3',
       '标题 4',
@@ -77,6 +78,7 @@ describe('heading menu', () => {
     ])
     expect(options().map((button) => button.querySelector('kbd')?.textContent)).toEqual([
       '⌥ ⌘ 0',
+      '⌥ ⌘ 1',
       '⌥ ⌘ 2',
       '⌥ ⌘ 3',
       '⌥ ⌘ 4',
@@ -84,7 +86,7 @@ describe('heading menu', () => {
       '⌥ ⌘ 6'
     ])
     expect(options()[0].getAttribute('aria-checked')).toBe('true')
-    options()[2].click()
+    options()[3].click()
     await wrapper.vm.$nextTick()
     expect(wrapper.emitted('select')).toEqual([[3]])
     expect(document.querySelector('[role="menu"]')).toBeNull()
@@ -92,9 +94,9 @@ describe('heading menu', () => {
     await wrapper.setProps({ level: 3, platform: 'win32' })
     expect(wrapper.get('button').text()).toBe('H3')
     await wrapper.get('button').trigger('click')
-    expect(options()[2].getAttribute('aria-checked')).toBe('true')
-    expect(options()[2].querySelector('kbd')?.textContent).toBe('Alt Ctrl 3')
-    expect(document.activeElement).toBe(options()[2])
+    expect(options()[3].getAttribute('aria-checked')).toBe('true')
+    expect(options()[3].querySelector('kbd')?.textContent).toBe('Alt Ctrl 3')
+    expect(document.activeElement).toBe(options()[3])
   })
 
   it('supports arrow navigation, Home/End and Escape without applying a change', async () => {
@@ -105,11 +107,11 @@ describe('heading menu', () => {
     }
     expect(document.activeElement).toBe(options()[0])
     press('ArrowUp')
-    expect(document.activeElement).toBe(options()[5])
+    expect(document.activeElement).toBe(options()[6])
     press('Home')
     expect(document.activeElement).toBe(options()[0])
     press('End')
-    expect(document.activeElement).toBe(options()[5])
+    expect(document.activeElement).toBe(options()[6])
     press('ArrowDown')
     expect(document.activeElement).toBe(options()[0])
     press('Escape')

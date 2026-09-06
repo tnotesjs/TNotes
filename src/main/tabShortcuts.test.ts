@@ -81,6 +81,18 @@ describe('tab shortcuts', () => {
     }
   })
 
+  it('opens quick search with Command+P and the command palette with Shift', () => {
+    expect(resolveTabShortcut(input({ key: 'p', meta: true }), 'darwin')).toBe('open-quick-open')
+    expect(resolveTabShortcut(input({ key: 'p', meta: true, shift: true }), 'darwin')).toBe(
+      'open-command-palette'
+    )
+    expect(resolveTabShortcut(input({ key: 'p', control: true }), 'win32')).toBe('open-quick-open')
+    expect(resolveTabShortcut(input({ key: 'p', control: true, shift: true }), 'win32')).toBe(
+      'open-command-palette'
+    )
+    expect(resolveTabShortcut(input({ key: 'p', control: true }), 'darwin')).toBeNull()
+  })
+
   it('maps Command+W on macOS and Ctrl+W on Windows', () => {
     expect(resolveTabShortcut(input({ key: 'w', meta: true }), 'darwin')).toBe(
       'close-active-tab-or-window'

@@ -36,7 +36,7 @@ interface ClearRequest {
 type WorkerRequest = BuildRequest | SearchRequest | ClearRequest
 
 interface CachedSearchIndex {
-  version: 1
+  version: 2
   signature: string
   index: ReturnType<MiniSearch<SearchIndexDocument>['toJSON']>
 }
@@ -57,7 +57,7 @@ function documentSignature(documents: SearchIndexDocument[]): string {
 async function readCache(cachePath: string, signature: string): Promise<boolean> {
   try {
     const cache = JSON.parse(await fs.readFile(cachePath, 'utf8')) as CachedSearchIndex
-    if (cache.version !== 1 || cache.signature !== signature) return false
+    if (cache.version !== 2 || cache.signature !== signature) return false
     currentIndex = MiniSearch.loadJSON<SearchIndexDocument>(
       JSON.stringify(cache.index),
       searchOptions()
@@ -72,7 +72,7 @@ async function writeCache(cachePath: string, signature: string): Promise<void> {
   await fs.mkdir(dirname(cachePath), { recursive: true })
   const temporary = `${cachePath}.tmp`
   const cache: CachedSearchIndex = {
-    version: 1,
+    version: 2,
     signature,
     index: currentIndex.toJSON()
   }

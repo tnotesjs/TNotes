@@ -163,7 +163,6 @@ export function mountMermaidPreview(
         h(Mermaid, {
           source: state.source,
           center: state.center,
-          securityLevel: 'strict',
           onCenterChange: emitCenter,
           'onUpdate:center': emitCenter
         })

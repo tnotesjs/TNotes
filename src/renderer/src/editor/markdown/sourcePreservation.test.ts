@@ -7,7 +7,7 @@ import {
 } from './sourcePreservation'
 
 describe('Markdown source preservation', () => {
-  it('slices a generated title and complete TOC region as opaque raw blocks', () => {
+  it('keeps the leading H1 as an ordinary heading and slices TOC as an opaque raw block', () => {
     const source = [
       '',
       '# 0001. 标题  ',
@@ -23,11 +23,12 @@ describe('Markdown source preservation', () => {
     const document = parseMarkdownSource(source)
 
     expect(document.blocks.map((block) => block.kind)).toEqual([
-      'raw-generated-title',
+      'heading',
       'raw-generated-toc',
       'heading'
     ])
-    expect(document.blocks.slice(0, 2).every((block) => block.raw)).toBe(true)
+    expect(document.blocks[0].raw).toBe(false)
+    expect(document.blocks[1].raw).toBe(true)
     expect(document.blocks[1].source).toBe(
       [
         '<!-- region:toc -->',

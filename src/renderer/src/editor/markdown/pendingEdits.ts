@@ -39,10 +39,15 @@ export function hasPendingEdits(knowledgeBaseId: string, noteUuid: string): bool
   return matching(knowledgeBaseId, noteUuid).some((editor) => editor.dirty())
 }
 
-export function flushPendingEdits(knowledgeBaseId: string, noteUuid: string): void {
+export function flushPendingEdits(
+  knowledgeBaseId: string,
+  noteUuid: string,
+  options: { requireClean?: boolean } = {}
+): void {
   for (const editor of matching(knowledgeBaseId, noteUuid)) {
     if (editors.has(editor) && editor.dirty()) editor.flush()
   }
+  if (options.requireClean === false) return
   if (hasPendingEdits(knowledgeBaseId, noteUuid)) {
     throw new Error('块内编辑尚未提交，请先完成编辑后再关闭标签页。')
   }

@@ -1,5 +1,5 @@
-import { languages } from '@codemirror/language-data'
-
+import { CHECK_ICON, COPY_ICON } from '../../markdown/copyIcons'
+import { createCodeExpandButton } from '../../markdown/codeBlockFullscreen'
 import {
   createContainerSourceEditor,
   type ContainerSourceEditorHandle
@@ -25,13 +25,13 @@ export interface MountCodeTabEditorOptions {
   /** CodeMirror language id (js, json, bash, …). */
   language?: string
   /**
-   * When true (default), show language picker + copy in the top-right tools
+   * When true (default), show language input + copy in the top-right tools
    * cluster (same chrome as standalone milkdown code blocks).
    */
   showTools?: boolean
   /** Shared file resources follow workspace autosave settings instead of saving on blur. */
   saveOnBlur?: boolean
-  /** Called after the user picks a language from the picker. */
+  /** Called after the user commits a typed language id. */
   onLanguageChange?: (language: string) => void | Promise<void>
   /** Optional clipboard writer; falls back to navigator.clipboard / execCommand. */
   onCopy?: (text: string) => void | Promise<void>
@@ -47,22 +47,9 @@ export interface MountCodeTabEditorOptions {
   }
 }
 
-const COPY_ICON = `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="none" aria-hidden="true"><path d="M360-240q-33 0-56.5-23.5T280-320v-480q0-33 23.5-56.5T360-880h360q33 0 56.5 23.5T800-800v480q0 33-23.5 56.5T720-240H360Zm0-80h360v-480H360v480ZM200-80q-33 0-56.5-23.5T120-160v-560h80v560h440v80H200Zm160-240v-480 480Z"></path></svg>`
-
-const EXPAND_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>`
-
-const LANGUAGE_OPTIONS: { id: string; label: string }[] = (() => {
-  const seen = new Set<string>()
-  const out: { id: string; label: string }[] = []
-  for (const lang of languages) {
-    const id = (lang.alias[0] ?? lang.name).toLowerCase()
-    if (seen.has(id)) continue
-    seen.add(id)
-    out.push({ id, label: lang.name })
-  }
-  out.sort((a, b) => a.label.localeCompare(b.label))
-  return out
-})()
+function normalizeLanguageInput(value: string): string {
+  return value.trim() || 'text'
+}
 
 async function defaultCopy(text: string): Promise<void> {
   if (navigator.clipboard?.writeText) {
@@ -105,7 +92,6 @@ export function mountCodeTabEditor(
   let saving = false
   let cancelled = false
   let editor: ContainerSourceEditorHandle | null = null
-  let pickerOpen = false
 
   const shell = document.createElement('div')
   shell.className = 'desk-code-tab milkdown-code-block'
@@ -113,18 +99,15 @@ export function mountCodeTabEditor(
   const tools = document.createElement('div')
   tools.className = 'tools desk-code-tab__tools'
 
-  // Match Crepe/Milkdown: language button is a sibling of the copy
-  // button-group (not nested), so shared code-block CSS applies.
-  const languageButton = document.createElement('button')
-  languageButton.type = 'button'
-  languageButton.className = 'language-button'
-  const languageLabel = document.createElement('span')
-  languageLabel.className = 'language-button__label'
-  languageLabel.textContent = currentLanguage
-  const expandIcon = document.createElement('span')
-  expandIcon.className = 'expand-icon'
-  expandIcon.innerHTML = EXPAND_ICON
-  languageButton.append(languageLabel, expandIcon)
+  const languageInput = document.createElement('input')
+  languageInput.type = 'text'
+  languageInput.className = 'desk-code-language'
+  languageInput.spellcheck = false
+  languageInput.autocomplete = 'off'
+  languageInput.placeholder = 'js'
+  languageInput.title = '语言'
+  languageInput.setAttribute('aria-label', '语言')
+  languageInput.value = currentLanguage
 
   const buttonGroup = document.createElement('div')
   buttonGroup.className = 'tools-button-group'
@@ -132,32 +115,11 @@ export function mountCodeTabEditor(
   const copyButton = document.createElement('button')
   copyButton.type = 'button'
   copyButton.className = 'copy-button'
-  copyButton.title = 'Copy'
-  copyButton.innerHTML = `${COPY_ICON}<span>Copy</span>`
-  buttonGroup.append(copyButton)
-
-  const picker = document.createElement('div')
-  picker.className = 'language-picker'
-  picker.hidden = true
-
-  const listWrapper = document.createElement('div')
-  listWrapper.className = 'list-wrapper'
-
-  const searchBox = document.createElement('div')
-  searchBox.className = 'search-box'
-  const searchInput = document.createElement('input')
-  searchInput.type = 'search'
-  searchInput.placeholder = 'Search language'
-  searchInput.autocomplete = 'off'
-  searchBox.append(searchInput)
-
-  const languageList = document.createElement('div')
-  languageList.className = 'language-list'
-  languageList.setAttribute('role', 'listbox')
-
-  listWrapper.append(searchBox, languageList)
-  picker.append(listWrapper)
-  tools.append(languageButton, buttonGroup, picker)
+  copyButton.title = '复制代码'
+  copyButton.setAttribute('aria-label', '复制代码')
+  copyButton.innerHTML = COPY_ICON
+  buttonGroup.append(copyButton, createCodeExpandButton())
+  tools.append(languageInput, buttonGroup)
 
   const cmHost = document.createElement('div')
   cmHost.className = 'desk-raw-block__include-cm desk-code-tab__cm'
@@ -190,75 +152,48 @@ export function mountCodeTabEditor(
     options.onDirtyChange?.(dirty)
   }
 
-  const applyLanguageLabel = (language: string): void => {
-    currentLanguage = language.trim() || 'text'
-    languageLabel.textContent = currentLanguage
+  const applyLanguage = (language: string): void => {
+    currentLanguage = normalizeLanguageInput(language)
+    languageInput.value = currentLanguage
+    languageInput.size = Math.max(2, currentLanguage.length)
   }
 
-  const closePicker = (): void => {
-    pickerOpen = false
-    picker.hidden = true
-    languageButton.dataset.expanded = 'false'
-    searchInput.value = ''
-  }
-
-  const renderLanguageList = (query: string): void => {
-    const q = query.trim().toLowerCase()
-    languageList.replaceChildren()
-    const matches = LANGUAGE_OPTIONS.filter(
-      (item) => !q || item.id.includes(q) || item.label.toLowerCase().includes(q)
-    ).slice(0, 80)
-    for (const item of matches) {
-      const row = document.createElement('button')
-      row.type = 'button'
-      row.className = 'language-list-item'
-      row.setAttribute('role', 'option')
-      row.textContent = item.label
-      if (item.id === currentLanguage.toLowerCase()) {
-        row.dataset.selected = 'true'
-      }
-      row.addEventListener('click', (event) => {
-        event.preventDefault()
-        event.stopPropagation()
-        void selectLanguage(item.id)
-      })
-      languageList.append(row)
+  const commitLanguage = async (): Promise<void> => {
+    const next = normalizeLanguageInput(languageInput.value)
+    if (next === currentLanguage) {
+      languageInput.value = next
+      languageInput.size = Math.max(2, next.length)
+      return
     }
+    applyLanguage(next)
+    editor?.setLanguage(next)
+    await options.onLanguageChange?.(next)
   }
 
-  const openPicker = (): void => {
-    pickerOpen = true
-    picker.hidden = false
-    languageButton.dataset.expanded = 'true'
-    renderLanguageList('')
-    searchInput.focus()
-  }
-
-  const selectLanguage = async (language: string): Promise<void> => {
-    closePicker()
-    if (language === currentLanguage) return
-    applyLanguageLabel(language)
-    editor?.setLanguage(language)
-    await options.onLanguageChange?.(language)
-  }
-
-  languageButton.addEventListener('click', (event) => {
-    event.preventDefault()
+  applyLanguage(currentLanguage)
+  languageInput.addEventListener('mousedown', (event) => event.stopPropagation())
+  languageInput.addEventListener('pointerdown', (event) => event.stopPropagation())
+  languageInput.addEventListener('keydown', (event) => {
     event.stopPropagation()
-    if (pickerOpen) closePicker()
-    else openPicker()
-  })
-
-  searchInput.addEventListener('input', () => {
-    renderLanguageList(searchInput.value)
-  })
-
-  searchInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      languageInput.blur()
+    }
     if (event.key === 'Escape') {
       event.preventDefault()
-      closePicker()
-      languageButton.focus()
+      languageInput.value = currentLanguage
+      languageInput.size = Math.max(2, currentLanguage.length)
+      languageInput.blur()
     }
+  })
+  languageInput.addEventListener('input', () => {
+    languageInput.size = Math.max(2, languageInput.value.length || 1)
+  })
+  languageInput.addEventListener('change', () => {
+    void commitLanguage()
+  })
+  languageInput.addEventListener('blur', () => {
+    void commitLanguage()
   })
 
   copyButton.addEventListener('click', (event) => {
@@ -272,22 +207,20 @@ export function mountCodeTabEditor(
         if (options.onCopy) await options.onCopy(text)
         else await defaultCopy(text)
         copyButton.dataset.copied = 'true'
+        copyButton.innerHTML = CHECK_ICON
+        copyButton.title = '已复制'
+        copyButton.setAttribute('aria-label', '已复制')
         window.setTimeout(() => {
           delete copyButton.dataset.copied
+          copyButton.innerHTML = COPY_ICON
+          copyButton.title = '复制代码'
+          copyButton.setAttribute('aria-label', '复制代码')
         }, 1200)
       } catch {
         /* ignore */
       }
     })()
   })
-
-  const onDocPointerDown = (event: PointerEvent): void => {
-    if (!pickerOpen) return
-    const target = event.target as Node | null
-    if (target && tools.contains(target)) return
-    closePicker()
-  }
-  document.addEventListener('pointerdown', onDocPointerDown)
 
   const save = async (): Promise<void> => {
     if (!editor || !dirty || saving || cancelled) return
@@ -334,7 +267,6 @@ export function mountCodeTabEditor(
     const next = event.relatedTarget as Node | null
     if (next && shell.contains(next)) return
     if (next && tools.contains(next)) return
-    closePicker()
     if (options.saveOnBlur !== false) void save()
   })
 
@@ -347,13 +279,11 @@ export function mountCodeTabEditor(
       syncDirtyUi()
     },
     setLanguage: (language: string) => {
-      applyLanguageLabel(language)
+      applyLanguage(language)
       editor?.setLanguage(language)
     },
     destroy: () => {
       cancelled = true
-      document.removeEventListener('pointerdown', onDocPointerDown)
-      closePicker()
       editor?.destroy()
       editor = null
     },

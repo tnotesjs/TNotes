@@ -94,6 +94,41 @@ describe('desk noteIo over @tnotesjs/kb', () => {
     ).rejects.toThrowError(/外部修改/)
   })
 
+  it('strips unknown frontmatter keys on save and keeps the snapshot id', async () => {
+    const handle = await makeHandle()
+    const doc = await readNote(handle, 'note-uuid-2')
+    const saved = await saveNote(
+      handle,
+      {
+        knowledgeBaseId: handle.id,
+        noteUuid: 'note-uuid-2',
+        content: [
+          '---',
+          'id: should-not-overwrite',
+          'description: 新描述',
+          'draft: true',
+          'title: 忽略我',
+          '---',
+          '',
+          '# 第二篇',
+          '',
+          '正文',
+          ''
+        ].join('\n'),
+        expectedRevision: doc.revision,
+        prettier: false
+      },
+      noopEffects
+    )
+    expect(saved.note.content).toBe(
+      ['---', 'id: note-uuid-2', 'description: 新描述', '---', '', '# 第二篇', '', '正文', ''].join(
+        '\n'
+      )
+    )
+    expect(saved.note.content).not.toContain('draft')
+    expect(saved.note.content).not.toContain('title:')
+  })
+
   it('resolves kb-level asset references and rejects traversal', async () => {
     const handle = await makeHandle()
     await fs.mkdir(path.join(handle.rootPath, 'assets'), { recursive: true })

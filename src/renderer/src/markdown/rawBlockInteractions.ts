@@ -6,6 +6,8 @@ import type { EditorView } from '@milkdown/kit/prose/view'
 import { Decoration, DecorationSet } from '@milkdown/kit/prose/view'
 import { $prose } from '@milkdown/kit/utils'
 import { EditorView as CodeMirrorView } from '@codemirror/view'
+import { isStandaloneImageParagraph } from '../editor/markdown/standaloneImageParagraph'
+import { createMarkVsBlockSelectionPlugin } from './selectionKind'
 import { BlockRangeSelection, createVerticalBlockSelectionPlugin } from './verticalBlockSelection'
 
 export type RawBlockArrowDirection = 'up' | 'down'
@@ -34,16 +36,37 @@ function isCodeBlock(node: { type: { name: string } }): boolean {
   return node.type.name === 'code_block'
 }
 
-/** Whole-block NodeSelection targets: visible raw atoms and Crepe code blocks. */
+/** Whole-block NodeSelection targets: visible raw atoms, Crepe code, standalone images. */
 export function isSelectableBlockNode(node: {
   type: { name: string }
   attrs?: Record<string, unknown>
+  childCount?: number
+  child?: (index: number) => { type: { name: string } }
 }): boolean {
   if (isCodeBlock(node)) return true
+  if (node.type.name === 'image') return true
+  if (isStandaloneImageParagraph(node as Parameters<typeof isStandaloneImageParagraph>[0])) {
+    return true
+  }
   return isVisibleRawBlock({
     type: node.type,
     attrs: (node.attrs ?? {}) as Record<string, unknown>
   })
+}
+
+/** Image atoms live inside a paragraph; arrow exit must leave that paragraph. */
+function outerSelectableRange(
+  doc: EditorState['doc'],
+  position: number,
+  node: { type: { name: string }; nodeSize: number }
+): { from: number; size: number } {
+  if (node.type.name === 'image') {
+    const $pos = doc.resolve(position)
+    if ($pos.depth >= 1 && isStandaloneImageParagraph($pos.parent)) {
+      return { from: $pos.before($pos.depth), size: $pos.parent.nodeSize }
+    }
+  }
+  return { from: position, size: node.nodeSize }
 }
 
 function needsRangeSelectionSurface(node: {
@@ -79,28 +102,12 @@ function isOnFirstLineOfTextblock($head: EditorState['selection']['$head']): boo
 function neighborSelectableBlockPosition(
   state: EditorState,
   boundary: number,
-  direction: RawBlockArrowDirection,
-  options: { skipEmptyTextblocks?: boolean } = {}
+  direction: RawBlockArrowDirection
 ): number | null {
-  const skipEmpty = options.skipEmptyTextblocks === true
-  let pos = boundary
-  for (let guard = 0; guard < 32; guard += 1) {
-    const resolved = state.doc.resolve(Math.max(0, Math.min(pos, state.doc.content.size)))
-    const neighbor = direction === 'down' ? resolved.nodeAfter : resolved.nodeBefore
-    if (!neighbor) return null
-    if (isSelectableBlockNode(neighbor)) {
-      return direction === 'down' ? pos : pos - neighbor.nodeSize
-    }
-    // Only skip empty paragraphs when chaining from an already-selected block
-    // (code→code). From a normal caret, an empty line must receive the arrow
-    // first — otherwise "哈哈哈"↓ jumps over the blank into the fence below.
-    if (skipEmpty && neighbor.isTextblock && neighbor.content.size === 0) {
-      pos = direction === 'down' ? pos + neighbor.nodeSize : pos - neighbor.nodeSize
-      continue
-    }
-    return null
-  }
-  return null
+  const resolved = state.doc.resolve(Math.max(0, Math.min(boundary, state.doc.content.size)))
+  const neighbor = direction === 'down' ? resolved.nodeAfter : resolved.nodeBefore
+  if (!neighbor || !isSelectableBlockNode(neighbor)) return null
+  return direction === 'down' ? boundary : boundary - neighbor.nodeSize
 }
 
 /**
@@ -229,13 +236,17 @@ function reclaimFocusFromCodeMirror(view: EditorView, position: number): void {
 function selectSelectableBlock(view: EditorView, position: number): boolean {
   const node = view.state.doc.nodeAt(position)
   if (!node || !isSelectableBlockNode(node)) return false
+  // Standalone images are inline atoms in a paragraph — select the image so the
+  // node view shows chrome. Selecting the paragraph would hide the text caret
+  // without calling the image view's selectNode().
+  const selectAt = isStandaloneImageParagraph(node) ? position + 1 : position
   // Use NodeSelection for both raw atoms and code fences so the caret leaves the
   // previous line (same UX as deskRawBlock). Crepe's selectNode() will focus CM —
   // reclaim PM focus and keep a decoration marker for styling / key routing.
   const isCode = isCodeBlock(node)
   view.dispatch(
     view.state.tr
-      .setSelection(NodeSelection.create(view.state.doc, position))
+      .setSelection(NodeSelection.create(view.state.doc, selectAt))
       .setMeta(codeBlockWholeSelectKey, isCode ? position : null)
       .scrollIntoView()
   )
@@ -298,7 +309,107 @@ export function clearRawBlockSelectionState(view: EditorView): void {
   view.dispatch(transaction)
 }
 
+function selectionHidesCaretInImageParagraph(doc: EditorState['doc'], position: number, bias: number): boolean {
+  const next = TextSelection.near(doc.resolve(position), bias)
+  const $head = next.$head
+  return $head.depth >= 1 && isStandaloneImageParagraph($head.parent)
+}
+
+function insertEmptyParagraphAt(view: EditorView, position: number): boolean {
+  const $pos = view.state.doc.resolve(position)
+  const paragraph = view.state.schema.nodes.paragraph?.create()
+  const index = $pos.index()
+  if (!paragraph || !$pos.parent.canReplaceWith(index, index, paragraph.type)) return false
+  const tr = view.state.tr.insert(position, paragraph)
+  view.dispatch(
+    tr
+      .setSelection(TextSelection.create(tr.doc, position + 1))
+      .setMeta(codeBlockWholeSelectKey, null)
+      .scrollIntoView()
+  )
+  view.focus()
+  return true
+}
+
+/** True when Enter should stay in a nested field (caption, CM, mindmap) instead of replacing the block. */
+function enterStaysInNestedField(event: KeyboardEvent): boolean {
+  const target = event.target
+  if (!(target instanceof Element)) return false
+  return Boolean(
+    target.closest('input, textarea, select, .cm-editor, .mm-editor, .is-mindmap-island-active')
+  )
+}
+
+/**
+ * Yuque: a non-empty selection + Enter deletes the selection, then leaves one
+ * empty paragraph (Backspace/Delete, then Enter). Same for images, fences, and
+ * multi-block ranges.
+ */
+function replaceRangeWithEmptyLine(view: EditorView, from: number, to: number): boolean {
+  const paragraphType = view.state.schema.nodes.paragraph
+  if (!paragraphType || from === to) return false
+  const start = Math.min(from, to)
+  const end = Math.max(from, to)
+  let tr = view.state.tr.delete(start, end)
+  const insertAt = Math.min(start, tr.doc.content.size)
+  const $pos = tr.doc.resolve(insertAt)
+  if ($pos.parent.type === paragraphType && $pos.parent.content.size === 0) {
+    tr = tr.setSelection(TextSelection.create(tr.doc, $pos.start()))
+  } else if ($pos.parent.canReplaceWith($pos.index(), $pos.index(), paragraphType)) {
+    tr = tr.insert(insertAt, paragraphType.create())
+    tr = tr.setSelection(TextSelection.create(tr.doc, insertAt + 1))
+  } else if ($pos.parent.inlineContent) {
+    tr = tr.split(insertAt)
+    tr = tr.setSelection(TextSelection.near(tr.doc.resolve(tr.mapping.map(insertAt, 1)), 1))
+  } else {
+    return false
+  }
+  view.dispatch(tr.setMeta(codeBlockWholeSelectKey, null).scrollIntoView())
+  view.focus()
+  return true
+}
+
+function handleEnterReplacingSelection(view: EditorView, event: KeyboardEvent): boolean {
+  if (
+    event.key !== 'Enter' ||
+    event.shiftKey ||
+    event.altKey ||
+    event.ctrlKey ||
+    event.metaKey ||
+    event.isComposing
+  ) {
+    return false
+  }
+  if (enterStaysInNestedField(event)) return false
+  if (isMindmapIslandKeyboardOwner(event.target) || isActiveMindmapIslandSelection(view)) {
+    return false
+  }
+
+  const codePos = codeBlockWholeSelectPosition(view.state)
+  if (codePos != null) {
+    const node = view.state.doc.nodeAt(codePos)
+    return Boolean(node && replaceRangeWithEmptyLine(view, codePos, codePos + node.nodeSize))
+  }
+
+  const { selection } = view.state
+  if (selection instanceof NodeSelection && isSelectableBlockNode(selection.node)) {
+    const outer = outerSelectableRange(view.state.doc, selection.from, selection.node)
+    return replaceRangeWithEmptyLine(view, outer.from, outer.from + outer.size)
+  }
+  if (selection instanceof BlockRangeSelection) {
+    return replaceRangeWithEmptyLine(view, selection.from, selection.to)
+  }
+  return false
+}
+
 function exitSelectableBlock(view: EditorView, position: number, bias: number): void {
+  const $pos = view.state.doc.resolve(position)
+  const neighbor = bias > 0 ? $pos.nodeAfter : $pos.nodeBefore
+  // End/start of the note (or a collapsed image paragraph) has no visible caret.
+  // Insert a real empty line — same as leaving a code fence at the document edge.
+  if (!neighbor || selectionHidesCaretInImageParagraph(view.state.doc, position, bias)) {
+    if (insertEmptyParagraphAt(view, position)) return
+  }
   view.dispatch(
     view.state.tr
       .setSelection(TextSelection.near(view.state.doc.resolve(position), bias))
@@ -361,28 +472,7 @@ function exitCodeEditorAtEnd(view: EditorView, event: KeyboardEvent): boolean {
   return true
 }
 
-/**
- * True when every sibling between `boundary` and the next selectable block is an
- * empty textblock (so code→code chaining across blanks is safe).
- */
-function onlyEmptyTextblocksUntilSelectable(
-  state: EditorState,
-  boundary: number,
-  direction: RawBlockArrowDirection
-): boolean {
-  let probe = boundary
-  for (let guard = 0; guard < 32; guard += 1) {
-    const $pos = state.doc.resolve(Math.max(0, Math.min(probe, state.doc.content.size)))
-    const node = direction === 'down' ? $pos.nodeAfter : $pos.nodeBefore
-    if (!node) return false
-    if (isSelectableBlockNode(node)) return true
-    if (!(node.isTextblock && node.content.size === 0)) return false
-    probe = direction === 'down' ? probe + node.nodeSize : probe - node.nodeSize
-  }
-  return false
-}
-
-/** Leave a selected block: chain into the next selectable neighbor, else park in text. */
+/** Leave a selected block: next selectable neighbor, else the immediate text. */
 function moveFromSelectableBlock(
   view: EditorView,
   position: number,
@@ -394,15 +484,8 @@ function moveFromSelectableBlock(
   if (immediatePos != null) {
     return selectSelectableBlock(view, immediatePos)
   }
-  // Chain across empty paragraphs only when nothing but blanks separate two
-  // selectable blocks (code→code). If real text follows a blank after an info
-  // atom, land on the blank instead of jumping the caret over it.
-  const chainedPos = neighborSelectableBlockPosition(view.state, boundary, direction, {
-    skipEmptyTextblocks: true
-  })
-  if (chainedPos != null && onlyEmptyTextblocksUntilSelectable(view.state, boundary, direction)) {
-    return selectSelectableBlock(view, chainedPos)
-  }
+  // Empty paragraphs are real caret targets (placeholder "输入 / 插入内容").
+  // Do not jump over them to the next fence.
   exitSelectableBlock(view, boundary, direction === 'down' ? 1 : -1)
   return true
 }
@@ -455,11 +538,12 @@ function handleSelectedSelectableBlock(view: EditorView, event: KeyboardEvent): 
     return true
   }
 
+  const outer = outerSelectableRange(view.state.doc, position, selection.node)
   if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
-    return moveFromSelectableBlock(view, position, selection.node.nodeSize, 'down')
+    return moveFromSelectableBlock(view, outer.from, outer.size, 'down')
   }
   if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
-    return moveFromSelectableBlock(view, position, selection.node.nodeSize, 'up')
+    return moveFromSelectableBlock(view, outer.from, outer.size, 'up')
   }
   return false
 }
@@ -596,6 +680,10 @@ export function createRawBlockSelectionPlugin(): MilkdownPlugin[] {
               claimEvent(event)
               return true
             }
+            if (handleEnterReplacingSelection(view, event)) {
+              claimEvent(event)
+              return true
+            }
             if (target?.closest('.cm-editor')) return false
 
             if (selectAdjacentBlockForArrow(view, event)) {
@@ -671,6 +759,13 @@ export function createRawBlockSelectionPlugin(): MilkdownPlugin[] {
                 view.focus()
                 return
               }
+              if (handleEnterReplacingSelection(view, event)) {
+                claimEvent(event)
+                event.preventDefault()
+                event.stopImmediatePropagation()
+                view.focus()
+                return
+              }
             }
 
             if (!inProseMirror) return
@@ -679,6 +774,13 @@ export function createRawBlockSelectionPlugin(): MilkdownPlugin[] {
               claimEvent(event)
               event.preventDefault()
               event.stopImmediatePropagation()
+              return
+            }
+            if (handleEnterReplacingSelection(view, event)) {
+              claimEvent(event)
+              event.preventDefault()
+              event.stopImmediatePropagation()
+              view.focus()
               return
             }
             if (inCodeMirror) return
@@ -718,5 +820,9 @@ export function createRawBlockSelectionPlugin(): MilkdownPlugin[] {
       })
   )
 
-  return [createVerticalBlockSelectionPlugin(), selectionPlugin]
+  return [
+    createVerticalBlockSelectionPlugin(),
+    createMarkVsBlockSelectionPlugin(),
+    selectionPlugin
+  ]
 }

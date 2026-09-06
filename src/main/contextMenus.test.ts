@@ -52,6 +52,12 @@ describe('native context menus', () => {
     expect(template.filter((item) => item.id === 'open-ide')).toHaveLength(1)
   })
 
+  it('gives code-group tabs rename and delete', () => {
+    const template = contextMenuTemplate({ kind: 'code-group-tab' }, vi.fn())
+    expect(template.map((item) => item.id)).toEqual(['rename', 'request-delete'])
+    expect(template.map((item) => item.label)).toEqual(['重命名', '删除代码块'])
+  })
+
   it('gives groups the former more-menu actions without note-only commands', () => {
     const selected = vi.fn()
     const template = contextMenuTemplate({ kind: 'group' }, selected)

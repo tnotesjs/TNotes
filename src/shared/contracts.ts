@@ -167,6 +167,7 @@ export type ContextMenuRequest =
   | { kind: 'note'; pinned: boolean; completed: boolean }
   | { kind: 'group' }
   | { kind: 'tab'; tabType: 'note' | 'web'; pinned: boolean }
+  | { kind: 'code-group-tab' }
 export type TabShortcutCommand =
   | { type: 'activate-tab-by-number'; number: number; sourceTabId?: string }
   | 'close-active-tab-or-window'
@@ -181,6 +182,8 @@ export type TabShortcutCommand =
   | 'increase-app-zoom'
   | 'decrease-app-zoom'
   | 'reset-app-zoom'
+  | 'open-quick-open'
+  | 'open-command-palette'
 export type ThemeMode = 'system' | 'light' | 'dark'
 export type InterfaceDensity = 'compact' | 'comfortable'
 export type IdeKind = 'vscode' | 'cursor'
@@ -303,6 +306,8 @@ export interface NoteEditorTab {
   icon: KnowledgeBaseIconDto | null
   viewMode: NoteViewMode
   pageWidth: NotePageWidth
+  /** Side outline next to the visual editor. Default true. */
+  outlineVisible?: boolean
   preview?: boolean
   pinned?: boolean
   openedAt?: number
@@ -566,6 +571,8 @@ export interface SearchResultDto {
   knowledgeBaseName: string
   noteUuid: string
   noteIndex: string
+  /** Real note folder / file stem, e.g. "0001. 标题". */
+  fileName: string
   title: string
   snippet: string
   score: number

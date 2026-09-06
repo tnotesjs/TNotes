@@ -144,6 +144,41 @@ textarea:focus-visible {
   transform: translateX(-50%) translateY(0);
 }
 
+.desk-editor-context-menu {
+  position: fixed;
+  z-index: 4000;
+  min-width: 148px;
+  padding: 4px;
+  border: 1px solid color-mix(in srgb, var(--border-strong) 70%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--titlebar-bg) 88%, transparent);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 28%);
+  backdrop-filter: saturate(160%) blur(18px);
+  -webkit-backdrop-filter: saturate(160%) blur(18px);
+}
+
+.desk-editor-context-menu__item {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  font: 12px/1.35 var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+}
+
+.desk-editor-context-menu__item:hover {
+  background: var(--selected);
+}
+
+.desk-editor-context-menu__item.is-danger {
+  color: var(--danger);
+}
+
 ::-webkit-scrollbar {
   width: 9px;
   height: 9px;

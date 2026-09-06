@@ -167,11 +167,13 @@ export function projectRawBlocksForMilkdown(source: string): string {
     const marker = createProjectedRawBlockMarker({
       kind: block.kind,
       source: block.source,
-      // Reference definitions are metadata consumed by the Markdown parser to
-      // resolve `[text][id]` links. They must never surface as a visible source
-      // card; keep them as a hidden atom so serialization still restores their
-      // exact original bytes.
-      hidden: isRegionComment(block) || block.kind === 'raw-reference-definition'
+      // Frontmatter and reference definitions are machine metadata, not authoring
+      // content. Keep them as hidden atoms so serialization still restores bytes
+      // without showing a source card.
+      hidden:
+        isRegionComment(block) ||
+        block.kind === 'raw-frontmatter' ||
+        block.kind === 'raw-reference-definition'
     })
     // Keep definitions in the parser input so reference usages still resolve. Remark consumes
     // them; the adjacent atom is what restores their exact source during serialization.

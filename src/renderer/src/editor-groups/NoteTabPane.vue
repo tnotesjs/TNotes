@@ -1,25 +1,31 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import UiTooltip from '../components/UiTooltip.vue'
+import OutlineIcon from '../components/OutlineIcon.vue'
 import PageWidthIcon from '../components/PageWidthIcon.vue'
 import HeadingMenu from './HeadingMenu.vue'
 import FormatIcon from './FormatIcon.vue'
+import FormatOverflowBar from './FormatOverflowBar.vue'
 import MarkdownSourceEditor from '../markdown/MarkdownSourceEditor.vue'
 import { useEditorStore } from '../stores/editor'
 import { useWorkspaceStore } from '../stores/workspace'
 
+import { registerHeadingFoldRunner } from '../commands/headingFoldBridge'
+import { findTab } from './layoutModel'
+import { pastedImageMarkdown } from '../editor/markdown/pasteImageWidth'
+
 import type { NoteEditorTab, NoteViewMode } from '../../../shared/contracts'
+import type { HeadingFoldCommand } from '../markdown/headingSectionCollapse'
 
 interface MarkdownEditorHandle {
   insertTextAt(text: string, position?: number): void
   wrapSelection(prefix: string, suffix: string, placeholder?: string): void
   prefixSelection(prefix: string): void
   setLinePrefix(prefix: string): void
-}
-
-interface VisualMarkdownEditorHandle extends MarkdownEditorHandle {
   insertTable(): void
+  applyHeadingFold?(command: HeadingFoldCommand): boolean
+  flush(): void
 }
 
 const MilkdownMarkdownEditor = defineAsyncComponent(
@@ -44,7 +50,7 @@ const key = computed(() => `${props.tab.knowledgeBaseId}:${props.tab.noteUuid}`)
 const session = computed(() =>
   workspace.getDocumentSession(props.tab.knowledgeBaseId, props.tab.noteUuid)
 )
-const milkdownMarkdownEditor = ref<VisualMarkdownEditorHandle | null>(null)
+const milkdownMarkdownEditor = ref<MarkdownEditorHandle | null>(null)
 const markdownSourceEditor = ref<MarkdownEditorHandle | null>(null)
 const milkdownFailed = ref(false)
 const milkdownMountKey = ref(0)
@@ -52,14 +58,60 @@ const markdownEditor = computed(() =>
   props.tab.viewMode === 'source' ? markdownSourceEditor.value : milkdownMarkdownEditor.value
 )
 const pageWidthLabel = computed(() => (props.tab.pageWidth === 'wide' ? '超宽显示' : '标准页宽'))
+const outlineVisible = computed(() => {
+  const located = findTab(editor.layout, props.tab.id)
+  const tab = located?.tab.type === 'note' ? located.tab : props.tab
+  return tab.outlineVisible !== false
+})
 const titleInput = ref<HTMLInputElement | null>(null)
 const editingTitle = ref(false)
 const titleDraft = ref('')
 const renaming = ref(false)
 const headingLevel = ref<number | null>(null)
+const formatDisabled = computed(() => {
+  if (!session.value?.document || session.value.document.readOnly) return true
+  if (props.tab.viewMode === 'readonly') return true
+  return props.tab.viewMode !== 'source' && milkdownFailed.value
+})
+const formatActions = [
+  'bold',
+  'italic',
+  'strikethrough',
+  'inline-code',
+  'heading',
+  'quote',
+  'unordered-list',
+  'ordered-list',
+  'checkbox',
+  'link',
+  'code-block',
+  'divider',
+  'table'
+] as const
 
 watch(key, () => {
   editingTitle.value = false
+})
+
+watch(
+  [milkdownMarkdownEditor, () => props.active, () => props.tab.viewMode],
+  () => {
+    if (
+      props.active &&
+      props.tab.viewMode !== 'source' &&
+      milkdownMarkdownEditor.value?.applyHeadingFold
+    ) {
+      const handle = milkdownMarkdownEditor.value
+      registerHeadingFoldRunner((command) => handle.applyHeadingFold?.(command) ?? false)
+    } else if (props.active) {
+      registerHeadingFoldRunner(null)
+    }
+  },
+  { immediate: true }
+)
+
+onUnmounted(() => {
+  if (props.active) registerHeadingFoldRunner(null)
 })
 
 async function editTitle(): Promise<void> {
@@ -104,6 +156,12 @@ onMounted(() => {
 })
 
 function setMode(mode: NoteViewMode): void {
+  // Flush while Milkdown is still mounted and viewMode is still `visual`.
+  // Switching first lets the source editor mount with the stale session,
+  // or applyReadonly discards an uncommitted Edit draft.
+  if (props.tab.viewMode === 'visual' && mode !== 'visual') {
+    milkdownMarkdownEditor.value?.flush?.()
+  }
   editor.setNoteViewMode(props.tab.id, mode)
 }
 
@@ -123,12 +181,7 @@ async function pasteImage(file: File, insertAt: number): Promise<void> {
   const targetEditor = markdownSourceEditor.value
   try {
     const attachment = await workspace.uploadImage(props.tab.knowledgeBaseId, file)
-    const alt =
-      file.name
-        .replace(/\.[^.]+$/, '')
-        .replaceAll('[', '')
-        .replaceAll(']', '') || 'image'
-    targetEditor?.insertTextAt(`![${alt}](${attachment.markdownPath})`, insertAt)
+    targetEditor?.insertTextAt(await pastedImageMarkdown(file, attachment.markdownPath), insertAt)
   } catch (cause) {
     workspace.error = cause instanceof Error ? cause.message : String(cause)
   }
@@ -137,12 +190,7 @@ async function pasteImage(file: File, insertAt: number): Promise<void> {
 async function uploadVisualImage(file: File): Promise<{ src: string; alt: string }> {
   try {
     const attachment = await workspace.uploadImage(props.tab.knowledgeBaseId, file)
-    const alt =
-      file.name
-        .replace(/\.[^.]+$/, '')
-        .replaceAll('[', '')
-        .replaceAll(']', '') || 'image'
-    return { src: attachment.markdownPath, alt }
+    return { src: attachment.markdownPath, alt: '' }
   } catch (cause) {
     workspace.error = cause instanceof Error ? cause.message : String(cause)
     throw cause
@@ -201,17 +249,181 @@ function openLink(url: string): void {
         </button>
         <span v-if="session.document.readOnly" class="read-only">只读</span>
       </div>
-      <div class="view-controls">
-        <UiTooltip :label="pageWidthLabel">
-          <button
-            type="button"
-            class="page-width-toggle"
-            :aria-label="pageWidthLabel"
-            @click="editor.toggleNotePageWidth(tab.id)"
+      <FormatOverflowBar :items="formatActions" :disabled="formatDisabled">
+        <template #item="{ item }">
+          <UiTooltip v-if="item === 'bold'" label="粗体" shortcut="⌘ B">
+            <button
+              type="button"
+              aria-label="粗体"
+              :disabled="formatDisabled"
+              @click="markdownEditor?.wrapSelection('**', '**')"
+            >
+              <FormatIcon name="bold" />
+            </button>
+          </UiTooltip>
+          <UiTooltip v-else-if="item === 'italic'" label="斜体" shortcut="⌘ I">
+            <button
+              type="button"
+              aria-label="斜体"
+              :disabled="formatDisabled"
+              @click="markdownEditor?.wrapSelection('*', '*')"
+            >
+              <FormatIcon name="italic" />
+            </button>
+          </UiTooltip>
+          <UiTooltip
+            v-else-if="item === 'strikethrough'"
+            label="删除线"
+            shortcut="⇧ ⌘ X"
           >
-            <PageWidthIcon :mode="tab.pageWidth" />
-          </button>
-        </UiTooltip>
+            <button
+              type="button"
+              aria-label="删除线"
+              :disabled="formatDisabled"
+              @mousedown.prevent
+              @click="markdownEditor?.wrapSelection('~~', '~~')"
+            >
+              <FormatIcon name="strikethrough" />
+            </button>
+          </UiTooltip>
+          <UiTooltip
+            v-else-if="item === 'inline-code'"
+            label="行内代码"
+            shortcut="⌘ E"
+          >
+            <button
+              type="button"
+              aria-label="行内代码"
+              :disabled="formatDisabled"
+              @mousedown.prevent
+              @click="markdownEditor?.wrapSelection('`', '`')"
+            >
+              <FormatIcon name="inline-code" />
+            </button>
+          </UiTooltip>
+          <HeadingMenu
+            v-else-if="item === 'heading'"
+            :level="headingLevel"
+            :disabled="formatDisabled"
+            :active="active"
+            :platform="workspace.runtimePlatform"
+            @select="markdownEditor?.setLinePrefix($event === 0 ? '' : `${'#'.repeat($event)} `)"
+          />
+          <UiTooltip
+            v-else-if="item === 'quote'"
+            label="引用"
+            shortcut="⇧ ⌘ U"
+          >
+            <button
+              type="button"
+              aria-label="引用"
+              :disabled="formatDisabled"
+              @click="markdownEditor?.setLinePrefix('> ')"
+            >
+              <FormatIcon name="quote" />
+            </button>
+          </UiTooltip>
+          <UiTooltip
+            v-else-if="item === 'unordered-list'"
+            label="无序列表"
+            shortcut="⇧ ⌘ 8"
+          >
+            <button
+              type="button"
+              aria-label="无序列表"
+              :disabled="formatDisabled"
+              @click="markdownEditor?.setLinePrefix('- ')"
+            >
+              <FormatIcon name="unordered-list" />
+            </button>
+          </UiTooltip>
+          <UiTooltip v-else-if="item === 'ordered-list'" label="有序列表">
+            <button
+              type="button"
+              aria-label="有序列表"
+              :disabled="formatDisabled"
+              @click="markdownEditor?.setLinePrefix('1. ')"
+            >
+              <FormatIcon name="ordered-list" />
+            </button>
+          </UiTooltip>
+          <UiTooltip v-else-if="item === 'checkbox'" label="复选框">
+            <button
+              type="button"
+              aria-label="复选框"
+              :disabled="formatDisabled"
+              @click="markdownEditor?.setLinePrefix('- [ ] ')"
+            >
+              <FormatIcon name="checkbox" />
+            </button>
+          </UiTooltip>
+          <UiTooltip v-else-if="item === 'link'" label="链接">
+            <button
+              type="button"
+              aria-label="链接"
+              :disabled="formatDisabled"
+              @click="markdownEditor?.wrapSelection('[', '](https://)', '链接')"
+            >
+              <FormatIcon name="link" />
+            </button>
+          </UiTooltip>
+          <UiTooltip v-else-if="item === 'code-block'" label="代码块">
+            <button
+              type="button"
+              aria-label="代码块"
+              :disabled="formatDisabled"
+              @click="insertTemplate('\n```ts\n\n```\n')"
+            >
+              <FormatIcon name="code-block" />
+            </button>
+          </UiTooltip>
+          <UiTooltip v-else-if="item === 'divider'" label="分割线">
+            <button
+              type="button"
+              aria-label="分割线"
+              :disabled="formatDisabled"
+              @click="insertTemplate('\n---\n')"
+            >
+              <FormatIcon name="divider" />
+            </button>
+          </UiTooltip>
+          <UiTooltip v-else-if="item === 'table'" label="表格">
+            <button
+              type="button"
+              aria-label="表格"
+              :disabled="formatDisabled"
+              @click="markdownEditor?.insertTable()"
+            >
+              <FormatIcon name="table" />
+            </button>
+          </UiTooltip>
+        </template>
+      </FormatOverflowBar>
+      <div class="view-controls">
+        <div class="layout-toggles">
+          <UiTooltip :label="pageWidthLabel">
+            <button
+              type="button"
+              class="page-width-toggle"
+              :aria-label="pageWidthLabel"
+              @click="editor.toggleNotePageWidth(tab.id)"
+            >
+              <PageWidthIcon :mode="tab.pageWidth" />
+            </button>
+          </UiTooltip>
+          <UiTooltip :label="outlineVisible ? '隐藏目录' : '显示目录'">
+            <button
+              type="button"
+              class="outline-toggle"
+              :class="{ active: outlineVisible }"
+              :aria-label="outlineVisible ? '隐藏目录' : '显示目录'"
+              :aria-pressed="outlineVisible"
+              @click="editor.toggleNoteOutlineVisible(tab.id)"
+            >
+              <OutlineIcon />
+            </button>
+          </UiTooltip>
+        </div>
         <span class="view-divider" aria-hidden="true"></span>
         <div class="view-switcher" aria-label="笔记视图">
           <UiTooltip label="可视化编辑">
@@ -255,94 +467,6 @@ function openLink(url: string): void {
         </div>
       </div>
     </div>
-    <div
-      v-if="tab.viewMode === 'visual'"
-      class="format-actions"
-      aria-label="Markdown 格式工具栏"
-      @mousedown.prevent
-    >
-      <UiTooltip label="粗体" shortcut="⌘ B">
-        <button type="button" aria-label="粗体" @click="markdownEditor?.wrapSelection('**', '**')">
-          <FormatIcon name="bold" />
-        </button>
-      </UiTooltip>
-      <UiTooltip label="斜体" shortcut="⌘ I">
-        <button type="button" aria-label="斜体" @click="markdownEditor?.wrapSelection('*', '*')">
-          <FormatIcon name="italic" />
-        </button>
-      </UiTooltip>
-      <UiTooltip label="删除线" shortcut="⇧ ⌘ X">
-        <button
-          type="button"
-          aria-label="删除线"
-          @mousedown.prevent
-          @click="markdownEditor?.wrapSelection('~~', '~~')"
-        >
-          <FormatIcon name="strikethrough" />
-        </button>
-      </UiTooltip>
-      <UiTooltip label="行内代码" shortcut="⌘ E">
-        <button
-          type="button"
-          aria-label="行内代码"
-          @mousedown.prevent
-          @click="markdownEditor?.wrapSelection('`', '`')"
-        >
-          <FormatIcon name="inline-code" />
-        </button>
-      </UiTooltip>
-      <HeadingMenu
-        :level="headingLevel"
-        :disabled="session.document.readOnly || milkdownFailed"
-        :active="active"
-        :platform="workspace.runtimePlatform"
-        @select="markdownEditor?.setLinePrefix($event === 0 ? '' : `${'#'.repeat($event)} `)"
-      />
-      <UiTooltip label="引用" shortcut="⇧ ⌘ U">
-        <button type="button" aria-label="引用" @click="markdownEditor?.setLinePrefix('> ')">
-          <FormatIcon name="quote" />
-        </button>
-      </UiTooltip>
-      <UiTooltip label="无序列表" shortcut="⇧ ⌘ 8">
-        <button type="button" aria-label="无序列表" @click="markdownEditor?.setLinePrefix('- ')">
-          <FormatIcon name="unordered-list" />
-        </button>
-      </UiTooltip>
-      <UiTooltip label="有序列表">
-        <button type="button" aria-label="有序列表" @click="markdownEditor?.setLinePrefix('1. ')">
-          <FormatIcon name="ordered-list" />
-        </button>
-      </UiTooltip>
-      <UiTooltip label="复选框">
-        <button type="button" aria-label="复选框" @click="markdownEditor?.setLinePrefix('- [ ] ')">
-          <FormatIcon name="checkbox" />
-        </button>
-      </UiTooltip>
-      <UiTooltip label="链接">
-        <button
-          type="button"
-          aria-label="链接"
-          @click="markdownEditor?.wrapSelection('[', '](https://)', '链接')"
-        >
-          <FormatIcon name="link" />
-        </button>
-      </UiTooltip>
-      <UiTooltip label="代码块">
-        <button type="button" aria-label="代码块" @click="insertTemplate('\n```ts\n\n```\n')">
-          <FormatIcon name="code-block" />
-        </button>
-      </UiTooltip>
-      <UiTooltip label="分割线">
-        <button type="button" aria-label="分割线" @click="insertTemplate('\n---\n')">
-          <FormatIcon name="divider" />
-        </button>
-      </UiTooltip>
-      <UiTooltip label="表格">
-        <button type="button" aria-label="表格" @click="milkdownMarkdownEditor?.insertTable()">
-          <FormatIcon name="table" />
-        </button>
-      </UiTooltip>
-    </div>
 
     <MilkdownMarkdownEditor
       v-if="tab.viewMode !== 'source' && !milkdownFailed"
@@ -356,6 +480,7 @@ function openLink(url: string): void {
       :note-uuid="tab.noteUuid"
       :active="active"
       :page-width="tab.pageWidth"
+      :outline-visible="outlineVisible"
       :toc-display="workspace.settings?.noteTocDisplay ?? 'expanded'"
       :upload-image="uploadVisualImage"
       @change="updateContent"
@@ -397,6 +522,8 @@ function openLink(url: string): void {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  container-type: inline-size;
+  container-name: desk-note-pane;
 }
 
 .document-toolbar {
@@ -412,8 +539,8 @@ function openLink(url: string): void {
 }
 
 .document-path {
-  flex: 1;
-  min-width: 0;
+  flex: 1 1 0;
+  min-width: 72px;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -484,6 +611,18 @@ function openLink(url: string): void {
   gap: 1px;
 }
 
+.view-controls {
+  flex: 1 1 0;
+  min-width: min-content;
+  justify-content: flex-end;
+}
+
+.layout-toggles {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
 .view-divider {
   width: 1px;
   height: 16px;
@@ -491,9 +630,18 @@ function openLink(url: string): void {
   background: var(--border);
 }
 
+/* Outline needs ~1080px beside the writing column. Below that, both layout
+   toggles do nothing useful, so hide them with the divider. */
+@container desk-note-pane (max-width: 1080px) {
+  .layout-toggles,
+  .view-divider {
+    display: none;
+  }
+}
+
 .view-controls button,
-.format-actions button,
-.conflict-banner button {
+.conflict-banner button,
+:deep(.format-overflow button) {
   border: 0;
   background: transparent;
   color: var(--muted);
@@ -501,24 +649,11 @@ function openLink(url: string): void {
   font-size: 10px;
 }
 
-.format-actions {
-  flex: none;
-  min-height: 40px;
-  padding: 3px 12px;
-  border-bottom: 1px solid var(--border);
-  background: var(--editor-bg);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 2px;
-}
-
-.format-actions :deep(.ui-tooltip-host) {
+:deep(.format-overflow .ui-tooltip-host) {
   flex: none;
 }
 
-.format-actions button {
+:deep(.format-overflow button) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -529,7 +664,7 @@ function openLink(url: string): void {
   font-size: 14px;
 }
 
-.format-actions button:hover {
+:deep(.format-overflow button:hover:not(:disabled)) {
   background: var(--hover);
   color: var(--text);
 }
@@ -553,9 +688,15 @@ function openLink(url: string): void {
   stroke-linejoin: round;
 }
 
-.view-switcher button.active {
+.view-switcher button.active,
+.outline-toggle.active {
   background: var(--selected);
   color: var(--accent-strong);
+}
+
+.outline-toggle svg {
+  fill: currentColor;
+  stroke: none;
 }
 
 .conflict-banner {

@@ -6,11 +6,9 @@ import CodeGroup from '@tnotesjs/ui/code-group'
 import { createApp, h, type App } from 'vue'
 
 import {
-  applySwiperTabsPadding,
-  createSwiperTabNav,
+  hydrateTnSwipers,
   parseSwiperSlides,
-  swiperSlideTabTitle,
-  wrapSlideIndex
+  swiperSlideTabTitle
 } from './swiperSlides'
 
 export interface ParsedContainer {
@@ -205,72 +203,21 @@ function buildSwiper(bodyMarkdown: string, resolveImage: ResolveImage): HTMLElem
   const wrapper = document.createElement('div')
   wrapper.className = 'swiper-wrapper'
 
-  if (slides.length === 0) {
-    container.append(wrapper)
-    root.append(tabs, container)
-    return root
-  }
-
-  const useTabs = slides.length > 1
-  const tabButtons: HTMLButtonElement[] = []
-  const slideEls: HTMLDivElement[] = []
-
-  const activate = (index: number): void => {
-    tabButtons.forEach((button, buttonIndex) =>
-      button.classList.toggle('active', buttonIndex === index)
-    )
-    slideEls.forEach((slide, slideIndex) => {
-      const on = slideIndex === index
-      slide.classList.toggle('is-active', on)
-      slide.hidden = !on
-    })
-  }
-
-  const activeIndex = (): number => {
-    const found = tabButtons.findIndex((button) => button.classList.contains('active'))
-    return found >= 0 ? found : 0
-  }
-
-  applySwiperTabsPadding(tabs, useTabs)
-  const nav = useTabs
-    ? createSwiperTabNav({
-        onPrev: () => activate(wrapSlideIndex(activeIndex(), slides.length, -1)),
-        onNext: () => activate(wrapSlideIndex(activeIndex(), slides.length, 1))
-      })
-    : null
-  if (nav) tabs.append(nav.prev, nav.line)
-
-  slides.forEach((slide, index) => {
+  for (const slide of slides) {
     const slideEl = document.createElement('div')
     slideEl.className = 'swiper-slide'
-    const title = swiperSlideTabTitle(slide)
-    slideEl.dataset.title = title
+    slideEl.dataset.title = swiperSlideTabTitle(slide)
     const img = document.createElement('img')
     img.src = resolveImage(slide.src) || slide.src
     img.alt = slide.alt
     slideEl.append(img)
-    if (index !== 0) slideEl.hidden = true
-    else slideEl.classList.add('is-active')
-    slideEls.push(slideEl)
     wrapper.append(slideEl)
-
-    if (useTabs) {
-      const tab = document.createElement('button')
-      tab.type = 'button'
-      tab.className = 'tn-tab'
-      tab.textContent = title
-      if (index === 0) tab.classList.add('active')
-      tab.addEventListener('click', () => activate(index))
-      tabButtons.push(tab)
-      tabs.append(tab)
-    }
-  })
-
-  if (nav) tabs.append(nav.next)
+  }
 
   container.append(wrapper)
-  if (useTabs) root.append(tabs, container)
-  else root.append(container)
+  root.append(tabs, container)
+  // Shared site/Desk activation: tabs, prev/next, single visible slide.
+  hydrateTnSwipers(root)
   return root
 }
 

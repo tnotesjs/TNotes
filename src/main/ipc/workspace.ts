@@ -25,7 +25,8 @@ export function registerWorkspace(getWindow: GetWindow): () => void {
         kind: z.literal('tab'),
         tabType: z.enum(['note', 'web']),
         pinned: z.boolean()
-      })
+      }),
+      z.object({ kind: z.literal('code-group-tab') })
     ]),
     (request) => {
       const window = getWindow()

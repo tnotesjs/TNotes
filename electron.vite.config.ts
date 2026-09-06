@@ -21,13 +21,19 @@ export default defineConfig({
     },
     resolve: {
       alias: {
-        '@renderer': resolve('src/renderer/src')
+        '@renderer': resolve('src/renderer/src'),
+        // Use the prebundled ESM build: its diagram chunks ship with CJS deps
+        // (dayjs etc.) already inlined. `mermaid.core` pulls raw dayjs.min.js
+        // which has no ESM default export and blanks the whole editor when
+        // mermaid is left un-optimized; optimizing mermaid.core instead rewrites
+        // diagram chunks into flaky `.vite/deps/*` URLs (504).
+        mermaid: 'mermaid/dist/mermaid.esm.min.mjs'
       }
     },
     plugins: [vue()],
     // Local file: packages change often; prebundling freezes an old export map.
     optimizeDeps: {
-      exclude: ['@tnotesjs/ui']
+      exclude: ['@tnotesjs/ui', 'mermaid']
     }
   }
 })

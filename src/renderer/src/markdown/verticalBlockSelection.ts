@@ -1,5 +1,5 @@
 import type { MilkdownPlugin } from '@milkdown/kit/ctx'
-import type { Node as ProseNode } from '@milkdown/kit/prose/model'
+import type { Node as ProseNode, ResolvedPos } from '@milkdown/kit/prose/model'
 import {
   NodeSelection,
   Plugin,
@@ -12,6 +12,7 @@ import type { Mappable } from '@milkdown/kit/prose/transform'
 import { Decoration, DecorationSet } from '@milkdown/kit/prose/view'
 import type { EditorView } from '@milkdown/kit/prose/view'
 import { $prose } from '@milkdown/kit/utils'
+import { isIndependentBlock } from './independentBlock'
 
 type Direction = -1 | 1
 
@@ -80,19 +81,39 @@ function blockRange(doc: ProseNode, anchor: number, head: number): Selection {
   return new BlockRangeSelection($anchor, $head)
 }
 
-function isIndependentBlock(node: ProseNode): boolean {
-  return (
-    node.attrs.hidden !== true &&
-    node.isBlock &&
-    (node.isAtom ||
-      node.type.name === 'code_block' ||
-      node.type.spec.tableRole === 'table' ||
-      // Desk also renders standalone Markdown images as inline image nodes
-      // inside an otherwise empty paragraph. Mixed text/image lines stay text.
-      (node.type.name === 'paragraph' &&
-        node.childCount === 1 &&
-        node.firstChild?.type.name === 'image'))
-  )
+export function createBlockRangeSelection(doc: ProseNode, anchor: number, head: number): Selection {
+  if (anchor === head) return Selection.near(doc.resolve(head))
+  // Always a block range — unlike `blockRange()`, which falls back to
+  // TextSelection when both ends sit in paragraphs (image / empty lines).
+  return new BlockRangeSelection(doc.resolve(anchor), doc.resolve(head))
+}
+
+/**
+ * Mouse drag often lands on the leading edge of a node-view atom (image, table,
+ * fence). That position is *before* the block, so the last image in a note can
+ * never be covered — there is no later text to drag into. Snap the head to the
+ * far side of the independent block, matching Shift+Arrow.
+ */
+function snapHeadAroundIndependentBlock($anchor: ResolvedPos, $head: ResolvedPos): number {
+  for (let depth = $head.depth; depth > 0; depth -= 1) {
+    const node = $head.node(depth)
+    if (!isIndependentBlock(node)) continue
+    const start = $head.before(depth)
+    const end = $head.after(depth)
+    if ($anchor.pos <= start) return end
+    if ($anchor.pos >= end) return start
+  }
+  if ($head.parent === $head.doc) {
+    const after = $head.nodeAfter
+    if (after && isIndependentBlock(after) && $anchor.pos <= $head.pos) {
+      return $head.pos + after.nodeSize
+    }
+    const before = $head.nodeBefore
+    if (before && isIndependentBlock(before) && $anchor.pos >= $head.pos) {
+      return $head.pos - before.nodeSize
+    }
+  }
+  return $head.pos
 }
 
 function isInsideIndependentBlock(selection: Selection): boolean {
@@ -316,6 +337,8 @@ export function createVerticalBlockSelectionPlugin(): MilkdownPlugin {
       props: {
         handleKeyDown: handle,
         createSelectionBetween(view, $anchor, $head) {
+          const snapped = snapHeadAroundIndependentBlock($anchor, $head)
+          if (snapped !== $head.pos) return blockRange(view.state.doc, $anchor.pos, snapped)
           const current = view.state.selection
           return current instanceof BlockRangeSelection && current.anchor === $anchor.pos
             ? blockRange(view.state.doc, $anchor.pos, $head.pos)

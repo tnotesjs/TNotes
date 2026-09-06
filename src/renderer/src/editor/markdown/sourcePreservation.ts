@@ -69,7 +69,6 @@ interface FencedBlockParts {
 }
 
 const ATX_HEADING = /^ {0,3}#{1,6}(?:[ \t]+|$)/
-const ATX_H1 = /^ {0,3}#(?:[ \t]+|$)/
 const BLOCKQUOTE = /^ {0,3}>/
 const LIST_ITEM = /^ {0,3}(?:[*+-]|\d{1,9}[.)])[ \t]+/
 const SETEXT_UNDERLINE = /^ {0,3}(?:=+|-+)[ \t]*$/
@@ -300,10 +299,6 @@ function blockBoundary(
     const frontmatterEnd = findFrontmatterEnd(lines, start)
     if (frontmatterEnd !== null) {
       return { endLine: frontmatterEnd, kind: 'raw-frontmatter', raw: true }
-    }
-
-    if (ATX_H1.test(line)) {
-      return { endLine: start, kind: 'raw-generated-title', raw: true }
     }
   }
 

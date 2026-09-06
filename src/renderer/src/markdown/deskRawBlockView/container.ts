@@ -9,6 +9,7 @@ import {
 } from '../../editor/markdown/containerBody'
 import {
   codeGroupEntryTabTitle,
+  createEmptyCodeGroupEntry,
   parseCodeGroupEntries,
   serializeCodeGroupEntries,
   withCodeGroupEntryHighlights,
@@ -32,6 +33,8 @@ import {
 } from '../../editor/markdown/deskCodeTabEditor'
 import { mountFootprintsPreview } from '../../editor/markdown/componentPreview'
 import { attachRawSourceEditor, type RawSourceEditorHandle } from '../attachRawSourceEditor'
+import { showEditorContextMenu } from '../editorContextMenu'
+import { deleteDeskRawBlockAt } from '../../editor/markdown/rawBlockEmpty'
 import { deferUntilVisible } from './deferUntilVisible'
 import type { DeskRawBlockMountContext } from './types'
 
@@ -118,16 +121,56 @@ export function mountRawContainer(ctx: DeskRawBlockMountContext): void {
       return true
     }
 
-    const remountEditableCodeGroup = async (): Promise<void> => {
+    const remountEditableCodeGroup = async (options?: {
+      activeIndex?: number
+      renameIndex?: number
+    }): Promise<void> => {
       if (!previewEl) return
-      const fresh = await mountEditableCodeGroup(currentContainerSource)
+      const fresh = await mountEditableCodeGroup(currentContainerSource, options)
       if (cancelledIncludes || !previewEl || !fresh) return
       destroyContainerPreview(previewEl)
       previewEl.replaceWith(fresh)
       previewEl = fresh
     }
 
-    const mountEditableCodeGroup = async (source: string): Promise<HTMLElement | null> => {
+    const addCodeGroupTab = async (): Promise<void> => {
+      await Promise.all(
+        codeGroupTabEditors.map((handle) =>
+          handle?.isDirty() ? handle.flushSave() : Promise.resolve()
+        )
+      )
+      if (cancelledIncludes) return
+      const nextEntries = [...codeGroupEntries, createEmptyCodeGroupEntry(codeGroupEntries)]
+      if (!commitCodeGroupEntries(nextEntries)) return
+      await remountEditableCodeGroup({
+        activeIndex: nextEntries.length - 1,
+        renameIndex: nextEntries.length - 1
+      })
+    }
+
+    const removeCodeGroupTab = async (index: number): Promise<void> => {
+      await Promise.all(
+        codeGroupTabEditors.map((handle) =>
+          handle?.isDirty() ? handle.flushSave() : Promise.resolve()
+        )
+      )
+      if (cancelledIncludes) return
+      if (codeGroupEntries.length <= 1) {
+        const position = getPos()
+        if (position != null) deleteDeskRawBlockAt(view, position)
+        return
+      }
+      const nextEntries = codeGroupEntries.filter((_, entryIndex) => entryIndex !== index)
+      if (!commitCodeGroupEntries(nextEntries)) return
+      await remountEditableCodeGroup({
+        activeIndex: Math.min(index, nextEntries.length - 1)
+      })
+    }
+
+    const mountEditableCodeGroup = async (
+      source: string,
+      options?: { activeIndex?: number; renameIndex?: number }
+    ): Promise<HTMLElement | null> => {
       const parsed = parseContainerSource(source)
       if (parsed.name !== 'code-group') return null
       const entries = parseCodeGroupEntries(parsed.body)
@@ -141,7 +184,11 @@ export function mountRawContainer(ctx: DeskRawBlockMountContext): void {
       const group = document.createElement('div')
       group.className = 'custom-block custom-block-code-group desk-raw-block--code-group-editable'
 
-      const useTabs = entries.length > 1
+      const useTabs = true
+      const initialActive = Math.min(
+        Math.max(options?.activeIndex ?? 0, 0),
+        Math.max(entries.length - 1, 0)
+      )
       const tabs = document.createElement('div')
       tabs.className = 'code-group-tabs'
       const panels = document.createElement('div')
@@ -418,8 +465,8 @@ export function mountRawContainer(ctx: DeskRawBlockMountContext): void {
           tab.type = 'button'
           tab.className = 'code-group-tab'
           tab.textContent = codeGroupEntryTabTitle(entry, index)
-          tab.title = '拖拽排序 · 双击重命名'
-          if (index === 0) {
+          tab.title = '拖拽排序 · 双击重命名 · 右键删除'
+          if (index === initialActive) {
             tab.classList.add('active')
             panel.classList.add('active')
           }
@@ -430,6 +477,25 @@ export function mountRawContainer(ctx: DeskRawBlockMountContext): void {
             if (Number.isNaN(entryIndex)) return
             startTabRename(tab, entryIndex)
           })
+          tab.addEventListener(
+            'contextmenu',
+            (event) => {
+              const entryIndex = Number(tab.dataset.startIndex)
+              if (Number.isNaN(entryIndex)) return
+              showEditorContextMenu(
+                event,
+                [
+                  { id: 'rename', label: '重命名' },
+                  { id: 'request-delete', label: '删除代码块', danger: true }
+                ],
+                (action) => {
+                  if (action === 'rename') startTabRename(tab, entryIndex)
+                  if (action === 'request-delete') void removeCodeGroupTab(entryIndex)
+                }
+              )
+            },
+            true
+          )
           tabButtons.push(tab)
           tabs.append(tab)
           bindTabDragReorder(tab, index)
@@ -439,6 +505,36 @@ export function mountRawContainer(ctx: DeskRawBlockMountContext): void {
         panelEls.push(panel)
         panels.append(panel)
       })
+
+      const addButton = document.createElement('button')
+      addButton.type = 'button'
+      addButton.className = 'code-group-tab-add'
+      addButton.setAttribute('aria-label', '添加代码块')
+      addButton.title = '添加代码块'
+      const addIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+      addIcon.setAttribute('viewBox', '0 0 24 24')
+      addIcon.setAttribute('width', '14')
+      addIcon.setAttribute('height', '14')
+      addIcon.setAttribute('aria-hidden', 'true')
+      const addPath = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+      addPath.setAttribute('d', 'M12 5v14M5 12h14')
+      addPath.setAttribute('fill', 'none')
+      addPath.setAttribute('stroke', 'currentColor')
+      addPath.setAttribute('stroke-width', '2')
+      addPath.setAttribute('stroke-linecap', 'round')
+      addIcon.append(addPath)
+      addButton.append(addIcon)
+      addButton.addEventListener('pointerdown', (event) => event.stopPropagation())
+      addButton.addEventListener('click', (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        void addCodeGroupTab()
+      })
+      tabs.append(addButton)
+      if (options?.renameIndex != null) {
+        const renameTab = tabButtons[options.renameIndex]
+        if (renameTab) startTabRename(renameTab, options.renameIndex)
+      }
 
       if (useTabs) group.append(tabs, panels)
       else group.append(panels)
@@ -751,6 +847,8 @@ export function mountRawContainer(ctx: DeskRawBlockMountContext): void {
       container.append(wrapper)
       if (useTabs) root.append(tabs, container)
       else root.append(container)
+      // Editable path builds its own tabs (drag/rename); skip shared hydrate.
+      root.dataset.tnSwiperReady = 'true'
       return root
     }
 
@@ -851,29 +949,31 @@ export function mountRawContainer(ctx: DeskRawBlockMountContext): void {
       }
     }
 
-    rawSourceEditor = attachRawSourceEditor(
-      {
-        dom,
-        source: block.source,
-        getSource: () => currentContainerSource,
-        view,
-        getPos,
-        label: structuredCallout
-          ? '编辑容器'
-          : structuredContainerBody
-            ? '编辑容器正文'
-            : '编辑容器源码',
-        structuredCallout,
-        structuredContainerBody,
-        renderPreview: (source) => {
-          void refreshContainerPreview(source)
-        }
-      },
-      deps
-    )
-    cleanupTasks.push(() => {
-      rawSourceEditor?.destroy()
-      rawSourceEditor = null
-    })
+    if (container.name !== 'code-group') {
+      rawSourceEditor = attachRawSourceEditor(
+        {
+          dom,
+          source: block.source,
+          getSource: () => currentContainerSource,
+          view,
+          getPos,
+          label: structuredCallout
+            ? '编辑容器'
+            : structuredContainerBody
+              ? '编辑容器正文'
+              : '编辑容器源码',
+          structuredCallout,
+          structuredContainerBody,
+          renderPreview: (source) => {
+            void refreshContainerPreview(source)
+          }
+        },
+        deps
+      )
+      cleanupTasks.push(() => {
+        rawSourceEditor?.destroy()
+        rawSourceEditor = null
+      })
+    }
   }
 }

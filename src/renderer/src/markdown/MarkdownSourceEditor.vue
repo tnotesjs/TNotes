@@ -14,16 +14,17 @@ import { searchKeymap } from '@codemirror/search'
 import { Annotation, Compartment, EditorState, type Extension } from '@codemirror/state'
 import {
   crosshairCursor,
+  drawSelection,
   dropCursor,
   EditorView,
   highlightActiveLine,
   highlightActiveLineGutter,
   highlightSpecialChars,
   keymap,
-  lineNumbers,
-  rectangularSelection
+  lineNumbers
 } from '@codemirror/view'
 import { githubDark, githubLight } from '@uiw/codemirror-theme-github'
+import { codeMirrorRectangularSelection } from '../editor/markdown/codeMirrorMultiCursor'
 import { clearSourceLineStyles } from './clearSourceLineStyles'
 
 import type { NotePageWidth, NoteViewMode } from '../../../shared/contracts'
@@ -155,18 +156,23 @@ function runEdit(action: () => void): boolean {
   return true
 }
 
-defineExpose({ insertTextAt, wrapSelection, prefixSelection, setLinePrefix })
+function insertTable(): void {
+  insertTextAt('\n|  |  |\n| --- | --- |\n|  |  |\n')
+}
+
+defineExpose({ insertTextAt, wrapSelection, prefixSelection, setLinePrefix, insertTable })
 
 function baseExtensions(): Extension[] {
   return [
     highlightSpecialChars(),
     history(),
-    // Prefer native ::selection so multi-line highlights wrap the selected
-    // characters only. drawSelection() paints full-width line rectangles.
+    // drawSelection paints every range (Cmd+D). Native ::selection only
+    // covers the primary range.
+    drawSelection(),
     dropCursor(),
     indentOnInput(),
     bracketMatching(),
-    rectangularSelection(),
+    ...codeMirrorRectangularSelection(),
     crosshairCursor(),
     highlightActiveLine(),
     autocompletion({ activateOnTyping: true, icons: false, maxRenderedOptions: 60 }),

@@ -62,6 +62,26 @@ export function codeGroupEntryTabTitle(entry: CodeGroupEntry, index: number): st
   return entry.filename || `代码 ${index + 1}`
 }
 
+export function nextCodeGroupTabTitle(entries: readonly CodeGroupEntry[]): string {
+  const used = new Set(entries.map((entry) => entry.filename.trim()).filter(Boolean))
+  let next = entries.length + 1
+  while (used.has(String(next))) next += 1
+  return String(next)
+}
+
+export function createEmptyCodeGroupEntry(entries: readonly CodeGroupEntry[]): CodeGroupEntry {
+  const lang = entries.at(-1)?.lang.trim() || 'js'
+  const filename = nextCodeGroupTabTitle(entries)
+  return {
+    kind: 'fence',
+    filename,
+    lang,
+    info: `${lang} [${filename}]`,
+    code: '',
+    highlights: ''
+  }
+}
+
 export function withCodeGroupEntryTitle(entry: CodeGroupEntry, title: string): CodeGroupEntry {
   const trimmed = title.trim()
   const lang = entry.lang || 'text'

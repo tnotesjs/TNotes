@@ -2,6 +2,8 @@ import type { MilkdownPlugin } from '@milkdown/kit/ctx'
 import { Plugin } from '@milkdown/kit/prose/state'
 import { $prose } from '@milkdown/kit/utils'
 
+export const DESK_RAW_BLOCK_COMMIT_META = 'desk-raw-block-commit'
+
 export interface ReadonlyTransactionGuardOptions {
   isReadOnly: () => boolean
   isExternalSync: () => boolean
@@ -22,7 +24,10 @@ export function createReadonlyTransactionGuard(
     () =>
       new Plugin({
         filterTransaction: (transaction) =>
-          !transaction.docChanged || !options.isReadOnly() || options.isExternalSync()
+          !transaction.docChanged ||
+          !options.isReadOnly() ||
+          options.isExternalSync() ||
+          Boolean(transaction.getMeta(DESK_RAW_BLOCK_COMMIT_META))
       })
   )
 }

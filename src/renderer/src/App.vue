@@ -8,6 +8,7 @@ import NavigatorSidebar from './components/NavigatorSidebar.vue'
 import SettingsPanel from './components/SettingsPanel.vue'
 import ToastHost from './components/ToastHost.vue'
 import AppZoomFeedback from './components/AppZoomFeedback.vue'
+import CommandPalette from './commands/CommandPalette.vue'
 import { useEditorStore } from './stores/editor'
 import { findTab, tabAtNumber } from './editor-groups/layoutModel'
 import {
@@ -38,6 +39,10 @@ const store = useWorkspaceStore()
 const editor = useEditorStore()
 const createDialogOpen = ref(false)
 const settingsOpen = ref(false)
+const paletteOpen = ref(false)
+const commandPalette = ref<{ openSearch: () => Promise<void>; openCommands: () => Promise<void> } | null>(
+  null
+)
 const createTitle = ref('')
 const createPlacement = ref<NoteCreateRequest['placement']>({ type: 'root', placement: 'end' })
 const createRootPosition = ref<'top' | 'end'>('top')
@@ -124,6 +129,11 @@ function onKeydown(event: KeyboardEvent): void {
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
     event.preventDefault()
     void store.saveCurrentDocument().catch(() => undefined)
+    return
+  }
+  if ((event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === 'p') {
+    event.preventDefault()
+    void (event.shiftKey ? commandPalette.value?.openCommands() : commandPalette.value?.openSearch())
   }
 }
 
@@ -154,6 +164,15 @@ async function handleTabShortcut(command: TabShortcutCommand): Promise<void> {
     }
     return
   }
+  if (command === 'open-quick-open') {
+    await commandPalette.value?.openSearch()
+    return
+  }
+  if (command === 'open-command-palette') {
+    await commandPalette.value?.openCommands()
+    return
+  }
+
   if (
     command === 'increase-app-zoom' ||
     command === 'decrease-app-zoom' ||
@@ -348,6 +367,7 @@ watch(
     groupDialogOpen.value ||
     Boolean(renameNode.value) ||
     settingsOpen.value ||
+    paletteOpen.value ||
     Boolean(deletePreview.value) ||
     Boolean(recoveryCandidate.value) ||
     Boolean(store.gitAttention) ||
@@ -423,6 +443,13 @@ onUnmounted(() => {
   <div class="desk-shell">
     <header class="titlebar">
       <div class="traffic-space" />
+      <div class="titlebar-center">
+        <CommandPalette
+          ref="commandPalette"
+          v-model:open="paletteOpen"
+          @open-settings="settingsOpen = true"
+        />
+      </div>
       <div class="titlebar-actions">
         <span v-if="store.saving" class="sync-state">正在保存</span>
         <span v-else-if="store.dirty" class="sync-state dirty">未保存</span>
@@ -432,7 +459,19 @@ onUnmounted(() => {
           data-tooltip="设置"
           @click="settingsOpen = true"
         >
-          ⚙
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="1em"
+            height="1em"
+            viewBox="0 0 1024 1024"
+            aria-hidden="true"
+          >
+            <path d="M0 0h1024v1024H0z" fill="none" />
+            <path
+              fill="currentColor"
+              d="M600.7 64a32 32 0 0 1 30.5 22.2l35.2 109.4a348 348 0 0 1 42.4 24.5l112.4-24.2a32 32 0 0 1 34.4 15.4l88.7 153.5a32 32 0 0 1-4 37.5l-77.1 85.1a357 357 0 0 1 0 49l77 85.3a32 32 0 0 1 4.1 37.5l-88.7 153.6a32 32 0 0 1-34.4 15.3l-112.4-24.2q-20.2 13.6-42.4 24.5l-35.2 109.4a32 32 0 0 1-30.5 22.2H423.3a32 32 0 0 1-30.5-22.2l-35.1-109.3a352 352 0 0 1-42.6-24.7l-112.3 24.3a32 32 0 0 1-34.4-15.4L79.7 659.2a32 32 0 0 1 4-37.5l77.1-85.3a357 357 0 0 1 0-48.8l-77-85.3a32 32 0 0 1-4.1-37.5l88.7-153.6a32 32 0 0 1 34.4-15.3l112.3 24.3a355 355 0 0 1 42.6-24.7l35.2-109.3A32 32 0 0 1 423.2 64zm-23.4 64H446.7l-36.3 113l-24.5 12a294 294 0 0 0-34.9 20.2l-22.6 15.3l-116.2-25l-65.3 113l79.7 88.3l-2 27.1a293 293 0 0 0 0 40.2l2 27.1l-79.8 88.2L212 760.6l116.2-25l22.7 15.2a294 294 0 0 0 34.8 20.1l24.5 12L446.7 896h130.7L614 782.8l24.4-11.9a288 288 0 0 0 34.8-20l22.6-15.3l116.3 25l65.2-113.2l-79.7-88.2l2-27.1a293 293 0 0 0 0-40.3l-2-27.1l79.8-88.1L812 263.4l-116.3 25l-22.6-15.2a288 288 0 0 0-34.8-20.1L614 241zM512 320a192 192 0 1 1 0 384a192 192 0 0 1 0-384m0 64a128 128 0 1 0 0 256a128 128 0 0 0 0-256"
+            />
+          </svg>
         </button>
       </div>
     </header>
@@ -770,6 +809,7 @@ onUnmounted(() => {
 }
 
 .titlebar {
+  position: relative;
   height: 42px;
   flex: none;
   display: flex;
@@ -784,6 +824,17 @@ onUnmounted(() => {
 .traffic-space {
   width: 58px;
   flex: none;
+}
+
+.titlebar-center {
+  position: absolute;
+  left: 50%;
+  z-index: 2;
+  width: min(520px, calc(100% - 280px));
+  display: flex;
+  justify-content: center;
+  transform: translateX(-50%);
+  -webkit-app-region: no-drag;
 }
 
 .welcome-mark {
@@ -811,7 +862,7 @@ onUnmounted(() => {
   display: grid;
   place-items: center;
   padding: 0;
-  font-size: 22px;
+  font-size: 18px;
   line-height: 1;
   -webkit-app-region: no-drag;
   border: 0;
@@ -824,6 +875,12 @@ onUnmounted(() => {
 .titlebar-actions button:hover {
   background: var(--hover);
   color: var(--text);
+}
+
+.titlebar-actions button svg {
+  display: block;
+  width: 1em;
+  height: 1em;
 }
 
 .sync-state {
@@ -867,6 +924,11 @@ body.is-resizing .workspace-layout .resize-handle::before {
 
 body.is-resizing {
   cursor: col-resize;
+  user-select: none;
+}
+
+body.is-resizing-image {
+  cursor: row-resize;
   user-select: none;
 }
 

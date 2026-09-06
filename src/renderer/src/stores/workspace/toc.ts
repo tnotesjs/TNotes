@@ -120,8 +120,8 @@ export function createToc(ctx: TocContext) {
           expectedRevision: beforeRename.document.revision
         })
       )
-      // A rename also regenerates the Markdown title. Preserve any edits made
-      // while saving/renaming instead of replacing a newer draft with disk content.
+      // Rename does not rewrite the note body. Keep in-progress edits if the
+      // session went dirty while the request was in flight.
       const current = ctx.documents.value[key] ?? beforeRename
       const content = current.dirty ? current.content : mutation.note.content
       const dirty = content !== mutation.note.content

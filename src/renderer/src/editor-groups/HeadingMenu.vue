@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from 'vue'
 
-type HeadingLevel = 0 | 2 | 3 | 4 | 5 | 6
+type HeadingLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6
 
 const props = defineProps<{
   level: number | null
@@ -10,7 +10,7 @@ const props = defineProps<{
   platform: string
 }>()
 const emit = defineEmits<{ select: [level: HeadingLevel] }>()
-const levels: HeadingLevel[] = [0, 2, 3, 4, 5, 6]
+const levels: HeadingLevel[] = [0, 1, 2, 3, 4, 5, 6]
 const menuId = useId()
 const trigger = ref<HTMLButtonElement | null>(null)
 const menu = ref<HTMLElement | null>(null)
@@ -229,7 +229,7 @@ onBeforeUnmount(() => {
   text-align: center;
 }
 
-.heading-trigger:hover {
+.heading-trigger:hover:not(:disabled) {
   background: var(--hover);
   color: var(--text);
 }
@@ -243,7 +243,6 @@ onBeforeUnmount(() => {
 }
 
 .heading-trigger:disabled {
-  opacity: 0.5;
   cursor: not-allowed;
 }
 
@@ -297,6 +296,9 @@ onBeforeUnmount(() => {
 .level-0 {
   font-size: 14px;
   font-weight: 400;
+}
+.level-1 {
+  font-size: 28px;
 }
 .level-2 {
   font-size: 24px;

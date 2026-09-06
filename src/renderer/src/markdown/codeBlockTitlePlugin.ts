@@ -3,23 +3,32 @@ import { Plugin } from '@milkdown/kit/prose/state'
 import type { EditorView } from '@milkdown/kit/prose/view'
 import { $prose } from '@milkdown/kit/utils'
 
+import { ensureCodeExpandButton } from './codeBlockFullscreen'
+
 /**
- * Injects a Yuque-style title input into each Crepe code-block tools row and
- * keeps it synced with the `title` attr on `code_block`.
+ * Injects a Yuque-style title input and a typed language field into each Crepe
+ * code-block tools row, keeping them synced with `title` / `language` attrs.
  *
- * Sync runs on create (with short retries for Crepe's async tools mount) and
- * when the document changes — not on every caret move.
+ * Sync runs on create (with short retries for Crepe's async tools mount), when
+ * the document changes, and when Crepe remounts `.tools` — which happens after
+ * the note is hidden (`v-show`) by starting site preview and shown again.
+ * Caret-only updates are ignored unless injected chrome is already missing.
  */
 export function createCodeBlockTitlePlugin(): MilkdownPlugin {
   return $prose(() => {
     return new Plugin({
       view: (view) => {
-        let raf = 0
+        let syncRaf = 0
+        let bootRaf = 0
         let bootFrames = 0
-        const sync = (): void => syncCodeBlockTitles(view)
+        const sync = (): void => {
+          syncCodeBlockTitles(view)
+          syncCodeBlockLanguages(view)
+          syncCodeBlockExpand(view)
+        }
         const schedule = (): void => {
-          cancelAnimationFrame(raf)
-          raf = requestAnimationFrame(() => {
+          cancelAnimationFrame(syncRaf)
+          syncRaf = requestAnimationFrame(() => {
             sync()
             // Crepe mounts `.tools` asynchronously after the code block appears.
             requestAnimationFrame(sync)
@@ -29,19 +38,95 @@ export function createCodeBlockTitlePlugin(): MilkdownPlugin {
           sync()
           bootFrames += 1
           if (bootFrames < 8 && !view.isDestroyed) {
-            raf = requestAnimationFrame(boot)
+            bootRaf = requestAnimationFrame(boot)
           }
         }
+        const restartBoot = (): void => {
+          cancelAnimationFrame(bootRaf)
+          bootFrames = 0
+          boot()
+        }
+        const observer = new MutationObserver((mutations) => {
+          if (mutationsIndicateCodeToolsRemount(mutations)) schedule()
+        })
+        observer.observe(view.dom, { childList: true, subtree: true })
+        // happy-dom's IntersectionObserver often never delivers callbacks.
+        const visibility =
+          typeof IntersectionObserver === 'function'
+            ? new IntersectionObserver((entries) => {
+                if (entries.some((entry) => entry.isIntersecting)) restartBoot()
+              })
+            : null
+        visibility?.observe(view.dom)
+        const onEditorVisible = (): void => restartBoot()
+        view.dom.addEventListener('desk-code-chrome-sync', onEditorVisible)
         boot()
         return {
           update: (current, previous) => {
-            if (!previous.doc.eq(current.state.doc)) schedule()
+            if (!previous.doc.eq(current.state.doc) || viewHasIncompleteCodeChrome(current)) {
+              schedule()
+            }
           },
-          destroy: () => cancelAnimationFrame(raf)
+          destroy: () => {
+            observer.disconnect()
+            visibility?.disconnect()
+            view.dom.removeEventListener('desk-code-chrome-sync', onEditorVisible)
+            cancelAnimationFrame(syncRaf)
+            cancelAnimationFrame(bootRaf)
+          }
         }
       }
     })
   })
+}
+
+export function mutationsIndicateCodeToolsRemount(mutations: MutationRecord[]): boolean {
+  for (const mutation of mutations) {
+    if (mutation.type !== 'childList') continue
+    if (mutation.target instanceof Element && isCodeToolsHost(mutation.target)) return true
+    for (const node of mutation.addedNodes) {
+      if (!(node instanceof Element)) continue
+      if (
+        node.classList.contains('tools') ||
+        node.classList.contains('milkdown-code-block') ||
+        node.querySelector('.tools')
+      ) {
+        return true
+      }
+    }
+  }
+  return false
+}
+
+function isCodeToolsHost(el: Element): boolean {
+  return (
+    el.classList.contains('tools') ||
+    el.classList.contains('tools-button-group') ||
+    el.classList.contains('milkdown-code-block')
+  )
+}
+
+function viewHasIncompleteCodeChrome(view: EditorView): boolean {
+  let incomplete = false
+  view.state.doc.descendants((node, pos) => {
+    if (incomplete || node.type.name !== 'code_block') return
+    const dom = view.nodeDOM(pos) as HTMLElement | null
+    if (!dom?.classList?.contains('milkdown-code-block')) return
+    if (dom.classList.contains('desk-code-tab')) return
+    if (standaloneCodeBlockMissingChrome(dom)) incomplete = true
+  })
+  return incomplete
+}
+
+export function standaloneCodeBlockMissingChrome(block: HTMLElement): boolean {
+  if (block.classList.contains('desk-code-tab')) return false
+  const tools = block.querySelector('.tools')
+  if (!tools) return false
+  return (
+    !tools.querySelector('.desk-code-title') ||
+    !tools.querySelector('.desk-code-language') ||
+    !tools.querySelector('.desk-code-expand')
+  )
 }
 
 function syncCodeBlockTitles(view: EditorView): void {
@@ -84,6 +169,89 @@ function syncCodeBlockTitles(view: EditorView): void {
     if (document.activeElement !== input && input.value !== title) {
       input.value = title
     }
+  })
+}
+
+function syncCodeBlockLanguages(view: EditorView): void {
+  if (view.isDestroyed) return
+  view.state.doc.descendants((node, pos) => {
+    if (node.type.name !== 'code_block') return
+    const dom = view.nodeDOM(pos) as HTMLElement | null
+    if (!dom?.classList?.contains('milkdown-code-block')) return
+    if (dom.classList.contains('desk-code-tab')) return
+    const tools = dom.querySelector('.tools') as HTMLElement | null
+    if (!tools) return
+
+    let input = tools.querySelector('.desk-code-language') as HTMLInputElement | null
+    if (!input) {
+      input = document.createElement('input')
+      input.type = 'text'
+      input.className = 'desk-code-language'
+      input.spellcheck = false
+      input.autocomplete = 'off'
+      input.placeholder = 'js'
+      input.title = '语言'
+      input.setAttribute('aria-label', '语言')
+      const commit = (): void => {
+        const language = input!.value.trim()
+        input!.value = language
+        input!.size = Math.max(2, language.length || 1)
+        const currentPos = findCodeBlockPos(view, dom)
+        if (currentPos == null) return
+        const current = view.state.doc.nodeAt(currentPos)
+        if (!current || current.type.name !== 'code_block') return
+        if (String(current.attrs.language ?? '') === language) return
+        view.dispatch(
+          view.state.tr.setNodeMarkup(currentPos, undefined, {
+            ...current.attrs,
+            language
+          })
+        )
+      }
+      input.addEventListener('mousedown', (event) => event.stopPropagation())
+      input.addEventListener('pointerdown', (event) => event.stopPropagation())
+      input.addEventListener('keydown', (event) => {
+        event.stopPropagation()
+        if (event.key === 'Enter') {
+          event.preventDefault()
+          input!.blur()
+        }
+        if (event.key === 'Escape') {
+          event.preventDefault()
+          const currentPos = findCodeBlockPos(view, dom)
+          const current = currentPos == null ? null : view.state.doc.nodeAt(currentPos)
+          const language = String(current?.attrs.language ?? '').trim()
+          input!.value = language
+          input!.size = Math.max(2, language.length || 1)
+          input!.blur()
+        }
+      })
+      input.addEventListener('input', () => {
+        input!.size = Math.max(2, input!.value.length || 1)
+      })
+      input.addEventListener('change', commit)
+      input.addEventListener('blur', commit)
+      const copyGroup = tools.querySelector('.tools-button-group')
+      if (copyGroup) tools.insertBefore(input, copyGroup)
+      else tools.append(input)
+    }
+
+    const language = String(node.attrs.language ?? '').trim()
+    if (document.activeElement !== input && input.value !== language) {
+      input.value = language
+      input.size = Math.max(2, language.length || 1)
+    }
+  })
+}
+
+function syncCodeBlockExpand(view: EditorView): void {
+  if (view.isDestroyed) return
+  view.state.doc.descendants((node, pos) => {
+    if (node.type.name !== 'code_block') return
+    const dom = view.nodeDOM(pos) as HTMLElement | null
+    if (!dom?.classList?.contains('milkdown-code-block')) return
+    if (dom.classList.contains('desk-code-tab')) return
+    ensureCodeExpandButton(dom)
   })
 }
 

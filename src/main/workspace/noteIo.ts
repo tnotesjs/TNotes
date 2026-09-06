@@ -2,7 +2,13 @@ import path from 'node:path'
 import fs from 'node:fs/promises'
 import prettier from 'prettier'
 
-import { KbError, type Placement } from '@tnotesjs/kb'
+import {
+  KbError,
+  parseNoteContent,
+  serializeNoteContent,
+  type NoteFrontmatter,
+  type Placement
+} from '@tnotesjs/kb'
 import { loadSettings, settingsForKnowledgeBase } from '../settings'
 
 import type {
@@ -94,6 +100,21 @@ export function resolveNotesTable(
   return { notes, missingIds }
 }
 
+/** Keep only whitelist keys; pin id from the snapshot so a lost atom cannot drop giscus mapping. */
+function normalizeWhitelistedFrontmatter(
+  content: string,
+  existing?: NoteFrontmatter
+): string {
+  const { frontmatter, body } = parseNoteContent(content)
+  return serializeNoteContent(
+    {
+      id: existing?.id ?? frontmatter.id,
+      description: frontmatter.description ?? existing?.description
+    },
+    body
+  )
+}
+
 export async function saveNote(
   handle: KnowledgeBaseHandle,
   request: NoteSaveRequest,
@@ -111,8 +132,11 @@ export async function saveNote(
       content = request.content
     }
   }
+  const index = resolveNoteIndex(handle, request.noteUuid)
+  const existing = handle.snapshot.notes.find((note) => note.index === index)?.frontmatter
+  content = normalizeWhitelistedFrontmatter(content, existing)
   const result = await handle.workspace.notes.save({
-    index: resolveNoteIndex(handle, request.noteUuid),
+    index,
     content,
     expectedRevision: request.expectedRevision
   })

@@ -144,11 +144,11 @@ export function createCodeLineHighlightExtension(options: CodeLineHighlightOptio
     pruneListener,
     EditorView.theme({
       '.cm-highlighted-line': {
-        backgroundColor: 'color-mix(in srgb, var(--accent) 18%, transparent)'
+        backgroundColor: 'var(--tn-c-highlight)'
       },
       /* Active-line overlay must not hide highlight marks. */
       '.cm-highlighted-line.cm-activeLine': {
-        backgroundColor: 'color-mix(in srgb, var(--accent) 26%, transparent)'
+        backgroundColor: 'var(--tn-c-highlight)'
       },
       '.cm-lineNumbers .cm-gutterElement': {
         cursor: 'pointer'
