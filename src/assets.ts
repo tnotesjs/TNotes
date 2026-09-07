@@ -8,10 +8,15 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-import { ASSETS_DIR, NOTES_DIR } from "./constants";
+import {
+  ASSETS_DIR,
+  KB_ICON_BASENAME,
+  KB_ICON_EXTENSIONS,
+  NOTES_DIR,
+} from "./constants";
 import { writeFileAtomic } from "./atomic";
 
-import type { AssetEntry } from "./types";
+import type { AssetEntry, KbIcon } from "./types";
 
 const IMAGE_EXTENSIONS = new Set([
   ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".avif", ".ico",
@@ -19,6 +24,8 @@ const IMAGE_EXTENSIONS = new Set([
 
 /** Markdown reference to an asset, e.g. ../assets/a.png or /assets/a.png. */
 const ASSET_REF_REGEX = /(?:\.\.\/|\.\/|\/)assets\/([^\s)"'<>]+)/g;
+
+const KB_ICON_EXT_SET = new Set<string>(KB_ICON_EXTENSIONS);
 
 function dedupeFileName(existing: Set<string>, fileName: string): string {
   if (!existing.has(fileName)) return fileName;
@@ -39,7 +46,7 @@ async function walkAssets(dir: string, prefix: string): Promise<AssetEntry[]> {
   }
   const result: AssetEntry[] = [];
   for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
-    if (entry.name.startsWith(".")) continue;
+    if (entry.name.startsWith(".") && !entry.name.startsWith(KB_ICON_BASENAME)) continue;
     const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
@@ -72,6 +79,60 @@ export async function addAsset(
   const relPath = `${ASSETS_DIR}/${finalName}`;
   await writeFileAtomic(path.join(rootPath, relPath), data);
   return { relPath, markdownPath: `../${relPath}` };
+}
+
+function normalizeIconExt(ext: string): string {
+  const withDot = ext.startsWith(".") ? ext.toLowerCase() : `.${ext.toLowerCase()}`;
+  if (withDot === ".jpeg") return ".jpg";
+  return withDot;
+}
+
+/** Delete every `assets/.tn-kb-icon.*` file. */
+export async function clearKbIcon(rootPath: string): Promise<{ deleted: string[] }> {
+  const assetsDir = path.join(rootPath, ASSETS_DIR);
+  const deleted: string[] = [];
+  let entries: string[] = [];
+  try {
+    entries = await fs.readdir(assetsDir);
+  } catch {
+    return { deleted };
+  }
+  for (const name of entries) {
+    if (!name.startsWith(KB_ICON_BASENAME)) continue;
+    const relPath = `${ASSETS_DIR}/${name}`;
+    await fs.rm(path.join(rootPath, relPath), { force: true });
+    deleted.push(relPath);
+  }
+  return { deleted };
+}
+
+/**
+ * Replace the knowledge-base icon with a fixed filename so repeated uploads
+ * do not pile up historical icon assets.
+ */
+export async function replaceKbIcon(
+  rootPath: string,
+  ext: string,
+  data: Uint8Array,
+): Promise<{ relPath: string; markdownPath: string; icon: KbIcon; deleted: string[] }> {
+  const normalized = normalizeIconExt(ext);
+  if (!KB_ICON_EXT_SET.has(normalized as (typeof KB_ICON_EXTENSIONS)[number])) {
+    throw new Error(`不支持的知识库图标扩展名: ${ext}`);
+  }
+  const writeExt = normalized;
+  const { deleted } = await clearKbIcon(rootPath);
+  const assetsDir = path.join(rootPath, ASSETS_DIR);
+  await fs.mkdir(assetsDir, { recursive: true });
+  const fileName = `${KB_ICON_BASENAME}${writeExt}`;
+  const relPath = `${ASSETS_DIR}/${fileName}`;
+  await writeFileAtomic(path.join(rootPath, relPath), data);
+  const markdownPath = `../${relPath}`;
+  return {
+    relPath,
+    markdownPath,
+    icon: { src: markdownPath },
+    deleted,
+  };
 }
 
 /** Collect asset references from all note bodies. */
@@ -110,7 +171,10 @@ export async function gcAssets(
   ]);
   const unreferenced = assets
     .map((a) => a.relPath)
-    .filter((relPath) => !refs.has(relPath));
+    .filter((relPath) => {
+      if (path.posix.basename(relPath).startsWith(KB_ICON_BASENAME)) return false;
+      return !refs.has(relPath);
+    });
   const deleted: string[] = [];
   if (options.delete) {
     for (const relPath of unreferenced) {

@@ -136,7 +136,7 @@ describe("notes", () => {
       kind: "renamed",
       previousPath: "notes/0002. 第二篇.md",
     });
-    expect(await read("notes/0002. 第二篇（改）.md")).toContain("# 0002. 第二篇（改）");
+    expect(await read("notes/0002. 第二篇（改）.md")).toBe("# 第二篇\n");
     expect(await read("TOC.md")).toContain("- [ ] 0002. 第二篇（改）");
   });
 

@@ -10,15 +10,21 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 
-import { addAsset, gcAssets, listAssets } from "./assets";
+import { addAsset, clearKbIcon, gcAssets, listAssets, replaceKbIcon } from "./assets";
 import { applyAtomicWrites, writeFileAtomic } from "./atomic";
-import { ASSETS_DIR, CONFIG_FILE, NOTES_DIR, TOC_FILE } from "./constants";
+import {
+  ASSETS_DIR,
+  CONFIG_FILE,
+  NOTES_DIR,
+  TOC_FILE,
+} from "./constants";
 import { KbError } from "./errors";
 import {
   parseNoteContent,
   serializeNoteContent,
   updateNoteFrontmatter,
 } from "./frontmatter";
+import { isValidKbName } from "./name";
 import {
   contentRevision,
   readKbConfig,
@@ -26,6 +32,7 @@ import {
   scanKnowledgeBase,
   scanNoteFiles,
 } from "./scanner";
+import { updateCompletedNotesStats } from "./stats";
 import {
   buildGroupLine,
   buildNoteLine,
@@ -47,7 +54,9 @@ import type {
   AssetEntry,
   ChangedFile,
   KbConfig,
+  KbIcon,
   KbSnapshot,
+  KbStats,
   MutationResult,
   NoteDoc,
   NoteFrontmatter,
@@ -110,22 +119,9 @@ function noteFileName(index: string, title: string): string {
   return `${index}. ${title}.md`;
 }
 
-/** File-stem heading, e.g. `0001. 标题`. */
+/** Default first-line H1 for a newly created note. Rename does not keep this in sync. */
 function noteHeading(index: string, title: string): string {
   return `${index}. ${title}`;
-}
-
-/** Keep the first-line H1 in sync with `{index}. {title}`. */
-function syncLeadingH1(content: string, index: string, title: string): string {
-  const heading = noteHeading(index, title);
-  const { frontmatter, body } = parseNoteContent(content);
-  const lines = body.replace(/^\n+/, "").split("\n");
-  if (/^#\s+.+$/.test(lines[0] ?? "")) {
-    lines[0] = `# ${heading}`;
-  } else {
-    lines.unshift(`# ${heading}`, "");
-  }
-  return serializeNoteContent(frontmatter, `${lines.join("\n")}\n`);
 }
 
 function toDoc(rootPath: string, meta: NoteMeta, content: string): NoteDoc {
@@ -209,12 +205,24 @@ export interface TNotesKbWorkspace {
       fileName: string;
       data: Uint8Array;
     }): Promise<{ relPath: string; markdownPath: string }>;
+    /** Replace KB icon with fixed `assets/.tn-kb-icon.<ext>` (deletes prior icons). */
+    replaceIcon(input: {
+      ext: string;
+      data: Uint8Array;
+    }): Promise<{ relPath: string; markdownPath: string; icon: KbIcon; deleted: string[] }>;
+    /** Delete all `assets/.tn-kb-icon.*` files. */
+    clearIcon(): Promise<{ deleted: string[] }>;
     gc(options?: { delete?: boolean }): Promise<{ unreferenced: string[]; deleted: string[] }>;
   };
 
   config: {
     get(): Promise<KbConfig>;
     set(updates: Partial<KbConfig>): Promise<MutationResult<KbConfig>>;
+  };
+
+  stats: {
+    /** Rewrite `stats.completedNotesCount` when enabled; requires a git repo. */
+    update(): Promise<MutationResult<KbStats>>;
   };
 }
 
@@ -338,7 +346,6 @@ export function createWorkspace(options: CreateWorkspaceOptions): TNotesKbWorksp
         }
         const nextFileName = noteFileName(input.index, title);
         const nextRelPath = `${NOTES_DIR}/${nextFileName}`;
-        const nextContent = syncLeadingH1(content, input.index, title);
         const lines = await readTocLines(rootPath);
 
         await applyAtomicWrites([
@@ -351,11 +358,10 @@ export function createWorkspace(options: CreateWorkspaceOptions): TNotesKbWorksp
           path.join(rootPath, meta.relPath),
           path.join(rootPath, nextRelPath),
         );
-        await writeFileAtomic(path.join(rootPath, nextRelPath), nextContent);
 
         const nextMeta: NoteMeta = { ...meta, title, fileName: nextFileName, relPath: nextRelPath };
         return {
-          value: toDoc(rootPath, nextMeta, nextContent),
+          value: toDoc(rootPath, nextMeta, content),
           changedFiles: [
             { path: nextRelPath, kind: "renamed", previousPath: meta.relPath },
             { path: TOC_FILE, kind: "updated" },
@@ -505,6 +511,8 @@ export function createWorkspace(options: CreateWorkspaceOptions): TNotesKbWorksp
     assets: {
       list: () => listAssets(rootPath),
       add: (input) => addAsset(rootPath, input.fileName, input.data),
+      replaceIcon: (input) => replaceKbIcon(rootPath, input.ext, input.data),
+      clearIcon: () => clearKbIcon(rootPath),
       gc: (options) => gcAssets(rootPath, options),
     },
 
@@ -513,12 +521,42 @@ export function createWorkspace(options: CreateWorkspaceOptions): TNotesKbWorksp
         return (await readKbConfig(rootPath)).config;
       },
       async set(updates) {
+        if (updates.name !== undefined && updates.name !== null) {
+          const name = String(updates.name).trim();
+          if (!isValidKbName(name)) {
+            throw new KbError(
+              "INVALID_OPERATION",
+              "知识库名称须匹配 ^[A-Za-z0-9._-]{1,100}$",
+              { name: updates.name },
+            );
+          }
+          updates = { ...updates, name };
+        }
+        if (updates.port !== undefined && updates.port !== null) {
+          const port = Number(updates.port);
+          if (!Number.isInteger(port) || port < 1 || port > 65535) {
+            throw new KbError("INVALID_OPERATION", "站点预览端口须为 1–65535 的整数", {
+              port: updates.port,
+            });
+          }
+          updates = { ...updates, port };
+        }
+        if (updates.title !== undefined && updates.title !== null) {
+          const title = String(updates.title).trim();
+          updates = { ...updates, title: title || undefined };
+        }
+
         const { config } = await readKbConfig(rootPath);
         const next: KbConfig = { ...config };
         for (const [key, value] of Object.entries(updates)) {
           if (value === undefined) delete next[key];
           else next[key] = value;
         }
+        // Normalize empty title away; consumers fall back to name / dir.
+        if (typeof next.title === "string" && !next.title.trim()) {
+          delete next.title;
+        }
+
         await writeFileAtomic(
           path.join(rootPath, CONFIG_FILE),
           `${JSON.stringify(next, null, 2)}\n`,
@@ -528,6 +566,10 @@ export function createWorkspace(options: CreateWorkspaceOptions): TNotesKbWorksp
           changedFiles: [{ path: CONFIG_FILE, kind: "updated" }],
         };
       },
+    },
+
+    stats: {
+      update: () => updateCompletedNotesStats(rootPath),
     },
   };
 

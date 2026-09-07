@@ -49,3 +49,26 @@ export type {
   SetFrontmatterInput,
   MoveTocEntryInput,
 } from "./workspace";
+export {
+  isValidKbName,
+  parseRepoNameFromRemoteUrl,
+  resolveKbName,
+} from "./name";
+export {
+  isGitRepository,
+  readOriginRemoteUrl,
+} from "./git";
+export {
+  clearKbIcon,
+  replaceKbIcon,
+  listAssets,
+  addAsset,
+  gcAssets,
+} from "./assets";
+export {
+  parseCompletedNoteIndexes,
+  computeCompletedNotesCount,
+  updateCompletedNotesStats,
+  fillCompletedNotesCount,
+  toMonthKey,
+} from "./stats";

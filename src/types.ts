@@ -51,10 +51,44 @@ export interface TocNoteNode {
   children: TocNode[];
 }
 
+/** Knowledge-base icon. Prefer at most one of src / svg / letter. */
+export interface KbIcon {
+  /** Markdown- or kb-relative image path, e.g. `../assets/.tn-kb-icon.png`. */
+  src?: string;
+  /** Inline SVG markup. */
+  svg?: string;
+  /** Single display character when no image is set. */
+  letter?: string;
+}
+
+/** Optional completion-trend statistics (populated by `tnotes-kb update`). */
+export interface KbStats {
+  /** When false/undefined, update skips rewriting counts. Default off. */
+  enabled?: boolean;
+  /** Monthly completed-note counts keyed by `YY.MM` (deduped by note index). */
+  completedNotesCount?: Record<string, number>;
+}
+
 /** tnotes.json — kb-level configuration. Unknown keys are preserved. */
 export interface KbConfig {
+  /**
+   * GitHub-style repository name (`^[A-Za-z0-9._-]{1,100}$`).
+   * Does not rename the on-disk folder.
+   */
+  name?: string;
+  /** Display name in Desk's KB list. Falls back to `name` / directory name. */
   title?: string;
   description?: string;
+  icon?: KbIcon;
+  /** Git clone / GitHub URL. */
+  repositoryUrl?: string;
+  /** Root-library URL (collection TBD). */
+  rootUrl?: string;
+  /** Site preview / SSG port. Defaults to 9193. */
+  port?: number;
+  /** Public deploy URL (e.g. GitHub Pages). */
+  pageUrl?: string;
+  stats?: KbStats;
   /** Deploy base path, e.g. "/TNotes.vite/". Defaults to "/". */
   base?: string;
   /** Note index used as the site home page. Defaults to the first TOC note. */

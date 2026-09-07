@@ -15,6 +15,7 @@
     }
   },
   "bin": {
+    "tnotes-kb": "./dist/cli.js",
     "tnotes-kb-migrate": "./dist/codemod-cli.js"
   },
   "files": [
