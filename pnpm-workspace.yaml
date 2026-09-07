@@ -8,3 +8,7 @@ onlyBuiltDependencies:
   - '@parcel/watcher'
   - electron
   - electron-winstaller
+minimumReleaseAgeExclude:
+  - '@tnotesjs/ui'
+  - '@tnotesjs/kb'
+  - '@tnotesjs/ssg'
