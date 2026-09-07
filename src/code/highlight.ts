@@ -118,6 +118,7 @@ export async function prepareCodeHighlighter(
         const loader =
           bundledLanguages[language as keyof typeof bundledLanguages] ??
           bundledLanguagesAlias[language as keyof typeof bundledLanguagesAlias];
+        if (!loader) return;
         pending = highlighter.loadLanguage(loader).then(() => undefined);
         loading.set(language, pending);
         pending.catch(() => loading.delete(language));
