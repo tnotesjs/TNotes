@@ -18,6 +18,7 @@ import type {
   ExternalNoteChangeEvent,
   KbBuildResult,
   KnowledgeBaseDetail,
+  KnowledgeBaseSettingsDto,
   NoteCreateRequest,
   NoteDocumentDto,
   NotesTableResolveRequest,
@@ -102,7 +103,13 @@ const api: DeskApi = {
   },
   knowledgeBases: {
     read: (knowledgeBaseId) =>
-      invoke<KnowledgeBaseDetail>(IPC_CHANNELS.knowledgeBaseRead, knowledgeBaseId)
+      invoke<KnowledgeBaseDetail>(IPC_CHANNELS.knowledgeBaseRead, knowledgeBaseId),
+    readSettings: (knowledgeBaseId) =>
+      invoke<KnowledgeBaseSettingsDto>(IPC_CHANNELS.knowledgeBaseReadSettings, knowledgeBaseId),
+    writeSettings: (request) =>
+      invoke<KnowledgeBaseDetail>(IPC_CHANNELS.knowledgeBaseWriteSettings, request),
+    writeIcon: (request) =>
+      invoke<KnowledgeBaseDetail>(IPC_CHANNELS.knowledgeBaseWriteIcon, request)
   },
   notes: {
     read: (knowledgeBaseId, noteUuid) =>

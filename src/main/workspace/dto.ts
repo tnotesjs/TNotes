@@ -1,10 +1,20 @@
 import { createHash } from 'node:crypto'
+import path from 'node:path'
 
-import type { KbSnapshot, NoteDoc, TocNode } from '@tnotesjs/kb'
+import {
+  DEFAULT_PREVIEW_PORT,
+  isGitRepository,
+  readOriginRemoteUrl,
+  resolveKbName,
+  type KbSnapshot,
+  type NoteDoc,
+  type TocNode
+} from '@tnotesjs/kb'
 import type {
   DeskTocNode,
   KnowledgeBaseDescriptor,
   KnowledgeBaseDetail,
+  KnowledgeBaseSettingsDto,
   NoteDocumentDto
 } from '../../shared/contracts'
 
@@ -19,14 +29,41 @@ export function knowledgeBaseId(rootPath: string): string {
   return stablePathSuffix(rootPath)
 }
 
-function iconFromConfig(snapshot: KbSnapshot): KnowledgeBaseDescriptor['icon'] {
+export function resolveIconDisplaySrc(
+  knowledgeBaseId: string,
+  src: string | undefined
+): string | undefined {
+  if (!src?.trim()) return undefined
+  const value = src.trim()
+  if (
+    /^https?:\/\//i.test(value) ||
+    value.startsWith('data:') ||
+    value.startsWith('tnotes-asset:')
+  ) {
+    return value
+  }
+  const params = new URLSearchParams({ knowledgeBaseId, path: value.split(/[?#]/, 1)[0] })
+  return `tnotes-asset://asset?${params.toString()}`
+}
+
+function iconFromConfig(
+  snapshot: KbSnapshot,
+  knowledgeBaseId: string
+): KnowledgeBaseDescriptor['icon'] {
   const icon = snapshot.config.icon
   if (!icon || typeof icon !== 'object') return null
   const value = icon as Record<string, unknown>
-  return {
-    src: typeof value.src === 'string' ? value.src : undefined,
-    svg: typeof value.svg === 'string' ? value.svg : undefined
-  }
+  const letter =
+    typeof value.letter === 'string' && value.letter.trim()
+      ? value.letter.trim().slice(0, 1)
+      : undefined
+  const src = resolveIconDisplaySrc(
+    knowledgeBaseId,
+    typeof value.src === 'string' ? value.src : undefined
+  )
+  const svg = typeof value.svg === 'string' ? value.svg : undefined
+  if (!src && !svg && !letter) return null
+  return { src, svg, letter }
 }
 
 function httpUrl(value: unknown): string | undefined {
@@ -39,22 +76,70 @@ function httpUrl(value: unknown): string | undefined {
   }
 }
 
+function optionalString(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined
+  const trimmed = value.trim()
+  return trimmed || undefined
+}
+
+function resolvePort(value: unknown): number {
+  if (typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 65535) {
+    return value
+  }
+  return DEFAULT_PREVIEW_PORT
+}
+
 export function descriptor(handle: KnowledgeBaseHandle): KnowledgeBaseDescriptor {
   const snapshot = handle.snapshot
   const hasError = snapshot.diagnostics.some((d) => d.severity === 'error')
+  const configName = optionalString(snapshot.config.name)
+  const title = optionalString(snapshot.config.title)
   return {
     id: handle.id,
     configId: handle.id,
     name: handle.name,
     rootPath: handle.rootPath,
-    displayName: snapshot.config.title?.trim() || handle.name.replace(/^TNotes\./, ''),
-    icon: iconFromConfig(snapshot),
+    displayName: title || configName || handle.name.replace(/^TNotes\./, ''),
+    icon: iconFromConfig(snapshot, handle.id),
     repositoryUrl: httpUrl(snapshot.config.repositoryUrl),
     pageUrl: httpUrl(snapshot.config.pageUrl),
+    configName,
+    port: resolvePort(snapshot.config.port),
+    rootUrl: optionalString(snapshot.config.rootUrl),
+    statsEnabled: snapshot.config.stats?.enabled === true,
     health: hasError ? 'invalid' : 'ready',
     diagnostics: snapshot.diagnostics,
     noteCount: snapshot.notes.length,
     snapshotRevision: snapshot.revision
+  }
+}
+
+export async function toSettingsDto(handle: KnowledgeBaseHandle): Promise<KnowledgeBaseSettingsDto> {
+  const config = handle.snapshot.config
+  const isGitRepo = await isGitRepository(handle.rootPath)
+  const originUrl = isGitRepo ? await readOriginRemoteUrl(handle.rootPath) : null
+  const directoryName = path.basename(handle.rootPath)
+  const configuredName = optionalString(config.name) ?? ''
+  const suggestedName = resolveKbName({
+    configured: configuredName || null,
+    originUrl,
+    directoryName
+  })
+  const icon = iconFromConfig(handle.snapshot, handle.id)
+  return {
+    knowledgeBaseId: handle.id,
+    name: configuredName || suggestedName || '',
+    title: optionalString(config.title) || configuredName || suggestedName || directoryName,
+    icon,
+    repositoryUrl:
+      optionalString(config.repositoryUrl) || originUrl || '',
+    rootUrl: optionalString(config.rootUrl) || '',
+    port: resolvePort(config.port),
+    pageUrl: optionalString(config.pageUrl) || '',
+    statsEnabled: config.stats?.enabled === true,
+    isGitRepo,
+    originUrl,
+    suggestedName
   }
 }
 

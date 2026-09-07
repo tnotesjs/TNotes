@@ -9,6 +9,9 @@ export const IPC_CHANNELS = {
   workspaceRefresh: 'workspace:refresh',
   workspaceRevealKnowledgeBase: 'workspace:reveal-knowledge-base',
   knowledgeBaseRead: 'knowledge-base:read',
+  knowledgeBaseReadSettings: 'knowledge-base:read-settings',
+  knowledgeBaseWriteSettings: 'knowledge-base:write-settings',
+  knowledgeBaseWriteIcon: 'knowledge-base:write-icon',
   settingsUpdate: 'settings:update',
   settingsExport: 'settings:export',
   settingsImport: 'settings:import',
@@ -95,6 +98,7 @@ export interface WorkspaceDiagnosticDto {
 export interface KnowledgeBaseIconDto {
   src?: string
   svg?: string
+  letter?: string
 }
 
 export interface KnowledgeBaseDescriptor {
@@ -106,11 +110,62 @@ export interface KnowledgeBaseDescriptor {
   icon: KnowledgeBaseIconDto | null
   repositoryUrl?: string
   pageUrl?: string
+  /** GitHub-style repo name from tnotes.json (`name`), when set. */
+  configName?: string
+  /** Site preview port from tnotes.json; defaults to 9193 when omitted. */
+  port?: number
+  rootUrl?: string
+  statsEnabled?: boolean
   health: 'ready' | 'invalid' | 'future-schema'
   diagnostics: WorkspaceDiagnosticDto[]
   noteCount: number
   snapshotRevision: string
 }
+
+/** Form payload for the knowledge-base settings tab. */
+export interface KnowledgeBaseSettingsDto {
+  knowledgeBaseId: string
+  name: string
+  title: string
+  icon: KnowledgeBaseIconDto | null
+  repositoryUrl: string
+  rootUrl: string
+  port: number
+  pageUrl: string
+  statsEnabled: boolean
+  isGitRepo: boolean
+  originUrl: string | null
+  /** Suggested name when `name` is empty (origin / directory). */
+  suggestedName: string | null
+}
+
+export interface KnowledgeBaseSettingsWriteRequest {
+  knowledgeBaseId: string
+  name: string
+  title: string
+  repositoryUrl?: string
+  rootUrl?: string
+  port: number
+  pageUrl?: string
+  statsEnabled: boolean
+}
+
+export type KnowledgeBaseIconWriteRequest =
+  | {
+      knowledgeBaseId: string
+      kind: 'file'
+      fileName: string
+      data: Uint8Array
+    }
+  | {
+      knowledgeBaseId: string
+      kind: 'letter'
+      letter: string
+    }
+  | {
+      knowledgeBaseId: string
+      kind: 'clear'
+    }
 
 export type DeskTocNode =
   | {
@@ -166,7 +221,7 @@ export type ContextMenuAction =
 export type ContextMenuRequest =
   | { kind: 'note'; pinned: boolean; completed: boolean }
   | { kind: 'group' }
-  | { kind: 'tab'; tabType: 'note' | 'web'; pinned: boolean }
+  | { kind: 'tab'; tabType: 'note' | 'web' | 'kb-settings'; pinned: boolean }
   | { kind: 'code-group-tab' }
 export type TabShortcutCommand =
   | { type: 'activate-tab-by-number'; number: number; sourceTabId?: string }
@@ -323,7 +378,19 @@ export interface WebEditorTab {
   openedAt?: number
 }
 
-export type EditorTab = NoteEditorTab | WebEditorTab
+export interface KbSettingsEditorTab {
+  id: string
+  type: 'kb-settings'
+  knowledgeBaseId: string
+  knowledgeBaseName: string
+  title: string
+  icon: KnowledgeBaseIconDto | null
+  pinned?: boolean
+  openedAt?: number
+  dirty?: boolean
+}
+
+export type EditorTab = NoteEditorTab | WebEditorTab | KbSettingsEditorTab
 
 export interface EditorGroupNode {
   type: 'group'
@@ -707,6 +774,11 @@ export interface DeskApi {
   }
   knowledgeBases: {
     read(knowledgeBaseId: string): Promise<DeskResult<KnowledgeBaseDetail>>
+    readSettings(knowledgeBaseId: string): Promise<DeskResult<KnowledgeBaseSettingsDto>>
+    writeSettings(
+      request: KnowledgeBaseSettingsWriteRequest
+    ): Promise<DeskResult<KnowledgeBaseDetail>>
+    writeIcon(request: KnowledgeBaseIconWriteRequest): Promise<DeskResult<KnowledgeBaseDetail>>
   }
   notes: {
     read(knowledgeBaseId: string, noteUuid: string): Promise<DeskResult<NoteDocumentDto>>

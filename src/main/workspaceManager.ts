@@ -6,7 +6,7 @@ import path from 'node:path'
 import { deskLog } from './log'
 import { loadSettings, settingsForKnowledgeBase } from './settings'
 import { loadWorkspace, saveWorkspace } from './workspace'
-import { descriptor, toDetail } from './workspace/dto'
+import { descriptor, toDetail, toSettingsDto } from './workspace/dto'
 import * as noteIo from './workspace/noteIo'
 import {
   disposeHandles,
@@ -38,6 +38,9 @@ import type {
   NoteRenameRequest,
   NoteSaveRequest,
   NoteUpdateConfigRequest,
+  KnowledgeBaseIconWriteRequest,
+  KnowledgeBaseSettingsDto,
+  KnowledgeBaseSettingsWriteRequest,
   TocCreateGroupRequest,
   TocDeleteRequest,
   TocEntryRefDto,
@@ -130,6 +133,69 @@ export class WorkspaceManager {
 
   getDetail(knowledgeBaseId: string): KnowledgeBaseDetail {
     return toDetail(this.getHandle(knowledgeBaseId))
+  }
+
+  async readSettings(knowledgeBaseId: string): Promise<KnowledgeBaseSettingsDto> {
+    return toSettingsDto(this.getHandle(knowledgeBaseId))
+  }
+
+  async writeSettings(request: KnowledgeBaseSettingsWriteRequest): Promise<KnowledgeBaseDetail> {
+    const handle = this.getHandle(request.knowledgeBaseId)
+    const existing = handle.snapshot.config
+    const stats =
+      request.statsEnabled === true
+        ? { ...existing.stats, enabled: true }
+        : existing.stats
+          ? { ...existing.stats, enabled: false }
+          : { enabled: false }
+
+    const result = await handle.workspace.config.set({
+      name: request.name.trim(),
+      title: request.title.trim() || request.name.trim(),
+      repositoryUrl: request.repositoryUrl?.trim() || undefined,
+      rootUrl: request.rootUrl?.trim() || undefined,
+      port: request.port,
+      pageUrl: request.pageUrl?.trim() || undefined,
+      stats
+    })
+    this.mutationEffects().markInternalWrites(result.changedFiles)
+    handle.snapshot = await handle.workspace.scan()
+    this.emitChanged()
+    return toDetail(handle)
+  }
+
+  async writeIcon(request: KnowledgeBaseIconWriteRequest): Promise<KnowledgeBaseDetail> {
+    const handle = this.getHandle(request.knowledgeBaseId)
+    const changedFiles: Array<{ path: string }> = []
+
+    if (request.kind === 'clear') {
+      const cleared = await handle.workspace.assets.clearIcon()
+      for (const deleted of cleared.deleted) changedFiles.push({ path: deleted })
+      const result = await handle.workspace.config.set({ icon: undefined })
+      changedFiles.push(...result.changedFiles)
+    } else if (request.kind === 'letter') {
+      const letter = request.letter.trim().slice(0, 1)
+      if (!letter) throw new Error('单字符图标不能为空')
+      const cleared = await handle.workspace.assets.clearIcon()
+      for (const deleted of cleared.deleted) changedFiles.push({ path: deleted })
+      const result = await handle.workspace.config.set({ icon: { letter } })
+      changedFiles.push(...result.changedFiles)
+    } else {
+      const ext = path.extname(request.fileName) || '.png'
+      const replaced = await handle.workspace.assets.replaceIcon({
+        ext,
+        data: request.data
+      })
+      for (const deleted of replaced.deleted) changedFiles.push({ path: deleted })
+      changedFiles.push({ path: replaced.relPath })
+      const result = await handle.workspace.config.set({ icon: replaced.icon })
+      changedFiles.push(...result.changedFiles)
+    }
+
+    this.mutationEffects().markInternalWrites(changedFiles)
+    handle.snapshot = await handle.workspace.scan()
+    this.emitChanged()
+    return toDetail(handle)
   }
 
   getLocation(knowledgeBaseId: string): { name: string; rootPath: string } {

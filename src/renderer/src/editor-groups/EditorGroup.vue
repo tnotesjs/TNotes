@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 
 import KnowledgeBaseIcon from '../components/KnowledgeBaseIcon.vue'
 import UiTooltip from '../components/UiTooltip.vue'
+import KbSettingsPane from './KbSettingsPane.vue'
 import NoteTabPane from './NoteTabPane.vue'
 import WebTabPane from './WebTabPane.vue'
 import { useEditorStore } from '../stores/editor'
@@ -125,6 +126,7 @@ function isDirty(tab: EditorTab): boolean {
 
 function tabAriaLabel(tab: EditorTab): string {
   if (tab.type === 'web') return tab.url
+  if (tab.type === 'kb-settings') return tab.title
   return `${tab.knowledgeBaseName} · ${tab.title}`
 }
 
@@ -216,7 +218,10 @@ async function runTabAction(action: ContextMenuAction, tab: EditorTab): Promise<
             :src="editor.webStates[tab.id].faviconUrl"
             alt=""
           />
-          <span v-else-if="tab.type === 'note'" class="tab-icon knowledge-tab-icon">
+          <span
+            v-else-if="tab.type === 'note' || tab.type === 'kb-settings'"
+            class="tab-icon knowledge-tab-icon"
+          >
             <KnowledgeBaseIcon :icon="tab.icon" :fallback="tab.knowledgeBaseName" />
           </span>
           <span v-else class="tab-icon">⌘</span>
@@ -251,7 +256,10 @@ async function runTabAction(action: ContextMenuAction, tab: EditorTab): Promise<
             :src="editor.webStates[tab.id].faviconUrl"
             alt=""
           />
-          <span v-else-if="tab.type === 'note'" class="tab-icon knowledge-tab-icon">
+          <span
+            v-else-if="tab.type === 'note' || tab.type === 'kb-settings'"
+            class="tab-icon knowledge-tab-icon"
+          >
             <KnowledgeBaseIcon :icon="tab.icon" :fallback="tab.knowledgeBaseName" />
           </span>
           <span v-else class="tab-icon">⌘</span>
@@ -299,6 +307,11 @@ async function runTabAction(action: ContextMenuAction, tab: EditorTab): Promise<
           v-if="tab.type === 'note'"
           :tab="tab"
           :group-id="group.id"
+          :active="tab.id === group.activeTabId"
+        />
+        <KbSettingsPane
+          v-else-if="tab.type === 'kb-settings'"
+          :tab="tab"
           :active="tab.id === group.activeTabId"
         />
         <WebTabPane v-else :tab="tab" :active="tab.id === group.activeTabId" />
@@ -514,6 +527,12 @@ async function runTabAction(action: ContextMenuAction, tab: EditorTab): Promise<
   min-width: 0;
   min-height: 0;
   display: flex;
+}
+
+.tab-content > * {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
 }
 
 .editor-empty strong {

@@ -9,7 +9,12 @@ export type ChangeCategory = 'noteFile' | 'configFile' | 'otherFile'
 export function classifyChangePath(path: string): ChangeCategory {
   const normalized = path.replace(/\\/g, '/')
   if (/^notes\/[^/]+\/README\.md$/.test(normalized)) return 'noteFile'
-  if (normalized === 'TOC.md' || normalized === 'sidebar.json' || normalized === '.tnotes.json') {
+  if (
+    normalized === 'TOC.md' ||
+    normalized === 'sidebar.json' ||
+    normalized === '.tnotes.json' ||
+    normalized === 'tnotes.json'
+  ) {
     return 'configFile'
   }
   if (/^notes\/[^/]+\/\.tnotes\.json$/.test(normalized)) return 'configFile'

@@ -189,13 +189,17 @@ async function buildSite(): Promise<void> {
   }
 }
 
-function chooseHeaderAction(action: 'group' | 'preview' | 'build' | 'reveal' | 'ide'): void {
+function chooseHeaderAction(
+  action: 'group' | 'preview' | 'build' | 'reveal' | 'ide' | 'settings'
+): void {
   createMenuOpen.value = false
   if (action === 'group') emit('createGroup')
   else if (action === 'preview') void togglePreview()
   else if (action === 'build') void buildSite()
   else if (action === 'reveal') void revealKnowledgeBase()
-  else showKnowledgeBaseMenu()
+  else if (action === 'settings') {
+    if (store.knowledgeBase) editor.openKbSettings(store.knowledgeBase)
+  } else showKnowledgeBaseMenu()
 }
 
 const previewLabel = computed(() => {
@@ -246,6 +250,7 @@ const previewLabel = computed(() => {
             {{ buildBusy ? '正在构建站点' : '构建站点' }}
           </button>
           <hr />
+          <button type="button" @click="chooseHeaderAction('settings')">知识库配置</button>
           <button type="button" @click="chooseHeaderAction('ide')">使用 IDE 打开</button>
           <button type="button" @click="chooseHeaderAction('reveal')">打开知识库目录</button>
         </div>

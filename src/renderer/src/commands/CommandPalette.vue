@@ -34,7 +34,11 @@ let searchSequence = 0
 const commands = computed(() =>
   createPaletteCommands({
     saveDocument: () => workspace.saveCurrentDocument(),
-    openSettings: () => emit('openSettings')
+    openSettings: () => emit('openSettings'),
+    openKbSettings: () => {
+      if (workspace.knowledgeBase) editor.openKbSettings(workspace.knowledgeBase)
+    },
+    hasSelectedKnowledgeBase: () => Boolean(workspace.knowledgeBase)
   })
 )
 
@@ -97,6 +101,7 @@ const placeholder = computed(() => {
 const idleLabel = computed(() => {
   const tab = editor.activeTab
   if (tab?.type === 'note') return tab.title
+  if (tab?.type === 'kb-settings') return tab.title
   if (tab?.type === 'web') return tab.title
   return '搜索笔记'
 })

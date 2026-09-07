@@ -14,6 +14,7 @@ describe('classifyChangePath', () => {
     expect(classifyChangePath('TOC.md')).toBe('configFile')
     expect(classifyChangePath('sidebar.json')).toBe('configFile')
     expect(classifyChangePath('.tnotes.json')).toBe('configFile')
+    expect(classifyChangePath('tnotes.json')).toBe('configFile')
   })
 
   it('classifies per-note .tnotes.json as configFile', () => {

@@ -25,6 +25,7 @@ import {
   type DocumentSession,
   type GitAttention
 } from './helpers'
+import { kbSettingsCloseResource } from './kbSettingsCloseRegistry'
 import { createSearch } from './search'
 import { createSettings } from './settings'
 import { createToc } from './toc'
@@ -217,6 +218,10 @@ export const useWorkspaceStore = defineStore('workspace', () => {
           discard: () => discardDocumentChanges(key)
         })
       }
+      if (tab.type === 'kb-settings') {
+        const resource = kbSettingsCloseResource(tab.id)
+        if (resource) resources.push(resource)
+      }
       return resources
     }
   })
@@ -380,7 +385,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
   async function syncToActiveTab(forceReveal = false): Promise<void> {
     const tab = editor.activeTab
-    if (!tab || tab.type === 'web') return
+    if (!tab || tab.type === 'web' || tab.type === 'kb-settings') return
     if (tab.type === 'note') await ensureDocument(tab.knowledgeBaseId, tab.noteUuid)
     if (forceReveal || settings.value?.tabs.autoRevealInToc) {
       if (selectedKnowledgeBaseId.value !== tab.knowledgeBaseId) {

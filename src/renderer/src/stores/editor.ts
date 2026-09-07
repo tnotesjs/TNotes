@@ -35,6 +35,8 @@ import type {
   EditorTab,
   KnowledgeBaseEditorSession,
   KnowledgeBaseDescriptor,
+  KnowledgeBaseIconDto,
+  KbSettingsEditorTab,
   NoteEditorTab,
   NotePageWidth,
   NoteViewMode,
@@ -68,20 +70,26 @@ function sanitizeLayout(
   if (node.type === 'group') {
     const tabs = node.tabs
       .filter((tab) => {
-        if (tab.type !== 'web') {
+        if (tab.type === 'web') {
+          if (!includeWebTabs) return false
+          try {
+            const url = new URL(tab.url)
+            return url.protocol === 'http:' || url.protocol === 'https:'
+          } catch {
+            return false
+          }
+        }
+        if (tab.type === 'kb-settings') {
           return (
             knowledgeBaseIds.has(tab.knowledgeBaseId) &&
-            (!scopedKnowledgeBaseId || tab.knowledgeBaseId === scopedKnowledgeBaseId) &&
-            (!validNoteUuids || validNoteUuids.has(tab.noteUuid))
+            (!scopedKnowledgeBaseId || tab.knowledgeBaseId === scopedKnowledgeBaseId)
           )
         }
-        if (!includeWebTabs) return false
-        try {
-          const url = new URL(tab.url)
-          return url.protocol === 'http:' || url.protocol === 'https:'
-        } catch {
-          return false
-        }
+        return (
+          knowledgeBaseIds.has(tab.knowledgeBaseId) &&
+          (!scopedKnowledgeBaseId || tab.knowledgeBaseId === scopedKnowledgeBaseId) &&
+          (!validNoteUuids || validNoteUuids.has(tab.noteUuid))
+        )
       })
       .map((tab, index) => ({
         ...tab,
@@ -97,7 +105,9 @@ function sanitizeLayout(
                   : defaultNotePageWidth,
               outlineVisible: tab.outlineVisible !== false
             }
-          : {})
+          : tab.type === 'kb-settings'
+            ? { dirty: Boolean(tab.dirty) }
+            : {})
       }))
     return {
       ...node,
@@ -568,7 +578,7 @@ export const useEditorStore = defineStore('editor', () => {
     for (const group of listGroups(session.layout)) {
       for (const tab of group.tabs) {
         if (
-          tab.type !== 'web' &&
+          tab.type === 'note' &&
           tab.knowledgeBaseId === knowledgeBaseId &&
           tab.noteUuid === noteUuid
         ) {
@@ -707,6 +717,56 @@ export const useEditorStore = defineStore('editor', () => {
     return tab.id
   }
 
+  function openKbSettings(knowledgeBase: KnowledgeBaseDescriptor): string {
+    if (activeKnowledgeBaseId.value !== knowledgeBase.id) switchKnowledgeBase(knowledgeBase.id)
+    const tabId = `kb-settings:${knowledgeBase.id}`
+    for (const group of groups.value) {
+      const existing = group.tabs.find(
+        (tab) => tab.type === 'kb-settings' && tab.knowledgeBaseId === knowledgeBase.id
+      )
+      if (existing) {
+        activate(group.id, existing.id)
+        return existing.id
+      }
+    }
+    ensureRoomForTab()
+    const tab: KbSettingsEditorTab = {
+      id: tabId,
+      type: 'kb-settings',
+      knowledgeBaseId: knowledgeBase.id,
+      knowledgeBaseName: knowledgeBase.displayName,
+      title: `配置 · ${knowledgeBase.displayName}`,
+      icon: knowledgeBase.icon,
+      pinned: false,
+      openedAt: Date.now(),
+      dirty: false
+    }
+    layout.value = insertTab(layout.value, activeGroupId.value, tab)
+    return tab.id
+  }
+
+  function setKbSettingsDirty(tabId: string, dirty: boolean): void {
+    const located = findTab(layout.value, tabId)
+    if (located?.tab.type !== 'kb-settings') return
+    if (Boolean(located.tab.dirty) === dirty) return
+    located.tab.dirty = dirty
+    layout.value = { ...layout.value }
+  }
+
+  function updateKbSettingsTabMeta(
+    tabId: string,
+    meta: { knowledgeBaseName?: string; icon?: KnowledgeBaseIconDto | null }
+  ): void {
+    const located = findTab(layout.value, tabId)
+    if (located?.tab.type !== 'kb-settings') return
+    if (meta.knowledgeBaseName !== undefined) {
+      located.tab.knowledgeBaseName = meta.knowledgeBaseName
+      located.tab.title = `配置 · ${meta.knowledgeBaseName}`
+    }
+    if (meta.icon !== undefined) located.tab.icon = meta.icon
+    layout.value = { ...layout.value }
+  }
+
   async function startPreview(knowledgeBaseId: string, noteDirName?: string): Promise<void> {
     const result = await window.desk.preview.start({ knowledgeBaseId, noteDirName })
     if (!result.ok) throw new Error(result.error.message)
@@ -773,7 +833,7 @@ export const useEditorStore = defineStore('editor', () => {
     for (const group of [...groups.value]) {
       for (const tab of [...group.tabs]) {
         if (
-          tab.type !== 'web' &&
+          tab.type === 'note' &&
           tab.knowledgeBaseId === knowledgeBaseId &&
           tab.noteUuid === noteUuid
         ) {
@@ -929,6 +989,9 @@ export const useEditorStore = defineStore('editor', () => {
     cycleActiveTab,
     openNote,
     openWeb,
+    openKbSettings,
+    setKbSettingsDirty,
+    updateKbSettingsTabMeta,
     startPreview,
     stopPreview,
     close,

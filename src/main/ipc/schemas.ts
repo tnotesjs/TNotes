@@ -5,7 +5,8 @@ import type { WorkspaceSession } from '../../shared/contracts'
 const iconSchema = z
   .object({
     src: z.string().optional(),
-    svg: z.string().optional()
+    svg: z.string().optional(),
+    letter: z.string().optional()
   })
   .nullable()
 
@@ -35,7 +36,23 @@ const webTabSchema = z.object({
   openedAt: z.number().finite().optional()
 })
 
-const editorTabSchema = z.discriminatedUnion('type', [noteTabSchema, webTabSchema])
+const kbSettingsTabSchema = z.object({
+  id: z.string().min(1),
+  type: z.literal('kb-settings'),
+  knowledgeBaseId: z.string().min(1),
+  knowledgeBaseName: z.string(),
+  title: z.string(),
+  icon: iconSchema,
+  pinned: z.boolean().optional(),
+  openedAt: z.number().finite().optional(),
+  dirty: z.boolean().optional()
+})
+
+const editorTabSchema = z.discriminatedUnion('type', [
+  noteTabSchema,
+  webTabSchema,
+  kbSettingsTabSchema
+])
 
 const editorLayoutSchema: z.ZodType<WorkspaceSession['layout']> = z.lazy(() =>
   z.discriminatedUnion('type', [
@@ -161,6 +178,37 @@ export const recoveryDeleteSchema = z.object({
   noteUuid: z.string().min(1),
   path: z.string().min(1).max(1024).optional()
 })
+
+export const knowledgeBaseSettingsWriteSchema = z.object({
+  knowledgeBaseId: z.string().min(1),
+  name: z.string().min(1).max(100),
+  title: z.string().max(200),
+  repositoryUrl: z.string().max(2048).optional(),
+  rootUrl: z.string().max(2048).optional(),
+  port: z.number().int().min(1).max(65535),
+  pageUrl: z.string().max(2048).optional(),
+  statsEnabled: z.boolean()
+})
+
+export const knowledgeBaseIconWriteSchema = z.discriminatedUnion('kind', [
+  z.object({
+    knowledgeBaseId: z.string().min(1),
+    kind: z.literal('file'),
+    fileName: z.string().min(1).max(240),
+    data: z.instanceof(Uint8Array).refine((data) => data.byteLength <= 5 * 1024 * 1024, {
+      message: '图标不能超过 5 MB'
+    })
+  }),
+  z.object({
+    knowledgeBaseId: z.string().min(1),
+    kind: z.literal('letter'),
+    letter: z.string().min(1).max(4)
+  }),
+  z.object({
+    knowledgeBaseId: z.string().min(1),
+    kind: z.literal('clear')
+  })
+])
 
 export const attachmentWriteLocalSchema = z.object({
   knowledgeBaseId: z.string().min(1),

@@ -14,6 +14,8 @@ export interface PaletteCommand {
 export interface PaletteCommandContext {
   saveDocument: () => Promise<void>
   openSettings: () => void
+  openKbSettings: () => void
+  hasSelectedKnowledgeBase: () => boolean
 }
 
 export function createPaletteCommands(context: PaletteCommandContext): PaletteCommand[] {
@@ -52,7 +54,14 @@ export function createPaletteCommands(context: PaletteCommandContext): PaletteCo
         title: `展开 ${level} 级标题`,
         category: '编辑器',
         hint: `Unfold Level ${level}`,
-        keywords: ['unfold', 'expand', 'level', `h${level}`, `heading ${level}`, `unfold level ${level}`],
+        keywords: [
+          'unfold',
+          'expand',
+          'level',
+          `h${level}`,
+          `heading ${level}`,
+          `unfold level ${level}`
+        ],
         enabled: foldEnabled,
         run: () => void runHeadingFold(`unfold-level-${level}`)
       }
@@ -66,6 +75,15 @@ export function createPaletteCommands(context: PaletteCommandContext): PaletteCo
       shortcut: '⌘ S',
       enabled: () => true,
       run: () => context.saveDocument()
+    },
+    {
+      id: 'open-kb-settings',
+      title: '知识库配置',
+      category: '知识库',
+      hint: 'KB Settings',
+      keywords: ['kb', 'settings', 'config', '配置', '知识库'],
+      enabled: () => context.hasSelectedKnowledgeBase(),
+      run: () => context.openKbSettings()
     },
     {
       id: 'open-settings',

@@ -9,7 +9,9 @@ import {
 
 const commands = createPaletteCommands({
   saveDocument: async () => undefined,
-  openSettings: () => undefined
+  openSettings: () => undefined,
+  openKbSettings: () => undefined,
+  hasSelectedKnowledgeBase: () => true
 })
 
 describe('palette commands', () => {

@@ -11,7 +11,7 @@ import { searchManager } from '../searchManager'
 import { webContentsManager } from '../webContentsManager'
 import { workspaceManager } from '../workspaceManager'
 import { IPC_CHANNELS } from '../../shared/contracts'
-import { workspaceSessionSchema } from './schemas'
+import { workspaceSessionSchema, knowledgeBaseSettingsWriteSchema, knowledgeBaseIconWriteSchema } from './schemas'
 import { handle, noInputSchema, type GetWindow } from './shared'
 
 export function registerWorkspace(getWindow: GetWindow): () => void {
@@ -23,7 +23,7 @@ export function registerWorkspace(getWindow: GetWindow): () => void {
       z.object({ kind: z.literal('group') }),
       z.object({
         kind: z.literal('tab'),
-        tabType: z.enum(['note', 'web']),
+        tabType: z.enum(['note', 'web', 'kb-settings']),
         pinned: z.boolean()
       }),
       z.object({ kind: z.literal('code-group-tab') })
@@ -97,6 +97,18 @@ export function registerWorkspace(getWindow: GetWindow): () => void {
   )
   handle(IPC_CHANNELS.knowledgeBaseRead, getWindow, z.string().min(1), (knowledgeBaseId) =>
     workspaceManager.getDetail(knowledgeBaseId)
+  )
+  handle(IPC_CHANNELS.knowledgeBaseReadSettings, getWindow, z.string().min(1), (knowledgeBaseId) =>
+    workspaceManager.readSettings(knowledgeBaseId)
+  )
+  handle(
+    IPC_CHANNELS.knowledgeBaseWriteSettings,
+    getWindow,
+    knowledgeBaseSettingsWriteSchema,
+    (request) => workspaceManager.writeSettings(request)
+  )
+  handle(IPC_CHANNELS.knowledgeBaseWriteIcon, getWindow, knowledgeBaseIconWriteSchema, (request) =>
+    workspaceManager.writeIcon(request)
   )
   handle(IPC_CHANNELS.kbBuild, getWindow, z.string().min(1), (knowledgeBaseId) =>
     workspaceManager.buildKnowledgeBase(knowledgeBaseId)

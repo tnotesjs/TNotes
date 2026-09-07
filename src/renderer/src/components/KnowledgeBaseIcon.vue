@@ -29,6 +29,7 @@ const safeSvg = computed(() =>
     <!-- The knowledge-base SVG has already passed through the strict DOMPurify profile above. -->
     <!-- eslint-disable-next-line vue/no-v-html -->
     <span v-else-if="safeSvg" class="inline-svg" v-html="safeSvg" />
+    <span v-else-if="icon?.letter" class="icon-fallback">{{ icon.letter.slice(0, 1).toUpperCase() }}</span>
     <span v-else class="icon-fallback">{{ fallback.slice(0, 1).toUpperCase() }}</span>
   </span>
 </template>
