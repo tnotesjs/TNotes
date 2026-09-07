@@ -64,7 +64,7 @@
       <div
         ref="diagramRef"
         class="tn-mermaid__diagram"
-        :class="{ 'is-centered': centered, 'is-obscured': loading || empty || !!error }"
+        :class="{ 'is-centered': centered, 'is-obscured': empty || !!error }"
         :style="diagramTransform ? { transform: diagramTransform, transformOrigin: 'top left' } : undefined"
         @wheel="handleWheel"
       />
@@ -86,6 +86,7 @@
 import mermaid from 'mermaid'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
+import { adoptLiveSvg } from './adoptLiveSvg'
 import iconCenterOff from './icons/icon__center_off.svg?url'
 import iconCenterOn from './icons/icon__center_on.svg?url'
 import iconCheck from './icons/icon__check.svg?url'
@@ -94,6 +95,56 @@ import iconFullscreen from './icons/icon__fullscreen.svg?url'
 import iconFullscreenExit from './icons/icon__fullscreen_exit.svg?url'
 
 let idSeq = 0
+
+/** Mermaid's renderer is not safe for overlapping `render()` calls. */
+let renderChain = Promise.resolve()
+/** Re-init wipes layout engines mid-flight when several diagrams mount at once. */
+let initializedKey = null
+
+function enqueueRender(task) {
+  const run = renderChain.then(task, task)
+  renderChain = run.then(
+    () => undefined,
+    () => undefined
+  )
+  return run
+}
+
+function ensureMermaidInitialized(dark, securityLevel) {
+  const key = `${dark ? 'dark' : 'light'}:${securityLevel}`
+  if (initializedKey === key) return
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: dark ? 'dark' : 'default',
+    securityLevel,
+    fontFamily: 'inherit'
+  })
+  initializedKey = key
+}
+
+function waitForLayoutBox(el) {
+  if (!el || el.clientWidth > 0) return Promise.resolve()
+  return new Promise((resolve) => {
+    let settled = false
+    const finish = () => {
+      if (settled) return
+      settled = true
+      observer?.disconnect()
+      resolve()
+    }
+    const observer =
+      typeof ResizeObserver === 'function'
+        ? new ResizeObserver(() => {
+            if (el.clientWidth > 0) finish()
+          })
+        : null
+    observer?.observe(el)
+    requestAnimationFrame(() => {
+      if (el.clientWidth > 0) finish()
+    })
+    setTimeout(finish, 1200)
+  })
+}
 
 const props = defineProps({
   /** Plain Mermaid source (preferred). */
@@ -368,22 +419,25 @@ async function renderDiagram() {
   const dark = detectDark()
   lastThemeDark = dark
 
+  loading.value = true
+  error.value = null
+
   try {
-    loading.value = true
-    error.value = null
-    mermaid.initialize({
-      startOnLoad: false,
-      theme: dark ? 'dark' : 'default',
-      securityLevel: props.securityLevel,
-      fontFamily: 'inherit'
-    })
-    // Mermaid requires a unique DOM id per render; reusing the same id on
-    // theme re-render (common on hard refresh) clears/fails the second pass.
-    const renderId = `${idPrefix}-${++idSeq}`
-    const { svg, bindFunctions } = await mermaid.render(renderId, decodedSource.value)
+    await waitForLayoutBox(rootRef.value || diagramRef.value)
     if (token !== renderToken || !diagramRef.value) return
-    diagramRef.value.innerHTML = svg
-    if (bindFunctions) bindFunctions(diagramRef.value)
+
+    await enqueueRender(async () => {
+      if (token !== renderToken || !diagramRef.value) return
+      ensureMermaidInitialized(dark, props.securityLevel)
+      // Unique render id (mermaid deletes getElementById(id) before the next
+      // draw). After insert, adoptLiveSvg renames the root so a later render
+      // cannot yank this live SVG out of Desk.
+      const renderId = `${idPrefix}-${++idSeq}`
+      const { svg, bindFunctions } = await mermaid.render(renderId, decodedSource.value)
+      if (token !== renderToken || !diagramRef.value) return
+      diagramRef.value.innerHTML = adoptLiveSvg(svg, renderId)
+      if (bindFunctions) bindFunctions(diagramRef.value)
+    })
   } catch (err) {
     if (token !== renderToken) return
     const message = err instanceof Error ? err.message : String(err)
@@ -408,16 +462,31 @@ function observeTheme() {
 }
 
 let themeObserver = null
+let layoutObserver = null
 
 onMounted(() => {
   void renderDiagram()
   themeObserver = observeTheme()
   document.addEventListener('fullscreenchange', handleFullscreenChange)
   document.addEventListener('keydown', handleDocumentKeydown, true)
+
+  // Desk NodeViews often mount at width 0. Wait once for a real box — do not
+  // re-render on later width flicker (that cancels in-flight mermaid.render).
+  const root = rootRef.value
+  if (root && root.clientWidth === 0 && typeof ResizeObserver === 'function') {
+    layoutObserver = new ResizeObserver(() => {
+      if (root.clientWidth <= 0) return
+      layoutObserver?.disconnect()
+      layoutObserver = null
+      void renderDiagram()
+    })
+    layoutObserver.observe(root)
+  }
 })
 
 onBeforeUnmount(() => {
   themeObserver?.disconnect()
+  layoutObserver?.disconnect()
   document.removeEventListener('fullscreenchange', handleFullscreenChange)
   document.removeEventListener('keydown', handleDocumentKeydown, true)
   if (copyResetTimer) clearTimeout(copyResetTimer)

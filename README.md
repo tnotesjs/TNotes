@@ -52,7 +52,8 @@ fence metadata, line numbering, titles, or generated markup cannot drift silentl
 | Fenced code + lazy Shiki language loading                 | Shared                                 | Shared in code-group previews; CodeMirror while editing | Shared                | Byte-preserved     |
 | `::: code-group`                                          | Shared `CodeGroup`                     | Shared atomic preview                                   | Shared                | Byte-preserved     |
 | `:line-numbers`, `:line-numbers=N`, `:no-line-numbers`    | Yes                                    | Yes                                                     | Yes                   | Byte-preserved     |
-| Shiki diff / highlight / focus / error annotations        | Yes                                    | Preview output                                          | Yes                   | Byte-preserved     |
+| `{N}` fence line highlights                               | Yes                                    | Yes (CodeMirror)                                        | Yes                   | Byte-preserved     |
+| Shiki `[!code]` annotations                               | No (aligned with Desk)                 | No                                                      | No                    | Shown as source    |
 | Inline `<Badge>`                                          | Shared `Badge`                         | Shared inline projection                                | Shared                | Byte-preserved     |
 | `NotesTable`                                              | Shared component via Core data adapter | Shared component projection                             | Shared                | Byte-preserved     |
 | Math                                                      | TNotes SSG MathJax pipeline            | Milkdown/KaTeX                                          | Milkdown/KaTeX        | Byte-preserved     |
@@ -106,7 +107,7 @@ Shared diagram preview for core (`tn:dev`) and Desk. Markdown fence language: `m
 | `id`                 | auto      | Mermaid render id                                |
 | `center`             | `false`   | From fence keyword `center`; omit → not centered |
 | `isDark`             | auto      | Or pass explicitly                               |
-| `securityLevel`      | `'loose'` | Desk preview uses `'strict'`                     |
+| `securityLevel`      | `'loose'` | Same default for Desk and site preview           |
 | `enableCopy`         | `true`    | Hover copy action                                |
 | `enableFullscreen`   | `true`    | Hover fullscreen action                          |
 | `enableCenterToggle` | `true`    | Hover center toggle (left of fullscreen)         |

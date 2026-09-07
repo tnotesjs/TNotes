@@ -7,6 +7,14 @@ describe('shared code rendering', () => {
       language: 'ts', title: 'demo.ts', startLine: 12, lineNumbers: true,
       highlightedLines: [1, 3, 4, 5]
     })
+    expect(parseCodeMeta('js {1-2} [setup.js]')).toEqual({
+      language: 'js', title: 'setup.js', startLine: 1, lineNumbers: true,
+      highlightedLines: [1, 2]
+    })
+    expect(parseCodeMeta('txt {3}')).toEqual({
+      language: 'txt', title: '', startLine: 1, lineNumbers: true,
+      highlightedLines: [3]
+    })
     expect(parseCodeMeta('text:no-line-numbers').lineNumbers).toBe(false)
     expect(parseCodeMeta('text {0,-1,8-3,1-9999999}').highlightedLines).toEqual([])
   })
@@ -31,11 +39,17 @@ describe('shared code rendering', () => {
     expect(host.textContent).toBe('<script>alert(1)</script> {{ injected }}')
     expect(html).toContain('{{ injected }}')
   })
-  it('keeps Shiki notation transformers and line offsets', async () => {
-    const html = await highlightCode('const x = 1 // [!code ++]\nconst y = 2 // [!code focus]', 'js:line-numbers=5')
-    expect(html).toContain('diff add')
-    expect(html).toContain('focused')
-    expect(html).toContain('data-line="5"')
-    expect(html).not.toContain('[!code')
+  it('applies fence line highlights and offsets without Shiki notation', async () => {
+    const withNotation = await highlightCode(
+      'const x = 1 // [!code ++]\nconst y = 2 // [!code focus]',
+      'js:line-numbers=5 {2}',
+    )
+    // Magic comments stay as source text; Desk has no annotation write path.
+    expect(withNotation).toContain('[!code ++]')
+    expect(withNotation).not.toContain('diff add')
+    expect(withNotation).not.toContain('focused')
+    expect(withNotation).toContain('data-line="5"')
+    expect(withNotation).toContain('data-line="6"')
+    expect(withNotation).toContain('class="line highlighted"')
   })
 })

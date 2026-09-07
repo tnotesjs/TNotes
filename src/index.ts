@@ -35,3 +35,9 @@ export { default as ImagePreview } from "./components/ImagePreview/ImagePreview.
 export * from "./browser/clipboard";
 export * from "./browser/theme";
 export * from "./code/highlight";
+export {
+  hydrateTnSwipers,
+  applySwiperTabsPadding,
+  createSwiperTabNav,
+  wrapSlideIndex,
+} from "./swiper/hydrate";

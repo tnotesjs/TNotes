@@ -21,9 +21,21 @@
       "import": "./src/components/Mindmap/markdown.ts",
       "default": "./src/components/Mindmap/markdown.ts"
     },
+    "./image-markdown": {
+      "types": "./src/markdown/image.ts",
+      "node": "./dist/markdown/image.js",
+      "import": "./src/markdown/image.ts",
+      "default": "./src/markdown/image.ts"
+    },
     "./styles/tokens.css": "./src/styles/tokens.css",
     "./styles/prose.css": "./src/styles/prose.css",
     "./styles/code.css": "./src/styles/code.css",
+    "./styles/swiper.css": "./src/styles/swiper.css",
+    "./swiper": {
+      "types": "./src/swiper/hydrate.ts",
+      "import": "./src/swiper/hydrate.ts",
+      "default": "./src/swiper/hydrate.ts"
+    },
     "./code": {
       "types": "./src/code/highlight.ts",
       "node": "./dist/code/highlight.js",
@@ -53,7 +65,6 @@
     "vue": "^3.5.0"
   },
   "dependencies": {
-    "@shikijs/transformers": "4.4.2",
     "@tnotesjs/mindmap-core": "^0.2.2",
     "marked": "^15.0.11",
     "mermaid": "^11.17.0",
@@ -91,7 +102,7 @@
   "license": "MIT",
   "packageManager": "pnpm@11.10.0",
   "scripts": {
-    "build": "tsup src/code/highlight.ts src/components/Footprints/parse.ts src/components/Mindmap/markdown.ts --format esm --dts --out-dir dist --clean",
+    "build": "tsup src/code/highlight.ts src/components/Footprints/parse.ts src/components/Mindmap/markdown.ts src/markdown/image.ts --format esm --dts --out-dir dist --clean",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "prepublishOnly": "pnpm test && pnpm typecheck && pnpm build"

@@ -81,12 +81,17 @@ function zoom(factor: number): void {
   scale.value = Math.min(6, Math.max(0.2, scale.value * factor));
 }
 
+function resolvePreviewImage(target: EventTarget | null): HTMLImageElement | null {
+  if (target instanceof HTMLImageElement) return target;
+  if (target instanceof Element) {
+    return target.closest<HTMLImageElement>("img");
+  }
+  return null;
+}
+
 function onDocumentClick(event: MouseEvent): void {
   if (visible.value) return;
-  const image =
-    event.target instanceof Element
-      ? event.target.closest<HTMLImageElement>("img")
-      : null;
+  const image = resolvePreviewImage(event.target);
   if (!image || !image.matches(props.selector) || !eligible(image)) return;
   if (
     image.closest(".swiper-container") &&
@@ -98,6 +103,27 @@ function onDocumentClick(event: MouseEvent): void {
     event.stopPropagation();
   }
   open(image);
+}
+
+function onPreviewRequest(event: Event): void {
+  const detail = (event as CustomEvent<HTMLImageElement | { src?: string }>).detail;
+  if (detail instanceof HTMLImageElement) {
+    open(detail);
+    return;
+  }
+  const src = detail && typeof detail.src === "string" ? detail.src : "";
+  if (!src) return;
+  images.value = [src];
+  index.value = 0;
+  reset();
+  previousFocus =
+    document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+  previousOverflow = document.documentElement.style.overflow;
+  document.documentElement.style.overflow = "hidden";
+  visible.value = true;
+  void nextTick(() => overlay.value?.focus({ preventScroll: true }));
 }
 
 function onKeydown(event: KeyboardEvent): void {
@@ -140,12 +166,14 @@ function onGlobalPointerDown(event: PointerEvent): void {
 
 onMounted(() => {
   document.addEventListener("click", onDocumentClick, true);
+  document.addEventListener("tn:preview-image", onPreviewRequest);
   document.addEventListener("keydown", onKeydown);
   document.addEventListener("pointerdown", onGlobalPointerDown, true);
 });
 
 onBeforeUnmount(() => {
   document.removeEventListener("click", onDocumentClick, true);
+  document.removeEventListener("tn:preview-image", onPreviewRequest);
   document.removeEventListener("keydown", onKeydown);
   document.removeEventListener("pointerdown", onGlobalPointerDown, true);
   window.removeEventListener("pointermove", onPointerMove);

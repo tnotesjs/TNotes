@@ -112,4 +112,28 @@ describe("shared code and media components", () => {
     await nextTick();
     expect(document.documentElement.style.overflow).toBe("");
   });
+
+  it("opens from a programmatic preview request", async () => {
+    const prose = document.createElement("div");
+    prose.className = "tn-prose tn-preview-ignore";
+    prose.innerHTML = '<img src="/requested.png">';
+    document.body.append(prose);
+    cleanups.push(() => prose.remove());
+    mount(ImagePreview);
+
+    document.dispatchEvent(
+      new CustomEvent("tn:preview-image", {
+        detail: prose.querySelector("img"),
+      }),
+    );
+    await nextTick();
+    expect(
+      document.body.querySelector<HTMLImageElement>(".tn-image-preview > img")
+        ?.src,
+    ).toContain("/requested.png");
+    document.body
+      .querySelector<HTMLButtonElement>('[aria-label="关闭"]')!
+      .click();
+    await nextTick();
+  });
 });

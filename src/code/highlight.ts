@@ -5,12 +5,6 @@ import {
 } from "shiki/core";
 import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
 import { bundledLanguages, bundledLanguagesAlias } from "shiki/langs";
-import {
-  transformerNotationDiff,
-  transformerNotationHighlight,
-  transformerNotationFocus,
-  transformerNotationErrorLevel,
-} from "@shikijs/transformers";
 
 export interface CodeMeta {
   language: string;
@@ -135,11 +129,9 @@ export async function prepareCodeHighlighter(
 }
 
 function transformers(meta: CodeMeta): ShikiTransformer[] {
+  // Fence `{N}` line highlights only — match Desk CodeMirror. No Shiki
+  // notation transformers (`[!code ++]` etc.); Desk has no write path for them.
   return [
-    transformerNotationDiff(),
-    transformerNotationHighlight(),
-    transformerNotationFocus(),
-    transformerNotationErrorLevel(),
     {
       name: "tnotes-code-meta",
       pre(node) {
