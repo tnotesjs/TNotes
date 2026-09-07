@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * tnotes-kb — knowledge-base maintenance CLI.
  *

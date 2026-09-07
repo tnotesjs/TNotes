@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import { migrateKnowledgeBase } from "./codemod";
 
 async function main(): Promise<void> {
