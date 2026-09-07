@@ -1,6 +1,6 @@
 {
   "name": "@tnotesjs/kb",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Workspace layer for TNotes single-file knowledge bases (notes/, TOC.md, assets/, tnotes.json).",
   "type": "module",
   "packageManager": "pnpm@11.10.0",
@@ -19,7 +19,8 @@
     "tnotes-kb-migrate": "./dist/codemod-cli.js"
   },
   "files": [
-    "dist/"
+    "dist/",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsup",
@@ -45,6 +46,10 @@
     "node": ">=22.0.0"
   },
   "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/tnotesjs/kb.git"
