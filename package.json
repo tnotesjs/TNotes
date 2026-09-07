@@ -1,6 +1,6 @@
 {
   "name": "desk",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "TNotes Desk — multi knowledge-base desktop client",
   "main": "./out/main/index.js",
   "author": "tnotesjs",
@@ -19,7 +19,7 @@
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "pnpm run build && electron-builder --dir",
     "build:win": "pnpm run build && electron-builder --win --publish never",
-    "build:mac": "pnpm run build && electron-builder --mac --publish never",
+    "build:mac": "pnpm run build && electron-builder --mac --arm64 --publish never",
     "build:linux": "pnpm run build && electron-builder --linux --publish never"
   },
   "dependencies": {

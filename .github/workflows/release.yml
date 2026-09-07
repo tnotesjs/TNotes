@@ -21,10 +21,6 @@ jobs:
             runner: macos-15
             command: build:mac
             args: --arm64
-          - platform: macOS-Intel
-            runner: macos-15-intel
-            command: build:mac
-            args: --x64
           - platform: Windows
             runner: windows-latest
             command: build:win
@@ -61,7 +57,7 @@ jobs:
         run: pnpm run ${{ matrix.command }} -- ${{ matrix.args }}
 
       - name: Verify macOS bundle signing
-        if: startsWith(matrix.platform, 'macOS')
+        if: matrix.platform == 'macOS'
         working-directory: desk
         shell: bash
         run: |
