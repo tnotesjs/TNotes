@@ -1,6 +1,13 @@
 import type { MilkdownPlugin } from '@milkdown/kit/ctx'
 import type { Node as ProseMirrorNode } from '@milkdown/kit/prose/model'
-import { NodeSelection, Plugin, PluginKey, TextSelection, type EditorState, type Transaction } from '@milkdown/kit/prose/state'
+import {
+  NodeSelection,
+  Plugin,
+  PluginKey,
+  TextSelection,
+  type EditorState,
+  type Transaction
+} from '@milkdown/kit/prose/state'
 import { Decoration, DecorationSet, type EditorView } from '@milkdown/kit/prose/view'
 import { $prose } from '@milkdown/kit/utils'
 
@@ -18,12 +25,19 @@ export interface HeadingSectionRange {
   level: number
 }
 
-function isDocHeading(doc: ProseMirrorNode, pos: number, node: ProseMirrorNode | null): node is ProseMirrorNode {
+function isDocHeading(
+  doc: ProseMirrorNode,
+  pos: number,
+  node: ProseMirrorNode | null
+): node is ProseMirrorNode {
   return Boolean(node?.type.name === 'heading' && doc.resolve(pos).parent === doc)
 }
 
 /** Heading plus following blocks until the next heading of the same or higher level. */
-export function headingSectionRange(doc: ProseMirrorNode, headingPos: number): HeadingSectionRange | null {
+export function headingSectionRange(
+  doc: ProseMirrorNode,
+  headingPos: number
+): HeadingSectionRange | null {
   const heading = doc.nodeAt(headingPos)
   if (!isDocHeading(doc, headingPos, heading)) return null
   const level = Number(heading.attrs.level)
@@ -58,15 +72,13 @@ export function collapsedHeadingSectionRange(
 
 export type HeadingFoldLevel = 1 | 2 | 3 | 4 | 5 | 6
 export type HeadingFoldCommand =
-  | 'fold-all'
-  | 'unfold-all'
-  | `fold-level-${HeadingFoldLevel}`
-  | `unfold-level-${HeadingFoldLevel}`
+  'fold-all' | 'unfold-all' | `fold-level-${HeadingFoldLevel}` | `unfold-level-${HeadingFoldLevel}`
 
 export function collectDocHeadings(doc: ProseMirrorNode): { pos: number; level: number }[] {
   const headings: { pos: number; level: number }[] = []
   doc.forEach((node, offset) => {
-    if (isDocHeading(doc, offset, node)) headings.push({ pos: offset, level: Number(node.attrs.level) })
+    if (isDocHeading(doc, offset, node))
+      headings.push({ pos: offset, level: Number(node.attrs.level) })
   })
   return headings
 }
@@ -98,8 +110,7 @@ export function applyHeadingFoldCommand(
     const keep = collapsed.filter((pos) => headingLevelAt(state.doc, pos) !== level)
     const add = headings
       .filter(
-        (heading) =>
-          heading.level === level && headingHasCollapsibleSection(state.doc, heading.pos)
+        (heading) => heading.level === level && headingHasCollapsibleSection(state.doc, heading.pos)
       )
       .map((heading) => heading.pos)
     next = [...new Set([...keep, ...add])]
@@ -112,7 +123,11 @@ export function applyHeadingFoldCommand(
   return state.tr.setMeta(headingSectionCollapseKey, { set: next })
 }
 
-function mapCollapsedPositions(doc: ProseMirrorNode, collapsed: Set<number>, tr: Transaction): Set<number> {
+function mapCollapsedPositions(
+  doc: ProseMirrorNode,
+  collapsed: Set<number>,
+  tr: Transaction
+): Set<number> {
   const next = new Set<number>()
   for (const pos of collapsed) {
     const mapped = tr.mapping.mapResult(pos, 1)
@@ -192,7 +207,9 @@ function skipCollapsedSection(view: EditorView, direction: 1 | -1): boolean {
     if (headingPos == null || !collapsed.has(headingPos)) return false
     const range = headingSectionRange(doc, headingPos)
     if (!range || range.to <= selection.head) return false
-    view.dispatch(view.state.tr.setSelection(TextSelection.near(doc.resolve(range.to), 1)).scrollIntoView())
+    view.dispatch(
+      view.state.tr.setSelection(TextSelection.near(doc.resolve(range.to), 1)).scrollIntoView()
+    )
     return true
   }
   const headingPos = collapsedSectionEndingAt(doc, collapsed, selection.head)
@@ -297,8 +314,7 @@ export function createHeadingSectionCollapsePlugin(): MilkdownPlugin {
         apply(tr, value) {
           const collapsed = mapCollapsedPositions(tr.doc, value.collapsed, tr)
           const meta = tr.getMeta(headingSectionCollapseKey) as
-            | { toggle?: number; set?: number[] }
-            | undefined
+            { toggle?: number; set?: number[] } | undefined
           if (typeof meta?.toggle === 'number') {
             const pos = tr.docChanged ? tr.mapping.map(meta.toggle, 1) : meta.toggle
             if (collapsed.has(pos)) collapsed.delete(pos)
@@ -339,8 +355,8 @@ export function createHeadingSectionCollapsePlugin(): MilkdownPlugin {
       },
       view(view) {
         const root = view.dom.closest('.milkdown') ?? view.dom.parentElement ?? view.dom
-        const onDragStart = (event: DragEvent): void => {
-          prepareCollapsedHeadingDrag(view, event)
+        const onDragStart = (event: Event): void => {
+          prepareCollapsedHeadingDrag(view, event as DragEvent)
         }
         root.addEventListener('dragstart', onDragStart)
         return {

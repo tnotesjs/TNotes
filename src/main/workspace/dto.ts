@@ -114,7 +114,9 @@ export function descriptor(handle: KnowledgeBaseHandle): KnowledgeBaseDescriptor
   }
 }
 
-export async function toSettingsDto(handle: KnowledgeBaseHandle): Promise<KnowledgeBaseSettingsDto> {
+export async function toSettingsDto(
+  handle: KnowledgeBaseHandle
+): Promise<KnowledgeBaseSettingsDto> {
   const config = handle.snapshot.config
   const isGitRepo = await isGitRepository(handle.rootPath)
   const originUrl = isGitRepo ? await readOriginRemoteUrl(handle.rootPath) : null
@@ -131,8 +133,7 @@ export async function toSettingsDto(handle: KnowledgeBaseHandle): Promise<Knowle
     name: configuredName || suggestedName || '',
     title: optionalString(config.title) || configuredName || suggestedName || directoryName,
     icon,
-    repositoryUrl:
-      optionalString(config.repositoryUrl) || originUrl || '',
+    repositoryUrl: optionalString(config.repositoryUrl) || originUrl || '',
     rootUrl: optionalString(config.rootUrl) || '',
     port: resolvePort(config.port),
     pageUrl: optionalString(config.pageUrl) || '',

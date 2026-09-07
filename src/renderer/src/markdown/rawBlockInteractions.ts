@@ -309,7 +309,11 @@ export function clearRawBlockSelectionState(view: EditorView): void {
   view.dispatch(transaction)
 }
 
-function selectionHidesCaretInImageParagraph(doc: EditorState['doc'], position: number, bias: number): boolean {
+function selectionHidesCaretInImageParagraph(
+  doc: EditorState['doc'],
+  position: number,
+  bias: number
+): boolean {
   const next = TextSelection.near(doc.resolve(position), bias)
   const $head = next.$head
   return $head.depth >= 1 && isStandaloneImageParagraph($head.parent)
@@ -820,9 +824,5 @@ export function createRawBlockSelectionPlugin(): MilkdownPlugin[] {
       })
   )
 
-  return [
-    createVerticalBlockSelectionPlugin(),
-    createMarkVsBlockSelectionPlugin(),
-    selectionPlugin
-  ]
+  return [createVerticalBlockSelectionPlugin(), createMarkVsBlockSelectionPlugin(), selectionPlugin]
 }

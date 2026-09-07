@@ -50,8 +50,12 @@ beforeEach(() => {
         stubLayout(target, 134)
         this.callback([], this)
       }
-      unobserve(): void {}
-      disconnect(): void {}
+      unobserve(): void {
+        return
+      }
+      disconnect(): void {
+        return
+      }
     }
   )
 })

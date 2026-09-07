@@ -11,7 +11,11 @@ import { searchManager } from '../searchManager'
 import { webContentsManager } from '../webContentsManager'
 import { workspaceManager } from '../workspaceManager'
 import { IPC_CHANNELS } from '../../shared/contracts'
-import { workspaceSessionSchema, knowledgeBaseSettingsWriteSchema, knowledgeBaseIconWriteSchema } from './schemas'
+import {
+  workspaceSessionSchema,
+  knowledgeBaseSettingsWriteSchema,
+  knowledgeBaseIconWriteSchema
+} from './schemas'
 import { handle, noInputSchema, type GetWindow } from './shared'
 
 export function registerWorkspace(getWindow: GetWindow): () => void {

@@ -4,10 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { Editor, defaultValueCtx, editorStateCtx, editorViewCtx, rootCtx } from '@milkdown/kit/core'
 import { commonmark } from '@milkdown/kit/preset/commonmark'
 
-import {
-  DESK_RAW_BLOCK_COMMIT_META,
-  createReadonlyTransactionGuard
-} from './readonlyGuard'
+import { DESK_RAW_BLOCK_COMMIT_META, createReadonlyTransactionGuard } from './readonlyGuard'
 
 const editors: Editor[] = []
 
@@ -77,9 +74,7 @@ describe('readonly transaction guard', () => {
 
     editor.action((ctx) => {
       const view = ctx.get(editorViewCtx)
-      view.dispatch(
-        view.state.tr.insertText('draft-', 1).setMeta(DESK_RAW_BLOCK_COMMIT_META, true)
-      )
+      view.dispatch(view.state.tr.insertText('draft-', 1).setMeta(DESK_RAW_BLOCK_COMMIT_META, true))
       expect(view.state.doc.textContent).toBe('draft-alpha')
     })
   })

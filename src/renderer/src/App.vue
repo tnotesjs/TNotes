@@ -40,9 +40,10 @@ const editor = useEditorStore()
 const createDialogOpen = ref(false)
 const settingsOpen = ref(false)
 const paletteOpen = ref(false)
-const commandPalette = ref<{ openSearch: () => Promise<void>; openCommands: () => Promise<void> } | null>(
-  null
-)
+const commandPalette = ref<{
+  openSearch: () => Promise<void>
+  openCommands: () => Promise<void>
+} | null>(null)
 const createTitle = ref('')
 const createPlacement = ref<NoteCreateRequest['placement']>({ type: 'root', placement: 'end' })
 const createRootPosition = ref<'top' | 'end'>('top')
@@ -133,7 +134,9 @@ function onKeydown(event: KeyboardEvent): void {
   }
   if ((event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === 'p') {
     event.preventDefault()
-    void (event.shiftKey ? commandPalette.value?.openCommands() : commandPalette.value?.openSearch())
+    void (event.shiftKey
+      ? commandPalette.value?.openCommands()
+      : commandPalette.value?.openSearch())
   }
 }
 

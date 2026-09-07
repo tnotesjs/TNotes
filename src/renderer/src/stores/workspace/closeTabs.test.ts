@@ -64,8 +64,7 @@ function setup(choice: TabCloseChoice = 'cancel') {
     editor,
     error,
     status: ref(null),
-    resourcesFor: (tab) =>
-      tab.type === 'note' ? (resources.get(tab.noteUuid) ?? []) : []
+    resourcesFor: (tab) => (tab.type === 'note' ? (resources.get(tab.noteUuid) ?? []) : [])
   })
   const open = (uuid: string, entries: ClosingResource[] = []) => {
     resources.set(uuid, entries)

@@ -462,19 +462,25 @@
   content: '';
 }
 
-.milkdown-markdown-editor :deep(.ProseMirror :is(h1, h2, h3, h4, h5, h6):not(.is-heading-collapsed) .desk-heading-toggle) {
+.milkdown-markdown-editor
+  :deep(.ProseMirror :is(h1, h2, h3, h4, h5, h6):not(.is-heading-collapsed) .desk-heading-toggle) {
   opacity: 0;
 }
 
 .milkdown-markdown-editor
-  :deep(.ProseMirror :is(h1, h2, h3, h4, h5, h6):not(.is-heading-collapsed):hover .desk-heading-toggle),
+  :deep(
+    .ProseMirror :is(h1, h2, h3, h4, h5, h6):not(.is-heading-collapsed):hover .desk-heading-toggle
+  ),
 .milkdown-markdown-editor
   :deep(
-    .ProseMirror :is(h1, h2, h3, h4, h5, h6):not(.is-heading-collapsed).ProseMirror-selectednode
+    .ProseMirror
+      :is(h1, h2, h3, h4, h5, h6):not(.is-heading-collapsed).ProseMirror-selectednode
       .desk-heading-toggle
   ),
 .milkdown-markdown-editor
-  :deep(.ProseMirror :is(h1, h2, h3, h4, h5, h6):not(.is-heading-collapsed) .desk-heading-toggle:hover),
+  :deep(
+    .ProseMirror :is(h1, h2, h3, h4, h5, h6):not(.is-heading-collapsed) .desk-heading-toggle:hover
+  ),
 .milkdown-markdown-editor :deep(.ProseMirror .is-heading-collapsed .desk-heading-toggle) {
   opacity: 1;
 }
@@ -692,9 +698,12 @@
 .milkdown-markdown-editor.is-readonly :deep(figure.desk-image.ProseMirror-selectednode),
 .milkdown-markdown-editor.is-readonly :deep(figure.desk-image.is-selected),
 .milkdown-markdown-editor.is-readonly :deep(figure.desk-image.is-selected .desk-image__frame),
-.milkdown-markdown-editor.is-readonly :deep(.ProseMirror p.desk-standalone-image.ProseMirror-selectednode),
-.milkdown-markdown-editor.is-readonly :deep(.ProseMirror p.desk-standalone-image.desk-block--range-selected),
-.milkdown-markdown-editor.is-readonly :deep(.ProseMirror p.desk-standalone-image.desk-block--range-selected .desk-image__stack) {
+.milkdown-markdown-editor.is-readonly
+  :deep(.ProseMirror p.desk-standalone-image.ProseMirror-selectednode),
+.milkdown-markdown-editor.is-readonly
+  :deep(.ProseMirror p.desk-standalone-image.desk-block--range-selected),
+.milkdown-markdown-editor.is-readonly
+  :deep(.ProseMirror p.desk-standalone-image.desk-block--range-selected .desk-image__stack) {
   background: transparent;
   outline: none;
 }
@@ -1575,8 +1584,7 @@
   white-space: pre-wrap;
 }
 
-.milkdown-markdown-editor
-  :deep(.desk-raw-block--container .desk-raw-block--code-group-editable) {
+.milkdown-markdown-editor :deep(.desk-raw-block--container .desk-raw-block--code-group-editable) {
   position: relative;
 }
 
@@ -2285,8 +2293,7 @@
   gap: 4px;
 }
 
-.milkdown-markdown-editor
-  :deep(.milkdown .milkdown-code-block .tools .tools-button-group button) {
+.milkdown-markdown-editor :deep(.milkdown .milkdown-code-block .tools .tools-button-group button) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2469,7 +2476,8 @@
   padding: 0;
 }
 
-.milkdown-markdown-editor :deep(.ProseMirror p.desk-standalone-image > br.ProseMirror-trailingBreak) {
+.milkdown-markdown-editor
+  :deep(.ProseMirror p.desk-standalone-image > br.ProseMirror-trailingBreak) {
   display: none;
 }
 
@@ -2486,7 +2494,8 @@
   outline: none;
 }
 
-.milkdown-markdown-editor :deep(.ProseMirror p.desk-standalone-image.desk-block--range-selected .desk-image__stack) {
+.milkdown-markdown-editor
+  :deep(.ProseMirror p.desk-standalone-image.desk-block--range-selected .desk-image__stack) {
   outline: 1px solid var(--accent-strong);
   outline-offset: 0;
   background-color: var(--selected);
@@ -2716,7 +2725,8 @@
   -webkit-user-select: none;
 }
 
-.milkdown-markdown-editor :deep(figure.desk-image .desk-image__stack.is-sized .desk-image__frame > img) {
+.milkdown-markdown-editor
+  :deep(figure.desk-image .desk-image__stack.is-sized .desk-image__frame > img) {
   width: 100%;
 }
 
@@ -2812,7 +2822,8 @@
   display: none;
 }
 
-.milkdown-markdown-editor :deep(figure.desk-image.is-compact .desk-image__quick-btn:not(.desk-image__more)),
+.milkdown-markdown-editor
+  :deep(figure.desk-image.is-compact .desk-image__quick-btn:not(.desk-image__more)),
 .milkdown-markdown-editor :deep(figure.desk-image.is-compact .desk-image__quick-divider) {
   display: none;
 }

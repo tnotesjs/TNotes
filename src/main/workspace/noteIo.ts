@@ -101,10 +101,7 @@ export function resolveNotesTable(
 }
 
 /** Keep only whitelist keys; pin id from the snapshot so a lost atom cannot drop giscus mapping. */
-function normalizeWhitelistedFrontmatter(
-  content: string,
-  existing?: NoteFrontmatter
-): string {
+function normalizeWhitelistedFrontmatter(content: string, existing?: NoteFrontmatter): string {
   const { frontmatter, body } = parseNoteContent(content)
   return serializeNoteContent(
     {

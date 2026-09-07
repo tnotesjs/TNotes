@@ -66,7 +66,9 @@ describe('code-group entries', () => {
       code: '',
       highlights: ''
     })
-    expect(createEmptyCodeGroupEntry([...entries, createEmptyCodeGroupEntry(entries)])).toMatchObject({
+    expect(
+      createEmptyCodeGroupEntry([...entries, createEmptyCodeGroupEntry(entries)])
+    ).toMatchObject({
       filename: '3',
       lang: 'ts'
     })

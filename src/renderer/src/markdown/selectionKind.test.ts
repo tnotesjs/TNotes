@@ -64,7 +64,9 @@ const mixedNote = [
   '结尾'
 ].join('\n')
 
-function selectAllText(view: { state: { doc: Parameters<typeof textSelectionSpanningDocument>[0] } }): Selection {
+function selectAllText(view: {
+  state: { doc: Parameters<typeof textSelectionSpanningDocument>[0] }
+}): Selection {
   const { doc } = view.state
   return textSelectionSpanningDocument(doc) ?? new AllSelection(doc)
 }
@@ -97,7 +99,9 @@ describe('classifySelectionRange', () => {
   })
 
   it('keeps a table-cell caret as marks so Cmd+B still applies inside the cell', async () => {
-    const editor = await createEditor('| Header A | Header B |\n| --- | --- |\n| Cell A | Cell B |\n')
+    const editor = await createEditor(
+      '| Header A | Header B |\n| --- | --- |\n| Cell A | Cell B |\n'
+    )
     editor.action((ctx) => {
       const view = ctx.get(editorViewCtx)
       let cell = 0
@@ -119,13 +123,21 @@ describe('coerceMarkVsBlockSelection', () => {
       let paraPos = -1
       view.state.doc.descendants((node, pos) => {
         if (node.type.name === 'image') imagePos = pos
-        if (node.type.name === 'paragraph' && node.childCount === 1 && node.firstChild?.type.name === 'image') {
+        if (
+          node.type.name === 'paragraph' &&
+          node.childCount === 1 &&
+          node.firstChild?.type.name === 'image'
+        ) {
           paraPos = pos
         }
       })
       view.dispatch(
         view.state.tr.setSelection(
-          TextSelection.create(view.state.doc, paraPos + 1, paraPos + view.state.doc.nodeAt(paraPos)!.nodeSize - 1)
+          TextSelection.create(
+            view.state.doc,
+            paraPos + 1,
+            paraPos + view.state.doc.nodeAt(paraPos)!.nodeSize - 1
+          )
         )
       )
       expect(view.state.selection).toBeInstanceOf(NodeSelection)
@@ -171,9 +183,10 @@ describe('coerceMarkVsBlockSelection', () => {
     editor.action((ctx) => {
       const view = ctx.get(editorViewCtx)
       view.dispatch(view.state.tr.setSelection(new AllSelection(view.state.doc)))
-      expect(view.state.selection instanceof NodeSelection || view.state.selection instanceof BlockRangeSelection).toBe(
-        true
-      )
+      expect(
+        view.state.selection instanceof NodeSelection ||
+          view.state.selection instanceof BlockRangeSelection
+      ).toBe(true)
       expect(classifySelection(view.state.selection, view.state.doc)).toBe('blocks')
     })
   })
@@ -204,9 +217,7 @@ describe('Cmd+B on mixed vs card-only selections', () => {
   })
 
   it('does not apply bold when only cards are selected', async () => {
-    const editor = await createEditor(
-      '![](https://example.com/a.png)\n\n```js\nconst x = 1\n```\n'
-    )
+    const editor = await createEditor('![](https://example.com/a.png)\n\n```js\nconst x = 1\n```\n')
     editor.action((ctx) => {
       const view = ctx.get(editorViewCtx)
       view.dispatch(view.state.tr.setSelection(selectAllText(view)))
@@ -219,9 +230,7 @@ describe('Cmd+B on mixed vs card-only selections', () => {
         bubbles: true,
         cancelable: true
       })
-      expect(
-        view.someProp('handleKeyDown', (handle) => handle(view, event)) ?? false
-      ).toBe(true)
+      expect(view.someProp('handleKeyDown', (handle) => handle(view, event)) ?? false).toBe(true)
       toggleMark(strong)(view.state, view.dispatch)
       expect(view.state.doc.toJSON()).toEqual(before)
     })
@@ -246,12 +255,8 @@ describe('selectionForIndependentBlocks', () => {
 
 describe('isTextMarkShortcut', () => {
   it('matches bold, italic, code, link and strike', () => {
-    expect(isTextMarkShortcut(new KeyboardEvent('keydown', { key: 'b', metaKey: true }))).toBe(
-      true
-    )
-    expect(isTextMarkShortcut(new KeyboardEvent('keydown', { key: 'i', ctrlKey: true }))).toBe(
-      true
-    )
+    expect(isTextMarkShortcut(new KeyboardEvent('keydown', { key: 'b', metaKey: true }))).toBe(true)
+    expect(isTextMarkShortcut(new KeyboardEvent('keydown', { key: 'i', ctrlKey: true }))).toBe(true)
     expect(
       isTextMarkShortcut(new KeyboardEvent('keydown', { key: 's', metaKey: true, shiftKey: true }))
     ).toBe(true)

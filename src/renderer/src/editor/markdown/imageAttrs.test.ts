@@ -36,9 +36,9 @@ async function createEditor(source = '![](../assets/a.png) {w=719px}\n'): Promis
 
 describe('image clipboard attrs', () => {
   it('recovers a note-local path from the asset protocol', () => {
-    expect(
-      markdownSrcFromClipboardUrl('tnotes-asset://asset?path=../assets/image-3.png')
-    ).toBe('../assets/image-3.png')
+    expect(markdownSrcFromClipboardUrl('tnotes-asset://asset?path=../assets/image-3.png')).toBe(
+      '../assets/image-3.png'
+    )
     expect(markdownSrcFromClipboardUrl('../assets/image-3.png')).toBe('../assets/image-3.png')
   })
 

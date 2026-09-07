@@ -80,9 +80,7 @@ describe('toggleDeskInlineCode', () => {
     const view = viewOf(editor)
     toggleDeskInlineCode(view.state, view.dispatch)
     const { from, to } = view.state.selection
-    expect(
-      view.someProp('handleTextInput', (handle) => handle(view, from, to, '123'))
-    ).toBe(true)
+    expect(view.someProp('handleTextInput', (handle) => handle(view, from, to, '123'))).toBe(true)
     expect(view.state.doc.textContent).toBe('123')
     expect(view.state.doc.rangeHasMark(1, 4, codeType(view))).toBe(true)
   })
@@ -115,7 +113,9 @@ describe('toggleDeskInlineCode', () => {
     const type = codeType(view)
     applyCode(view, 1, 7)
     view.dispatch(
-      view.state.tr.setSelection(TextSelection.create(view.state.doc, 7)).setStoredMarks([type.create()])
+      view.state.tr
+        .setSelection(TextSelection.create(view.state.doc, 7))
+        .setStoredMarks([type.create()])
     )
     expect(inlineCodeCaretKind(view.state)).toBe('inside-end')
     view.dispatch(view.state.tr.delete(6, 7))
@@ -133,9 +133,9 @@ describe('toggleDeskInlineCode', () => {
     view.dispatch(
       view.state.tr.setSelection(TextSelection.create(view.state.doc, 3)).setStoredMarks([])
     )
-    expect(
-      view.someProp('handleTextInput', (handle) => handle(view, 3, 3, '3')) ?? false
-    ).toBe(false)
+    expect(view.someProp('handleTextInput', (handle) => handle(view, 3, 3, '3')) ?? false).toBe(
+      false
+    )
   })
 
   it('unwraps the whole span when the caret is inside', async () => {
@@ -217,7 +217,9 @@ describe('inline code caret chrome', () => {
     applyCode(view, 1, 4)
 
     view.dispatch(
-      view.state.tr.setSelection(TextSelection.create(view.state.doc, 4)).setStoredMarks([type.create()])
+      view.state.tr
+        .setSelection(TextSelection.create(view.state.doc, 4))
+        .setStoredMarks([type.create()])
     )
     expect(isInsideInlineCode(view.state)).toBe(true)
     expect(inlineCodeCaretKind(view.state)).toBe('inside-end')
@@ -235,7 +237,9 @@ describe('inline code caret chrome', () => {
     expect(view.dom.dataset.inlineCodeCaret).toBe('inside-end')
 
     view.dispatch(
-      view.state.tr.setSelection(TextSelection.create(view.state.doc, 1)).setStoredMarks([type.create()])
+      view.state.tr
+        .setSelection(TextSelection.create(view.state.doc, 1))
+        .setStoredMarks([type.create()])
     )
     expect(inlineCodeCaretKind(view.state)).toBe('inside-start')
     expect(press(view, 'ArrowLeft')).toBe(true)

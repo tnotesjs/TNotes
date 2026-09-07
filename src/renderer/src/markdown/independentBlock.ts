@@ -16,11 +16,7 @@ export function isIndependentBlock(node: ProseNode): boolean {
   )
 }
 
-export function isStandaloneImageNode(
-  doc: ProseNode,
-  position: number,
-  node: ProseNode
-): boolean {
+export function isStandaloneImageNode(doc: ProseNode, position: number, node: ProseNode): boolean {
   if (node.type.name !== 'image') return false
   const $pos = doc.resolve(position)
   return isStandaloneImageParagraph($pos.parent)

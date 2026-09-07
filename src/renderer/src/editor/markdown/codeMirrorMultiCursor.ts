@@ -1,12 +1,11 @@
 import { searchKeymap } from '@codemirror/search'
-import { EditorSelection, EditorState, type Extension } from '@codemirror/state'
 import {
-  crosshairCursor,
-  drawSelection,
-  EditorView,
-  keymap,
-  ViewPlugin
-} from '@codemirror/view'
+  EditorSelection,
+  EditorState,
+  type Extension,
+  type SelectionRange
+} from '@codemirror/state'
+import { crosshairCursor, drawSelection, EditorView, keymap, ViewPlugin } from '@codemirror/view'
 
 /** Option+left-drag (CodeMirror default) or middle-button drag. */
 export function isRectangularSelectionEvent(event: MouseEvent): boolean {
@@ -26,7 +25,7 @@ export function addCursorToSelection(selection: EditorSelection, pos: number): E
           : selection.mainIndex
     return EditorSelection.create(ranges, main)
   }
-    return selection.addRange(EditorSelection.cursor(pos), true)
+  return selection.addRange(EditorSelection.cursor(pos), true)
 }
 
 export function rectangleRangesForPositions(
@@ -38,7 +37,7 @@ export function rectangleRangesForPositions(
   const bottom = Math.max(start.line, end.line)
   const left = Math.min(start.col, end.col)
   const right = Math.max(start.col, end.col)
-  const ranges = []
+  const ranges: SelectionRange[] = []
   for (let number = top; number <= bottom; number += 1) {
     const line = doc.line(number)
     const from = line.from + Math.min(left, line.length)
@@ -48,7 +47,11 @@ export function rectangleRangesForPositions(
   return EditorSelection.create(ranges)
 }
 
-function pointInView(view: EditorView, clientX: number, clientY: number): { line: number; col: number } | null {
+function pointInView(
+  view: EditorView,
+  clientX: number,
+  clientY: number
+): { line: number; col: number } | null {
   const offset = view.posAtCoords({ x: clientX, y: clientY }, false)
   if (offset == null) return null
   const line = view.state.doc.lineAt(offset)
@@ -296,7 +299,7 @@ export function codeMirrorMultiCursorExtensions(): Extension[] {
     // Native ::selection only paints the primary range. Extra Cmd+D ranges
     // need CodeMirror's selection layer.
     drawSelection(),
-    ...codeMirrorRectangularSelection(),
+    codeMirrorRectangularSelection(),
     crosshairCursor(),
     keymap.of(searchKeymap)
   ]

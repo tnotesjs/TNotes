@@ -110,12 +110,9 @@ function attachImageAttrs(tree: MdastNode): void {
   for (const child of tree.children ?? []) attachImageAttrs(child)
 }
 
-export const imageWidthRemark = $remark(
-  'deskImageWidth',
-  () => () => (tree) => {
-    attachImageAttrs(tree as MdastNode)
-  }
-)
+export const imageWidthRemark = $remark('deskImageWidth', () => () => (tree) => {
+  attachImageAttrs(tree as MdastNode)
+})
 
 export const sourcePreservingImageSchema = imageSchema.extendSchema((base) => (ctx) => {
   const schema = base(ctx)

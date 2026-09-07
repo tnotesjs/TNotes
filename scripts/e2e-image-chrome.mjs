@@ -168,15 +168,22 @@ try {
   assert.equal(initialCaptioned.quickAbsolute, true)
 
   await large.scrollIntoViewIfNeeded()
-  const yBeforeSelect = await large.locator('img').evaluate((element) => element.getBoundingClientRect().y)
+  const yBeforeSelect = await large
+    .locator('img')
+    .evaluate((element) => element.getBoundingClientRect().y)
   await large.locator('img').click()
   await large.waitFor({ state: 'visible' })
-  const yAfterSelect = await large.locator('img').evaluate((element) => element.getBoundingClientRect().y)
+  const yAfterSelect = await large
+    .locator('img')
+    .evaluate((element) => element.getBoundingClientRect().y)
   assert.ok(
     Math.abs(yAfterSelect - yBeforeSelect) <= 2,
     `selecting an image must not shift it (before=${yBeforeSelect}, after=${yAfterSelect})`
   )
-  assert.equal(await large.getAttribute('class').then((value) => value.includes('is-selected')), true)
+  assert.equal(
+    await large.getAttribute('class').then((value) => value.includes('is-selected')),
+    true
+  )
   assert.equal(await visible(large.locator('.desk-image__chrome')), true)
   assert.equal(await visible(large.locator('.desk-image__toolbar')), true)
   assert.equal(await visible(large.locator('.desk-image__size-panel')), false)
@@ -192,9 +199,13 @@ try {
   }
   await page.screenshot({ path: join(shots, '01-selected.png') })
 
-  const yBeforeSize = await large.locator('img').evaluate((element) => element.getBoundingClientRect().y)
+  const yBeforeSize = await large
+    .locator('img')
+    .evaluate((element) => element.getBoundingClientRect().y)
   await large.getByTitle('宽高', { exact: true }).click()
-  const yAfterSize = await large.locator('img').evaluate((element) => element.getBoundingClientRect().y)
+  const yAfterSize = await large
+    .locator('img')
+    .evaluate((element) => element.getBoundingClientRect().y)
   assert.ok(
     Math.abs(yAfterSize - yBeforeSize) <= 2,
     `opening 宽高 must not shift the image (before=${yBeforeSize}, after=${yAfterSize})`
@@ -253,7 +264,10 @@ try {
   assert.ok(alignBox)
   if (sizeBox) assert.equal(overlap(alignBox, sizeBox) && !sizeHidden, false)
   await large.getByRole('button', { name: '居中对齐', exact: true }).click()
-  assert.equal(await large.evaluate((element) => element.classList.contains('tn-image--center')), true)
+  assert.equal(
+    await large.evaluate((element) => element.classList.contains('tn-image--center')),
+    true
+  )
   const afterCenter = await large.evaluate((figure) => {
     const img = figure.querySelector('img')
     const caption = figure.querySelector('.desk-image__caption')
@@ -304,14 +318,20 @@ try {
   assert.equal(await visible(tiny.getByTitle('全屏', { exact: true })), false)
   assert.equal(await visible(tiny.getByTitle('删除', { exact: true })), false)
   assert.deepEqual(
-    await tiny.locator('.desk-image__more-panel .desk-image__menu-item').evaluateAll((items) =>
-      items.map((item) => item.getAttribute('data-label'))
-    ),
+    await tiny
+      .locator('.desk-image__more-panel .desk-image__menu-item')
+      .evaluateAll((items) => items.map((item) => item.getAttribute('data-label'))),
     ['全屏', '删除', '复制']
   )
   await page.screenshot({ path: join(shots, '04-tiny-more.png') })
-  await tiny.locator('.desk-image__more-panel').getByRole('button', { name: '复制', exact: true }).click()
-  assert.match(await page.evaluate(() => window.imageChromeClipboard), /!\[\]\(\.\.\/assets\/tiny\.svg\)/)
+  await tiny
+    .locator('.desk-image__more-panel')
+    .getByRole('button', { name: '复制', exact: true })
+    .click()
+  assert.match(
+    await page.evaluate(() => window.imageChromeClipboard),
+    /!\[\]\(\.\.\/assets\/tiny\.svg\)/
+  )
 
   await captioned.locator('img').click()
   await page.waitForFunction(() => {
@@ -361,7 +381,9 @@ try {
   assert.match(await large.locator('.desk-image__size-label').innerText(), /\d+\s*×\s*\d+/)
   await page.screenshot({ path: join(shots, '05-resize-ghost.png') })
   await page.mouse.up()
-  const resized = await large.locator('.desk-image__stack').evaluate((element) => element.style.width)
+  const resized = await large
+    .locator('.desk-image__stack')
+    .evaluate((element) => element.style.width)
   assert.match(resized, /px$/, `expected pixel width after drag, got "${resized}"`)
 
   await page.getByRole('button', { name: '只读视图', exact: true }).click()
@@ -380,7 +402,9 @@ try {
   const saved = readFileSync(noteFile, 'utf8')
   assert.match(saved, /!\[新说明\]\(\.\.\/assets\/large\.svg\) \{w=\d+px align=center\}/)
   assert.match(saved, /!\[\]\(\.\.\/assets\/tiny\.svg\)/)
-  console.log('✓ image chrome: exclusive panels, alignment, caption, compact more, resize, readonly preview')
+  console.log(
+    '✓ image chrome: exclusive panels, alignment, caption, compact more, resize, readonly preview'
+  )
 } catch (error) {
   const page = await app.firstWindow()
   await page.screenshot({ path: join(shots, 'failure.png') }).catch(() => undefined)

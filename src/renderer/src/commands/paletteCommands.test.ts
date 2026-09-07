@@ -27,12 +27,12 @@ describe('palette commands', () => {
     expect(filterPaletteCommands(commands, '>全部展开').map((command) => command.id)).toEqual([
       'unfold-all'
     ])
-    expect(filterPaletteCommands(commands, '>2').some((command) => command.id === 'fold-level-2')).toBe(
-      true
+    expect(
+      filterPaletteCommands(commands, '>2').some((command) => command.id === 'fold-level-2')
+    ).toBe(true)
+    expect(filterPaletteCommands(commands, '>Unfold Level 3').map((command) => command.id)).toEqual(
+      ['unfold-level-3']
     )
-    expect(filterPaletteCommands(commands, '>Unfold Level 3').map((command) => command.id)).toEqual([
-      'unfold-level-3'
-    ])
     expect(
       filterPaletteCommands(commands, '>Fold Level 1').map((command) => command.hint)
     ).toContain('Fold Level 1')

@@ -112,7 +112,13 @@ export function filterPaletteCommands(
   const query = commandQuery(rawQuery).toLowerCase()
   if (!query) return [...commands]
   return commands.filter((command) => {
-    const haystack = [command.title, command.category, command.hint, command.id, ...command.keywords]
+    const haystack = [
+      command.title,
+      command.category,
+      command.hint,
+      command.id,
+      ...command.keywords
+    ]
       .join(' ')
       .toLowerCase()
     return matchesQuery(haystack, query)

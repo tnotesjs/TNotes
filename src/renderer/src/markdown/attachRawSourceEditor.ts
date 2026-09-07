@@ -109,7 +109,6 @@ export function attachRawSourceEditor(
   ctx.dom.append(editButton, editorHost)
 
   let editorValue = liveSource()
-  let lastCommitted = editorValue
   /** Skip publishDraft while pulling atom → Edit panel (avoids preview remount). */
   let suppressPublish = false
   let draftTitle = ''
@@ -201,7 +200,6 @@ export function attachRawSourceEditor(
     if (position == null) return false
     const currentNode = ctx.view.state.doc.nodeAt(position)
     if (currentNode?.type.name !== 'deskRawBlock') return false
-    lastCommitted = editorValue
     ctx.view.dispatch(
       ctx.view.state.tr
         .setNodeMarkup(position, undefined, {
@@ -337,7 +335,6 @@ export function attachRawSourceEditor(
     if (editing || isEffectivelyReadOnly()) return
     editing = true
     editorValue = liveSource()
-    lastCommitted = editorValue
     editButton.hidden = true
     editButton.disabled = true
     expandDetailsPreview()

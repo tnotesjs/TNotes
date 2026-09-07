@@ -57,10 +57,7 @@ export function applicationMenuTemplate(options: {
         },
         ...(platform === 'darwin'
           ? []
-          : ([
-              { type: 'separator' },
-              { role: 'quit' }
-            ] satisfies MenuItemConstructorOptions[]))
+          : ([{ type: 'separator' }, { role: 'quit' }] satisfies MenuItemConstructorOptions[]))
       ]
     },
     { role: 'editMenu' },

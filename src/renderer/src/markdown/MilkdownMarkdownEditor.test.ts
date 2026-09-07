@@ -244,7 +244,9 @@ describe('MilkdownMarkdownEditor synchronization', () => {
       '![](https://example.com/a.png) {w=100px}\n\n![](https://example.com/b.png) {w=80px}\n'
     )
     const paragraphs = [...wrapper.get('.ProseMirror').element.querySelectorAll(':scope > p')]
-    const imageParagraphs = paragraphs.filter((element) => element.querySelector('figure.desk-image'))
+    const imageParagraphs = paragraphs.filter((element) =>
+      element.querySelector('figure.desk-image')
+    )
     expect(imageParagraphs).toHaveLength(2)
     expect(imageParagraphs[0]?.classList.contains('desk-standalone-image')).toBe(true)
     expect(imageParagraphs[1]?.classList.contains('desk-standalone-image')).toBe(true)
@@ -257,9 +259,7 @@ describe('MilkdownMarkdownEditor synchronization', () => {
     const wrapper = await mountEditor('![说明](https://example.com/a.png) {w=50%}\n')
     const image = wrapper.get('.desk-image img')
     expect(image.attributes('alt')).toBe('说明')
-    expect(wrapper.get('.desk-image__stack').attributes('style') ?? '').toContain(
-      'width: 50%'
-    )
+    expect(wrapper.get('.desk-image__stack').attributes('style') ?? '').toContain('width: 50%')
     expect(image.attributes('data-tn-src')).toBe('https://example.com/a.png')
     expect(image.attributes('data-tn-width')).toBe('50%')
     expect((wrapper.get('.desk-image__caption').element as HTMLInputElement).value).toBe('说明')
@@ -274,9 +274,7 @@ describe('MilkdownMarkdownEditor synchronization', () => {
   it('keeps an unsized captioned image shrink-wrapped to the image', async () => {
     const wrapper = await mountEditor('![标题](https://example.com/pixel.svg)\n')
     const caption = wrapper.get('.desk-image__caption').element as HTMLInputElement
-    expect(wrapper.get('.desk-image__stack').attributes('style') ?? '').not.toMatch(
-      /width\s*:/
-    )
+    expect(wrapper.get('.desk-image__stack').attributes('style') ?? '').not.toMatch(/width\s*:/)
     expect(wrapper.get('.desk-image__caption-row').exists()).toBe(true)
     expect(caption.value).toBe('标题')
     expect(caption.size).toBe(1)

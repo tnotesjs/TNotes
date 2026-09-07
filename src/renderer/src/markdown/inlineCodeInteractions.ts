@@ -1,6 +1,12 @@
 import type { MilkdownPlugin } from '@milkdown/kit/ctx'
 import type { MarkType, Node as ProseNode } from '@milkdown/kit/prose/model'
-import { Plugin, PluginKey, TextSelection, type EditorState, type Transaction } from '@milkdown/kit/prose/state'
+import {
+  Plugin,
+  PluginKey,
+  TextSelection,
+  type EditorState,
+  type Transaction
+} from '@milkdown/kit/prose/state'
 import { Decoration, DecorationSet, type EditorView } from '@milkdown/kit/prose/view'
 import { $prose } from '@milkdown/kit/utils'
 
@@ -68,11 +74,7 @@ export function isInsideInlineCode(state: EditorState): boolean {
 
 /** Same document position at a pill edge; only storedMarks differs. */
 export type InlineCodeCaretKind =
-  | 'inside'
-  | 'inside-start'
-  | 'inside-end'
-  | 'outside-start'
-  | 'outside-end'
+  'inside' | 'inside-start' | 'inside-end' | 'outside-start' | 'outside-end'
 
 export function inlineCodeCaretKind(state: EditorState): InlineCodeCaretKind | null {
   const type = inlineCodeType(state)
@@ -155,7 +157,8 @@ export function toggleDeskInlineCode(
     if (dispatch) dispatch(insertPlaceholder(state).scrollIntoView())
     return true
   }
-  if (dispatch) dispatch(toggleRange(state, state.selection.from, state.selection.to).scrollIntoView())
+  if (dispatch)
+    dispatch(toggleRange(state, state.selection.from, state.selection.to).scrollIntoView())
   return true
 }
 
@@ -408,17 +411,21 @@ function placeInlineCodeCaret(view: EditorView): void {
     return
   }
   const code =
-    codeElementAt(view, span.from) ??
-    codeElementAt(view, Math.max(span.from, span.to - 1))
+    codeElementAt(view, span.from) ?? codeElementAt(view, Math.max(span.from, span.to - 1))
   if (!code) {
     clear()
     return
   }
   const styles = getComputedStyle(code)
-  const left = inlineCodeCaretOffset(kind, code.getBoundingClientRect(), view.dom.getBoundingClientRect().left, {
-    left: Number.parseFloat(styles.paddingLeft) || 0,
-    right: Number.parseFloat(styles.paddingRight) || 0
-  })
+  const left = inlineCodeCaretOffset(
+    kind,
+    code.getBoundingClientRect(),
+    view.dom.getBoundingClientRect().left,
+    {
+      left: Number.parseFloat(styles.paddingLeft) || 0,
+      right: Number.parseFloat(styles.paddingRight) || 0
+    }
+  )
   if (left == null) {
     clear()
     return
@@ -428,23 +435,20 @@ function placeInlineCodeCaret(view: EditorView): void {
   if (cursor instanceof HTMLElement) cursor.style.left = `${left}px`
 }
 
-function insertInlineCodeText(
-  view: EditorView,
-  from: number,
-  to: number,
-  text: string
-): boolean {
+function insertInlineCodeText(view: EditorView, from: number, to: number, text: string): boolean {
   const type = inlineCodeType(view.state)
   if (!type) return false
-  const span = findInlineCodeSpan(view.state.doc, from, type) ?? findInlineCodeSpan(view.state.doc, to, type)
+  const span =
+    findInlineCodeSpan(view.state.doc, from, type) ?? findInlineCodeSpan(view.state.doc, to, type)
   const replacingWhole = Boolean(span && span.from === from && span.to === to)
   const continuing =
-    type.isInSet(marksAt(view.state)) &&
-    Boolean(span && from >= span.from && to <= span.to)
+    type.isInSet(marksAt(view.state)) && Boolean(span && from >= span.from && to <= span.to)
   if (!replacingWhole && !continuing) return false
   const tr = view.state.tr.replaceWith(from, to, view.state.schema.text(text, [type.create()]))
   view.dispatch(
-    tr.setSelection(TextSelection.create(tr.doc, from + text.length)).setStoredMarks([type.create()])
+    tr
+      .setSelection(TextSelection.create(tr.doc, from + text.length))
+      .setStoredMarks([type.create()])
   )
   return true
 }
@@ -455,106 +459,122 @@ export function createInlineCodeInteractionPlugin(): MilkdownPlugin {
     let compositionAnchor: number | null = null
     let lastPillImeEnd = 0
     return new Plugin({
-        key: inlineCodeInteractionKey,
-        appendTransaction: (transactions, oldState, newState) =>
-          retainInlineCodeAfterEdit(transactions, oldState, newState),
-        props: {
-          attributes(state) {
-            const kind = inlineCodeCaretKind(state)
-            return kind ? { 'data-inline-code-caret': kind } : {}
+      key: inlineCodeInteractionKey,
+      appendTransaction: (transactions, oldState, newState) =>
+        retainInlineCodeAfterEdit(transactions, oldState, newState),
+      props: {
+        attributes(state) {
+          const kind = inlineCodeCaretKind(state)
+          const attrs: { [name: string]: string } = {}
+          if (kind) attrs['data-inline-code-caret'] = kind
+          return attrs
+        },
+        decorations(state) {
+          return activeInlineCodeDecorations(state)
+        },
+        handleTextInput(view, from, to, text) {
+          if (!view.editable || view.composing) return false
+          return insertInlineCodeText(view, from, to, text)
+        },
+        handleDOMEvents: {
+          compositionstart(view) {
+            if (!view.editable) return false
+            const fromPlaceholder = selectionCoversPlaceholder(view.state)
+            const prepared = prepareInlineCodeComposition(view.state, view.dispatch)
+            if (prepared || fromPlaceholder || isInsideInlineCode(view.state)) {
+              composingFromPlaceholder = fromPlaceholder
+              compositionAnchor = view.state.selection.from
+            }
+            return false
           },
-          decorations(state) {
-            return activeInlineCodeDecorations(state)
-          },
-          handleTextInput(view, from, to, text) {
-            if (!view.editable || view.composing) return false
-            return insertInlineCodeText(view, from, to, text)
-          },
-          handleDOMEvents: {
-            compositionstart(view) {
-              if (!view.editable) return false
-              const fromPlaceholder = selectionCoversPlaceholder(view.state)
-              const prepared = prepareInlineCodeComposition(view.state, view.dispatch)
-              if (prepared || fromPlaceholder || isInsideInlineCode(view.state)) {
-                composingFromPlaceholder = fromPlaceholder
-                compositionAnchor = view.state.selection.from
-              }
-              return false
-            },
-            compositionend(view) {
-              if (!composingFromPlaceholder && compositionAnchor == null) return false
-              const fromPlaceholder = composingFromPlaceholder
-              const anchor = compositionAnchor
-              lastPillImeEnd = Date.now()
-              composingFromPlaceholder = false
-              compositionAnchor = null
-              window.setTimeout(() => {
-                if (view.isDestroyed) return
-                const tr = repairInlineCodeAfterComposition(view.state, { anchor, fromPlaceholder })
-                if (tr) view.dispatch(tr)
-              }, 32)
-              return false
-            }
-          },
-          handleKeyDown(view: EditorView, event: KeyboardEvent) {
-            if (!view.editable || event.isComposing) return false
-            const target = event.target
-            if (
-              target instanceof Element &&
-              target.closest('input, textarea, select, .cm-editor, .mm-editor, .is-mindmap-island-active')
-            ) {
-              return false
-            }
-            if (isModE(event)) {
-              return toggleDeskInlineCode(view.state, view.dispatch)
-            }
-            if (
-              event.key === 'Enter' &&
-              !event.shiftKey &&
-              !event.altKey &&
-              !event.metaKey &&
-              !event.ctrlKey
-            ) {
-              if (Date.now() - lastPillImeEnd < 80) return true
-              return splitInlineCodeOnEnter(view.state, view.dispatch)
-            }
-            if (
-              (event.key === 'ArrowRight' || event.key === 'ArrowLeft') &&
-              event.metaKey &&
-              !event.altKey
-            ) {
-              return moveOrSelectTextblockEdge(
-                view.state,
-                view.dispatch,
-                event.key === 'ArrowRight' ? 1 : -1,
-                event.shiftKey
-              )
-            }
-            if (event.key === 'ArrowRight' && !event.shiftKey && !event.altKey && !event.metaKey && !event.ctrlKey) {
-              return stepInlineCodeOnArrow(view.state, view.dispatch, 1)
-            }
-            if (event.key === 'ArrowLeft' && !event.shiftKey && !event.altKey && !event.metaKey && !event.ctrlKey) {
-              return stepInlineCodeOnArrow(view.state, view.dispatch, -1)
-            }
+          compositionend(view) {
+            if (!composingFromPlaceholder && compositionAnchor == null) return false
+            const fromPlaceholder = composingFromPlaceholder
+            const anchor = compositionAnchor
+            lastPillImeEnd = Date.now()
+            composingFromPlaceholder = false
+            compositionAnchor = null
+            window.setTimeout(() => {
+              if (view.isDestroyed) return
+              const tr = repairInlineCodeAfterComposition(view.state, { anchor, fromPlaceholder })
+              if (tr) view.dispatch(tr)
+            }, 32)
             return false
           }
         },
-        view(view) {
-          let raf = 0
-          const sync = (): void => {
-            cancelAnimationFrame(raf)
-            raf = requestAnimationFrame(() => {
-              if (!view.isDestroyed) placeInlineCodeCaret(view)
-            })
+        handleKeyDown(view: EditorView, event: KeyboardEvent) {
+          if (!view.editable || event.isComposing) return false
+          const target = event.target
+          if (
+            target instanceof Element &&
+            target.closest(
+              'input, textarea, select, .cm-editor, .mm-editor, .is-mindmap-island-active'
+            )
+          ) {
+            return false
           }
-          sync()
-          return {
-            update: sync,
-            destroy() {
-              cancelAnimationFrame(raf)
-            }
+          if (isModE(event)) {
+            return toggleDeskInlineCode(view.state, view.dispatch)
+          }
+          if (
+            event.key === 'Enter' &&
+            !event.shiftKey &&
+            !event.altKey &&
+            !event.metaKey &&
+            !event.ctrlKey
+          ) {
+            if (Date.now() - lastPillImeEnd < 80) return true
+            return splitInlineCodeOnEnter(view.state, view.dispatch)
+          }
+          if (
+            (event.key === 'ArrowRight' || event.key === 'ArrowLeft') &&
+            event.metaKey &&
+            !event.altKey
+          ) {
+            return moveOrSelectTextblockEdge(
+              view.state,
+              view.dispatch,
+              event.key === 'ArrowRight' ? 1 : -1,
+              event.shiftKey
+            )
+          }
+          if (
+            event.key === 'ArrowRight' &&
+            !event.shiftKey &&
+            !event.altKey &&
+            !event.metaKey &&
+            !event.ctrlKey
+          ) {
+            return stepInlineCodeOnArrow(view.state, view.dispatch, 1)
+          }
+          if (
+            event.key === 'ArrowLeft' &&
+            !event.shiftKey &&
+            !event.altKey &&
+            !event.metaKey &&
+            !event.ctrlKey
+          ) {
+            return stepInlineCodeOnArrow(view.state, view.dispatch, -1)
+          }
+          return false
+        }
+      },
+      view(view) {
+        let raf = 0
+        const sync = (): void => {
+          cancelAnimationFrame(raf)
+          raf = requestAnimationFrame(() => {
+            if (!view.isDestroyed) placeInlineCodeCaret(view)
+          })
+        }
+        sync()
+        return {
+          update: sync,
+          destroy() {
+            cancelAnimationFrame(raf)
           }
         }
-      })
+      }
+    })
   })
 }

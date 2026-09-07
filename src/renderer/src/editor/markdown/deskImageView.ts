@@ -14,7 +14,7 @@ import { COPY_ICON, EXPAND_ICON } from '../../markdown/copyIcons'
 import { NodeSelection } from '@milkdown/kit/prose/state'
 
 import type { MilkdownPlugin } from '@milkdown/kit/ctx'
-import type { Node } from '@milkdown/kit/prose/model'
+import type { Node as ProseMirrorNode } from '@milkdown/kit/prose/model'
 import type { EditorView } from '@milkdown/kit/prose/view'
 
 const MIN_WIDTH = 80
@@ -303,8 +303,7 @@ export function createDeskImageView(options: {
       widthInput.input.value = String(Math.max(1, Math.round(height * aspect)))
     })
 
-    let drag: { corner: Corner; aspect: number; anchorX: number; anchorY: number } | null =
-      null
+    let drag: { corner: Corner; aspect: number; anchorX: number; anchorY: number } | null = null
     const applyDisplayWidth = (width: string): void => {
       if (width) {
         stack.style.width = width
@@ -364,7 +363,6 @@ export function createDeskImageView(options: {
       handles[corner].addEventListener('pointerdown', (event) => beginDrag(corner, event))
       handles[corner].addEventListener('pointermove', onDrag)
       handles[corner].addEventListener('pointerup', endDrag)
-      handles[corner].addEventListener('mouseup', endDrag)
       handles[corner].addEventListener('pointercancel', endDrag)
     }
 
@@ -459,7 +457,7 @@ export function createDeskImageView(options: {
       syncCompact()
     }
 
-    const render = (node: Node, nextSelected: boolean): void => {
+    const render = (node: ProseMirrorNode, nextSelected: boolean): void => {
       current = node
       selected = nextSelected
       const source = String(node.attrs.src ?? '')
@@ -483,7 +481,11 @@ export function createDeskImageView(options: {
       image.style.height = 'auto'
       const align = normalizeImageAlign(String(node.attrs.align ?? ''))
       applyImageClipboardAttrs(image, { src: source, width: String(node.attrs.width ?? ''), align })
-      applyImageClipboardAttrs(figure, { src: source, width: String(node.attrs.width ?? ''), align })
+      applyImageClipboardAttrs(figure, {
+        src: source,
+        width: String(node.attrs.width ?? ''),
+        align
+      })
       figure.classList.toggle('tn-image--center', align === 'center')
       figure.classList.toggle('tn-image--right', align === 'right')
       figure.classList.toggle('is-selected', selected && !options.isReadOnly())
@@ -570,10 +572,7 @@ function numberField(label: string): { row: HTMLLabelElement; input: HTMLInputEl
   return { row, input }
 }
 
-function oppositeCorner(
-  corner: Corner,
-  rect: DOMRect
-): { x: number; y: number } {
+function oppositeCorner(corner: Corner, rect: DOMRect): { x: number; y: number } {
   if (corner === 'tl') return { x: rect.right, y: rect.bottom }
   if (corner === 'tr') return { x: rect.left, y: rect.bottom }
   if (corner === 'bl') return { x: rect.right, y: rect.top }

@@ -61,9 +61,9 @@ export function showEditorContextMenu(
 }
 
 export function dismissEditorContextMenu(): void {
-  const existing = document.querySelector<
-    HTMLElement & { __deskDismiss?: () => void }
-  >('.desk-editor-context-menu')
+  const existing = document.querySelector<HTMLElement & { __deskDismiss?: () => void }>(
+    '.desk-editor-context-menu'
+  )
   existing?.__deskDismiss?.()
   existing?.remove()
 }

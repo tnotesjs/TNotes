@@ -202,7 +202,7 @@ function close(): void {
   query.value = ''
   activeIndex.value = 0
   searchResults.value = []
-  if (document.activeElement === input.value) input.value.blur()
+  if (document.activeElement === input.value) input.value?.blur()
 }
 
 function onFocus(): void {
@@ -211,8 +211,7 @@ function onFocus(): void {
 
 function isInsidePalette(target: EventTarget | null): boolean {
   return (
-    target instanceof Node &&
-    Boolean(input.value?.contains(target) || menu.value?.contains(target))
+    target instanceof Node && Boolean(input.value?.contains(target) || menu.value?.contains(target))
   )
 }
 
@@ -242,10 +241,7 @@ async function confirm(): Promise<void> {
     await command.run()
     return
   }
-  const note =
-    'noteUuid' in item
-      ? item
-      : null
+  const note = 'noteUuid' in item ? item : null
   if (!note) return
   close()
   await workspace.openNoteByUuid(note.knowledgeBaseId, note.noteUuid)
@@ -326,7 +322,9 @@ defineExpose({ openSearch, openCommands, close })
               <kbd v-if="command.shortcut">{{ command.shortcut }}</kbd>
             </span>
           </button>
-          <div v-if="filteredCommands.length === 0" class="command-palette__empty">没有匹配的命令</div>
+          <div v-if="filteredCommands.length === 0" class="command-palette__empty">
+            没有匹配的命令
+          </div>
         </template>
         <template v-else-if="query.trim()">
           <div v-if="searchLoading" class="command-palette__empty">正在搜索…</div>

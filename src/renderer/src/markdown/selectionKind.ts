@@ -60,7 +60,7 @@ export function classifySelectionRange(
       hasBlocks = true
       return false
     }
-    if (node.isText && node.text.length > 0) {
+    if (node.isText && (node.text?.length ?? 0) > 0) {
       hasMarks = true
       return false
     }
@@ -93,10 +93,7 @@ function collectIndependentBlocks(
       blocks.push({ pos: position, node })
       return false
     }
-    if (
-      isStandaloneImageNode(doc, position, node) &&
-      isFullyCovered(position, node, from, to)
-    ) {
+    if (isStandaloneImageNode(doc, position, node) && isFullyCovered(position, node, from, to)) {
       blocks.push({ pos: position, node })
       return false
     }
@@ -106,19 +103,18 @@ function collectIndependentBlocks(
 }
 
 function nodeSelectionFor(doc: ProseNode, pos: number, node: ProseNode): Selection {
-  if (node.type.name === 'paragraph' && node.childCount > 0 && node.firstChild?.type.name === 'image') {
+  if (
+    node.type.name === 'paragraph' &&
+    node.childCount > 0 &&
+    node.firstChild?.type.name === 'image'
+  ) {
     return NodeSelection.create(doc, pos + 1)
   }
   if (NodeSelection.isSelectable(node)) return NodeSelection.create(doc, pos)
   return createBlockRangeSelection(doc, pos, pos + node.nodeSize)
 }
 
-function rangeFitsSingleBlock(
-  from: number,
-  to: number,
-  pos: number,
-  node: ProseNode
-): boolean {
+function rangeFitsSingleBlock(from: number, to: number, pos: number, node: ProseNode): boolean {
   const end = pos + node.nodeSize
   return from >= pos && to <= end
 }

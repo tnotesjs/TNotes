@@ -271,11 +271,7 @@ function openLink(url: string): void {
               <FormatIcon name="italic" />
             </button>
           </UiTooltip>
-          <UiTooltip
-            v-else-if="item === 'strikethrough'"
-            label="删除线"
-            shortcut="⇧ ⌘ X"
-          >
+          <UiTooltip v-else-if="item === 'strikethrough'" label="删除线" shortcut="⇧ ⌘ X">
             <button
               type="button"
               aria-label="删除线"
@@ -286,11 +282,7 @@ function openLink(url: string): void {
               <FormatIcon name="strikethrough" />
             </button>
           </UiTooltip>
-          <UiTooltip
-            v-else-if="item === 'inline-code'"
-            label="行内代码"
-            shortcut="⌘ E"
-          >
+          <UiTooltip v-else-if="item === 'inline-code'" label="行内代码" shortcut="⌘ E">
             <button
               type="button"
               aria-label="行内代码"
@@ -309,11 +301,7 @@ function openLink(url: string): void {
             :platform="workspace.runtimePlatform"
             @select="markdownEditor?.setLinePrefix($event === 0 ? '' : `${'#'.repeat($event)} `)"
           />
-          <UiTooltip
-            v-else-if="item === 'quote'"
-            label="引用"
-            shortcut="⇧ ⌘ U"
-          >
+          <UiTooltip v-else-if="item === 'quote'" label="引用" shortcut="⇧ ⌘ U">
             <button
               type="button"
               aria-label="引用"
@@ -323,11 +311,7 @@ function openLink(url: string): void {
               <FormatIcon name="quote" />
             </button>
           </UiTooltip>
-          <UiTooltip
-            v-else-if="item === 'unordered-list'"
-            label="无序列表"
-            shortcut="⇧ ⌘ 8"
-          >
+          <UiTooltip v-else-if="item === 'unordered-list'" label="无序列表" shortcut="⇧ ⌘ 8">
             <button
               type="button"
               aria-label="无序列表"

@@ -62,7 +62,10 @@ export function serializeBlockForClipboard(
   const collapsedSection = collapsedHeadingSectionRange(state, position)
   if (collapsedSection) {
     return serialize(
-      state.doc.type.create(state.doc.attrs, state.doc.slice(collapsedSection.from, collapsedSection.to).content)
+      state.doc.type.create(
+        state.doc.attrs,
+        state.doc.slice(collapsedSection.from, collapsedSection.to).content
+      )
     )
   }
 

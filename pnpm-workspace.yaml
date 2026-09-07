@@ -8,8 +8,3 @@ onlyBuiltDependencies:
   - '@parcel/watcher'
   - electron
   - electron-winstaller
-overrides:
-  # 开发期临时指向本地源码（含未发布的共享组件）；发版前改回 registry 版本并移除本段。
-  '@tnotesjs/ui': 'link:../ui'
-  '@tnotesjs/kb': 'link:../kb'
-  '@tnotesjs/ssg': 'link:../ssg'

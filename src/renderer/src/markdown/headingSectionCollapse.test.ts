@@ -81,7 +81,9 @@ describe('heading section range', () => {
 
 describe('heading section collapse', () => {
   it('hides the section body until the toggle is clicked again', async () => {
-    const view = await setup('## Title\n\nparagraph\n\n### Nested\n\ninner\n\n## Sibling\n\nlater\n')
+    const view = await setup(
+      '## Title\n\nparagraph\n\n### Nested\n\ninner\n\n## Sibling\n\nlater\n'
+    )
     const [title, , sibling] = headingPositions(view.state.doc)
     const toggle = toggleHeadingSectionCollapsed(view.state, title!)
     expect(toggle).not.toBeNull()
@@ -130,7 +132,9 @@ describe('heading section collapse', () => {
   })
 
   it('deletes a collapsed heading together with its hidden section', async () => {
-    const view = await setup('# Keep\n\nkeep body\n\n## Remove\n\nhidden body\n\n# After\n\nafter body\n')
+    const view = await setup(
+      '# Keep\n\nkeep body\n\n## Remove\n\nhidden body\n\n# After\n\nafter body\n'
+    )
     const [, remove] = headingPositions(view.state.doc)
     view.dispatch(toggleHeadingSectionCollapsed(view.state, remove!)!)
     view.dispatch(createBlockDeleteTransaction(view.state, remove!)!)
@@ -143,7 +147,9 @@ describe('heading section collapse', () => {
     const view = await setup('# One\n\nbody\n\n## Two\n\ninner\n\n# Other\n\nafter\n')
     const [one, two, other] = headingPositions(view.state.doc)
     view.dispatch(applyHeadingFoldCommand(view.state, 'fold-all')!)
-    expect([...collapsedHeadingSet(view.state)].sort((a, b) => a - b)).toEqual([one, two, other].sort((a, b) => a - b))
+    expect([...collapsedHeadingSet(view.state)].sort((a, b) => a - b)).toEqual(
+      [one, two, other].sort((a, b) => a - b)
+    )
     view.dispatch(applyHeadingFoldCommand(view.state, 'unfold-all')!)
     expect(collapsedHeadingSet(view.state).size).toBe(0)
   })

@@ -5,11 +5,7 @@ import DOMPurify from 'dompurify'
 import CodeGroup from '@tnotesjs/ui/code-group'
 import { createApp, h, type App } from 'vue'
 
-import {
-  hydrateTnSwipers,
-  parseSwiperSlides,
-  swiperSlideTabTitle
-} from './swiperSlides'
+import { hydrateTnSwipers, parseSwiperSlides, swiperSlideTabTitle } from './swiperSlides'
 
 export interface ParsedContainer {
   name: string

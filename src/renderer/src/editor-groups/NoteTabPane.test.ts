@@ -76,11 +76,9 @@ describe('note header', () => {
     expect(controls.element.children[1].className).toBe('view-divider')
     expect(wrapper.get('.outline-toggle').classes()).toContain('active')
     const toolbar = wrapper.get('.document-toolbar')
-    expect([...toolbar.element.children].map((node) => node.classList[0] ?? node.nodeName.toLowerCase())).toEqual([
-      'document-path',
-      'format-overflow-bar-stub',
-      'view-controls'
-    ])
+    expect(
+      [...toolbar.element.children].map((node) => node.classList[0] ?? node.nodeName.toLowerCase())
+    ).toEqual(['document-path', 'format-overflow-bar-stub', 'view-controls'])
     expect(wrapper.find('.save-button').exists()).toBe(false)
     const width = vi.spyOn(editor, 'toggleNotePageWidth')
     const outline = vi.spyOn(editor, 'toggleNoteOutlineVisible')

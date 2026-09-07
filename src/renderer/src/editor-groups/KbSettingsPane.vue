@@ -177,10 +177,7 @@ async function persistSettings(): Promise<void> {
         request = { knowledgeBaseId: props.tab.knowledgeBaseId, kind: 'clear' }
       }
       resultValue(await window.desk.knowledgeBases.writeIcon(request))
-    } else if (
-      draft.letter.trim() &&
-      draft.letter.trim() !== (loaded.value?.icon?.letter ?? '')
-    ) {
+    } else if (draft.letter.trim() && draft.letter.trim() !== (loaded.value?.icon?.letter ?? '')) {
       resultValue(
         await window.desk.knowledgeBases.writeIcon({
           knowledgeBaseId: props.tab.knowledgeBaseId,

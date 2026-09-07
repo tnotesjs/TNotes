@@ -172,7 +172,7 @@ function baseExtensions(): Extension[] {
     dropCursor(),
     indentOnInput(),
     bracketMatching(),
-    ...codeMirrorRectangularSelection(),
+    codeMirrorRectangularSelection(),
     crosshairCursor(),
     highlightActiveLine(),
     autocompletion({ activateOnTyping: true, icons: false, maxRenderedOptions: 60 }),

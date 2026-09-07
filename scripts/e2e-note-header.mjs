@@ -333,9 +333,7 @@ try {
   await page.keyboard.type(' SHORTCUT-SAVED')
   await page.waitForFunction(() => document.querySelector('.tab.is-dirty, .tab .dirty-dot'))
   await page.keyboard.press('ControlOrMeta+s')
-  await waitUntil(() =>
-    readFileSync(finalNoteFile, 'utf8').includes('SHORTCUT-SAVED')
-  )
+  await waitUntil(() => readFileSync(finalNoteFile, 'utf8').includes('SHORTCUT-SAVED'))
   await page.getByRole('button', { name: '标准页宽', exact: true }).click()
   await page.getByRole('button', { name: '超宽显示', exact: true }).waitFor()
   await page.evaluate(() => {
@@ -350,15 +348,11 @@ try {
   await page.locator('.format-actions').getByRole('button', { name: '复选框', exact: true }).click()
   await pm.locator('li .unchecked').waitFor()
   await page.keyboard.press('ControlOrMeta+s')
-  await waitUntil(() =>
-    /^- \[ \] .*KEEP-DRAFT/m.test(readFileSync(finalNoteFile, 'utf8'))
-  )
+  await waitUntil(() => /^- \[ \] .*KEEP-DRAFT/m.test(readFileSync(finalNoteFile, 'utf8')))
   await pm.locator('li .unchecked').click()
   await pm.locator('li .checked').waitFor()
   await page.keyboard.press('ControlOrMeta+s')
-  await waitUntil(() =>
-    /^- \[x\] .*KEEP-DRAFT/m.test(readFileSync(finalNoteFile, 'utf8'))
-  )
+  await waitUntil(() => /^- \[x\] .*KEEP-DRAFT/m.test(readFileSync(finalNoteFile, 'utf8')))
   console.log(
     '✓ task checkboxes save as native GFM Markdown and support checked/unchecked interaction'
   )
@@ -437,9 +431,7 @@ try {
   assert.equal((await pm.innerText()).includes('/table'), false)
   await page.keyboard.press('ControlOrMeta+s')
   await waitUntil(
-    () =>
-      (readFileSync(finalNoteFile, 'utf8').match(/^\|[^\n]*\|$/gm) ?? []).length ===
-      6
+    () => (readFileSync(finalNoteFile, 'utf8').match(/^\|[^\n]*\|$/gm) ?? []).length === 6
   )
   await page.screenshot({ path: join(shots, 'matching-tables.png') })
   console.log('✓ slash and toolbar share seven icons and insert identical empty 2×2 tables')

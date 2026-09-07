@@ -1,12 +1,15 @@
+import { existsSync } from 'fs'
 import { resolve } from 'path'
 import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vitest/config'
 
-// The linked @tnotesjs/ui publishes source .ts via the "import" condition and
-// built dist via "node". Vitest resolves with the node condition, which would
-// require a fresh ui build on every edit — alias the dual-condition subpaths
-// to source instead.
-const uiSrc = (p: string): string => resolve(__dirname, '../ui/src', p)
+// Prefer a sibling ui checkout while iterating; fall back to the published
+// package so CI / isolated installs (no ../ui) still resolve source .ts.
+const uiSrc = (p: string): string => {
+  const sibling = resolve(__dirname, '../ui/src', p)
+  if (existsSync(sibling)) return sibling
+  return resolve(__dirname, 'node_modules/@tnotesjs/ui/src', p)
+}
 
 export default defineConfig({
   plugins: [vue()],

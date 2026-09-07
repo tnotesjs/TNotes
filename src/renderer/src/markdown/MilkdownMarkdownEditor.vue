@@ -995,9 +995,7 @@ watch(
   () => props.active,
   (active) => {
     if (active) {
-      host.value
-        ?.querySelector('.ProseMirror')
-        ?.dispatchEvent(new Event('desk-code-chrome-sync'))
+      host.value?.querySelector('.ProseMirror')?.dispatchEvent(new Event('desk-code-chrome-sync'))
       focus()
     }
   }

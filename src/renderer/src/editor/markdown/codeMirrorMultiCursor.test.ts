@@ -31,30 +31,34 @@ function createView(doc: string): EditorView {
 describe('rectangleRangesForPositions', () => {
   it('builds one range per line for a column rectangle', () => {
     const view = createView('abcd\nefgh\nijkl')
-    const selection = rectangleRangesForPositions(view.state.doc, { line: 1, col: 1 }, { line: 3, col: 3 })
-    expect(selection.ranges.map((range) => view.state.doc.sliceString(range.from, range.to))).toEqual([
-      'bc',
-      'fg',
-      'jk'
-    ])
+    const selection = rectangleRangesForPositions(
+      view.state.doc,
+      { line: 1, col: 1 },
+      { line: 3, col: 3 }
+    )
+    expect(
+      selection.ranges.map((range) => view.state.doc.sliceString(range.from, range.to))
+    ).toEqual(['bc', 'fg', 'jk'])
   })
 
   it('clamps columns on shorter lines', () => {
     const view = createView('abcd\nab\nabcdef')
-    const selection = rectangleRangesForPositions(view.state.doc, { line: 1, col: 2 }, { line: 3, col: 4 })
-    expect(selection.ranges.map((range) => view.state.doc.sliceString(range.from, range.to))).toEqual([
-      'cd',
-      '',
-      'cd'
-    ])
+    const selection = rectangleRangesForPositions(
+      view.state.doc,
+      { line: 1, col: 2 },
+      { line: 3, col: 4 }
+    )
+    expect(
+      selection.ranges.map((range) => view.state.doc.sliceString(range.from, range.to))
+    ).toEqual(['cd', '', 'cd'])
   })
 })
 
 describe('isRectangularSelectionEvent', () => {
   it('accepts Option+left-drag and middle-button drag', () => {
-    expect(isRectangularSelectionEvent(new MouseEvent('mousedown', { altKey: true, button: 0 }))).toBe(
-      true
-    )
+    expect(
+      isRectangularSelectionEvent(new MouseEvent('mousedown', { altKey: true, button: 0 }))
+    ).toBe(true)
     expect(isRectangularSelectionEvent(new MouseEvent('mousedown', { button: 1 }))).toBe(true)
     expect(isRectangularSelectionEvent(new MouseEvent('mousedown', { button: 0 }))).toBe(false)
   })
@@ -81,10 +85,22 @@ describe('alt multi-cursor', () => {
     vi.spyOn(view, 'posAtCoords').mockReturnValue(4)
 
     view.dom.dispatchEvent(
-      new PointerEvent('pointerdown', { button: 0, altKey: true, clientX: 12, clientY: 8, bubbles: true })
+      new PointerEvent('pointerdown', {
+        button: 0,
+        altKey: true,
+        clientX: 12,
+        clientY: 8,
+        bubbles: true
+      })
     )
     view.dom.ownerDocument.dispatchEvent(
-      new PointerEvent('pointerup', { button: 0, altKey: true, clientX: 12, clientY: 8, bubbles: true })
+      new PointerEvent('pointerup', {
+        button: 0,
+        altKey: true,
+        clientX: 12,
+        clientY: 8,
+        bubbles: true
+      })
     )
 
     expect(view.state.selection.ranges.map((range) => range.head)).toEqual([0, 4])
@@ -97,7 +113,13 @@ describe('alt multi-cursor', () => {
     vi.spyOn(view, 'posAtCoords').mockImplementation((coords) => (coords.y < 20 ? start : end))
 
     view.dom.dispatchEvent(
-      new PointerEvent('pointerdown', { button: 0, altKey: true, clientX: 8, clientY: 4, bubbles: true })
+      new PointerEvent('pointerdown', {
+        button: 0,
+        altKey: true,
+        clientX: 8,
+        clientY: 4,
+        bubbles: true
+      })
     )
     view.dom.ownerDocument.dispatchEvent(
       new PointerEvent('pointermove', {
@@ -110,11 +132,9 @@ describe('alt multi-cursor', () => {
       })
     )
 
-    expect(view.state.selection.ranges.map((range) => view.state.doc.sliceString(range.from, range.to))).toEqual([
-      'bc',
-      'fg',
-      'jk'
-    ])
+    expect(
+      view.state.selection.ranges.map((range) => view.state.doc.sliceString(range.from, range.to))
+    ).toEqual(['bc', 'fg', 'jk'])
   })
 })
 
@@ -129,12 +149,18 @@ describe('middle-button rectangular selection', () => {
       new PointerEvent('pointerdown', { button: 1, clientX: 8, clientY: 4, bubbles: true })
     )
     view.dom.ownerDocument.dispatchEvent(
-      new PointerEvent('pointermove', { button: 1, buttons: 4, clientX: 24, clientY: 40, bubbles: true })
+      new PointerEvent('pointermove', {
+        button: 1,
+        buttons: 4,
+        clientX: 24,
+        clientY: 40,
+        bubbles: true
+      })
     )
 
-    expect(view.state.selection.ranges.map((range) => view.state.doc.sliceString(range.from, range.to))).toEqual(
-      ['bc', 'fg', 'jk']
-    )
+    expect(
+      view.state.selection.ranges.map((range) => view.state.doc.sliceString(range.from, range.to))
+    ).toEqual(['bc', 'fg', 'jk'])
   })
 })
 

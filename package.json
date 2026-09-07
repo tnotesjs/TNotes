@@ -36,10 +36,10 @@
     "@electron-toolkit/utils": "^4.0.0",
     "@milkdown/crepe": "7.22.1",
     "@milkdown/kit": "7.22.1",
-    "@tnotesjs/kb": "^0.1.0",
+    "@tnotesjs/kb": "^0.2.1",
     "@tnotesjs/mindmap-core": "^0.2.2",
     "@tnotesjs/ssg": "^0.1.0",
-    "@tnotesjs/ui": "^0.1.1",
+    "@tnotesjs/ui": "^0.1.2",
     "@types/markdown-it": "^14.2.0",
     "@uiw/codemirror-theme-github": "4.25.11",
     "dompurify": "^3.4.14",
@@ -52,6 +52,7 @@
     "minisearch": "^7.2.0",
     "pinia": "^4.0.3",
     "prettier": "^3.9.6",
+    "shiki": "4.4.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {

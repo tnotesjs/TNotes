@@ -43,7 +43,12 @@ describe('note outline headings', () => {
     const root = document.createElement('div')
     const menu = document.createElement('div')
     menu.className = 'milkdown-slash-menu'
-    menu.append(heading('h6', 'Text'), heading('h6', 'List'), heading('h6', 'Advanced'), heading('h6', 'TNotes'))
+    menu.append(
+      heading('h6', 'Text'),
+      heading('h6', 'List'),
+      heading('h6', 'Advanced'),
+      heading('h6', 'TNotes')
+    )
     root.append(heading('h1', '代码分组', 'code-group'), menu)
     expect(collectNoteOutlineHeadings(root)).toEqual([
       { id: 'code-group', level: 1, text: '代码分组' }
@@ -67,9 +72,7 @@ describe('note outline headings', () => {
     raw.className = 'desk-raw-block'
     raw.append(heading('h2', '提示里的标题'))
     root.append(heading('h2', '正文标题', 'body'), raw)
-    expect(collectNoteOutlineHeadings(root)).toEqual([
-      { id: 'body', level: 2, text: '正文标题' }
-    ])
+    expect(collectNoteOutlineHeadings(root)).toEqual([{ id: 'body', level: 2, text: '正文标题' }])
   })
 
   it('picks the last heading that has scrolled past the offset', () => {
