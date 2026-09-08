@@ -6,6 +6,8 @@
   font-optical-sizing: auto;
   font-synthesis: style;
   line-height: 1.5;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   -webkit-font-smoothing: antialiased;
 }
 :is(.tn-prose, .vp-doc) :where(p) {
@@ -48,6 +50,8 @@
   color: var(--tn-c-brand);
   text-decoration: none;
   font-weight: 500;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 :is(.tn-prose, .vp-doc) :where(a:hover) {
   color: var(--tn-c-brand-hover);
@@ -125,7 +129,9 @@
   width: 100%;
   height: auto;
 }
-:is(.tn-prose, .vp-doc) :where(figure.tn-image > figcaption) {
+:is(.tn-prose, .vp-doc) :where(figure.tn-image > figcaption),
+:is(.tn-prose, .vp-doc) :where(figcaption) {
+  display: block;
   margin: 8px 0 0;
   color: var(--tn-c-text-2);
   font-size: 13px;
