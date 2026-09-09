@@ -104,7 +104,7 @@
 :is(.tn-prose, .vp-doc) :where(hr) {
   margin: 16px 0;
   border: 0;
-  border-top: 1px solid var(--tn-c-text-2);
+  border-top: 1px solid var(--tn-c-divider);
 }
 :is(.tn-prose, .vp-doc) :where(img) {
   max-width: 100%;
