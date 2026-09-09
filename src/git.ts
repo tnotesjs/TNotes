@@ -27,6 +27,14 @@ async function git(
   }
 }
 
+/** `git init` in `rootPath`. Throws Error with stderr when it fails. */
+export async function initGitRepository(rootPath: string): Promise<void> {
+  const result = await git(rootPath, ["init"]);
+  if (!result.ok) {
+    throw new Error(result.stderr.trim() || "git init 失败");
+  }
+}
+
 /** True when `rootPath` is inside a git work tree. */
 export async function isGitRepository(rootPath: string): Promise<boolean> {
   const result = await git(rootPath, ["rev-parse", "--is-inside-work-tree"]);

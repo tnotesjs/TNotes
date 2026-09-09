@@ -40,6 +40,7 @@ export {
   inlineIncludes,
 } from "./codemod";
 export type { MigrateReport } from "./codemod";
+export { buildMigratedKbConfig } from "./migrate-config";
 export type {
   TNotesKbWorkspace,
   CreateWorkspaceOptions,
@@ -55,7 +56,19 @@ export {
   resolveKbName,
 } from "./name";
 export {
+  isKnowledgeBaseRoot,
+  createKnowledgeBase,
+  STARTER_NOTE_TITLE,
+  DOCS_SITE_URL,
+} from "./create";
+export type {
+  CreateKnowledgeBaseInput,
+  CreateKnowledgeBaseOptions,
+  CreateKnowledgeBaseResult,
+} from "./create";
+export {
   isGitRepository,
+  initGitRepository,
   readOriginRemoteUrl,
 } from "./git";
 export {

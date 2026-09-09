@@ -3,36 +3,36 @@
  *
  * Commands:
  *   update   Refresh stats.completedNotesCount from TOC.md git history
+ *   init     Create a minimal knowledge base under the current (or given) parent
  */
 
 import path from "node:path";
 
+import { createKnowledgeBase } from "./create";
 import { createWorkspace } from "./workspace";
 
-async function main(): Promise<void> {
-  const args = process.argv.slice(2);
-  const command = args[0];
-  const targetArg = args.find((arg, i) => i > 0 && !arg.startsWith("--")) ?? process.cwd();
-  const rootPath = path.resolve(targetArg);
-
-  if (!command || command === "--help" || command === "-h") {
-    console.log(`用法:
+function printHelp(): void {
+  console.log(`用法:
   tnotes-kb update [知识库目录]
+  tnotes-kb init <文件夹名> [选项]
+
+选项:
+  --title <显示名称>
+  --parent <父目录>          默认当前工作目录
+  --package-json             写入 package.json（CLI / 本地构建）
+  --github-pages             写入 deploy.yml（并附带 package.json）
+  --readme                   写入根 README.md
+  --git-init                 在知识库目录执行 git init
 
 说明:
-  根据 Git 中 TOC.md 的历史回填 tnotes.json → stats.completedNotesCount。
-  需要先在 tnotes.json 中设置 "stats": { "enabled": true }。
-  旧库脚本别名示例: "tn:update": "tnotes-kb update"
+  update  根据 Git 中 TOC.md 的历史回填 tnotes.json → stats.completedNotesCount。
+          需要先在 tnotes.json 中设置 "stats": { "enabled": true }。
+  init    创建最小知识库（tnotes.json / TOC.md / notes/0001. 开始使用.md）。
+          可选脚手架默认关闭；Desk 预览不需要 package.json。
 `);
-    process.exit(command ? 0 : 1);
-  }
+}
 
-  if (command !== "update") {
-    console.error(`未知命令: ${command}`);
-    console.error("用法: tnotes-kb update [知识库目录]");
-    process.exit(1);
-  }
-
+async function runUpdate(rootPath: string): Promise<void> {
   const ws = createWorkspace({ rootPath });
   const { value } = await ws.stats.update();
   const counts = value.completedNotesCount ?? {};
@@ -42,6 +42,97 @@ async function main(): Promise<void> {
     `完成趋势已更新: ${keys.length} 个月` +
       (latest ? `，当前 ${latest} = ${counts[latest]}` : ""),
   );
+}
+
+async function runInit(args: string[]): Promise<void> {
+  let folderName = "";
+  let title: string | undefined;
+  let parentDir = process.cwd();
+  const options = {
+    packageJson: false,
+    githubPages: false,
+    readme: false,
+    gitInit: false,
+  };
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === "--title") {
+      title = args[++i];
+      continue;
+    }
+    if (arg === "--parent") {
+      parentDir = path.resolve(args[++i] ?? process.cwd());
+      continue;
+    }
+    if (arg === "--package-json") {
+      options.packageJson = true;
+      continue;
+    }
+    if (arg === "--github-pages") {
+      options.githubPages = true;
+      continue;
+    }
+    if (arg === "--readme") {
+      options.readme = true;
+      continue;
+    }
+    if (arg === "--git-init") {
+      options.gitInit = true;
+      continue;
+    }
+    if (arg.startsWith("-")) {
+      console.error(`未知参数: ${arg}`);
+      printHelp();
+      process.exit(1);
+    }
+    if (!folderName) {
+      folderName = arg;
+      continue;
+    }
+    console.error(`多余参数: ${arg}`);
+    printHelp();
+    process.exit(1);
+  }
+
+  if (!folderName) {
+    console.error("缺少文件夹名");
+    printHelp();
+    process.exit(1);
+  }
+
+  const result = await createKnowledgeBase({ parentDir, folderName, title, options });
+  console.log(`已创建知识库: ${result.rootPath}`);
+  console.log(`  配置: tnotes.json (name=${result.config.name}, title=${result.config.title})`);
+  console.log(`  引导笔记: ${result.starterNoteRelPath}`);
+  if (result.extras.length > 0) {
+    console.log(`  可选文件: ${result.extras.join("、")}`);
+  }
+}
+
+async function main(): Promise<void> {
+  const args = process.argv.slice(2);
+  const command = args[0];
+
+  if (!command || command === "--help" || command === "-h") {
+    printHelp();
+    process.exit(command ? 0 : 1);
+  }
+
+  if (command === "update") {
+    const targetArg = args.find((arg, i) => i > 0 && !arg.startsWith("--")) ?? process.cwd();
+    await runUpdate(path.resolve(targetArg));
+    return;
+  }
+
+  if (command === "init") {
+    await runInit(args.slice(1));
+    return;
+  }
+
+  console.error(`未知命令: ${command}`);
+  printHelp();
+  process.exit(1);
 }
 
 main().catch((error) => {

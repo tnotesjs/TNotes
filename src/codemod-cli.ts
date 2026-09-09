@@ -16,8 +16,22 @@ async function main(): Promise<void> {
   console.log(`  迁移 assets：${report.assetsMoved} 个文件`);
   const renamed = Object.entries(report.assetsRenamed);
   if (renamed.length > 0) {
-    console.log(`  重命名（重名冲突）：`);
+    console.log(`  资源重命名（已加笔记索引）：`);
     for (const [from, to] of renamed) console.log(`    ${from} → ${to}`);
+  }
+  if (report.config) {
+    console.log(`  tnotes.json：`);
+    for (const line of JSON.stringify(report.config, null, 2).split("\n")) {
+      console.log(`    ${line}`);
+    }
+  } else {
+    console.log("  tnotes.json：已存在，未覆盖");
+  }
+  if (report.scaffolded.length > 0) {
+    console.log(`  工程文件：${report.scaffolded.join("、")}`);
+  }
+  if (report.preservedScripts.length > 0) {
+    console.log(`  保留的自定义 scripts：${report.preservedScripts.join("、")}`);
   }
   if (report.includeFailures.length > 0) {
     console.log(`  ⚠️ 引用失败（保留原行）：`);

@@ -1,10 +1,13 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 
 import { ASSETS_DIR, NOTES_DIR, TOC_FILE } from "./constants";
 import { parseNoteContent, serializeNoteContent } from "./frontmatter";
-import type { NoteFrontmatter } from "./types";
+import { buildMigratedKbConfig } from "./migrate-config";
+import { extraPackageScripts, writeMigratedScaffold } from "./migrate-scaffold";
+import type { KbConfig, NoteFrontmatter } from "./types";
 
 /**
  * Codemod: old directory-based kb → new single-file kb.
@@ -21,18 +24,25 @@ export interface MigrateReport {
   notesMigrated: number;
   includesInlined: number;
   assetsMoved: number;
-  /** Assets renamed due to kb-level name collisions (old → new). */
+  /** Assets renamed when moved to kb-level `assets/` (old → new). */
   assetsRenamed: Record<string, string>;
   /** Referenced include files that could not be read (left as-is). */
   includeFailures: string[];
   /** Old-layout leftovers the codemod deliberately did not delete. */
   leftovers: string[];
+  /** New tnotes.json payload (omitted when a tnotes.json already existed). */
+  config?: KbConfig;
+  /** Engineering files written (package.json / deploy.yml / .gitignore). */
+  scaffolded: string[];
+  /** Custom package.json scripts preserved into the new template. */
+  preservedScripts: string[];
   dryRun: boolean;
 }
 
 interface OldNoteConfig {
   id?: unknown;
   description?: unknown;
+  enableDiscussions?: unknown;
 }
 
 const NOTE_DIR_REGEX = /^(\d{4})\.\s*(.+)$/;
@@ -40,8 +50,11 @@ const GENERATED_TITLE_REGEX = /^#\s+\[[^\]]*\]\(https?:\/\/[^)]*\)\s*$/;
 const TOC_REGION_START = /^\s*<!--\s*region:toc\s*-->\s*$/;
 const TOC_REGION_END = /^\s*<!--\s*endregion:toc\s*-->\s*$/;
 const INCLUDE_LINE_REGEX = /^ {0,3}<<<\s+(.+)$/;
-/** `./assets/x.png` (and bare `assets/x.png`) references in note bodies. */
-const LOCAL_ASSET_REF_REGEX = /\(?\.\/assets\/([^\s)"']+)\)?/g;
+/** `./assets/x.png` and bare `assets/x.png` in note bodies. Not `../assets/` (already kb-level). */
+const LOCAL_ASSET_REF_REGEX = new RegExp(
+  String.raw`\((?:\./)?assets/([^\s)"']+)\)`,
+  "g",
+);
 
 interface ParsedInclude {
   filePath: string;
@@ -63,17 +76,25 @@ function parseIncludeLine(line: string): ParsedInclude | null {
   }
 
   let highlights: string | undefined;
-  const highlightMatch = rest.match(/\s*\{([\d,\-\s]+)\}\s*$/);
-  if (highlightMatch) {
-    highlights = `{${highlightMatch[1]!.replace(/\s+/g, "")}}`;
-    rest = rest.slice(0, highlightMatch.index).trim();
-  }
-
   let lang: string | undefined;
-  const langMatch = rest.match(/\s+\{([A-Za-z][\w#+-]*)\}\s*$/);
-  if (langMatch) {
-    lang = langMatch[1];
-    rest = rest.slice(0, langMatch.index).trim();
+  // VitePress include meta is one trailing `{...}`:
+  // `{}`, `{4}`, `{1-3,5}`, `{js}`, `{md}`, `{16,21 js}`, `{6 js}`.
+  const braceMatch = rest.match(/\s*\{([^}]*)\}\s*$/);
+  if (braceMatch) {
+    rest = rest.slice(0, braceMatch.index).trim();
+    const inner = braceMatch[1]!.trim();
+    if (inner) {
+      const parts = inner.split(/\s+/);
+      const last = parts[parts.length - 1]!;
+      const head = parts.slice(0, -1).join("");
+      if (/^[A-Za-z][\w#+-]*$/.test(last) && (parts.length === 1 || /^[\d,-]*$/.test(head))) {
+        lang = last;
+        if (head) highlights = `{${head}}`;
+      } else if (/^[\d,\-\s]*$/.test(inner)) {
+        const compact = inner.replace(/\s+/g, "");
+        if (compact) highlights = `{${compact}}`;
+      }
+    }
   }
 
   // Region suffixes (`./file.ts#region`) are not supported by the new
@@ -112,6 +133,16 @@ const EXT_TO_LANG: Record<string, string> = {
   sql: "sql",
 };
 
+/** Outer fence must be longer than any backtick run inside the included file. */
+function fenceTicksForContent(content: string): string {
+  let n = 3;
+  for (const line of content.split("\n")) {
+    const match = line.match(/^(`{3,})/);
+    if (match) n = Math.max(n, match[1]!.length + 1);
+  }
+  return "`".repeat(n);
+}
+
 function langForPath(filePath: string): string {
   const ext = path.extname(filePath).slice(1).toLowerCase();
   return EXT_TO_LANG[ext] ?? ext ?? "";
@@ -119,6 +150,32 @@ function langForPath(filePath: string): string {
 
 function baseName(filePath: string): string {
   return filePath.split(/[/\\]/).pop() ?? filePath;
+}
+
+/** `0008-1.png` — note index owns the file. Do not double-prefix. */
+export function indexedAssetFileName(index: string, originalName: string): string {
+  const name = baseName(originalName);
+  if (name.startsWith(`${index}-`)) return name;
+  const stem = name.replace(/^\.+/, "") || name;
+  return `${index}-${stem}`;
+}
+
+function contentHash(content: Buffer): string {
+  return createHash("sha256").update(content).digest("hex");
+}
+
+async function listFilesRecursive(dir: string): Promise<string[]> {
+  const entries = await fs.readdir(dir, { withFileTypes: true }).catch(() => []);
+  const files: string[] = [];
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...(await listFilesRecursive(full)));
+      continue;
+    }
+    if (entry.isFile() && entry.name !== ".DS_Store") files.push(full);
+  }
+  return files;
 }
 
 /** Strip desk/VitePress-era generated regions from an old README body. */
@@ -163,6 +220,25 @@ async function pathExists(target: string): Promise<boolean> {
     .catch(() => false);
 }
 
+/** VitePress allows several `<<<` includes on one line (leetcode code-groups). */
+function includeSegments(line: string): string[] | null {
+  if (!/^ {0,3}<<<\s+\S/.test(line)) return null;
+  const parts = line
+    .trim()
+    .split(/\s*(?=<<<)/)
+    .map((part) => part.trim())
+    .filter((part) => part.startsWith("<<<"));
+  return parts.length > 0 ? parts : null;
+}
+
+function renderIncludeFence(include: ParsedInclude, content: string): string {
+  const lang = include.lang ?? langForPath(include.filePath);
+  const title = include.title ?? baseName(include.filePath);
+  const info = [lang, include.highlights, `[${title}]`].filter(Boolean).join(" ");
+  const ticks = fenceTicksForContent(content);
+  return `${ticks}${info}\n${content.replace(/\n$/, "")}\n${ticks}`;
+}
+
 /**
  * Inline `<<<` includes as fenced code blocks. `readFile` resolves an include
  * path (relative to the old note directory) to file content, or null.
@@ -176,24 +252,28 @@ export function inlineIncludes(
   const out: string[] = [];
   let inlined = 0;
   for (const line of lines) {
-    const include = parseIncludeLine(line);
-    if (!include) {
+    const segments = includeSegments(line);
+    if (!segments) {
       out.push(line);
       continue;
     }
-    const content = readFile(include.filePath);
-    if (content == null) {
-      onFailure?.(include.filePath);
-      out.push(line);
-      continue;
+    for (let i = 0; i < segments.length; i++) {
+      const segment = segments[i]!;
+      const include = parseIncludeLine(segment);
+      if (!include) {
+        out.push(segment);
+        continue;
+      }
+      const content = readFile(include.filePath);
+      if (content == null) {
+        onFailure?.(include.filePath);
+        out.push(segment);
+        continue;
+      }
+      if (i > 0 && out.length > 0 && out[out.length - 1] !== "") out.push("");
+      out.push(renderIncludeFence(include, content));
+      inlined += 1;
     }
-    const lang = include.lang ?? langForPath(include.filePath);
-    const title = include.title ?? baseName(include.filePath);
-    const info = [lang, include.highlights, `[${title}]`].filter(Boolean).join(" ");
-    out.push(`\`\`\`${info}`);
-    out.push(content.replace(/\n$/, ""));
-    out.push("```");
-    inlined += 1;
   }
   return { body: out.join("\n"), inlined };
 }
@@ -215,6 +295,7 @@ export async function migrateKnowledgeBase(
   options?: { dryRun?: boolean },
 ): Promise<MigrateReport> {
   const dryRun = options?.dryRun ?? false;
+  const root = path.resolve(rootPath);
   const report: MigrateReport = {
     notesMigrated: 0,
     includesInlined: 0,
@@ -222,63 +303,71 @@ export async function migrateKnowledgeBase(
     assetsRenamed: {},
     includeFailures: [],
     leftovers: [],
+    scaffolded: [],
+    preservedScripts: [],
     dryRun,
   };
 
-  const notesDir = path.join(rootPath, NOTES_DIR);
-  const kbAssetsDir = path.join(rootPath, ASSETS_DIR);
+  const notesDir = path.join(root, NOTES_DIR);
+  const kbAssetsDir = path.join(root, ASSETS_DIR);
   const noteDirs = await listNoteDirs(notesDir);
   if (noteDirs.length === 0) {
     throw new Error(`未找到旧格式笔记目录：${notesDir}`);
   }
 
-  // ---- kb config: old .tnotes.json → minimal tnotes.json ----
-  const oldKbConfig = await readJsonFile(path.join(rootPath, ".tnotes.json"));
-  const tnotesJsonPath = path.join(rootPath, "tnotes.json");
-  if (!(await pathExists(tnotesJsonPath))) {
-    const rootItem = (oldKbConfig?.root_item ?? {}) as Record<string, unknown>;
-    const title =
-      (typeof rootItem.title === "string" && rootItem.title) ||
-      (typeof oldKbConfig?.repoName === "string" && oldKbConfig.repoName) ||
-      path.basename(rootPath);
-    const description =
-      typeof rootItem.details === "string" && rootItem.details ? rootItem.details : undefined;
-    const config: Record<string, unknown> = { title };
-    if (description) config.description = description;
-    if (!dryRun) {
-      await fs.writeFile(tnotesJsonPath, `${JSON.stringify(config, null, 2)}\n`);
-    }
-  }
+  const oldKbConfig = await readJsonFile(path.join(root, ".tnotes.json"));
+  const tnotesJsonPath = path.join(root, "tnotes.json");
+  const tnotesJsonExists = await pathExists(tnotesJsonPath);
+  let discussions = false;
 
-  // Track kb-level asset name occupancy for collision-safe moves.
+  // Track kb-level asset name occupancy. Files are named `{index}-{basename}`
+  // so ownership is visible. Identical bytes referenced by a later note reuse
+  // the first referencing note's name (1:many → first detected index).
   const usedAssetNames = new Set<string>(
     await fs.readdir(kbAssetsDir).catch(() => [] as string[]),
   );
   const assetContentByName = new Map<string, Buffer>();
+  const nameByContentHash = new Map<string, string>();
 
-  const claimAssetName = async (
-    noteDirName: string,
-    name: string,
-    content: Buffer,
-  ): Promise<string> => {
-    if (!usedAssetNames.has(name)) {
-      usedAssetNames.add(name);
-      assetContentByName.set(name, content);
-      return name;
-    }
-    const existing = assetContentByName.get(name);
-    if (existing?.equals(content)) return name; // identical content: share
-    const ext = path.extname(name);
-    const stem = name.slice(0, name.length - ext.length);
+  const occupyName = (name: string, content: Buffer): void => {
+    usedAssetNames.add(name);
+    assetContentByName.set(name, content);
+    nameByContentHash.set(contentHash(content), name);
+  };
+
+  const uniqueIndexedName = (index: string, originalName: string, content: Buffer): string => {
+    const preferred = indexedAssetFileName(index, originalName);
+    if (!usedAssetNames.has(preferred)) return preferred;
+    const existing = assetContentByName.get(preferred);
+    if (existing?.equals(content)) return preferred;
+    const ext = path.extname(preferred);
+    const stem = preferred.slice(0, preferred.length - ext.length);
     for (let counter = 2; ; counter += 1) {
       const candidate = `${stem}-${counter}${ext}`;
-      if (!usedAssetNames.has(candidate)) {
-        usedAssetNames.add(candidate);
-        assetContentByName.set(candidate, content);
-        report.assetsRenamed[`${noteDirName}/assets/${name}`] = `${ASSETS_DIR}/${candidate}`;
-        return candidate;
-      }
+      if (!usedAssetNames.has(candidate)) return candidate;
     }
+  };
+
+  const claimAsset = (
+    index: string,
+    noteDirName: string,
+    originalRel: string,
+    content: Buffer,
+    shareByContent: boolean,
+  ): string => {
+    const hash = contentHash(content);
+    if (shareByContent) {
+      const shared = nameByContentHash.get(hash);
+      if (shared) return shared;
+    }
+    const newName = uniqueIndexedName(index, originalRel, content);
+    const oldKey = `${noteDirName}/assets/${originalRel}`;
+    if (newName !== baseName(originalRel) || newName !== originalRel) {
+      report.assetsRenamed[oldKey] = `${ASSETS_DIR}/${newName}`;
+    }
+    occupyName(newName, content);
+    report.assetsMoved += 1;
+    return newName;
   };
 
   for (const noteDir of noteDirs) {
@@ -301,6 +390,9 @@ export async function migrateKnowledgeBase(
     if (typeof oldNoteConfig?.description === "string" && oldNoteConfig.description.trim()) {
       frontmatter.description = oldNoteConfig.description.trim();
     }
+    if (oldNoteConfig?.enableDiscussions === true) {
+      discussions = true;
+    }
 
     // ---- body: strip generated regions, inline includes, move assets ----
     let body = stripGeneratedRegions(parseNoteContent(readme).body || readme);
@@ -321,23 +413,32 @@ export async function migrateKnowledgeBase(
     body = includeResult.body;
     report.includesInlined += includeResult.inlined;
 
-    // Move note-local assets referenced by the body to kb-level assets/.
+    // Move note-local assets to kb-level assets/{index}-{basename}.
     const noteAssetsDir = path.join(noteDirPath, "assets");
     const refRewrites = new Map<string, string>();
+    const claimedSources = new Set<string>();
     const assetRefs = [...body.matchAll(LOCAL_ASSET_REF_REGEX)].map((m) => m[1]!);
     for (const ref of new Set(assetRefs)) {
       const sourcePath = path.join(noteAssetsDir, ref);
       const content = await fs.readFile(sourcePath).catch(() => null);
       if (!content) continue;
-      const newName = await claimAssetName(noteDir.dir, baseName(ref), content);
+      const newName = claimAsset(noteDir.index, noteDir.dir, ref, content, true);
       refRewrites.set(ref, newName);
-      report.assetsMoved += 1;
+      claimedSources.add(path.resolve(sourcePath));
     }
     body = body.replace(LOCAL_ASSET_REF_REGEX, (whole, ref: string) => {
       const newName = refRewrites.get(ref);
       if (!newName) return whole;
-      return whole.replace(`./assets/${ref}`, `../${ASSETS_DIR}/${newName}`);
+      return `(../${ASSETS_DIR}/${newName})`;
     });
+
+    for (const sourcePath of await listFilesRecursive(noteAssetsDir)) {
+      if (claimedSources.has(path.resolve(sourcePath))) continue;
+      const content = await fs.readFile(sourcePath).catch(() => null);
+      if (!content) continue;
+      const originalRel = path.relative(noteAssetsDir, sourcePath).split(path.sep).join("/");
+      claimAsset(noteDir.index, noteDir.dir, originalRel, content, false);
+    }
 
     // ---- write the new single-file note ----
     const newFileName = `${noteDir.dir}.md`;
@@ -359,16 +460,44 @@ export async function migrateKnowledgeBase(
     }
   }
 
+  if (!tnotesJsonExists) {
+    report.config = buildMigratedKbConfig(oldKbConfig, {
+      directoryName: path.basename(root),
+      discussions,
+    });
+    if (!dryRun) {
+      await fs.writeFile(tnotesJsonPath, `${JSON.stringify(report.config, null, 2)}\n`);
+    }
+  }
+
   // ---- obsolete kb-level files ----
   for (const obsolete of [".tnotes.json", "sidebar.json"]) {
-    if (!dryRun) await fs.rm(path.join(rootPath, obsolete), { force: true });
+    if (!dryRun) await fs.rm(path.join(root, obsolete), { force: true });
   }
-  for (const leftover of ["index.md", "package.json", "package-lock.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "tsconfig.json", ".vitepress", "public", "docs", "todo"]) {
-    if (await pathExists(path.join(rootPath, leftover))) report.leftovers.push(leftover);
+
+  const oldPackage = await readJsonFile(path.join(root, "package.json"));
+  report.preservedScripts = Object.keys(extraPackageScripts(oldPackage));
+  if (!dryRun) {
+    report.scaffolded = await writeMigratedScaffold(root, oldPackage);
+  } else {
+    report.scaffolded = ["package.json", ".github/workflows/deploy.yml", ".gitignore", ".gitattributes"];
+  }
+
+  const leftoverCandidates = [
+    "index.md",
+    "package-lock.json",
+    "tsconfig.json",
+    ".vitepress",
+    "docs",
+    "todo",
+    "demos",
+  ];
+  for (const leftover of leftoverCandidates) {
+    if (await pathExists(path.join(root, leftover))) report.leftovers.push(leftover);
   }
 
   // TOC.md stays as-is (same syntax, done checkboxes already live there).
-  if (!(await pathExists(path.join(rootPath, TOC_FILE)))) {
+  if (!(await pathExists(path.join(root, TOC_FILE)))) {
     report.leftovers.push("⚠️ TOC.md 缺失");
   }
 
