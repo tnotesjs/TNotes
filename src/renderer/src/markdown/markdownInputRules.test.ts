@@ -175,15 +175,28 @@ describe('0006 block shortcuts', () => {
     expect(findEnterBlockShortcut(':::')).toBeNull()
   })
 
-  it('turns an exact top-level container trigger into the shared raw block', async () => {
+  it('turns :::tip into a visual callout without opening the source editor', async () => {
     const opened = vi.fn()
     const { view } = await createEditor(opened)
     typeText(view, ':::TIP')
 
     expect(pressEnter(view)).toBe(true)
+    expect(view.state.doc.firstChild?.type.name).toBe('deskCallout')
+    expect(view.state.doc.firstChild?.attrs.calloutType).toBe('tip')
+    expect(view.state.doc.firstChild?.attrs.title).toBe('💡 TIP')
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+    expect(opened).not.toHaveBeenCalled()
+  })
+
+  it('turns :::details into the shared raw block and opens the source editor', async () => {
+    const opened = vi.fn()
+    const { view } = await createEditor(opened)
+    typeText(view, ':::details')
+
+    expect(pressEnter(view)).toBe(true)
     expect(view.state.doc.firstChild?.type.name).toBe('deskRawBlock')
     expect(view.state.doc.firstChild?.attrs.kind).toBe('raw-container')
-    expect(view.state.doc.firstChild?.attrs.source).toBe('::: tip 💡 TIP\n\n\n\n:::\n')
+    expect(view.state.doc.firstChild?.attrs.source).toBe('::: details 🔍 DETAILS\n\n\n\n:::\n')
     await new Promise((resolve) => window.setTimeout(resolve, 0))
     expect(opened).toHaveBeenCalledWith(0)
   })

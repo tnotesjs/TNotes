@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { previewManager } from '../preview'
 import { confirmTabClose } from '../closeConfirmation'
 import { showContextMenu } from '../contextMenus'
+import { showKnowledgeSidebarMenu, showNavigatorSidebarMenu } from '../sidebarMenus'
 import { loadRecoveries } from '../recovery'
 import { loadWorkspaceSession, saveWorkspaceSession } from '../session'
 import { loadSettings } from '../settings'
@@ -13,6 +14,7 @@ import { workspaceManager } from '../workspaceManager'
 import { IPC_CHANNELS } from '../../shared/contracts'
 import {
   workspaceSessionSchema,
+  knowledgeBaseCreateSchema,
   knowledgeBaseSettingsWriteSchema,
   knowledgeBaseIconWriteSchema
 } from './schemas'
@@ -36,6 +38,33 @@ export function registerWorkspace(getWindow: GetWindow): () => void {
       const window = getWindow()
       if (!window || window.isDestroyed()) throw new Error('Desk 主窗口不可用')
       return showContextMenu(window, request)
+    }
+  )
+  handle(
+    IPC_CHANNELS.knowledgeSidebarMenuShow,
+    getWindow,
+    z.object({
+      hasWorkspace: z.boolean(),
+      loading: z.boolean()
+    }),
+    (request) => {
+      const window = getWindow()
+      if (!window || window.isDestroyed()) throw new Error('Desk 主窗口不可用')
+      return showKnowledgeSidebarMenu(window, request)
+    }
+  )
+  handle(
+    IPC_CHANNELS.navigatorSidebarMenuShow,
+    getWindow,
+    z.object({
+      ready: z.boolean(),
+      previewLabel: z.string().min(1),
+      buildBusy: z.boolean()
+    }),
+    (request) => {
+      const window = getWindow()
+      if (!window || window.isDestroyed()) throw new Error('Desk 主窗口不可用')
+      return showNavigatorSidebarMenu(window, request)
     }
   )
   handle(IPC_CHANNELS.tabConfirmClose, getWindow, z.array(z.string().min(1)).min(1), (titles) => {
@@ -90,6 +119,18 @@ export function registerWorkspace(getWindow: GetWindow): () => void {
     }
   )
   handle(IPC_CHANNELS.workspaceRefresh, getWindow, noInputSchema, () => workspaceManager.refresh())
+  handle(IPC_CHANNELS.workspaceReveal, getWindow, noInputSchema, async () => {
+    const path = workspaceManager.getOverview().path
+    if (!path) throw new Error('请先选择工作区')
+    const error = await shell.openPath(path)
+    if (error) throw new Error(error)
+  })
+  handle(
+    IPC_CHANNELS.knowledgeBaseCreate,
+    getWindow,
+    knowledgeBaseCreateSchema,
+    (request) => workspaceManager.createKnowledgeBase(request)
+  )
   handle(
     IPC_CHANNELS.workspaceRevealKnowledgeBase,
     getWindow,

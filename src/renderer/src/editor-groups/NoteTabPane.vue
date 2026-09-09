@@ -180,7 +180,11 @@ function insertTemplate(text: string): void {
 async function pasteImage(file: File, insertAt: number): Promise<void> {
   const targetEditor = markdownSourceEditor.value
   try {
-    const attachment = await workspace.uploadImage(props.tab.knowledgeBaseId, file)
+    const attachment = await workspace.uploadImage(
+      props.tab.knowledgeBaseId,
+      props.tab.noteUuid,
+      file
+    )
     targetEditor?.insertTextAt(await pastedImageMarkdown(file, attachment.markdownPath), insertAt)
   } catch (cause) {
     workspace.error = cause instanceof Error ? cause.message : String(cause)
@@ -189,7 +193,11 @@ async function pasteImage(file: File, insertAt: number): Promise<void> {
 
 async function uploadVisualImage(file: File): Promise<{ src: string; alt: string }> {
   try {
-    const attachment = await workspace.uploadImage(props.tab.knowledgeBaseId, file)
+    const attachment = await workspace.uploadImage(
+      props.tab.knowledgeBaseId,
+      props.tab.noteUuid,
+      file
+    )
     return { src: attachment.markdownPath, alt: '' }
   } catch (cause) {
     workspace.error = cause instanceof Error ? cause.message : String(cause)

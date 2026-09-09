@@ -383,6 +383,34 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     }
   }
 
+  async function createKnowledgeBase(input: {
+    folderName: string
+    title?: string
+    packageJson?: boolean
+    githubPages?: boolean
+    readme?: boolean
+    gitInit?: boolean
+  }): Promise<string> {
+    loading.value = true
+    error.value = null
+    try {
+      if (!overview.value.path) {
+        await chooseWorkspace()
+        if (!overview.value.path) throw new Error('请先选择工作区')
+      }
+      const result = resultValue(await window.desk.knowledgeBases.create(input))
+      overview.value = result.overview
+      await selectKnowledgeBase(result.knowledgeBaseId)
+      status.value = `已创建知识库 ${input.folderName}`
+      return result.knowledgeBaseId
+    } catch (cause) {
+      error.value = cause instanceof Error ? cause.message : String(cause)
+      throw cause
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function syncToActiveTab(forceReveal = false): Promise<void> {
     const tab = editor.activeTab
     if (!tab || tab.type === 'web' || tab.type === 'kb-settings') return
@@ -499,6 +527,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     initialize,
     dispose,
     chooseWorkspace,
+    createKnowledgeBase,
     refreshWorkspace,
     reloadKnowledgeBase,
     selectKnowledgeBase,

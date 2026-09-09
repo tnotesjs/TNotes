@@ -1,46 +1,127 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 import KnowledgeBaseIcon from './KnowledgeBaseIcon.vue'
+import UiTooltip from './UiTooltip.vue'
 import { useEditorStore, KNOWLEDGE_SIDEBAR_COMPACT } from '../stores/editor'
 import { useWorkspaceStore } from '../stores/workspace'
 
+import type {
+  KnowledgeBaseDescriptor,
+  KnowledgeSidebarMenuAction
+} from '../../../shared/contracts'
+
+const emit = defineEmits<{
+  'create-knowledge-base': []
+}>()
+
 const store = useWorkspaceStore()
 const editor = useEditorStore()
+const query = ref('')
+const menuBusy = ref(false)
 const compact = computed(() => editor.knowledgeSidebarWidth <= KNOWLEDGE_SIDEBAR_COMPACT)
 
-function showContextMenu(knowledgeBaseId: string): void {
+function showIdeMenu(knowledgeBaseId: string): void {
   void window.desk.ide.showKnowledgeBaseMenu(knowledgeBaseId)
+}
+
+function matchesKb(item: KnowledgeBaseDescriptor, needle: string): boolean {
+  if (!needle) return true
+  const haystacks = [item.displayName, item.name, item.configName ?? '', item.rootPath]
+  return haystacks.some((value) => value.toLocaleLowerCase().includes(needle))
+}
+
+const filteredKnowledgeBases = computed(() => {
+  const needle = query.value.trim().toLocaleLowerCase()
+  return store.overview.knowledgeBases.filter((item) => matchesKb(item, needle))
+})
+
+const emptyMessage = computed(() => {
+  if (store.overview.knowledgeBases.length === 0) {
+    return {
+      title: '没有扫描到知识库',
+      detail: '工作区根或其直接子目录中需要存在 tnotes.json'
+    }
+  }
+  return {
+    title: '没有匹配的知识库',
+    detail: '试试其它名称关键字'
+  }
+})
+
+async function applyMenuAction(action: KnowledgeSidebarMenuAction): Promise<void> {
+  if (action === 'create') {
+    emit('create-knowledge-base')
+    return
+  }
+  if (action === 'refresh') {
+    await store.refreshWorkspace()
+    return
+  }
+  if (action === 'choose-workspace') {
+    await store.chooseWorkspace()
+    return
+  }
+  try {
+    const result = await window.desk.workspace.reveal()
+    if (!result.ok) store.error = result.error.message
+  } catch (cause) {
+    store.error = cause instanceof Error ? cause.message : String(cause)
+  }
+}
+
+async function openHeaderMenu(): Promise<void> {
+  if (menuBusy.value || store.loading) return
+  menuBusy.value = true
+  try {
+    const result = await window.desk.app.showKnowledgeSidebarMenu({
+      hasWorkspace: Boolean(store.overview.path),
+      loading: store.loading
+    })
+    if (!result.ok) {
+      store.error = result.error.message
+      return
+    }
+    if (result.value) await applyMenuAction(result.value)
+  } catch (cause) {
+    store.error = cause instanceof Error ? cause.message : String(cause)
+  } finally {
+    menuBusy.value = false
+  }
 }
 </script>
 
 <template>
   <aside class="knowledge-sidebar" :class="{ compact }">
-    <header class="column-header">
-      <div v-if="!compact">
-        <strong>知识库</strong>
+    <div class="knowledge-top">
+      <div v-if="!compact" class="search-wrap">
+        <span>⌕</span>
+        <input v-model="query" type="search" placeholder="搜索知识库" />
       </div>
-      <button
-        type="button"
-        class="icon-button"
-        aria-label="重新扫描知识库"
-        data-tooltip="重新扫描知识库"
-        :disabled="store.loading"
-        @click="store.refreshWorkspace"
-      >
-        ↻
-      </button>
-    </header>
+      <div class="header-actions">
+        <UiTooltip label="更多知识库操作">
+          <button
+            type="button"
+            class="menu-button"
+            aria-label="更多知识库操作"
+            :disabled="store.loading || menuBusy"
+            @click="openHeaderMenu"
+          >
+            ⋯
+          </button>
+        </UiTooltip>
+      </div>
+    </div>
 
-    <div v-if="store.overview.knowledgeBases.length" class="knowledge-list">
+    <div v-if="filteredKnowledgeBases.length" class="knowledge-list">
       <button
-        v-for="item in store.overview.knowledgeBases"
+        v-for="item in filteredKnowledgeBases"
         :key="item.id"
         type="button"
         class="knowledge-item"
         :class="{ active: store.selectedKnowledgeBaseId === item.id }"
         @click="store.selectKnowledgeBase(item.id)"
-        @contextmenu.prevent="showContextMenu(item.id)"
+        @contextmenu.prevent="showIdeMenu(item.id)"
       >
         <span class="knowledge-icon">
           <KnowledgeBaseIcon :icon="item.icon" :fallback="item.displayName" />
@@ -51,13 +132,12 @@ function showContextMenu(knowledgeBaseId: string): void {
       </button>
     </div>
     <div v-else class="column-empty">
-      <strong>没有扫描到知识库</strong>
-      <span>工作区的直接子目录中需要存在 TNotes.*</span>
+      <strong>{{ emptyMessage.title }}</strong>
+      <span>{{ emptyMessage.detail }}</span>
     </div>
 
     <footer class="workspace-footer" :title="store.overview.path ?? ''">
       <span v-if="!compact">{{ store.overview.path ?? '尚未选择工作区' }}</span>
-      <button type="button" class="link-button" @click="store.chooseWorkspace">更换</button>
     </footer>
   </aside>
 </template>
@@ -72,25 +152,75 @@ function showContextMenu(knowledgeBaseId: string): void {
   border-right: 1px solid var(--border);
 }
 
-.column-header {
-  height: 42px;
+.knowledge-top {
   flex: none;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 12px 0 14px;
+  gap: 6px;
+  padding: 7px 9px;
   border-bottom: 1px solid var(--border);
 }
 
-.column-header > div {
+.search-wrap {
+  height: auto;
+  flex: 1;
+  min-width: 0;
   display: flex;
-  flex-direction: column;
-  gap: 1px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--input-bg);
+  color: var(--muted);
 }
 
-.column-header strong {
-  font-size: 14px;
-  font-weight: 650;
+.search-wrap > span {
+  flex: none;
+  font-size: 13px;
+}
+
+.search-wrap input {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 11px;
+}
+
+.search-wrap input:focus {
+  outline: none;
+}
+
+.header-actions {
+  flex: none;
+  position: relative;
+  display: flex;
+  gap: 6px;
+}
+
+.menu-button {
+  height: 28px;
+  width: 28px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--raised);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 20px;
+}
+
+.menu-button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.menu-button:disabled {
+  opacity: 0.4;
 }
 
 .knowledge-list {
@@ -152,18 +282,13 @@ function showContextMenu(knowledgeBaseId: string): void {
   font-weight: 600;
 }
 
-.knowledge-sidebar.compact .column-header {
+.knowledge-sidebar.compact .knowledge-top {
   justify-content: center;
 }
 
 .knowledge-sidebar.compact .knowledge-item {
   justify-content: center;
   gap: 0;
-}
-
-.knowledge-badge.danger {
-  background: var(--danger-soft);
-  color: var(--danger);
 }
 
 .column-empty {
@@ -201,33 +326,5 @@ function showContextMenu(knowledgeBaseId: string): void {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.icon-button,
-.link-button {
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-}
-
-.icon-button {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  font-size: 17px;
-}
-
-.icon-button:hover,
-.link-button:hover {
-  color: var(--text);
-  background: var(--hover);
-}
-
-.link-button {
-  border-radius: 4px;
-  padding: 3px 5px;
-  color: var(--accent);
-  font-size: 10px;
 }
 </style>

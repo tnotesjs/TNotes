@@ -1,8 +1,6 @@
 import type { KbSnapshot, TNotesKbWorkspace } from '@tnotesjs/kb'
 import type { ExternalNoteChangeEvent, WorkspaceOverview } from '../../shared/contracts'
 
-export const KNOWLEDGE_BASE_NAME = /^TNotes\./
-
 export interface KnowledgeBaseHandle {
   id: string
   name: string
@@ -11,8 +9,15 @@ export interface KnowledgeBaseHandle {
   snapshot: KbSnapshot
 }
 
+export interface WorkspaceChangeHint {
+  /** 'content' = single note body edit; 'structural' = anything else. */
+  kind: 'content' | 'structural'
+  knowledgeBaseId?: string
+  noteUuid?: string
+}
+
 export interface WorkspaceManagerEvents {
-  changed: [WorkspaceOverview]
+  changed: [WorkspaceOverview, WorkspaceChangeHint?]
   noteExternalChanged: [ExternalNoteChangeEvent]
 }
 

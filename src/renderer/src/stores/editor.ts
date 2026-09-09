@@ -229,7 +229,35 @@ export const useEditorStore = defineStore('editor', () => {
     maxOpenTabCount.value = settings.tabs.maxOpenCount
     wrapTabs.value = settings.tabs.wrap
     defaultNotePageWidth.value = settings.defaultNotePageWidth
+    applyDefaultNotePageWidth(settings.defaultNotePageWidth)
     trimToLimit()
+  }
+
+  function applyDefaultNotePageWidth(pageWidth: NotePageWidth): void {
+    const applyToLayout = (node: EditorLayoutNode): EditorLayoutNode => {
+      if (node.type === 'group') {
+        return {
+          ...node,
+          tabs: node.tabs.map((tab) =>
+            tab.type === 'note' ? { ...tab, pageWidth } : tab
+          )
+        }
+      }
+      return {
+        ...node,
+        first: applyToLayout(node.first),
+        second: applyToLayout(node.second)
+      }
+    }
+    layout.value = applyToLayout(layout.value)
+    const nextEditors: Record<string, KnowledgeBaseEditorSession> = {}
+    for (const [knowledgeBaseId, session] of Object.entries(knowledgeBaseEditors.value)) {
+      nextEditors[knowledgeBaseId] = {
+        ...session,
+        layout: applyToLayout(session.layout)
+      }
+    }
+    knowledgeBaseEditors.value = nextEditors
   }
 
   function initializeWebEvents(): void {

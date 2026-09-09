@@ -25,6 +25,15 @@ describe('GitHub image bed helpers', () => {
     expect(formatImageFileName('${YY}-${MM}-${DD}-${HH}-${mm}-${ss}', 'screen.PNG', date)).toBe(
       '26-08-23-09-08-07.png'
     )
+    expect(
+      formatImageFileName(
+        '${index}-${YY}-${MM}-${DD}-${HH}-${mm}-${ss}',
+        'screen.PNG',
+        date,
+        0,
+        { index: '0008' }
+      )
+    ).toBe('0008-26-08-23-09-08-07.png')
     expect(formatImageFileName('desk/image', 'screen.png', date, 1)).toBe('desk-image-2.png')
   })
 

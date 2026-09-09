@@ -25,6 +25,7 @@ import {
 } from '@codemirror/view'
 import { githubDark, githubLight } from '@uiw/codemirror-theme-github'
 import { codeMirrorRectangularSelection } from '../editor/markdown/codeMirrorMultiCursor'
+import { DESK_SELECT_ALL_EVENT, shouldHandleDeskSelectAll } from './documentSelection'
 import { clearSourceLineStyles } from './clearSourceLineStyles'
 
 import type { NotePageWidth, NoteViewMode } from '../../../shared/contracts'
@@ -160,7 +161,16 @@ function insertTable(): void {
   insertTextAt('\n|  |  |\n| --- | --- |\n|  |  |\n')
 }
 
-defineExpose({ insertTextAt, wrapSelection, prefixSelection, setLinePrefix, insertTable })
+function selectAll(): void {
+  if (!view || !shouldHandleDeskSelectAll(host.value, props.active)) return
+  view.dispatch({
+    selection: { anchor: 0, head: view.state.doc.length },
+    scrollIntoView: true
+  })
+  view.focus()
+}
+
+defineExpose({ insertTextAt, wrapSelection, prefixSelection, setLinePrefix, insertTable, selectAll })
 
 function baseExtensions(): Extension[] {
   return [
@@ -283,6 +293,7 @@ onMounted(() => {
     attributeFilter: ['data-theme']
   })
   requestAnimationFrame(() => view?.requestMeasure())
+  window.addEventListener(DESK_SELECT_ALL_EVENT, selectAll)
 })
 
 watch(
@@ -317,6 +328,7 @@ watch(
 )
 
 onBeforeUnmount(() => {
+  window.removeEventListener(DESK_SELECT_ALL_EVENT, selectAll)
   resizeObserver?.disconnect()
   resizeObserver = null
   appearanceObserver?.disconnect()

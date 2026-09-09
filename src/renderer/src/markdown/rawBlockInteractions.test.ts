@@ -530,14 +530,14 @@ describe('raw block keyboard selection', () => {
     })
   })
 
-  it('ArrowDown from a selected info atom lands on the following blank before text', async () => {
+  it('ArrowDown from a selected details atom lands on the following blank before text', async () => {
     const editor = await createEditor(
       [
         '## 2. 评价',
         '',
         '<br />',
         '',
-        '::: info INFO',
+        '::: details DETAILS',
         '',
         '这是输入的内容',
         '',
@@ -621,14 +621,14 @@ describe('raw block keyboard selection', () => {
     })
   })
 
-  it('Shift+ArrowDown from an empty line continues past a single info atom', async () => {
+  it('Shift+ArrowDown from an empty line continues past a single details atom', async () => {
     const editor = await createEditor(
       [
         '## 2. 评价',
         '',
         '<br />',
         '',
-        '::: info INFO',
+        '::: details DETAILS',
         '',
         'body',
         '',
@@ -1196,6 +1196,51 @@ describe('code_block keyboard selection', () => {
       expect((view.state.selection as NodeSelection).from).toBe(pos.code)
       expect(view.state.selection.head).not.toBe(pos.afterStart)
       expect(codeBlockWholeSelectPosition(view.state)).toBe(pos.code)
+    })
+  })
+
+  it('ArrowUp from the first callout body line does not whole-select the previous fence', async () => {
+    const editor = await createEditor(
+      [
+        '```js',
+        'const x = 1',
+        '```',
+        '',
+        '::: tip 提示题',
+        '',
+        '这是 PowerShell 的经典坑',
+        '',
+        ':::',
+        ''
+      ].join('\n')
+    )
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      let codePos = -1
+      let bodyMid = -1
+      let bodyStart = -1
+      view.state.doc.descendants((node, position) => {
+        if (node.type.name === 'code_block') codePos = position
+        if (node.type.name === 'paragraph' && node.textContent.includes('经典坑')) {
+          bodyStart = position + 1
+          bodyMid = position + 1 + 8
+        }
+      })
+      expect(codePos).toBeGreaterThan(-1)
+      expect(bodyMid).toBeGreaterThan(bodyStart)
+
+      view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, bodyMid)))
+      expect(adjacentRawBlockSelectionPosition(view.state, 'up')).toBeNull()
+      view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }))
+      expect(codeBlockWholeSelectPosition(view.state)).toBeNull()
+      expect(view.state.selection).not.toBeInstanceOf(NodeSelection)
+      expect(view.state.selection.from).not.toBe(codePos)
+
+      view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, bodyStart)))
+      expect(adjacentRawBlockSelectionPosition(view.state, 'left')).toBeNull()
+      view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }))
+      expect(codeBlockWholeSelectPosition(view.state)).toBeNull()
+      expect(view.state.selection.from).not.toBe(codePos)
     })
   })
 

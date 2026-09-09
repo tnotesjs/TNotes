@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+
 withDefaults(
   defineProps<{
     label: string
@@ -9,10 +11,26 @@ withDefaults(
   }>(),
   { shortcut: '', placement: 'bottom', align: 'center' }
 )
+
+/** Hide after activation until the pointer leaves — native menus keep :hover otherwise. */
+const suppressed = ref(false)
+
+function onPointerDown(): void {
+  suppressed.value = true
+}
+
+function onPointerLeave(): void {
+  suppressed.value = false
+}
 </script>
 
 <template>
-  <span class="ui-tooltip-host">
+  <span
+    class="ui-tooltip-host"
+    :class="{ suppressed }"
+    @pointerdown.capture="onPointerDown"
+    @pointerleave="onPointerLeave"
+  >
     <slot />
     <span
       class="ui-tooltip-popover"
@@ -90,23 +108,29 @@ withDefaults(
   transform: translateY(3px);
 }
 
-.ui-tooltip-host:hover .ui-tooltip-popover,
-.ui-tooltip-host:has(:focus-visible) .ui-tooltip-popover {
+.ui-tooltip-host:not(.suppressed):hover .ui-tooltip-popover,
+.ui-tooltip-host:not(.suppressed):has(:focus-visible) .ui-tooltip-popover {
   visibility: visible;
   opacity: 1;
   transition-delay: 260ms;
 }
 
-.ui-tooltip-host:hover .align-center,
-.ui-tooltip-host:has(:focus-visible) .align-center {
+.ui-tooltip-host:not(.suppressed):hover .align-center,
+.ui-tooltip-host:not(.suppressed):has(:focus-visible) .align-center {
   transform: translateX(-50%) translateY(0);
 }
 
-.ui-tooltip-host:hover .align-start,
-.ui-tooltip-host:has(:focus-visible) .align-start,
-.ui-tooltip-host:hover .align-end,
-.ui-tooltip-host:has(:focus-visible) .align-end {
+.ui-tooltip-host:not(.suppressed):hover .align-start,
+.ui-tooltip-host:not(.suppressed):has(:focus-visible) .align-start,
+.ui-tooltip-host:not(.suppressed):hover .align-end,
+.ui-tooltip-host:not(.suppressed):has(:focus-visible) .align-end {
   transform: translateY(0);
+}
+
+.ui-tooltip-host.suppressed .ui-tooltip-popover {
+  visibility: hidden;
+  opacity: 0;
+  transition-delay: 0s;
 }
 
 .ui-tooltip-popover strong {

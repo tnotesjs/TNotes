@@ -11,6 +11,7 @@ import { loadSettings } from './settings'
 import { updateManager } from './updateManager'
 import { previewManager } from './preview'
 import { searchManager } from './searchManager'
+import type { WorkspaceChangeHint } from './workspace/types'
 import { applicationMenuTemplate } from './applicationMenu'
 import { TabShortcutResolver } from './tabShortcuts'
 import { webContentsManager } from './webContentsManager'
@@ -22,19 +23,44 @@ let mainWindow: BrowserWindow | null = null
 let unregisterIpc: (() => void) | null = null
 let unregisterSearchRefresh: (() => void) | null = null
 let searchRefreshTimer: NodeJS.Timeout | null = null
+let gitRefreshTimer: NodeJS.Timeout | null = null
 const mainTabShortcutResolver = new TabShortcutResolver()
 
 registerAssetScheme()
 
-function scheduleSearchRefresh(): void {
+/** Git status is spawned per repo; debounce so save bursts refresh it once. */
+function scheduleGitRefresh(): void {
+  if (gitRefreshTimer) clearTimeout(gitRefreshTimer)
+  gitRefreshTimer = setTimeout(() => {
+    gitRefreshTimer = null
+    gitManager.configure(workspaceManager.getGitRepositories())
+  }, 2000)
+}
+
+function scheduleSearchRefresh(hint?: WorkspaceChangeHint): void {
   const overview = workspaceManager.getOverview()
-  gitManager.configure(workspaceManager.getGitRepositories())
+  scheduleGitRefresh()
   searchManager.setWorkspace(overview.path)
   if (searchRefreshTimer) clearTimeout(searchRefreshTimer)
   if (!overview.path) return
   const workspacePath = overview.path
   searchRefreshTimer = setTimeout(() => {
     searchRefreshTimer = null
+    if (hint?.kind === 'content' && hint.knowledgeBaseId && hint.noteUuid) {
+      // Single-note edit: reindex just that document instead of re-reading
+      // and re-hashing every note in the workspace.
+      void workspaceManager
+        .getSearchDocument(hint.knowledgeBaseId, hint.noteUuid)
+        .then((document) => (document ? searchManager.upsert(workspacePath, document) : undefined))
+        .catch((error) =>
+          deskLog(
+            'search',
+            'document refresh failed',
+            error instanceof Error ? error.message : String(error)
+          )
+        )
+      return
+    }
     void workspaceManager
       .getSearchDocuments()
       .then((documents) => searchManager.rebuild(workspacePath, documents))
@@ -62,6 +88,7 @@ function sendTabShortcut(window: BrowserWindow, command: TabShortcutCommand): vo
 }
 
 function configureApplicationMenu(): void {
+  // Select All is a custom command (not role:selectAll) so Cmd+A stays in the note.
   Menu.setApplicationMenu(
     Menu.buildFromTemplate(
       applicationMenuTemplate({
@@ -165,7 +192,9 @@ if (!hasSingleInstanceLock) {
     })
 
     await workspaceManager.initialize()
-    unregisterSearchRefresh = workspaceManager.onChanged(scheduleSearchRefresh)
+    unregisterSearchRefresh = workspaceManager.onChanged((_overview, hint) =>
+      scheduleSearchRefresh(hint)
+    )
     scheduleSearchRefresh()
     handleAssetProtocol()
     unregisterIpc = registerIpc(() => mainWindow)

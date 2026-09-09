@@ -4,6 +4,7 @@ import type { EditorView } from '@milkdown/kit/prose/view'
 import { $prose } from '@milkdown/kit/utils'
 
 import { ensureCodeExpandButton } from './codeBlockFullscreen'
+import { UNLABELED_CODE_LANGUAGE } from './codeLanguage'
 
 /**
  * Injects a Yuque-style title input and a typed language field into each Crepe
@@ -189,7 +190,7 @@ function syncCodeBlockLanguages(view: EditorView): void {
       input.className = 'desk-code-language'
       input.spellcheck = false
       input.autocomplete = 'off'
-      input.placeholder = 'js'
+      input.placeholder = UNLABELED_CODE_LANGUAGE
       input.title = '语言'
       input.setAttribute('aria-label', '语言')
       const commit = (): void => {

@@ -26,6 +26,7 @@ import {
   updateBanner
 } from './stores/update'
 import { useWorkspaceStore } from './stores/workspace'
+import { selectAllInRenderer } from './selectAll'
 import { APP_ZOOM_DEFAULT } from '../../shared/appZoom'
 
 import type {
@@ -34,10 +35,19 @@ import type {
   NoteCreateRequest,
   TabShortcutCommand
 } from '../../shared/contracts'
+import { isEmptyDeletePreview } from './deletePreview'
+import { focusDialogInput } from './dialogInputFocus'
 
 const store = useWorkspaceStore()
 const editor = useEditorStore()
 const createDialogOpen = ref(false)
+const createKbDialogOpen = ref(false)
+const createKbFolderName = ref('')
+const createKbTitle = ref('')
+const createKbPackageJson = ref(false)
+const createKbGithubPages = ref(false)
+const createKbReadme = ref(false)
+const createKbGitInit = ref(false)
 const settingsOpen = ref(false)
 const paletteOpen = ref(false)
 const commandPalette = ref<{
@@ -51,6 +61,7 @@ const groupDialogOpen = ref(false)
 const groupTitle = ref('')
 const renameNode = ref<DeskTocNode | null>(null)
 const renameTitle = ref('')
+const renameInput = ref<HTMLInputElement | null>(null)
 const deletePreview = ref<DeletePreviewDto | null>(null)
 const recoveryCandidate = computed(() => store.pendingRecoveries[0] ?? null)
 const pendingPublishState = computed(() =>
@@ -175,6 +186,14 @@ async function handleTabShortcut(command: TabShortcutCommand): Promise<void> {
     await commandPalette.value?.openCommands()
     return
   }
+  if (command === 'select-all') {
+    if (editor.activeTab?.type === 'web') {
+      await window.desk.web.selectAll(editor.activeTab.id)
+      return
+    }
+    selectAllInRenderer()
+    return
+  }
 
   if (
     command === 'increase-app-zoom' ||
@@ -281,6 +300,47 @@ async function confirmCreate(): Promise<void> {
   }
 }
 
+function openCreateKbDialog(): void {
+  createKbFolderName.value = ''
+  createKbTitle.value = ''
+  createKbPackageJson.value = false
+  createKbGithubPages.value = false
+  createKbReadme.value = false
+  createKbGitInit.value = false
+  createKbDialogOpen.value = true
+}
+
+watch(createKbGithubPages, (enabled) => {
+  if (enabled) createKbPackageJson.value = true
+})
+
+const createKbFolderError = computed(() => {
+  const value = createKbFolderName.value.trim()
+  if (!value) return '文件夹名必填'
+  if (!/^[A-Za-z0-9._-]{1,100}$/.test(value)) return '须匹配 ^[A-Za-z0-9._-]{1,100}$'
+  return null
+})
+
+async function confirmCreateKb(): Promise<void> {
+  if (createKbFolderError.value || dialogBusy.value) return
+  dialogBusy.value = true
+  try {
+    await store.createKnowledgeBase({
+      folderName: createKbFolderName.value.trim(),
+      title: createKbTitle.value.trim() || undefined,
+      packageJson: createKbPackageJson.value,
+      githubPages: createKbGithubPages.value,
+      readme: createKbReadme.value,
+      gitInit: createKbGitInit.value
+    })
+    createKbDialogOpen.value = false
+  } catch {
+    // store.createKnowledgeBase already sets error
+  } finally {
+    dialogBusy.value = false
+  }
+}
+
 function openGroupDialog(): void {
   groupTitle.value = ''
   groupDialogOpen.value = true
@@ -301,6 +361,7 @@ async function confirmCreateGroup(): Promise<void> {
 function openRenameDialog(node: DeskTocNode): void {
   renameNode.value = node
   renameTitle.value = node.title
+  void focusDialogInput(() => renameInput.value)
 }
 
 async function confirmRename(): Promise<void> {
@@ -318,7 +379,12 @@ async function confirmRename(): Promise<void> {
 async function requestDelete(node: DeskTocNode): Promise<void> {
   dialogBusy.value = true
   try {
-    deletePreview.value = await store.previewDeleteNode(node)
+    const preview = await store.previewDeleteNode(node)
+    if (isEmptyDeletePreview(preview)) {
+      await store.deleteNode(preview)
+      return
+    }
+    deletePreview.value = preview
   } finally {
     dialogBusy.value = false
   }
@@ -367,6 +433,7 @@ watch(
 watch(
   () =>
     createDialogOpen.value ||
+    createKbDialogOpen.value ||
     groupDialogOpen.value ||
     Boolean(renameNode.value) ||
     settingsOpen.value ||
@@ -496,7 +563,7 @@ onUnmounted(() => {
       class="workspace-layout"
       :style="{ gridTemplateColumns: workspaceColumns, gridTemplateAreas: workspaceAreas }"
     >
-      <KnowledgeSidebar style="grid-area: i1" />
+      <KnowledgeSidebar style="grid-area: i1" @create-knowledge-base="openCreateKbDialog" />
       <div
         class="resize-handle"
         role="separator"
@@ -525,7 +592,7 @@ onUnmounted(() => {
       <div class="welcome-card">
         <span class="welcome-mark">T</span>
         <h1>打开你的 TNotes 工作区</h1>
-        <p>Desk 会扫描所选目录下的 TNotes.* 直接子目录，不会克隆或修改其他目录。</p>
+        <p>Desk 会扫描所选目录：若根目录有 tnotes.json 则作为单库打开；否则扫描含 tnotes.json 的直接子目录。</p>
         <button type="button" :disabled="store.loading" @click="store.chooseWorkspace">
           {{ store.loading ? '正在检查…' : '选择工作区' }}
         </button>
@@ -554,6 +621,77 @@ onUnmounted(() => {
             class="primary"
             :disabled="!createTitle.trim() || dialogBusy"
             @click="confirmCreate"
+          >
+            创建
+          </button>
+        </footer>
+      </form>
+    </div>
+
+    <div
+      v-if="createKbDialogOpen"
+      class="dialog-backdrop"
+      @mousedown.self="createKbDialogOpen = false"
+    >
+      <form class="dialog dialog-create-kb" @submit.prevent="confirmCreateKb">
+        <header>
+          <div>
+            <span>新建知识库</span>
+            <strong>在当前工作区下创建最小目录（含一篇引导笔记）</strong>
+          </div>
+          <button type="button" @click="createKbDialogOpen = false">×</button>
+        </header>
+        <label>
+          <span>文件夹名</span>
+          <input
+            v-model="createKbFolderName"
+            autofocus
+            placeholder="例如 demo-kb 或 TNotes.demo"
+          />
+        </label>
+        <p v-if="createKbFolderError" class="dialog-error">{{ createKbFolderError }}</p>
+        <label>
+          <span>显示名称</span>
+          <input v-model="createKbTitle" placeholder="默认与文件夹名相同" />
+        </label>
+        <fieldset class="dialog-options">
+          <legend>可选（默认全关；Desk 预览不需要）</legend>
+          <label class="dialog-check">
+            <input v-model="createKbPackageJson" type="checkbox" :disabled="createKbGithubPages" />
+            <span>
+              <strong>添加 CLI / package.json</strong>
+              <small>本地 pnpm tn:dev / tn:build</small>
+            </span>
+          </label>
+          <label class="dialog-check">
+            <input v-model="createKbGithubPages" type="checkbox" />
+            <span>
+              <strong>添加 GitHub Pages 工作流</strong>
+              <small>写入 deploy.yml，并附带 package.json</small>
+            </span>
+          </label>
+          <label class="dialog-check">
+            <input v-model="createKbReadme" type="checkbox" />
+            <span>
+              <strong>生成 README.md</strong>
+              <small>仓库首页说明，与引导笔记无关</small>
+            </span>
+          </label>
+          <label class="dialog-check">
+            <input v-model="createKbGitInit" type="checkbox" />
+            <span>
+              <strong>初始化 Git 仓库</strong>
+              <small>在知识库目录执行 git init</small>
+            </span>
+          </label>
+        </fieldset>
+        <footer>
+          <button type="button" class="secondary" @click="createKbDialogOpen = false">取消</button>
+          <button
+            type="button"
+            class="primary"
+            :disabled="Boolean(createKbFolderError) || dialogBusy"
+            @click="confirmCreateKb"
           >
             创建
           </button>
@@ -599,7 +737,7 @@ onUnmounted(() => {
         </header>
         <label>
           <span>新名称</span>
-          <input v-model="renameTitle" autofocus />
+          <input ref="renameInput" v-model="renameTitle" />
         </label>
         <footer>
           <button type="button" class="secondary" @click="renameNode = null">取消</button>
@@ -1046,6 +1184,10 @@ body.is-resizing-image {
   overflow: hidden;
 }
 
+.dialog.dialog-create-kb {
+  width: min(460px, calc(100% - 32px));
+}
+
 .dialog header {
   display: flex;
   align-items: center;
@@ -1089,6 +1231,56 @@ body.is-resizing-image {
   font-size: 10px;
 }
 
+.dialog-options {
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+  padding: 12px 15px 4px;
+}
+
+.dialog-options legend {
+  padding: 0;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.dialog-check {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.dialog-check input {
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+  flex: none;
+  accent-color: var(--accent);
+}
+
+.dialog-check span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dialog-check strong {
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.dialog-check small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
 .dialog input {
   height: 34px;
   border: 1px solid var(--border);
@@ -1102,6 +1294,12 @@ body.is-resizing-image {
 
 .dialog input:focus {
   border-color: var(--accent);
+}
+
+.dialog-error {
+  margin: -8px 15px 0;
+  color: var(--danger);
+  font-size: 11px;
 }
 
 .dialog footer {

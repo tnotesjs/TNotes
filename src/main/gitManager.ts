@@ -41,21 +41,23 @@ function runGit(rootPath: string, args: string[], timeoutMs = 30_000): Promise<C
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true
     })
-    let stdout = ''
-    let stderr = ''
-    const append = (current: string, chunk: Buffer): string =>
-      `${current}${chunk.toString('utf8')}`.slice(-2 * 1024 * 1024)
+    // Accumulate chunks and join once — template-literal appends are O(n²)
+    // and a large `git status` (tens of thousands of changes) would block the
+    // main process for seconds.
+    const stdoutChunks: Buffer[] = []
+    const stderrChunks: Buffer[] = []
     child.stdout.on('data', (chunk: Buffer) => {
-      stdout = append(stdout, chunk)
+      stdoutChunks.push(chunk)
     })
     child.stderr.on('data', (chunk: Buffer) => {
-      stderr = append(stderr, chunk)
+      stderrChunks.push(chunk)
     })
+    const cap = (text: string): string => text.slice(-2 * 1024 * 1024)
     const timer = setTimeout(() => {
       child.kill('SIGTERM')
       resolve({
         code: 124,
-        stdout,
+        stdout: cap(Buffer.concat(stdoutChunks).toString('utf8')),
         stderr: `Git 操作超时：git ${args[0]}`
       })
     }, timeoutMs)
@@ -65,7 +67,11 @@ function runGit(rootPath: string, args: string[], timeoutMs = 30_000): Promise<C
     })
     child.on('close', (code) => {
       clearTimeout(timer)
-      resolve({ code: code ?? 1, stdout, stderr })
+      resolve({
+        code: code ?? 1,
+        stdout: cap(Buffer.concat(stdoutChunks).toString('utf8')),
+        stderr: cap(Buffer.concat(stderrChunks).toString('utf8'))
+      })
     })
   })
 }
@@ -388,12 +394,18 @@ export class GitManager {
       }
     }
     const changes = parseGitStatus(statusResult.stdout)
-      .map((change) => this.attachNote(repository, change))
-      .sort((left, right) =>
-        `${left.noteIndex ?? 'zzzz'}:${left.path}`.localeCompare(
-          `${right.noteIndex ?? 'zzzz'}:${right.path}`
-        )
-      )
+    // Attach notes via a dirName lookup — a linear `notes.find` per change is
+    // O(changes × notes) and froze the main process for seconds on repos with
+    // tens of thousands of pending changes.
+    const notesByDirName = new Map(repository.notes.map((note) => [note.dirName, note]))
+    const attached = changes.map((change) => this.attachNote(notesByDirName, change))
+    // Precompute sort keys; localeCompare per comparison is ICU-slow at 40k+.
+    const keyed = attached.map((change) => ({
+      key: `${change.noteIndex ?? 'zzzz'}:${change.path}`,
+      change
+    }))
+    keyed.sort((left, right) => (left.key < right.key ? -1 : left.key > right.key ? 1 : 0))
+    const sorted = keyed.map((entry) => entry.change)
     const previous = this.states.get(repository.knowledgeBaseId)
     return {
       knowledgeBaseId: repository.knowledgeBaseId,
@@ -403,8 +415,8 @@ export class GitManager {
       upstream,
       ahead,
       behind,
-      changes,
-      conflict: changes.some((change) => change.status === 'conflicted'),
+      changes: sorted,
+      conflict: sorted.some((change) => change.status === 'conflicted'),
       busy: previous?.busy ?? null,
       lastFetchedAt: lastFetchedAt ?? previous?.lastFetchedAt ?? null,
       error: null
@@ -412,13 +424,12 @@ export class GitManager {
   }
 
   private attachNote(
-    repository: GitRepositoryDescriptor,
+    notesByDirName: Map<string, GitRepositoryDescriptor['notes'][number]>,
     change: GitFileChangeDto
   ): GitFileChangeDto {
     const relative = change.path.replaceAll('\\', '/')
-    const note = repository.notes.find((candidate) =>
-      relative.startsWith(`notes/${candidate.dirName}/`)
-    )
+    const match = /^notes\/([^/]+)\//.exec(relative)
+    const note = match ? notesByDirName.get(match[1]!) : undefined
     return note
       ? {
           ...change,

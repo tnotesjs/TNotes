@@ -24,4 +24,20 @@ describe('application menu', () => {
       'open-command-palette'
     ])
   })
+
+  it.each(['darwin', 'win32'] as const)(
+    'routes Select All to the renderer instead of webContents.selectAll on %s',
+    (platform) => {
+      const send = vi.fn()
+      const template = applicationMenuTemplate({ appName: 'Desk', platform, send })
+      expect(template.some((item) => item.role === 'editMenu')).toBe(false)
+      const edit = template.find((item) => item.label === 'Edit')
+      const items = (edit?.submenu ?? []) as Electron.MenuItemConstructorOptions[]
+      const selectAll = items.find((item) => item.accelerator === 'CmdOrCtrl+A')
+      expect(selectAll?.label).toBe('全选')
+      expect(selectAll?.role).toBeUndefined()
+      selectAll?.click?.(undefined as never, undefined, undefined as never)
+      expect(send).toHaveBeenCalledWith('select-all')
+    }
+  )
 })

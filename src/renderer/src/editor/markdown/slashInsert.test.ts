@@ -39,7 +39,7 @@ function countBlocks(editor: Editor): number {
   editor.action((ctx) => {
     const view = ctx.get(editorViewCtx)
     view.state.doc.descendants((node) => {
-      if (node.type.name === 'deskRawBlock') n += 1
+      if (node.type.name === 'deskRawBlock' || node.type.name === 'deskCallout') n += 1
     })
   })
   return n
@@ -153,9 +153,9 @@ describe('slash menu insert projection', () => {
   })
 
   for (const item of TN_NOTES_SLASH_ITEMS) {
-    // 代码块由 Crepe 代码块承载（insertCodeBlock），不走 deskRawBlock 投影。
+    // 普通代码块由 Crepe 代码块承载，不走 deskRawBlock / deskCallout。
     if (item.kind === 'code') continue
-    it(`inserts ${item.label} as deskRawBlock`, async () => {
+    it(`inserts ${item.label} as a TNotes block node`, async () => {
       const editor = await createEditor('# A\n\n- b\n')
       const before = countBlocks(editor)
       // move selection to the very end of the document

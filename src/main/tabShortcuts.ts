@@ -76,6 +76,9 @@ export class TabShortcutResolver {
     if (primaryModifier && !input.alt && !input.shift && key === 'w') {
       return { handled: true, command: 'close-active-tab-or-window' }
     }
+    if (primaryModifier && !input.alt && !input.shift && key === 'a') {
+      return { handled: true, command: 'select-all' }
+    }
     if (primaryModifier && input.alt && !input.shift && key === 'c') {
       return { handled: true, command: 'copy-active-note-path' }
     }

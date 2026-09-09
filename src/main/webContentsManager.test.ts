@@ -6,7 +6,8 @@ const mocks = vi.hoisted(() => {
     setWindowOpenHandler: vi.fn(),
     setZoomFactor: vi.fn(),
     isDestroyed: () => false,
-    loadURL: vi.fn(async () => undefined)
+    loadURL: vi.fn(async () => undefined),
+    selectAll: vi.fn()
   }
   const view = {
     webContents: contents,
@@ -99,4 +100,17 @@ it('includes the native web tab origin when forwarding numbered tab shortcuts', 
     number: 3,
     sourceTabId: 'right-web-tab'
   })
+})
+
+it('selects all in a native web tab without touching the Desk chrome', async () => {
+  mocks.contents.selectAll.mockClear()
+  const manager = new WebContentsManager()
+  manager.attachWindow({
+    on: vi.fn(),
+    isDestroyed: () => false,
+    contentView: { addChildView: vi.fn() }
+  } as unknown as Electron.BrowserWindow)
+  await manager.create('web-select', 'https://example.com')
+  manager.selectAll('web-select')
+  expect(mocks.contents.selectAll).toHaveBeenCalledOnce()
 })

@@ -209,6 +209,11 @@ export class WebContentsManager {
     this.getHandle(tabId).view.webContents.stop()
   }
 
+  selectAll(tabId: string): void {
+    const contents = this.getHandle(tabId).view.webContents
+    if (!contents.isDestroyed()) contents.selectAll()
+  }
+
   async openExternal(inputUrl: string): Promise<void> {
     await shell.openExternal(normalizeWebUrl(inputUrl))
   }

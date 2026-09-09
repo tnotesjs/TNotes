@@ -1,7 +1,6 @@
 // @vitest-environment happy-dom
 
 import { mount } from '@vue/test-utils'
-import { EditorView } from '@codemirror/view'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import MilkdownMarkdownEditor from './MilkdownMarkdownEditor.vue'
@@ -79,18 +78,7 @@ describe('container inline source editor', () => {
     expect(hasPendingEdits('kb-a', 'note-a')).toBe(false)
   })
 
-  const EMPTY_TIP = [
-    '# 0008. tip block',
-    '',
-    '::: tip 💡 TIP',
-    '',
-    '',
-    '',
-    ':::',
-    '',
-    'plain',
-    ''
-  ].join('\n')
+  const EMPTY_TIP = ['::: tip 💡 TIP', '', '', '', ':::', '', 'plain', ''].join('\n')
 
   async function mountEmptyTip(): Promise<ReturnType<typeof mount>> {
     const wrapper = mount(MilkdownMarkdownEditor, {
@@ -105,48 +93,38 @@ describe('container inline source editor', () => {
         uploadImage: vi.fn(async () => ({ src: './assets/image.png', alt: 'image' }))
       }
     })
-    await vi.waitFor(() => expect(wrapper.find('.desk-raw-block__edit').exists()).toBe(true))
+    await vi.waitFor(() => expect(wrapper.find('.desk-callout').exists()).toBe(true))
     return wrapper
   }
 
   async function typeTipBody(wrapper: ReturnType<typeof mount>, text: string): Promise<void> {
-    await wrapper.find('.desk-raw-block__edit').trigger('click')
-    const cmHost = wrapper.find('.desk-raw-block__editor-cm .cm-editor').element as HTMLElement
-    const cm = EditorView.findFromDOM(cmHost)
-    expect(cm).toBeTruthy()
-    cm!.dispatch({
-      changes: { from: 0, to: cm!.state.doc.length, insert: text }
-    })
-    // Preview timer copies the draft into getSource(); dirty/commit used to
-    // treat that as "already persisted" and skip the atom write.
-    await new Promise((resolve) => setTimeout(resolve, 300))
+    const title = wrapper.find('.desk-callout__title').element as HTMLInputElement
+    title.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    ;(wrapper.vm as unknown as { insertTextAt: (value: string) => void }).insertTextAt(text)
+    await Promise.resolve()
   }
 
-  it('keeps tip body when flush() runs after the preview timer (source switch)', async () => {
+  it('keeps tip body when flush() runs after visual typing (source switch)', async () => {
     const wrapper = await mountEmptyTip()
     await typeTipBody(wrapper, '**111**')
-    expect(hasPendingEdits('kb-a', 'note-a')).toBe(true)
-    expect(wrapper.emitted('change')).toBeUndefined()
+    expect(wrapper.find('.desk-raw-block__edit').exists()).toBe(false)
     ;(wrapper.vm as unknown as { flush: () => void }).flush()
     const emitted = wrapper.emitted<string[]>('change')?.at(-1)?.[0] ?? ''
     expect(emitted).toContain('**111**')
     expect(emitted).toContain('::: tip')
-    expect(hasPendingEdits('kb-a', 'note-a')).toBe(false)
     wrapper.unmount()
   })
 
-  it('keeps tip body when Done is clicked after the preview timer', async () => {
+  it('keeps tip body after typing in the visual callout', async () => {
     const wrapper = await mountEmptyTip()
     await typeTipBody(wrapper, '**222**')
-    await wrapper.find('.desk-raw-block__editor-done').trigger('click')
     await vi.waitFor(() => {
       expect(wrapper.emitted<string[]>('change')?.at(-1)?.[0]).toContain('**222**')
     })
-    expect(hasPendingEdits('kb-a', 'note-a')).toBe(false)
     wrapper.unmount()
   })
 
-  it('keeps tip body when switching to readonly after the preview timer', async () => {
+  it('keeps tip body when switching to readonly after visual typing', async () => {
     const wrapper = await mountEmptyTip()
     await typeTipBody(wrapper, '**333**')
     await wrapper.setProps({ mode: 'readonly' })
@@ -156,7 +134,223 @@ describe('container inline source editor', () => {
     wrapper.unmount()
   })
 
-  it('opens a structured title+body editor for tip/info/details callouts', async () => {
+  it('focuses the callout title input on pointer down', async () => {
+    const wrapper = await mountEmptyTip()
+    const title = wrapper.find('.desk-callout__title').element as HTMLInputElement
+    expect(wrapper.find('.desk-callout__title-host').attributes('contenteditable')).toBe('false')
+    title.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }))
+    expect(document.activeElement).toBe(title)
+    wrapper.unmount()
+  })
+
+  it('keeps title arrow keys from selecting the previous code fence', async () => {
+    const wrapper = mount(MilkdownMarkdownEditor, {
+      attachTo: document.body,
+      props: {
+        content: [
+          '```js',
+          'const x = 1',
+          '```',
+          '',
+          '::: tip 提示题',
+          '',
+          '正文下一行',
+          '',
+          ':::',
+          ''
+        ].join('\n'),
+        mode: 'visual',
+        readOnly: false,
+        knowledgeBaseId: 'kb-a',
+        noteUuid: 'note-a',
+        active: true,
+        uploadImage: vi.fn(async () => ({ src: './assets/image.png', alt: 'image' }))
+      }
+    })
+    await vi.waitFor(() => expect(wrapper.find('.desk-callout__title').exists()).toBe(true))
+    const title = wrapper.find('.desk-callout__title').element as HTMLInputElement
+    title.focus()
+    title.setSelectionRange(title.value.length, title.value.length)
+    title.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true })
+    )
+    expect(wrapper.find('.desk-code-block--whole-selected').exists()).toBe(false)
+    expect(wrapper.find('.milkdown-code-block.ProseMirror-selectednode').exists()).toBe(false)
+    expect(document.activeElement).toBe(title)
+
+    title.setSelectionRange(title.value.length, title.value.length)
+    title.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })
+    )
+    expect(document.activeElement).not.toBe(title)
+    wrapper.unmount()
+  })
+
+  it('ArrowUp from the callout title whole-selects the previous code fence', async () => {
+    const wrapper = mount(MilkdownMarkdownEditor, {
+      attachTo: document.body,
+      props: {
+        content: [
+          '```js',
+          'const x = 1',
+          '```',
+          '',
+          '::: tip 提示题',
+          '',
+          '这是 PowerShell 的经典坑',
+          '',
+          ':::',
+          ''
+        ].join('\n'),
+        mode: 'visual',
+        readOnly: false,
+        knowledgeBaseId: 'kb-a',
+        noteUuid: 'note-a',
+        active: true,
+        uploadImage: vi.fn(async () => ({ src: './assets/image.png', alt: 'image' }))
+      }
+    })
+    await vi.waitFor(() => expect(wrapper.find('.desk-callout__title').exists()).toBe(true))
+    const title = wrapper.find('.desk-callout__title').element as HTMLInputElement
+    title.focus()
+    expect(document.activeElement).toBe(title)
+    title.setSelectionRange(title.value.length, title.value.length)
+    title.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true })
+    )
+    await Promise.resolve()
+    expect(document.activeElement).not.toBe(title)
+    const body = wrapper.find('.desk-callout .custom-block-body').element
+    const anchor = window.getSelection()?.anchorNode
+    expect(Boolean(anchor && body.contains(anchor))).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('ArrowDown from the line above a callout focuses the title', async () => {
+    const wrapper = mount(MilkdownMarkdownEditor, {
+      attachTo: document.body,
+      props: {
+        content: ['上方段落', '', '::: tip 提示题', '', '这是 PowerShell 的经典坑', '', ':::', ''].join(
+          '\n'
+        ),
+        mode: 'visual',
+        readOnly: false,
+        knowledgeBaseId: 'kb-a',
+        noteUuid: 'note-a',
+        active: true,
+        uploadImage: vi.fn(async () => ({ src: './assets/image.png', alt: 'image' }))
+      }
+    })
+    await vi.waitFor(() => expect(wrapper.find('.desk-callout__title').exists()).toBe(true))
+    const title = wrapper.find('.desk-callout__title').element as HTMLInputElement
+    title.focus()
+    title.setSelectionRange(0, 0)
+    title.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true })
+    )
+    await Promise.resolve()
+    expect(document.activeElement).not.toBe(title)
+    wrapper
+      .find('.ProseMirror')
+      .element.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })
+      )
+    expect(document.activeElement).toBe(title)
+    wrapper.unmount()
+  })
+
+  it('ArrowUp from the first callout body line focuses the title', async () => {
+    const wrapper = mount(MilkdownMarkdownEditor, {
+      attachTo: document.body,
+      props: {
+        content: [
+          '```js',
+          'const x = 1',
+          '```',
+          '',
+          '::: tip 提示题',
+          '',
+          '这是 PowerShell 的经典坑',
+          '',
+          ':::',
+          ''
+        ].join('\n'),
+        mode: 'visual',
+        readOnly: false,
+        knowledgeBaseId: 'kb-a',
+        noteUuid: 'note-a',
+        active: true,
+        uploadImage: vi.fn(async () => ({ src: './assets/image.png', alt: 'image' }))
+      }
+    })
+    await vi.waitFor(() => expect(wrapper.find('.desk-callout__title').exists()).toBe(true))
+    const title = wrapper.find('.desk-callout__title').element as HTMLInputElement
+    title.focus()
+    title.setSelectionRange(title.value.length, title.value.length)
+    title.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })
+    )
+    expect(document.activeElement).not.toBe(title)
+
+    wrapper
+      .find('.ProseMirror')
+      .element.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true })
+      )
+    expect(document.activeElement).toBe(title)
+    expect(wrapper.find('.desk-code-block--whole-selected').exists()).toBe(false)
+    expect(wrapper.find('.milkdown-code-block.ProseMirror-selectednode').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('edits the callout title independently of the body', async () => {
+    const wrapper = await mountEmptyTip()
+    const title = wrapper.find('.desk-callout__title').element as HTMLInputElement
+    expect(title.placeholder).toBe('TIP')
+    expect(title.value).toBe('💡 TIP')
+    title.value = '新标题'
+    title.dispatchEvent(new Event('input', { bubbles: true }))
+    await vi.waitFor(() => {
+      expect(wrapper.emitted<string[]>('change')?.at(-1)?.[0]).toContain('::: tip 新标题')
+    })
+    wrapper.unmount()
+  })
+
+  it('renders nested fenced code inside a tip as a real code block', async () => {
+    const wrapper = mount(MilkdownMarkdownEditor, {
+      attachTo: document.body,
+      props: {
+        content: [
+          '::: tip 提示：PowerShell',
+          '',
+          '说明',
+          '',
+          '```powershell',
+          'git show stash@{0}',
+          '```',
+          '',
+          ':::',
+          ''
+        ].join('\n'),
+        mode: 'visual',
+        readOnly: false,
+        knowledgeBaseId: 'kb-a',
+        noteUuid: 'note-a',
+        active: true,
+        uploadImage: vi.fn(async () => ({ src: './assets/image.png', alt: 'image' }))
+      }
+    })
+    await vi.waitFor(() => expect(wrapper.find('.desk-callout').exists()).toBe(true))
+    expect(wrapper.find('.desk-callout .desk-raw-block__edit').exists()).toBe(false)
+    await vi.waitFor(() => expect(wrapper.find('.milkdown-code-block').exists()).toBe(true))
+    expect(wrapper.find('.desk-callout .milkdown-code-block').exists()).toBe(true)
+    expect(wrapper.find('.desk-callout__title').element).toMatchObject({
+      value: '提示：PowerShell'
+    })
+    wrapper.unmount()
+  })
+
+  it('opens a structured title+body editor for details callouts', async () => {
     const wrapper = await mountWithContainer()
     const edit = wrapper.find('.desk-raw-block__edit')
     expect(edit.classes()).toContain('desk-raw-block__edit--pill')

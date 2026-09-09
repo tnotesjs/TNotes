@@ -2,10 +2,17 @@ import { searchKeymap } from '@codemirror/search'
 import {
   EditorSelection,
   EditorState,
+  Prec,
   type Extension,
   type SelectionRange
 } from '@codemirror/state'
 import { crosshairCursor, drawSelection, EditorView, keymap, ViewPlugin } from '@codemirror/view'
+
+import {
+  selectAllInCodeMirrorView,
+  shouldPreserveCodeMirrorSelectAll,
+  trackNestedCodeMirrorFocus
+} from '../../selectAll'
 
 /** Option+left-drag (CodeMirror default) or middle-button drag. */
 export function isRectangularSelectionEvent(event: MouseEvent): boolean {
@@ -259,6 +266,7 @@ export function collapseBrowserSelectAllOnFocus(): Extension {
       if (!wholeDoc) return false
       requestAnimationFrame(() => {
         if (view.hasFocus === false) return
+        if (shouldPreserveCodeMirrorSelectAll(view)) return
         const current = view.state.selection.main
         if (current.empty || current.from !== 0 || current.to !== view.state.doc.length) return
         view.dispatch({
@@ -283,12 +291,25 @@ function preventMiddleClickPaste(): Extension {
   })
 }
 
+function nestedCodeMirrorSelectAllKeymap(): Extension {
+  return Prec.highest(
+    keymap.of([
+      {
+        key: 'Mod-a',
+        run: (view) => selectAllInCodeMirrorView(view)
+      }
+    ])
+  )
+}
+
 export function codeMirrorRectangularSelection(): Extension {
   return [
     altButtonMultiCursor(),
     middleButtonRectangularSelection(),
     preventMiddleClickPaste(),
-    collapseBrowserSelectAllOnFocus()
+    collapseBrowserSelectAllOnFocus(),
+    trackNestedCodeMirrorFocus(),
+    nestedCodeMirrorSelectAllKeymap()
   ]
 }
 

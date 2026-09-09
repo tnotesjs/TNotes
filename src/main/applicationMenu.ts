@@ -60,7 +60,37 @@ export function applicationMenuTemplate(options: {
           : ([{ type: 'separator' }, { role: 'quit' }] satisfies MenuItemConstructorOptions[]))
       ]
     },
-    { role: 'editMenu' },
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        ...(platform === 'darwin'
+          ? ([{ role: 'pasteAndMatchStyle' }] satisfies MenuItemConstructorOptions[])
+          : []),
+        { role: 'delete' },
+        // Do not use role:selectAll — it calls webContents.selectAll() on the
+        // whole Desk window, so Cmd+A cannot delete inside the note editor.
+        {
+          label: '全选',
+          accelerator: 'CmdOrCtrl+A',
+          click: () => send('select-all')
+        },
+        ...(platform === 'darwin'
+          ? ([
+              { type: 'separator' },
+              {
+                label: 'Speech',
+                submenu: [{ role: 'startSpeaking' }, { role: 'stopSpeaking' }]
+              }
+            ] satisfies MenuItemConstructorOptions[])
+          : [])
+      ]
+    },
     {
       label: 'View',
       submenu: [

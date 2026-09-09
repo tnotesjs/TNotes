@@ -7,8 +7,9 @@
  * - 每项：展示名 + 搜索词（多对一）+ 插入用的 insert 字符串。
  * - 搜索词拼进 Crepe 的内部 label，供默认 includes 过滤命中；DOM 展示层
  *   再移除分隔符后的别名，避免菜单把搜索元数据显示给用户。
- * - 容器 / 导图 / 组件插成 deskRawBlock 并打开「编辑源码」（由调用方
- *   onInsert 执行）；普通代码块交给调用方决定走 Crepe 代码块。
+ * - tip/info/warning/danger 插成 deskCallout；其余容器 / 导图 / 组件插成
+ *   deskRawBlock 并打开「编辑源码」（由调用方 onInsert 执行）；普通代码块
+ *   交给调用方决定走 Crepe 代码块。
  *
  * 该清单同时被 0006（块级快捷输入）复用。
  */

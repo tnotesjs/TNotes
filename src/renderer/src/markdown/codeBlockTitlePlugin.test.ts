@@ -8,6 +8,7 @@ import {
   mutationsIndicateCodeToolsRemount,
   standaloneCodeBlockMissingChrome
 } from './codeBlockTitlePlugin'
+import { UNLABELED_CODE_LANGUAGE } from './codeLanguage'
 
 function remountedTools(): HTMLElement {
   const tools = document.createElement('div')
@@ -77,6 +78,32 @@ describe('code block header chrome', () => {
         expect(wrapper.find('.milkdown-code-block .desk-code-language').exists()).toBe(true)
         expect(wrapper.find('.milkdown-code-block .desk-code-expand').exists()).toBe(true)
       })
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  it('uses text as the empty-language placeholder and does not fill js into unlabeled fences', async () => {
+    const wrapper = mount(MilkdownMarkdownEditor, {
+      attachTo: document.body,
+      props: {
+        content: '```\nmindmap\n  Root\n```\n',
+        mode: 'visual',
+        readOnly: false,
+        knowledgeBaseId: 'kb-a',
+        noteUuid: 'note-a',
+        active: true,
+        uploadImage: vi.fn(async () => ({ src: './assets/image.png', alt: 'image' }))
+      }
+    })
+    try {
+      const input = await vi.waitFor(() => {
+        const el = wrapper.find('.milkdown-code-block .desk-code-language')
+        expect(el.exists()).toBe(true)
+        return el.element as HTMLInputElement
+      })
+      expect(input.placeholder).toBe(UNLABELED_CODE_LANGUAGE)
+      expect(input.value).toBe('')
     } finally {
       wrapper.unmount()
     }

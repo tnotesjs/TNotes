@@ -12,6 +12,7 @@ import {
   isRectangularSelectionEvent,
   rectangleRangesForPositions
 } from './codeMirrorMultiCursor'
+import { selectAllInCodeMirrorView, trackNestedCodeMirrorFocus } from '../../selectAll'
 
 const views: EditorView[] = []
 
@@ -179,6 +180,23 @@ describe('collapseBrowserSelectAllOnFocus', () => {
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
     expect(view.state.selection.main.empty).toBe(true)
     expect(view.state.selection.main.head).toBe(0)
+  })
+
+  it('keeps a programmatic select-all when the app menu refocuses the editor', async () => {
+    const view = new EditorView({
+      doc: 'abcd\nefgh',
+      extensions: [collapseBrowserSelectAllOnFocus(), trackNestedCodeMirrorFocus()]
+    })
+    views.push(view)
+    document.body.append(view.dom)
+    selectAllInCodeMirrorView(view)
+    Object.defineProperty(view, 'hasFocus', { configurable: true, get: () => true })
+    view.contentDOM.dispatchEvent(
+      new FocusEvent('focus', { bubbles: true, relatedTarget: document.body })
+    )
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+    expect(view.state.selection.main.from).toBe(0)
+    expect(view.state.selection.main.to).toBe(view.state.doc.length)
   })
 })
 

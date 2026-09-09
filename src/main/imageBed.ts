@@ -42,11 +42,15 @@ export function parseGitHubRepository(input: string): GitHubRepository {
   return { owner: segments[0], repository: segments[1] }
 }
 
+/** Local paste into `assets/`: `{index}-{YY}-{MM}-{DD}-{HH}-{mm}-{ss}{ext}`. */
+export const LOCAL_PASTED_ASSET_NAME_FORMAT = '${index}-${YY}-${MM}-${DD}-${HH}-${mm}-${ss}'
+
 export function formatImageFileName(
   format: string,
   originalName: string,
   date = new Date(),
-  duplicateIndex = 0
+  duplicateIndex = 0,
+  extraTokens: Record<string, string> = {}
 ): string {
   const tokens: Record<string, string> = {
     YYYY: date.getFullYear().toString(),
@@ -55,10 +59,14 @@ export function formatImageFileName(
     DD: twoDigits(date.getDate()),
     HH: twoDigits(date.getHours()),
     mm: twoDigits(date.getMinutes()),
-    ss: twoDigits(date.getSeconds())
+    ss: twoDigits(date.getSeconds()),
+    index: extraTokens.index ?? ''
   }
   const extension = extname(originalName).toLowerCase() || '.png'
-  const replaced = format.replace(/\$\{(YYYY|YY|MM|DD|HH|mm|ss)\}/g, (_match, key) => tokens[key])
+  const replaced = format.replace(
+    /\$\{(YYYY|YY|MM|DD|HH|mm|ss|index)\}/g,
+    (_match, key) => tokens[key] ?? ''
+  )
   const withoutControlCharacters = [...replaced]
     .map((character) => (character.charCodeAt(0) < 32 ? '-' : character))
     .join('')

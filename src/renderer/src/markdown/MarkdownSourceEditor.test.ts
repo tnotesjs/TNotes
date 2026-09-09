@@ -5,6 +5,7 @@ import { EditorView } from '@codemirror/view'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import MarkdownSourceEditor from './MarkdownSourceEditor.vue'
+import { DESK_SELECT_ALL_EVENT } from './documentSelection'
 
 interface EditorHandle {
   insertTextAt(text: string, position?: number): void
@@ -184,6 +185,16 @@ describe('MarkdownSourceEditor', () => {
     expect(pasted?.[0][1]).toBe(0)
     expect(event.defaultPrevented).toBe(true)
     expect(wrapper.emitted('change')).toBeUndefined()
+    wrapper.unmount()
+  })
+
+  it('selects the whole source document when the application menu asks for select-all', () => {
+    const wrapper = mountEditor('alpha\nbeta')
+    window.dispatchEvent(new Event(DESK_SELECT_ALL_EVENT))
+    const cm = EditorView.findFromDOM(wrapper.get('.cm-editor').element)
+    expect(cm).not.toBeNull()
+    expect(cm!.state.selection.main.from).toBe(0)
+    expect(cm!.state.selection.main.to).toBe(cm!.state.doc.length)
     wrapper.unmount()
   })
 })

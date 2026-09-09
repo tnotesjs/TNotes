@@ -9,6 +9,7 @@ import {
   type NoteFrontmatter,
   type Placement
 } from '@tnotesjs/kb'
+import { formatImageFileName, LOCAL_PASTED_ASSET_NAME_FORMAT } from '../imageBed'
 import { loadSettings, settingsForKnowledgeBase } from '../settings'
 
 import type {
@@ -189,12 +190,20 @@ export async function writeLocalAttachment(
   request: AttachmentWriteLocalRequest,
   effects: MutationSideEffects
 ): Promise<AttachmentWriteLocalResult> {
+  const noteIndex = resolveNoteIndex(handle, request.noteUuid)
+  const fileName = formatImageFileName(
+    LOCAL_PASTED_ASSET_NAME_FORMAT,
+    request.fileName,
+    new Date(),
+    0,
+    { index: noteIndex }
+  )
   const result = await handle.workspace.assets.add({
-    fileName: request.fileName,
+    fileName,
     data: request.data
   })
   const absolutePath = path.join(handle.rootPath, result.relPath)
-  effects.markInternalWrites([{ path: result.relPath }])
+  effects.markInternalWrites(handle.rootPath, [{ path: result.relPath }])
   handle.snapshot = await handle.workspace.scan()
   effects.emitChanged()
   return { absolutePath, markdownPath: result.markdownPath }

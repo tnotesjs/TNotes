@@ -6,6 +6,7 @@ import type { EditorView } from '@milkdown/kit/prose/view'
 import { Decoration, DecorationSet } from '@milkdown/kit/prose/view'
 import { $prose } from '@milkdown/kit/utils'
 import { EditorView as CodeMirrorView } from '@codemirror/view'
+import { focusCalloutTitleInput, isCaretEnteringCalloutTitle, isDeskCalloutNode } from '../editor/markdown/deskCallout'
 import { isStandaloneImageParagraph } from '../editor/markdown/standaloneImageParagraph'
 import { createMarkVsBlockSelectionPlugin } from './selectionKind'
 import { BlockRangeSelection, createVerticalBlockSelectionPlugin } from './verticalBlockSelection'
@@ -161,6 +162,8 @@ export function adjacentRawBlockSelectionPosition(
 
   if (direction === 'left' ? $head.parentOffset !== 0 : !isOnFirstLineOfTextblock($head))
     return null
+  // Callout title is outside contentDOM; the first body line is not a fence edge.
+  if (isCaretEnteringCalloutTitle($head, direction === 'left' ? 'left' : 'up')) return null
   for (let depth = $head.depth; depth > 1; depth -= 1) {
     if ($head.index(depth - 1) > 0) return null
   }
@@ -224,12 +227,27 @@ function selectedRawBlockDecorations(state: EditorState): DecorationSet | null {
 }
 
 /** Keep ProseMirror focused after Crepe's code nodeView.selectNode() focuses CM. */
+function focusEditorKeepingSelection(view: EditorView): void {
+  const selection = view.state.selection
+  const whole = codeBlockWholeSelectKey.getState(view.state) ?? null
+  view.dom.focus({ preventScroll: true })
+  if (
+    view.state.selection.eq(selection) &&
+    (codeBlockWholeSelectKey.getState(view.state) ?? null) === whole
+  ) {
+    return
+  }
+  view.dispatch(
+    view.state.tr.setSelection(selection).setMeta(codeBlockWholeSelectKey, whole).scrollIntoView()
+  )
+}
+
 function reclaimFocusFromCodeMirror(view: EditorView, position: number): void {
-  view.focus()
+  focusEditorKeepingSelection(view)
   queueMicrotask(() => {
     if (codeBlockWholeSelectKey.getState(view.state) !== position) return
     if (!(view.state.selection instanceof NodeSelection)) return
-    view.focus()
+    focusEditorKeepingSelection(view)
   })
 }
 
@@ -342,6 +360,12 @@ function enterStaysInNestedField(event: KeyboardEvent): boolean {
   return Boolean(
     target.closest('input, textarea, select, .cm-editor, .mm-editor, .is-mindmap-island-active')
   )
+}
+
+/** Native chrome inside ProseMirror owns arrows; the capture listener must not steal them. */
+function isNativeEditorField(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false
+  return Boolean(target.closest('input, textarea, select'))
 }
 
 /**
@@ -470,9 +494,33 @@ function exitCodeEditorAtEnd(view: EditorView, event: KeyboardEvent): boolean {
     view.focus()
     return true
   }
-  const nextBlock = neighborSelectableBlockPosition(view.state, boundary, 'down')
-  if (nextBlock != null) return selectSelectableBlock(view, nextBlock)
-  exitSelectableBlock(view, boundary, 1)
+  return moveFromBlockBoundary(view, boundary, 'down')
+}
+
+/**
+ * Leave a top-level block at `boundary` (the node's start for up, end for down).
+ * Used by whole-select arrows and by the callout title (outside contentDOM).
+ */
+export function moveFromBlockBoundary(
+  view: EditorView,
+  boundary: number,
+  direction: RawBlockArrowDirection
+): boolean {
+  const immediatePos = neighborSelectableBlockPosition(view.state, boundary, direction)
+  if (immediatePos != null) {
+    return selectSelectableBlock(view, immediatePos)
+  }
+  if (direction === 'down') {
+    const next = view.state.doc.resolve(
+      Math.max(0, Math.min(boundary, view.state.doc.content.size))
+    ).nodeAfter
+    if (next && isDeskCalloutNode(next)) {
+      return focusCalloutTitleInput(view, boundary, 'start')
+    }
+  }
+  // Empty paragraphs are real caret targets (placeholder "输入 / 插入内容").
+  // Do not jump over them to the next fence.
+  exitSelectableBlock(view, boundary, direction === 'down' ? 1 : -1)
   return true
 }
 
@@ -484,14 +532,7 @@ function moveFromSelectableBlock(
   direction: RawBlockArrowDirection
 ): boolean {
   const boundary = direction === 'down' ? position + nodeSize : position
-  const immediatePos = neighborSelectableBlockPosition(view.state, boundary, direction)
-  if (immediatePos != null) {
-    return selectSelectableBlock(view, immediatePos)
-  }
-  // Empty paragraphs are real caret targets (placeholder "输入 / 插入内容").
-  // Do not jump over them to the next fence.
-  exitSelectableBlock(view, boundary, direction === 'down' ? 1 : -1)
-  return true
+  return moveFromBlockBoundary(view, boundary, direction)
 }
 
 function handleCodeBlockWholeSelect(view: EditorView, event: KeyboardEvent): boolean {
@@ -613,7 +654,6 @@ function handleWholeSelectKeys(view: EditorView, event: KeyboardEvent): boolean 
 }
 
 function isBlockArrowEvent(event: KeyboardEvent): boolean {
-  const target = event.target as Element | null
   return (
     !event.shiftKey &&
     !event.altKey &&
@@ -621,7 +661,8 @@ function isBlockArrowEvent(event: KeyboardEvent): boolean {
     !event.metaKey &&
     !event.isComposing &&
     ['ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft'].includes(event.key) &&
-    !target?.closest('.cm-editor')
+    !isNativeEditorField(event.target) &&
+    !(event.target instanceof Element && event.target.closest('.cm-editor'))
   )
 }
 
@@ -666,6 +707,7 @@ export function createRawBlockSelectionPlugin(): MilkdownPlugin[] {
           decorations: selectedRawBlockDecorations,
           handleKeyDown: (view, event) => {
             if (!view.editable) return false
+            if (isNativeEditorField(event.target)) return false
             // Document capture already evaluated this event; only honor claims.
             if (evaluatedKeydowns.has(event)) return claimedKeyboardEvent === event
             if (claimedKeyboardEvent === event) return true
@@ -723,6 +765,7 @@ export function createRawBlockSelectionPlugin(): MilkdownPlugin[] {
             if (claimedKeyboardEvent === event) return
 
             const eventTarget = event.target
+            if (isNativeEditorField(eventTarget)) return
             // Mindmap island: do not steal Arrow/Delete from .mm-editor (capture runs first).
             if (
               isMindmapIslandKeyboardOwner(eventTarget) ||

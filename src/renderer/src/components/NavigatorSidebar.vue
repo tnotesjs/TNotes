@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 
 import TocNodeList from './TocNodeList.vue'
 import UiTooltip from './UiTooltip.vue'
@@ -9,7 +9,7 @@ import { noteFileName } from '../commands/noteFileName'
 import { useEditorStore } from '../stores/editor'
 import { useWorkspaceStore } from '../stores/workspace'
 
-import type { DeskTocNode } from '../../../shared/contracts'
+import type { DeskTocNode, NavigatorSidebarMenuAction } from '../../../shared/contracts'
 
 const emit = defineEmits<{
   createNote: [node?: DeskTocNode, placement?: 'before' | 'after' | 'inside']
@@ -27,17 +27,9 @@ const noteFileExpanded = ref(true)
 const configFileExpanded = ref(true)
 const otherFileExpanded = ref(true)
 const tocListRef = ref<InstanceType<typeof TocNodeList> | null>(null)
-const createMenuOpen = ref(false)
-const createMenu = ref<HTMLElement | null>(null)
 const previewBusy = ref(false)
+const menuBusy = ref(false)
 let searchTimer: ReturnType<typeof setTimeout> | null = null
-
-function closeCreateMenu(event: MouseEvent): void {
-  if (createMenu.value?.contains(event.target as Node)) return
-  createMenuOpen.value = false
-}
-
-onMounted(() => document.addEventListener('mousedown', closeCreateMenu))
 
 function filterNodes(nodes: DeskTocNode[], needle: string): DeskTocNode[] {
   if (!needle) return nodes
@@ -64,7 +56,6 @@ watch([() => query.value, () => store.selectedKnowledgeBaseId], () => {
 
 onUnmounted(() => {
   if (searchTimer) clearTimeout(searchTimer)
-  document.removeEventListener('mousedown', closeCreateMenu)
 })
 
 const previewState = computed(() =>
@@ -189,11 +180,20 @@ async function buildSite(): Promise<void> {
   }
 }
 
-function chooseHeaderAction(
-  action: 'group' | 'preview' | 'build' | 'reveal' | 'ide' | 'settings'
-): void {
-  createMenuOpen.value = false
-  if (action === 'group') emit('createGroup')
+const previewLabel = computed(() => {
+  if (previewBusy.value || previewState.value?.status === 'starting') return '正在启动站点预览'
+  if (previewState.value?.status === 'ready') return '停止站点预览'
+  if (previewState.value?.status === 'error') return '重新启动站点预览'
+  return '启动站点预览'
+})
+
+const kbReady = computed(
+  () => Boolean(store.knowledgeBase) && store.knowledgeBase?.health === 'ready'
+)
+
+function applyMenuAction(action: NavigatorSidebarMenuAction): void {
+  if (action === 'create-note') emit('createNote')
+  else if (action === 'create-group') emit('createGroup')
   else if (action === 'preview') void togglePreview()
   else if (action === 'build') void buildSite()
   else if (action === 'reveal') void revealKnowledgeBase()
@@ -202,12 +202,26 @@ function chooseHeaderAction(
   } else showKnowledgeBaseMenu()
 }
 
-const previewLabel = computed(() => {
-  if (previewBusy.value || previewState.value?.status === 'starting') return '正在启动站点预览'
-  if (previewState.value?.status === 'ready') return '停止站点预览'
-  if (previewState.value?.status === 'error') return '重新启动站点预览'
-  return '启动站点预览'
-})
+async function openHeaderMenu(): Promise<void> {
+  if (menuBusy.value || !kbReady.value) return
+  menuBusy.value = true
+  try {
+    const result = await window.desk.app.showNavigatorSidebarMenu({
+      ready: kbReady.value,
+      previewLabel: previewLabel.value,
+      buildBusy: buildBusy.value
+    })
+    if (!result.ok) {
+      store.error = result.error.message
+      return
+    }
+    if (result.value) applyMenuAction(result.value)
+  } catch (cause) {
+    store.error = cause instanceof Error ? cause.message : String(cause)
+  } finally {
+    menuBusy.value = false
+  }
+}
 </script>
 
 <template>
@@ -217,43 +231,18 @@ const previewLabel = computed(() => {
         <span>⌕</span>
         <input v-model="query" type="search" placeholder="搜索标题和正文" />
       </div>
-      <div ref="createMenu" class="header-actions" :class="{ open: createMenuOpen }">
+      <div class="header-actions">
         <UiTooltip label="更多笔记操作">
           <button
             type="button"
             class="menu-button"
             aria-label="更多笔记操作"
-            :aria-expanded="createMenuOpen"
-            :disabled="!store.knowledgeBase || store.knowledgeBase.health !== 'ready'"
-            @click="createMenuOpen = !createMenuOpen"
+            :disabled="!kbReady || menuBusy"
+            @click="openHeaderMenu"
           >
             ⋯
           </button>
         </UiTooltip>
-        <UiTooltip label="添加笔记">
-          <button
-            type="button"
-            class="new-button"
-            aria-label="添加笔记"
-            :disabled="!store.knowledgeBase || store.knowledgeBase.health !== 'ready'"
-            @click="emit('createNote')"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-          </button>
-        </UiTooltip>
-        <div v-if="createMenuOpen" class="create-menu">
-          <button type="button" @click="chooseHeaderAction('group')">新建分组</button>
-          <button type="button" @click="chooseHeaderAction('preview')">{{ previewLabel }}</button>
-          <button type="button" :disabled="buildBusy" @click="chooseHeaderAction('build')">
-            {{ buildBusy ? '正在构建站点' : '构建站点' }}
-          </button>
-          <hr />
-          <button type="button" @click="chooseHeaderAction('settings')">知识库配置</button>
-          <button type="button" @click="chooseHeaderAction('ide')">使用 IDE 打开</button>
-          <button type="button" @click="chooseHeaderAction('reveal')">打开知识库目录</button>
-        </div>
       </div>
     </div>
 
@@ -696,11 +685,6 @@ const previewLabel = computed(() => {
   gap: 6px;
 }
 
-.header-actions.open > .ui-tooltip-host :deep(.ui-tooltip-popover) {
-  display: none;
-}
-
-.new-button,
 .menu-button {
   height: 28px;
   width: 28px;
@@ -710,77 +694,16 @@ const previewLabel = computed(() => {
   color: var(--text);
   cursor: pointer;
   font-size: 18px;
-}
-
-.new-button {
-  display: grid;
-  place-items: center;
-}
-
-.new-button svg {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.new-button svg {
-  width: 15px;
-  height: 15px;
-}
-
-.menu-button {
   line-height: 20px;
 }
 
-.new-button:hover:not(:disabled),
 .menu-button:hover:not(:disabled) {
   border-color: var(--accent);
   color: var(--accent);
 }
 
-.new-button:disabled,
 .menu-button:disabled {
   opacity: 0.4;
-}
-
-.create-menu {
-  position: absolute;
-  z-index: 80;
-  top: 35px;
-  right: 0;
-  width: 184px;
-  overflow: hidden;
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
-  background: var(--raised);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.34);
-  padding: 4px;
-}
-
-.create-menu button {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text);
-  padding: 8px;
-  font-size: 10px;
-  text-align: left;
-  cursor: pointer;
-}
-
-.create-menu button:hover {
-  background: var(--hover);
-}
-
-.create-menu hr {
-  border: 0;
-  border-top: 1px solid var(--border);
-  margin: 4px 6px;
 }
 
 .search-wrap {

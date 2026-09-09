@@ -58,19 +58,24 @@ import {
   serializeBlockForClipboard,
   type BlockHandleClickTarget
 } from './blockActionMenu'
+import { createDocumentSelectAllPlugin } from './documentSelection'
 import { createCodeBlockTitlePlugin } from './codeBlockTitlePlugin'
+import { createCodeBlockLatexPreviewPlugin } from './codeBlockLatexPreview'
 import { createCodeBlockHighlightBundle } from './codeBlockHighlightPlugin'
 import { CHECK_ICON, COPY_ICON } from './copyIcons'
 import { exitCodeBlockFullscreen, toggleCodeBlockFullscreen } from './codeBlockFullscreen'
 import { githubDark, githubLight } from '@uiw/codemirror-theme-github'
 
+import { deskCodeMirrorLanguages } from '../editor/markdown/codeMirrorLanguages'
 import {
   projectRawBlocksForMilkdown,
   rawBlockProjectionPlugins
 } from '../editor/markdown/rawBlockProjection'
+import { serializeDeskCalloutMdast } from '../editor/markdown/deskCallout'
 import { reconcileMarkdownSource } from '../editor/markdown/sourcePreservation'
 import { flushPendingEdits } from '../editor/markdown/pendingEdits'
 import { createDeskRawBlockView } from './createDeskRawBlockView'
+import { createDeskCalloutView, deskCalloutKeymapPlugin } from './deskCalloutView'
 import { imageAttrPlugins } from '../editor/markdown/imageAttrs'
 import { createDeskImageView } from '../editor/markdown/deskImageView'
 import { resolvePastedImageWidth } from '../editor/markdown/pasteImageWidth'
@@ -397,7 +402,8 @@ function insertTable(): void {
 
 /**
  * 0005：斜杠菜单的 TNotes 项被选中时插入内容。
- * - 容器 / 导图 / 组件 / 代码组 / swiper：插入 markdown（走 raw 块投影），
+ * - tip/info/warning/danger：插入 deskCallout（标题可编辑，正文走普通块）。
+ * - details / 导图 / 组件 / 代码组 / swiper：插入 deskRawBlock，
  *   并自动打开新插入块的「编辑源码」。
  * - 普通代码块：走 Crepe 代码块（createCodeBlockCommand）。
  */
@@ -780,10 +786,12 @@ onMounted(async () => {
     },
     featureConfigs: {
       [Crepe.Feature.CodeMirror]: {
+        languages: deskCodeMirrorLanguages,
         extensions: codeBlockHighlights.extensions,
         theme: document.documentElement.dataset.theme === 'light' ? githubLight : githubDark,
         copyText: '\u200b',
-        copyIcon: COPY_ICON
+        copyIcon: COPY_ICON,
+        previewOnlyByDefault: true
       },
       [Crepe.Feature.Placeholder]: {
         text: '输入 / 插入内容',
@@ -823,9 +831,12 @@ onMounted(async () => {
     }
   })
   editor.editor.use(rawBlockProjectionPlugins)
+  editor.editor.use(createDeskCalloutView())
+  editor.editor.use(deskCalloutKeymapPlugin)
   editor.editor.use(imageAttrPlugins)
   editor.editor.use(standaloneImageParagraphPlugin)
   editor.editor.use(createCodeBlockTitlePlugin())
+  editor.editor.use(createCodeBlockLatexPreviewPlugin())
   editor.editor.use(codeBlockHighlights.plugin)
   editor.editor.use(createMarkdownShortcutInputRules())
   editor.editor.use(createInlineCodeInteractionPlugin())
@@ -835,6 +846,7 @@ onMounted(async () => {
       onRawBlockInserted: openRawSourceEditorAt
     })
   )
+  editor.editor.use(createDocumentSelectAllPlugin({ isPaneActive: () => props.active }))
   editor.editor.use(createRawBlockSelectionPlugin())
   editor.editor.use(createHeadingSectionCollapsePlugin())
   editor.editor.use(
@@ -904,7 +916,11 @@ onMounted(async () => {
     ctx.update(remarkStringifyOptionsCtx, (current) => ({
       ...current,
       bullet: '-' as const,
-      bulletOther: '*' as const
+      bulletOther: '*' as const,
+      handlers: {
+        ...current.handlers,
+        deskCallout: serializeDeskCalloutMdast
+      }
     }))
     ctx.update(uploadConfig.key, (current) => ({
       ...current,
@@ -1003,8 +1019,8 @@ watch(
 
 onBeforeUnmount(() => {
   if (host.value) exitCodeBlockFullscreen(host.value)
-  // Tip/warning Edit drafts live on the atom only after commit. Switching to
-  // source unmounts Crepe; flush first or getMarkdown() still sees empty bodies.
+  // Switching to source unmounts Crepe; flush first so pending raw-block
+  // drafts and in-progress visual edits are committed.
   flushPendingEdits(props.knowledgeBaseId, props.noteUuid, { requireClean: false })
   flushCurrentContent()
   destroyed = true

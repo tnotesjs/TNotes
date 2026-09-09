@@ -269,23 +269,30 @@ export function createDocuments(ctx: DocumentsContext) {
 
   async function writeLocalAttachment(
     knowledgeBaseId: string,
+    noteUuid: string,
     file: File
   ): Promise<AttachmentWriteLocalResult> {
     const data = new Uint8Array(await file.arrayBuffer())
     return resultValue(
       await window.desk.attachments.writeLocal({
         knowledgeBaseId,
+        noteUuid,
         fileName: file.name || `image-${Date.now()}.png`,
         data
       })
     )
   }
 
-  async function uploadImage(knowledgeBaseId: string, file: File): Promise<ImageUploadResult> {
+  async function uploadImage(
+    knowledgeBaseId: string,
+    noteUuid: string,
+    file: File
+  ): Promise<ImageUploadResult> {
     const data = new Uint8Array(await file.arrayBuffer())
     const result = resultValue(
       await window.desk.attachments.uploadImage({
         knowledgeBaseId,
+        noteUuid,
         fileName: file.name || `image-${Date.now()}.png`,
         data
       })

@@ -4,6 +4,7 @@ import { mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import MilkdownMarkdownEditor from './MilkdownMarkdownEditor.vue'
+import { DESK_SELECT_ALL_EVENT } from './documentSelection'
 
 interface EditorHandle {
   insertTextAt(text: string, position?: number): void
@@ -449,6 +450,43 @@ describe('MilkdownMarkdownEditor synchronization', () => {
     // The reference definitions must not surface as visible source cards.
     expect(pm.querySelectorAll('.desk-raw-block:not(.desk-raw-block--hidden)')).toHaveLength(0)
     expect(pm.querySelectorAll('.desk-raw-block--hidden')).toHaveLength(1)
+    wrapper.unmount()
+  })
+
+  it('clears a mixed heading note after select-all then Backspace', async () => {
+    const wrapper = await mountEditor(
+      [
+        '---',
+        'id: c9b10d0b-e8f9-4b98-8199-8a2156f439ea',
+        '---',
+        '',
+        '# 认识 webpack',
+        '',
+        'Webpack 是一个打包工具。',
+        '',
+        '- 依赖管理',
+        '',
+        '结尾',
+        ''
+      ].join('\n')
+    )
+    const pm = wrapper.get('.ProseMirror').element as HTMLElement
+    expect(pm.textContent).toContain('认识 webpack')
+    window.dispatchEvent(new Event(DESK_SELECT_ALL_EVENT))
+    pm.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }))
+    await vi.waitFor(() => {
+      const last = wrapper.emitted<string[]>('change')?.at(-1)?.[0] ?? ''
+      expect(last).toContain('id: c9b10d0b-e8f9-4b98-8199-8a2156f439ea')
+      expect(last).not.toContain('认识 webpack')
+      expect(last).not.toContain('打包工具')
+    })
+    await vi.waitFor(() => {
+      expect(wrapper.find('.crepe-placeholder').exists()).toBe(true)
+      expect(wrapper.find('.ProseMirror-gapcursor').exists()).toBe(false)
+    })
+    const emptyLine = wrapper.get('.ProseMirror p')
+    expect(emptyLine.classes()).toContain('crepe-placeholder')
+    expect((emptyLine.element.textContent ?? '').replace(/\u200b/g, '').trim()).toBe('')
     wrapper.unmount()
   })
 })

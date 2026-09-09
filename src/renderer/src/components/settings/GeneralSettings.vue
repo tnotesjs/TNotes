@@ -132,9 +132,12 @@ async function checkNow(): Promise<void> {
           <em>ms</em>
         </span>
       </label>
-      <label class="switch-field">
+      <label
+        class="switch-field"
+        title="仅源码保存时生效；可视化编辑不会整篇重排"
+      >
         <input v-model="draft.prettier" type="checkbox" />
-        <span>按 Core 规则格式化</span>
+        <span>保存时用 Prettier 格式化 Markdown</span>
       </label>
     </div>
     <div class="settings-row update-row">

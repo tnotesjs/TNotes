@@ -5,7 +5,14 @@ import { codeBlockSchema } from '@milkdown/kit/preset/commonmark'
 import Badge from '@tnotesjs/ui/badge'
 import { createApp, h } from 'vue'
 
-import { renderContainerFromSource, type ResolveImage } from './containerBody'
+import {
+  isVisualCalloutSource,
+  parseContainerFences,
+  renderContainerFromSource,
+  type ResolveImage,
+  type VisualCalloutType
+} from './containerBody'
+import { deskCalloutRemark, deskCalloutSchema, wrapProjectedCalloutBody } from './deskCallout'
 import { parseFencedCode } from './diagramRenderer'
 import { parseFenceTitleFromMeta } from './fenceInfo'
 import {
@@ -66,6 +73,15 @@ const HTML_TAG = /<\/?[A-Za-z][\w.-]*(?=[\s/>])/
 /** Standalone HTML breaks stay in the source for Milkdown's remark-preserve-empty-line. */
 const STANDALONE_BREAK = /^ {0,3}<br\s*\/?>(?:[ \t]*)$/i
 const DIAGRAM_LANGUAGES = new Set(['mermaid', 'mindmap'])
+const COMMENT_OPEN = '<!--'
+const COMMENT_CLOSE = '-->'
+const NESTED_COMMENT_HOSTS = new Set<MarkdownSourceBlockKind>([
+  'heading',
+  'paragraph',
+  'list',
+  'blockquote',
+  'table'
+])
 
 interface ProjectionMarkdownNode extends MarkdownNode {
   type: string
@@ -110,12 +126,183 @@ function isRegionComment(block: MarkdownSourceBlock): boolean {
   return block.kind === 'html' && REGION_COMMENT.test(block.source)
 }
 
+/** True when the whole block is an HTML comment (`<!-- ... -->`). */
+export function isHtmlCommentSource(source: string): boolean {
+  const trimmed = source.trim()
+  if (!trimmed.startsWith(COMMENT_OPEN)) return false
+  const close = trimmed.indexOf(COMMENT_CLOSE)
+  if (close < 0) return false
+  return trimmed.slice(close + COMMENT_CLOSE.length).trim() === ''
+}
+
+/** Author `<!-- ... -->`, not `region:*` machine comments. */
+export function isAuthorHtmlCommentSource(source: string): boolean {
+  return isHtmlCommentSource(source) && !REGION_COMMENT.test(source.trim())
+}
+
+function isAuthorHtmlComment(block: MarkdownSourceBlock): boolean {
+  return block.kind === 'html' && isAuthorHtmlCommentSource(block.source)
+}
+
 function isStandaloneBreak(block: MarkdownSourceBlock): boolean {
   return block.kind === 'html' && STANDALONE_BREAK.test(block.source)
 }
 
+function atLineStart(source: string, index: number): boolean {
+  return index === 0 || source[index - 1] === '\n'
+}
+
+function matchFenceOpen(
+  source: string,
+  index: number
+): { marker: '`' | '~'; length: number; next: number } | null {
+  let cursor = index
+  let spaces = 0
+  while (spaces < 3 && source[cursor] === ' ') {
+    spaces += 1
+    cursor += 1
+  }
+  const marker = source[cursor]
+  if (marker !== '`' && marker !== '~') return null
+  let length = 0
+  while (source[cursor] === marker) {
+    length += 1
+    cursor += 1
+  }
+  if (length < 3) return null
+  while (cursor < source.length && source[cursor] !== '\n' && source[cursor] !== '\r') {
+    cursor += 1
+  }
+  return { marker, length, next: cursor }
+}
+
+function matchFenceClose(
+  source: string,
+  index: number,
+  fence: { marker: '`' | '~'; length: number }
+): number | null {
+  let cursor = index
+  let spaces = 0
+  while (spaces < 3 && source[cursor] === ' ') {
+    spaces += 1
+    cursor += 1
+  }
+  let length = 0
+  while (source[cursor] === fence.marker) {
+    length += 1
+    cursor += 1
+  }
+  if (length < fence.length) return null
+  while (source[cursor] === ' ' || source[cursor] === '\t') cursor += 1
+  if (cursor < source.length && source[cursor] !== '\n' && source[cursor] !== '\r') return null
+  return cursor
+}
+
+function countBackticks(source: string, index: number): number {
+  let length = 0
+  while (source[index + length] === '`') length += 1
+  return length
+}
+
+function expandCommentRemoval(
+  source: string,
+  start: number,
+  end: number
+): { start: number; end: number } {
+  let lineStart = start
+  while (lineStart > 0 && source[lineStart - 1] !== '\n') lineStart -= 1
+
+  let after = end
+  while (after < source.length && source[after] !== '\n' && source[after] !== '\r') after += 1
+
+  const before = source.slice(lineStart, start)
+  const rest = source.slice(end, after)
+  if (before.trim() !== '' || rest.trim() !== '') return { start, end }
+
+  if (source[after] === '\r') after += 1
+  if (source[after] === '\n') after += 1
+  return { start: lineStart, end: after }
+}
+
+/**
+ * Drops HTML comments from a block that Milkdown will parse as normal Markdown.
+ * Fenced and inline code keep their `<!-- -->` bytes.
+ */
+export function stripHtmlCommentsOutsideCode(source: string): string {
+  if (!source.includes(COMMENT_OPEN)) return source
+
+  const ranges: Array<{ start: number; end: number }> = []
+  let index = 0
+  let fence: { marker: '`' | '~'; length: number } | null = null
+  let inlineTicks = 0
+
+  while (index < source.length) {
+    if (fence) {
+      if (atLineStart(source, index)) {
+        const close = matchFenceClose(source, index, fence)
+        if (close != null) {
+          index = close
+          fence = null
+          continue
+        }
+      }
+      index += 1
+      continue
+    }
+
+    if (inlineTicks > 0) {
+      if (countBackticks(source, index) === inlineTicks) {
+        index += inlineTicks
+        inlineTicks = 0
+        continue
+      }
+      index += 1
+      continue
+    }
+
+    if (atLineStart(source, index)) {
+      const open = matchFenceOpen(source, index)
+      if (open) {
+        fence = { marker: open.marker, length: open.length }
+        index = open.next
+        continue
+      }
+    }
+
+    const ticks = countBackticks(source, index)
+    if (ticks > 0) {
+      inlineTicks = ticks
+      index += ticks
+      continue
+    }
+
+    if (source.startsWith(COMMENT_OPEN, index)) {
+      const close = source.indexOf(COMMENT_CLOSE, index + COMMENT_OPEN.length)
+      if (close < 0) break
+      ranges.push(expandCommentRemoval(source, index, close + COMMENT_CLOSE.length))
+      index = close + COMMENT_CLOSE.length
+      continue
+    }
+
+    index += 1
+  }
+
+  if (ranges.length === 0) return source
+
+  let result = ''
+  let cursor = 0
+  for (const range of ranges) {
+    if (range.start < cursor) continue
+    result += source.slice(cursor, range.start)
+    cursor = range.end
+  }
+  return result + source.slice(cursor)
+}
+
 function fenceLanguage(source: string): string {
-  return source.match(/^ {0,3}(?:`{3,}|~{3,})\s*([^\s]+)/)?.[1]?.toLowerCase() ?? ''
+  // Only the opening fence line. `\s` must not eat the newline, or an unlabeled
+  // fence whose first body line is `mindmap` / `mermaid` is misread as a diagram.
+  return parseFencedCode(source).lang.toLowerCase()
 }
 
 function isDiagramFence(block: MarkdownSourceBlock): boolean {
@@ -163,24 +350,45 @@ export function projectRawBlocksForMilkdown(source: string): string {
     // Leave standalone <br /> for Milkdown empty-paragraph round-trip; do not
     // project them as raw HTML cards.
     if (isStandaloneBreak(block)) return
-    if (!shouldProjectBlock(block)) return
-    const marker = createProjectedRawBlockMarker({
-      kind: block.kind,
-      source: block.source,
-      // Frontmatter and reference definitions are machine metadata, not authoring
-      // content. Keep them as hidden atoms so serialization still restores bytes
-      // without showing a source card.
-      hidden:
-        isRegionComment(block) ||
-        block.kind === 'raw-frontmatter' ||
-        block.kind === 'raw-reference-definition'
-    })
-    // Keep definitions in the parser input so reference usages still resolve. Remark consumes
-    // them; the adjacent atom is what restores their exact source during serialization.
-    replacements.set(
-      block.id,
-      block.kind === 'raw-reference-definition' ? `${block.source}\n${marker}` : marker
-    )
+    if (block.kind === 'raw-container' && isVisualCalloutSource(block.source)) {
+      const parsed = parseContainerFences(block.source)
+      const inner = parsed.body ? projectRawBlocksForMilkdown(`${parsed.body}\n`) : ''
+      replacements.set(
+        block.id,
+        wrapProjectedCalloutBody(
+          {
+            calloutType: parsed.name as VisualCalloutType,
+            title: parsed.title,
+            openColons: parsed.openColons
+          },
+          inner
+        )
+      )
+      return
+    }
+    if (shouldProjectBlock(block)) {
+      const marker = createProjectedRawBlockMarker({
+        kind: block.kind,
+        source: block.source,
+        // Frontmatter, reference definitions, and HTML comments are not visual
+        // authoring. Hidden atoms keep bytes for reconcile without a source card.
+        hidden:
+          isRegionComment(block) ||
+          isAuthorHtmlComment(block) ||
+          block.kind === 'raw-frontmatter' ||
+          block.kind === 'raw-reference-definition'
+      })
+      // Keep definitions in the parser input so reference usages still resolve. Remark consumes
+      // them; the adjacent atom is what restores their exact source during serialization.
+      replacements.set(
+        block.id,
+        block.kind === 'raw-reference-definition' ? `${block.source}\n${marker}` : marker
+      )
+      return
+    }
+    if (!NESTED_COMMENT_HOSTS.has(block.kind) || !block.source.includes(COMMENT_OPEN)) return
+    const stripped = stripHtmlCommentsOutsideCode(block.source)
+    if (stripped !== block.source) replacements.set(block.id, stripped)
   })
 
   return serializeMarkdownSource(document, replacements)
@@ -563,6 +771,30 @@ export const sourcePreservingCodeBlockSchema = codeBlockSchema.extendSchema((bas
   }
 })
 
+const MUTABLE_RAW_KINDS = new Set(['raw-container', 'raw-component', 'raw-diagram'])
+
+export function isHiddenRawBlock(node: {
+  type: { name: string }
+  attrs: Record<string, unknown>
+}): boolean {
+  return node.type.name === 'deskRawBlock' && node.attrs.hidden === true
+}
+
+/** Locked cards (frontmatter, includes, generated TOC, …) cannot be deleted in-place. */
+export function isImmutableRawBlock(node: {
+  type: { name: string }
+  attrs: Record<string, unknown>
+}): boolean {
+  if (node.type.name !== 'deskRawBlock') return false
+  if (MUTABLE_RAW_KINDS.has(String(node.attrs.kind))) return false
+  // Author comments are hidden so they do not steal visual interaction, but they
+  // must remain deletable (⌘A+Delete, or deleting the surrounding visible range).
+  if (node.attrs.kind === 'html' && isAuthorHtmlCommentSource(String(node.attrs.source ?? ''))) {
+    return false
+  }
+  return true
+}
+
 function rawBlockSignatures(document: {
   descendants(
     visitor: (node: { type: { name: string }; attrs: Record<string, unknown> }) => void
@@ -570,17 +802,7 @@ function rawBlockSignatures(document: {
 }): string[] {
   const signatures: string[] = []
   document.descendants((node) => {
-    if (node.type.name !== 'deskRawBlock') return
-    // These three kinds all have the inline source editor wired by
-    // MilkdownMarkdownEditor. They must be mutable after slash/shortcut insert;
-    // opaque HTML, includes and generated blocks remain byte-locked.
-    if (
-      node.attrs.kind === 'raw-container' ||
-      node.attrs.kind === 'raw-component' ||
-      node.attrs.kind === 'raw-diagram'
-    ) {
-      return
-    }
+    if (!isImmutableRawBlock(node)) return
     signatures.push(
       `${String(node.attrs.kind)}\u0000${String(node.attrs.hidden)}\u0000${String(node.attrs.source)}`
     )
@@ -697,7 +919,9 @@ export const inlineBadgePlugin = $prose(
 
 export const rawBlockProjectionPlugins: MilkdownPlugin[] = [
   ...rawBlockProjectionRemark,
+  ...deskCalloutRemark,
   ...rawBlockSchema,
+  ...deskCalloutSchema,
   ...sourcePreservingCodeBlockSchema,
   immutableRawBlockPlugin,
   codeLineNumberMetaPlugin,

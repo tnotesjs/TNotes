@@ -1,5 +1,6 @@
 import { CHECK_ICON, COPY_ICON } from '../../markdown/copyIcons'
 import { createCodeExpandButton } from '../../markdown/codeBlockFullscreen'
+import { UNLABELED_CODE_LANGUAGE } from '../../markdown/codeLanguage'
 import {
   createContainerSourceEditor,
   type ContainerSourceEditorHandle
@@ -48,7 +49,7 @@ export interface MountCodeTabEditorOptions {
 }
 
 function normalizeLanguageInput(value: string): string {
-  return value.trim() || 'text'
+  return value.trim() || UNLABELED_CODE_LANGUAGE
 }
 
 async function defaultCopy(text: string): Promise<void> {
@@ -87,7 +88,8 @@ export function mountCodeTabEditor(
   options: MountCodeTabEditorOptions
 ): CodeTabEditorHandle {
   let savedContent = options.initialContent
-  let currentLanguage = (options.language || 'text').trim() || 'text'
+  let currentLanguage =
+    (options.language || UNLABELED_CODE_LANGUAGE).trim() || UNLABELED_CODE_LANGUAGE
   let dirty = false
   let saving = false
   let cancelled = false
@@ -104,7 +106,7 @@ export function mountCodeTabEditor(
   languageInput.className = 'desk-code-language'
   languageInput.spellcheck = false
   languageInput.autocomplete = 'off'
-  languageInput.placeholder = 'js'
+  languageInput.placeholder = UNLABELED_CODE_LANGUAGE
   languageInput.title = '语言'
   languageInput.setAttribute('aria-label', '语言')
   languageInput.value = currentLanguage

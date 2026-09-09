@@ -8,9 +8,11 @@ import { getMarkdown, replaceAll } from '@milkdown/kit/utils'
 
 import {
   createProjectedRawBlockMarker,
+  isAuthorHtmlCommentSource,
   projectRawBlocksForMilkdown,
   rawBlockProjectionPlugins,
   readProjectedRawBlockMarker,
+  stripHtmlCommentsOutsideCode,
   type ProjectedRawBlock
 } from './rawBlockProjection'
 import { reconcileMarkdownSource } from './sourcePreservation'
@@ -38,6 +40,30 @@ async function createEditor(source: string): Promise<Editor> {
   await editor.create()
   return editor
 }
+
+describe('HTML comment helpers', () => {
+  it('treats paired comments as author comments and leaves region comments to the machine path', () => {
+    expect(isAuthorHtmlCommentSource('<!-- leftover -->')).toBe(true)
+    expect(isAuthorHtmlCommentSource('<!--\n- todo\n -->')).toBe(true)
+    expect(isAuthorHtmlCommentSource('<!-- region:toc -->')).toBe(false)
+    expect(isAuthorHtmlCommentSource('<aside>raw</aside>')).toBe(false)
+  })
+
+  it('strips comments outside code and keeps fenced or inline examples', () => {
+    const list = [
+      '- `index3.js`',
+      '  <!-- - ![2.zip](2.zip.png) -->',
+      '  - nested'
+    ].join('\n')
+    expect(stripHtmlCommentsOutsideCode(list)).toBe(['- `index3.js`', '  - nested'].join('\n'))
+    expect(stripHtmlCommentsOutsideCode('```html\n<!-- keep -->\n```')).toBe(
+      '```html\n<!-- keep -->\n```'
+    )
+    expect(stripHtmlCommentsOutsideCode('Use `<!-- inline -->` here.')).toBe(
+      'Use `<!-- inline -->` here.'
+    )
+  })
+})
 
 describe('Milkdown raw block projection', () => {
   it('round-trips Unicode and original line endings through an opaque marker', () => {
@@ -92,6 +118,20 @@ describe('Milkdown raw block projection', () => {
       kind: 'raw-frontmatter',
       hidden: true
     })
+  })
+
+  it('does not project an unlabeled fence whose body starts with mindmap', () => {
+    const source = ['```', 'mindmap', '  Root', '    A', '      B', '      C', '```', ''].join('\n')
+    const projected = projectRawBlocksForMilkdown(source)
+    expect(projected).not.toContain('raw-diagram')
+    expect(projected).toContain('```\nmindmap\n  Root\n    A\n      B\n      C\n```')
+  })
+
+  it('still projects mermaid and mindmap info-string fences as diagrams', () => {
+    expect(projectRawBlocksForMilkdown('```mermaid\nmindmap\n  Root\n```\n')).toContain(
+      'raw-diagram'
+    )
+    expect(projectRawBlocksForMilkdown('```mindmap\n- A\n```\n')).toContain('raw-diagram')
   })
 
   it('leaves the leading H1 editable and projects only the TOC region as an immutable atom', async () => {
@@ -292,7 +332,7 @@ describe('Milkdown raw block projection', () => {
       },
       { kind: 'raw-reference-definition', source: '[shared]: ./shared.md', hidden: true },
       { kind: 'raw-component', source: '<Demo value="中文" />', hidden: false },
-      { kind: 'html', source: '<!-- ordinary comment -->', hidden: false },
+      { kind: 'html', source: '<!-- ordinary comment -->', hidden: true },
       { kind: 'html', source: '<aside data-x="1">raw</aside>', hidden: false },
       {
         kind: 'table',
@@ -328,8 +368,8 @@ describe('Milkdown raw block projection', () => {
     rawBlocks.forEach((block) => expect(markdown).toContain(block.source))
     expect(markdown).toContain('```ts\nx = 1\n```')
     expect(document.querySelectorAll('.desk-raw-block')).toHaveLength(rawBlocks.length)
-    // Frontmatter and reference-definition blocks render hidden; the rest are visible.
-    expect(document.querySelectorAll('.desk-raw-block--hidden')).toHaveLength(2)
+    // Frontmatter, reference definitions, and author HTML comments render hidden.
+    expect(document.querySelectorAll('.desk-raw-block--hidden')).toHaveLength(3)
   })
 
   it('rejects visual transactions that delete or mutate an opaque raw block', async () => {
@@ -375,5 +415,62 @@ describe('Milkdown raw block projection', () => {
     expect(baseline).toContain('[the guide](https://example.com/docs "Docs title")')
     expect(baseline).toContain('![the logo](./images/logo.png "Logo title")')
     expect(reconciled).toBe(editedInput)
+  })
+
+  it('hides top-level HTML comments and strips nested comments outside code', () => {
+    const source = [
+      '<!-- leftover todo -->',
+      '',
+      '### 3.2. 脚本使用说明',
+      '',
+      '- `index3.js` 按照字母来提取',
+      '  <!-- - ![2.zip](2.zip.png) -->',
+      '  - 将所有单词本中的词汇提取出来',
+      '',
+      '```html',
+      '<!-- keep in fence -->',
+      '```',
+      '',
+      'Use `<!-- inline -->` as code.',
+      ''
+    ].join('\n')
+    const projected = projectRawBlocksForMilkdown(source)
+    const markers = (projected.match(/<!--desk-raw-block:v1:[^\n]+-->/g) ?? [])
+      .map(readProjectedRawBlockMarker)
+      .filter((block): block is ProjectedRawBlock => Boolean(block))
+
+    expect(markers).toEqual([
+      { kind: 'html', source: '<!-- leftover todo -->', hidden: true }
+    ])
+    expect(projected).not.toContain('![2.zip](2.zip.png)')
+    expect(projected).toContain('index3.js')
+    expect(projected).toContain('<!-- keep in fence -->')
+    expect(projected).toContain('`<!-- inline -->`')
+  })
+
+  it('round-trips comments until the host list is edited', async () => {
+    const source = [
+      '### 3.2. 脚本使用说明',
+      '',
+      '- `index3.js` 按照字母来提取',
+      '  <!-- - ![2.zip](2.zip.png) -->',
+      '  - 将所有单词本中的词汇提取出来',
+      ''
+    ].join('\n')
+    const editor = await createEditor(source)
+    const baseline = editor.action(getMarkdown())
+    expect(reconcileMarkdownSource(source, baseline, baseline)).toBe(source)
+    expect(baseline).not.toContain('<!--')
+
+    const edited = [
+      '### 3.2. 脚本使用说明',
+      '',
+      '- `index3.js` 按照字母来提取',
+      '  - 改过的子项',
+      ''
+    ].join('\n')
+    editor.action(replaceAll(projectRawBlocksForMilkdown(edited), true))
+    const current = editor.action(getMarkdown())
+    expect(reconcileMarkdownSource(source, baseline, current)).not.toContain('2.zip.png')
   })
 })

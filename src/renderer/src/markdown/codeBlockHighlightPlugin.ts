@@ -1,3 +1,4 @@
+import type { Extension } from '@codemirror/state'
 import type { MilkdownPlugin } from '@milkdown/kit/ctx'
 import { Plugin } from '@milkdown/kit/prose/state'
 import type { EditorView } from '@milkdown/kit/prose/view'
@@ -6,6 +7,7 @@ import { EditorView as CodeMirrorView } from '@codemirror/view'
 
 import { codeMirrorMultiCursorExtensions } from '../editor/markdown/codeMirrorMultiCursor'
 import { createCodeLineHighlightExtension } from '../editor/markdown/codeLineHighlightExtension'
+import { createLatexCodeBlockKeymap } from './codeBlockLatexKeymap'
 
 function findCodeBlockPos(view: EditorView, dom: HTMLElement): number | null {
   try {
@@ -31,7 +33,7 @@ function findCodeBlockDomFromCm(cm: CodeMirrorView): HTMLElement | null {
  * - `plugin` → `editor.editor.use(plugin)` to sync PM attrs ↔ CM
  */
 export function createCodeBlockHighlightBundle(): {
-  extensions: ReturnType<typeof createCodeLineHighlightExtension>['extensions']
+  extensions: Extension[]
   plugin: MilkdownPlugin
 } {
   let latestPmView: EditorView | null = null
@@ -104,5 +106,12 @@ export function createCodeBlockHighlightBundle(): {
     })
   })
 
-  return { extensions: [...codeMirrorMultiCursorExtensions(), ...highlight.extensions], plugin }
+  return {
+    extensions: [
+      ...codeMirrorMultiCursorExtensions(),
+      ...highlight.extensions,
+      createLatexCodeBlockKeymap(() => latestPmView)
+    ],
+    plugin
+  }
 }

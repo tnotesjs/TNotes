@@ -109,6 +109,23 @@ export class SearchManager {
     }
   }
 
+  /** Content-only note save: update just that document, no full rebuild. */
+  async upsert(workspacePath: string, document: SearchIndexDocument): Promise<void> {
+    if (workspacePath !== this.workspacePath) return
+    try {
+      const result = await this.request<{ documentCount: number }>('upsert', {
+        document,
+        cachePath: this.cachePath(workspacePath)
+      })
+      if (workspacePath !== this.workspacePath) return
+      this.documentCount = result.documentCount
+    } catch (error) {
+      deskLog('search', 'upsert failed', error instanceof Error ? error.message : String(error))
+    } finally {
+      this.emitChanged()
+    }
+  }
+
   async search(request: SearchRequest): Promise<SearchResultDto[]> {
     if (!request.query.trim() || !this.workspacePath) return []
     await this.ready

@@ -55,7 +55,7 @@ const mixedNote = [
   'const x = 1',
   '```',
   '',
-  '::: info INFO',
+  '::: details DETAILS',
   '',
   '高亮',
   '',
@@ -82,7 +82,7 @@ describe('classifySelectionRange', () => {
 
   it('treats images, fences and raw cards as blocks', async () => {
     const editor = await createEditor(
-      '![](https://example.com/a.png)\n\n```js\nconst x = 1\n```\n\n::: info INFO\n\n高亮\n\n:::\n'
+      '![](https://example.com/a.png)\n\n```js\nconst x = 1\n```\n\n::: details DETAILS\n\n高亮\n\n:::\n'
     )
     editor.action((ctx) => {
       const { doc } = ctx.get(editorViewCtx).state

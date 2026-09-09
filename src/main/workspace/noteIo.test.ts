@@ -7,7 +7,13 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { createWorkspace } from '@tnotesjs/kb'
 
 import { toNoteDocument } from './dto'
-import { readNote, resolveNoteAsset, resolveNoteIndex, saveNote } from './noteIo'
+import {
+  readNote,
+  resolveNoteAsset,
+  resolveNoteIndex,
+  saveNote,
+  writeLocalAttachment
+} from './noteIo'
 import type { KnowledgeBaseHandle } from './types'
 
 const cleanups: Array<() => Promise<void>> = []
@@ -127,6 +133,23 @@ describe('desk noteIo over @tnotesjs/kb', () => {
     )
     expect(saved.note.content).not.toContain('draft')
     expect(saved.note.content).not.toContain('title:')
+  })
+
+  it('names pasted local assets with the note index and timestamp', async () => {
+    const handle = await makeHandle()
+    const result = await writeLocalAttachment(
+      handle,
+      {
+        knowledgeBaseId: handle.id,
+        noteUuid: '0001',
+        fileName: 'clip.PNG',
+        data: new Uint8Array([1, 2, 3])
+      },
+      noopEffects
+    )
+    expect(result.markdownPath).toMatch(
+      /^\.\.\/assets\/0001-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}\.png$/
+    )
   })
 
   it('resolves kb-level asset references and rejects traversal', async () => {

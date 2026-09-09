@@ -2,7 +2,6 @@ import { autocompletion, completionKeymap } from '@codemirror/autocomplete'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
 import { bracketMatching, foldGutter, indentOnInput } from '@codemirror/language'
-import { languages } from '@codemirror/language-data'
 import { searchKeymap } from '@codemirror/search'
 import { Compartment, EditorState, type Extension } from '@codemirror/state'
 import {
@@ -19,6 +18,7 @@ import {
 } from '@codemirror/view'
 import { githubDark, githubLight } from '@uiw/codemirror-theme-github'
 
+import { matchDeskLanguage } from './codeMirrorLanguages'
 import { codeMirrorRectangularSelection } from './codeMirrorMultiCursor'
 import { createCodeLineHighlightExtension } from './codeLineHighlightExtension'
 import { isEmptyRawBlockSource } from './rawBlockEmpty'
@@ -93,11 +93,7 @@ export async function resolveLanguageExtension(language?: string): Promise<Exten
   const name = normalizeLanguageName(language ?? '')
   if (!name || name === 'markdown') return markdown()
 
-  const matched =
-    languages.find((item) => item.name.toLowerCase() === name) ??
-    languages.find((item) => item.alias.some((alias) => alias.toLowerCase() === name)) ??
-    languages.find((item) => item.extensions.includes(name))
-
+  const matched = matchDeskLanguage(name)
   if (!matched) return []
   try {
     return await matched.load()

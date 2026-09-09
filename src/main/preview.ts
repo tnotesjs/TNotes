@@ -8,6 +8,7 @@ interface PreviewServerLike {
     address(): unknown
     close(callback?: () => void): void
   } | null
+  close?: () => Promise<void> | void
 }
 
 interface PreviewHandle {
@@ -25,8 +26,8 @@ function notePreviewUrl(baseUrl: string, noteDirName?: string): string {
 }
 
 /**
- * Embedded preview: runs @tnotesjs/ssg's dev server in-process (full rebuild
- * on change + SSE reload). No per-kb package.json / tn:dev script needed.
+ * Embedded preview: runs @tnotesjs/ssg's on-demand Vite SSR in-process.
+ * No per-kb package.json / tn:dev script needed.
  */
 export class PreviewManager {
   private handles = new Map<string, PreviewHandle>()
@@ -130,6 +131,13 @@ export class PreviewManager {
     const server = handle.server
     handle.server = null
     if (!server) return
+    if (server.close) {
+      await Promise.race([
+        Promise.resolve(server.close()),
+        new Promise<void>((resolve) => setTimeout(resolve, 2500)),
+      ])
+      return
+    }
     await new Promise<void>((resolve) => {
       server.httpServer?.close(() => resolve())
       setTimeout(resolve, 2500)

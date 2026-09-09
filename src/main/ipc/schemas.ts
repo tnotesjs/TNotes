@@ -179,6 +179,20 @@ export const recoveryDeleteSchema = z.object({
   path: z.string().min(1).max(1024).optional()
 })
 
+export const knowledgeBaseCreateSchema = z.object({
+  folderName: z
+    .string()
+    .trim()
+    .min(1)
+    .max(100)
+    .regex(/^[A-Za-z0-9._-]+$/, '须匹配 ^[A-Za-z0-9._-]{1,100}$'),
+  title: z.string().trim().max(200).optional(),
+  packageJson: z.boolean().optional(),
+  githubPages: z.boolean().optional(),
+  readme: z.boolean().optional(),
+  gitInit: z.boolean().optional()
+})
+
 export const knowledgeBaseSettingsWriteSchema = z.object({
   knowledgeBaseId: z.string().min(1),
   name: z.string().min(1).max(100),
@@ -212,6 +226,7 @@ export const knowledgeBaseIconWriteSchema = z.discriminatedUnion('kind', [
 
 export const attachmentWriteLocalSchema = z.object({
   knowledgeBaseId: z.string().min(1),
+  noteUuid: z.string().min(1),
   fileName: z.string().min(1).max(240),
   data: z.instanceof(Uint8Array).refine((data) => data.byteLength <= 25 * 1024 * 1024, {
     message: '图片不能超过 25 MB'

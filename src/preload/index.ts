@@ -18,6 +18,8 @@ import type {
   ExternalNoteChangeEvent,
   KbBuildResult,
   KnowledgeBaseDetail,
+  KnowledgeBaseCreateRequest,
+  KnowledgeBaseCreateResult,
   KnowledgeBaseSettingsDto,
   NoteCreateRequest,
   NoteDocumentDto,
@@ -35,6 +37,10 @@ import type {
   TabShortcutCommand,
   TabCloseChoice,
   ContextMenuAction,
+  KnowledgeSidebarMenuAction,
+  KnowledgeSidebarMenuRequest,
+  NavigatorSidebarMenuAction,
+  NavigatorSidebarMenuRequest,
   TocCreateGroupRequest,
   TocDeleteRequest,
   TocEntryRefDto,
@@ -58,6 +64,10 @@ const api: DeskApi = {
     confirmTabClose: (titles) => invoke<TabCloseChoice>(IPC_CHANNELS.tabConfirmClose, titles),
     showContextMenu: (request) =>
       invoke<ContextMenuAction | null>(IPC_CHANNELS.contextMenuShow, request),
+    showKnowledgeSidebarMenu: (request: KnowledgeSidebarMenuRequest) =>
+      invoke<KnowledgeSidebarMenuAction | null>(IPC_CHANNELS.knowledgeSidebarMenuShow, request),
+    showNavigatorSidebarMenu: (request: NavigatorSidebarMenuRequest) =>
+      invoke<NavigatorSidebarMenuAction | null>(IPC_CHANNELS.navigatorSidebarMenuShow, request),
     onTabShortcut: (callback) => {
       const listener = (_event: Electron.IpcRendererEvent, command: TabShortcutCommand): void =>
         callback(command)
@@ -80,6 +90,7 @@ const api: DeskApi = {
     choose: () => invoke<WorkspaceOverview>(IPC_CHANNELS.workspaceChoose),
     set: (path) => invoke<WorkspaceOverview>(IPC_CHANNELS.workspaceSet, path),
     refresh: () => invoke<WorkspaceOverview>(IPC_CHANNELS.workspaceRefresh),
+    reveal: () => invoke<void>(IPC_CHANNELS.workspaceReveal),
     revealKnowledgeBase: (knowledgeBaseId) =>
       invoke<void>(IPC_CHANNELS.workspaceRevealKnowledgeBase, knowledgeBaseId),
     onChanged: (callback) => {
@@ -102,6 +113,8 @@ const api: DeskApi = {
       invoke<ImageSettingsValidateResult>(IPC_CHANNELS.imageSettingsValidate, request)
   },
   knowledgeBases: {
+    create: (request: KnowledgeBaseCreateRequest) =>
+      invoke<KnowledgeBaseCreateResult>(IPC_CHANNELS.knowledgeBaseCreate, request),
     read: (knowledgeBaseId) =>
       invoke<KnowledgeBaseDetail>(IPC_CHANNELS.knowledgeBaseRead, knowledgeBaseId),
     readSettings: (knowledgeBaseId) =>
@@ -205,6 +218,7 @@ const api: DeskApi = {
     goForward: (tabId) => invoke<void>(IPC_CHANNELS.webGoForward, tabId),
     reload: (tabId) => invoke<void>(IPC_CHANNELS.webReload, tabId),
     stop: (tabId) => invoke<void>(IPC_CHANNELS.webStop, tabId),
+    selectAll: (tabId) => invoke<void>(IPC_CHANNELS.webSelectAll, tabId),
     openExternal: (url) => invoke<void>(IPC_CHANNELS.webOpenExternal, url),
     clearBrowsingData: () => invoke<void>(IPC_CHANNELS.webClearBrowsingData),
     onStateChanged: (callback) => {

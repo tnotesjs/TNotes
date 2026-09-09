@@ -32,8 +32,21 @@ const CALLOUT_TYPES = new Set(['info', 'tip', 'warning', 'danger', 'note'])
 /** Callouts that use structured title+body editing (fences stay locked). */
 export const STRUCTURED_CALLOUT_TYPES = new Set(['tip', 'info', 'warning', 'danger', 'details'])
 
+/** tip/info/warning/danger are visual ProseMirror containers; details stays an atom. */
+export const VISUAL_CALLOUT_TYPES = new Set(['tip', 'info', 'warning', 'danger'])
+
+export type VisualCalloutType = 'tip' | 'info' | 'warning' | 'danger'
+
 export function isStructuredCalloutName(name: string): boolean {
   return STRUCTURED_CALLOUT_TYPES.has(name.toLowerCase())
+}
+
+export function isVisualCalloutName(name: string): boolean {
+  return VISUAL_CALLOUT_TYPES.has(name.toLowerCase())
+}
+
+export function isVisualCalloutSource(source: string): boolean {
+  return isVisualCalloutName(parseContainerSource(source).name)
 }
 
 export function isStructuredCalloutSource(source: string): boolean {

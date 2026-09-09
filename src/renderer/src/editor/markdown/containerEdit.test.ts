@@ -6,7 +6,6 @@ import { editorViewCtx } from '@milkdown/kit/core'
 import { getMarkdown } from '@milkdown/kit/utils'
 
 import { projectRawBlocksForMilkdown, rawBlockProjectionPlugins } from './rawBlockProjection'
-import { deleteDeskRawBlockAt } from './rawBlockEmpty'
 import { reconcileMarkdownSource } from './sourcePreservation'
 
 function createEditor(source: string): Promise<{ root: HTMLElement; crepe: Crepe }> {
@@ -100,22 +99,30 @@ describe('container source editing', () => {
     }
   })
 
-  it('deletes an empty tip container atom (empty-Backspace path)', async () => {
+  it('deletes an empty tip callout (empty-Backspace path)', async () => {
     const source = 'before\n\n::: tip 💡 TIP\n\n\n\n:::\n\nafter\n'
     const { root, crepe } = await createEditor(source)
     try {
-      const pos = findRawContainerPos(crepe)
-      expect(pos).not.toBeNull()
-      const removed = crepe.editor.action((ctx) => {
+      const pos = crepe.editor.action((ctx) => {
         const view = ctx.get(editorViewCtx)
-        return deleteDeskRawBlockAt(view, pos!)
+        let found: number | null = null
+        view.state.doc.descendants((node, p) => {
+          if (node.type.name === 'deskCallout' && found == null) found = p
+        })
+        return found
       })
-      expect(removed).toBe(true)
+      expect(pos).not.toBeNull()
+      crepe.editor.action((ctx) => {
+        const view = ctx.get(editorViewCtx)
+        const node = view.state.doc.nodeAt(pos!)
+        expect(node?.type.name).toBe('deskCallout')
+        view.dispatch(view.state.tr.delete(pos!, pos! + node!.nodeSize))
+      })
       let remaining = 0
       crepe.editor.action((ctx) => {
         const view = ctx.get(editorViewCtx)
         view.state.doc.descendants((node) => {
-          if (node.type.name === 'deskRawBlock') remaining += 1
+          if (node.type.name === 'deskCallout') remaining += 1
         })
       })
       expect(remaining).toBe(0)

@@ -103,6 +103,13 @@ describe('tab shortcuts', () => {
     expect(resolveTabShortcut(input({ key: 'w', control: true }), 'darwin')).toBeNull()
   })
 
+  it('maps Command+A and Ctrl+A to in-editor select-all', () => {
+    expect(resolveTabShortcut(input({ key: 'a', meta: true }), 'darwin')).toBe('select-all')
+    expect(resolveTabShortcut(input({ key: 'a', control: true }), 'win32')).toBe('select-all')
+    expect(resolveTabShortcut(input({ key: 'a', control: true }), 'darwin')).toBeNull()
+    expect(resolveTabShortcut(input({ key: 'a', meta: true, shift: true }), 'darwin')).toBeNull()
+  })
+
   it('cycles tabs forward and backward with Control+Tab', () => {
     expect(resolveTabShortcut(input({ key: 'Tab', control: true }), 'darwin')).toBe('next-tab')
     expect(resolveTabShortcut(input({ key: 'Tab', control: true, shift: true }), 'darwin')).toBe(

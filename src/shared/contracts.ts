@@ -4,10 +4,14 @@ export const IPC_CHANNELS = {
   tabShortcut: 'tab:shortcut',
   tabConfirmClose: 'tab:confirm-close',
   contextMenuShow: 'context-menu:show',
+  knowledgeSidebarMenuShow: 'knowledge-sidebar-menu:show',
+  navigatorSidebarMenuShow: 'navigator-sidebar-menu:show',
   workspaceChoose: 'workspace:choose',
   workspaceSet: 'workspace:set',
   workspaceRefresh: 'workspace:refresh',
+  workspaceReveal: 'workspace:reveal',
   workspaceRevealKnowledgeBase: 'workspace:reveal-knowledge-base',
+  knowledgeBaseCreate: 'knowledge-base:create',
   knowledgeBaseRead: 'knowledge-base:read',
   knowledgeBaseReadSettings: 'knowledge-base:read-settings',
   knowledgeBaseWriteSettings: 'knowledge-base:write-settings',
@@ -61,6 +65,7 @@ export const IPC_CHANNELS = {
   webGoForward: 'web:go-forward',
   webReload: 'web:reload',
   webStop: 'web:stop',
+  webSelectAll: 'web:select-all',
   webOpenExternal: 'web:open-external',
   webClearBrowsingData: 'web:clear-browsing-data',
   previewStart: 'preview:start',
@@ -150,6 +155,24 @@ export interface KnowledgeBaseSettingsWriteRequest {
   statsEnabled: boolean
 }
 
+export interface KnowledgeBaseCreateRequest {
+  folderName: string
+  title?: string
+  /** Write package.json for CLI / local build. Implied by githubPages. */
+  packageJson?: boolean
+  /** Write GitHub Pages deploy.yml (also enables packageJson). */
+  githubPages?: boolean
+  /** Write root README.md. */
+  readme?: boolean
+  /** Run git init in the new knowledge-base folder. */
+  gitInit?: boolean
+}
+
+export interface KnowledgeBaseCreateResult {
+  overview: WorkspaceOverview
+  knowledgeBaseId: string
+}
+
 export type KnowledgeBaseIconWriteRequest =
   | {
       knowledgeBaseId: string
@@ -223,6 +246,33 @@ export type ContextMenuRequest =
   | { kind: 'group' }
   | { kind: 'tab'; tabType: 'note' | 'web' | 'kb-settings'; pinned: boolean }
   | { kind: 'code-group-tab' }
+
+export interface KnowledgeSidebarMenuRequest {
+  hasWorkspace: boolean
+  loading: boolean
+}
+
+export type KnowledgeSidebarMenuAction =
+  | 'create'
+  | 'refresh'
+  | 'reveal-workspace'
+  | 'choose-workspace'
+
+export interface NavigatorSidebarMenuRequest {
+  ready: boolean
+  previewLabel: string
+  buildBusy: boolean
+}
+
+export type NavigatorSidebarMenuAction =
+  | 'create-note'
+  | 'create-group'
+  | 'preview'
+  | 'build'
+  | 'settings'
+  | 'ide'
+  | 'reveal'
+
 export type TabShortcutCommand =
   | { type: 'activate-tab-by-number'; number: number; sourceTabId?: string }
   | 'close-active-tab-or-window'
@@ -239,6 +289,7 @@ export type TabShortcutCommand =
   | 'reset-app-zoom'
   | 'open-quick-open'
   | 'open-command-palette'
+  | 'select-all'
 export type ThemeMode = 'system' | 'light' | 'dark'
 export type InterfaceDensity = 'compact' | 'comfortable'
 export type IdeKind = 'vscode' | 'cursor'
@@ -586,6 +637,8 @@ export interface NoteUpdateConfigRequest {
 
 export interface AttachmentWriteLocalRequest {
   knowledgeBaseId: string
+  /** Owning note — local paste names start with this note's 4-digit index. */
+  noteUuid: string
   fileName: string
   data: Uint8Array
 }
@@ -744,6 +797,12 @@ export interface DeskApi {
     closeWindow(): Promise<DeskResult<void>>
     confirmTabClose(titles: string[]): Promise<DeskResult<TabCloseChoice>>
     showContextMenu(request: ContextMenuRequest): Promise<DeskResult<ContextMenuAction | null>>
+    showKnowledgeSidebarMenu(
+      request: KnowledgeSidebarMenuRequest
+    ): Promise<DeskResult<KnowledgeSidebarMenuAction | null>>
+    showNavigatorSidebarMenu(
+      request: NavigatorSidebarMenuRequest
+    ): Promise<DeskResult<NavigatorSidebarMenuAction | null>>
     onTabShortcut(callback: (command: TabShortcutCommand) => void): () => void
   }
   updates: {
@@ -756,6 +815,8 @@ export interface DeskApi {
     choose(): Promise<DeskResult<WorkspaceOverview>>
     set(path: string | null): Promise<DeskResult<WorkspaceOverview>>
     refresh(): Promise<DeskResult<WorkspaceOverview>>
+    /** Open the workspace folder in the system file manager. */
+    reveal(): Promise<DeskResult<void>>
     revealKnowledgeBase(knowledgeBaseId: string): Promise<DeskResult<void>>
     onChanged(callback: (overview: WorkspaceOverview) => void): () => void
   }
@@ -773,6 +834,7 @@ export interface DeskApi {
     ): Promise<DeskResult<ImageSettingsValidateResult>>
   }
   knowledgeBases: {
+    create(request: KnowledgeBaseCreateRequest): Promise<DeskResult<KnowledgeBaseCreateResult>>
     read(knowledgeBaseId: string): Promise<DeskResult<KnowledgeBaseDetail>>
     readSettings(knowledgeBaseId: string): Promise<DeskResult<KnowledgeBaseSettingsDto>>
     writeSettings(
@@ -842,6 +904,7 @@ export interface DeskApi {
     goForward(tabId: string): Promise<DeskResult<void>>
     reload(tabId: string): Promise<DeskResult<void>>
     stop(tabId: string): Promise<DeskResult<void>>
+    selectAll(tabId: string): Promise<DeskResult<void>>
     openExternal(url: string): Promise<DeskResult<void>>
     clearBrowsingData(): Promise<DeskResult<void>>
     onStateChanged(callback: (state: WebTabState) => void): () => void

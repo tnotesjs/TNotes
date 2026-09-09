@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { EventEmitter } from 'node:events'
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import { createKnowledgeBase as createKbOnDisk, isKnowledgeBaseRoot } from '@tnotesjs/kb'
 
 import { deskLog } from './log'
 import { loadSettings, settingsForKnowledgeBase } from './settings'
@@ -21,6 +22,7 @@ import * as toc from './workspace/toc'
 import type {
   GitRepositoryDescriptor,
   KnowledgeBaseHandle,
+  WorkspaceChangeHint,
   WorkspaceManagerEvents
 } from './workspace/types'
 
@@ -31,6 +33,8 @@ import type {
   AttachmentWriteLocalResult,
   ExternalNoteChangeEvent,
   KbBuildResult,
+  KnowledgeBaseCreateRequest,
+  KnowledgeBaseCreateResult,
   KnowledgeBaseDetail,
   NoteCreateRequest,
   NoteDocumentDto,
@@ -68,17 +72,24 @@ export class WorkspaceManager {
   }
 
   private mutationEffects(): {
-    markInternalWrites: (changedFiles: Array<{ path: string; previousPath?: string }>) => void
-    emitChanged: () => void
+    markInternalWrites: (
+      rootPath: string,
+      changedFiles: Array<{ path: string; previousPath?: string }>
+    ) => void
+    emitChanged: (hint?: WorkspaceChangeHint) => void
   } {
     return {
-      markInternalWrites: (changedFiles: Array<{ path: string; previousPath?: string }>) =>
-        markInternalWrites(this.scanState, changedFiles),
-      emitChanged: () => this.emitChanged()
+      markInternalWrites: (
+        rootPath: string,
+        changedFiles: Array<{ path: string; previousPath?: string }>
+      ) => markInternalWrites(this.scanState, rootPath, changedFiles),
+      emitChanged: (hint?: WorkspaceChangeHint) => this.emitChanged(hint)
     }
   }
 
-  onChanged(listener: (overview: WorkspaceOverview) => void): () => void {
+  onChanged(
+    listener: (overview: WorkspaceOverview, hint?: WorkspaceChangeHint) => void
+  ): () => void {
     this.events.on('changed', listener)
     return () => this.events.off('changed', listener)
   }
@@ -116,6 +127,47 @@ export class WorkspaceManager {
   async refresh(): Promise<WorkspaceOverview> {
     await enqueueScan(this.scanState)
     return this.getOverview()
+  }
+
+  async createKnowledgeBase(
+    request: KnowledgeBaseCreateRequest
+  ): Promise<KnowledgeBaseCreateResult> {
+    this.assertActive()
+    const workspacePath = this.scanState.workspacePath
+    if (!workspacePath) throw new Error('请先选择工作区')
+    if (await isKnowledgeBaseRoot(workspacePath)) {
+      throw new Error('当前工作区本身就是知识库，请打开包含多个知识库的父目录后再新建')
+    }
+
+    const created = await createKbOnDisk({
+      parentDir: workspacePath,
+      folderName: request.folderName,
+      title: request.title,
+      options: {
+        packageJson: request.packageJson,
+        githubPages: request.githubPages,
+        readme: request.readme,
+        gitInit: request.gitInit
+      }
+    })
+    this.mutationEffects().markInternalWrites(created.rootPath, [
+      { path: 'tnotes.json' },
+      { path: 'TOC.md' },
+      { path: created.starterNoteRelPath },
+      { path: '.gitignore' },
+      { path: '.gitattributes' },
+      ...created.extras.map((path) => ({ path }))
+    ])
+    await enqueueScan(this.scanState)
+    const overview = this.getOverview()
+    this.events.emit('changed', overview)
+
+    const match = overview.knowledgeBases.find((item) => item.rootPath === created.rootPath)
+    if (!match) {
+      throw new Error(`知识库已创建但未扫描到：${created.folderName}`)
+    }
+    deskLog('workspace', 'created knowledge base', { rootPath: created.rootPath })
+    return { overview, knowledgeBaseId: match.id }
   }
 
   getOverview(): WorkspaceOverview {
@@ -158,7 +210,7 @@ export class WorkspaceManager {
       pageUrl: request.pageUrl?.trim() || undefined,
       stats
     })
-    this.mutationEffects().markInternalWrites(result.changedFiles)
+    this.mutationEffects().markInternalWrites(handle.rootPath, result.changedFiles)
     handle.snapshot = await handle.workspace.scan()
     this.emitChanged()
     return toDetail(handle)
@@ -192,7 +244,7 @@ export class WorkspaceManager {
       changedFiles.push(...result.changedFiles)
     }
 
-    this.mutationEffects().markInternalWrites(changedFiles)
+    this.mutationEffects().markInternalWrites(handle.rootPath, changedFiles)
     handle.snapshot = await handle.workspace.scan()
     this.emitChanged()
     return toDetail(handle)
@@ -263,6 +315,31 @@ export class WorkspaceManager {
     }
     await Promise.all(Array.from({ length: Math.min(12, pending.length) }, () => readNext()))
     return documents.sort((left, right) => left.id.localeCompare(right.id))
+  }
+
+  /** Single-note counterpart of getSearchDocuments for content-only saves. */
+  async getSearchDocument(
+    knowledgeBaseId: string,
+    noteUuid: string
+  ): Promise<SearchIndexDocument | null> {
+    const handle = this.getHandle(knowledgeBaseId)
+    const note = handle.snapshot.notes.find(
+      (item) => (item.frontmatter.id ?? item.index) === noteUuid
+    )
+    if (!note) return null
+    const filePath = path.join(handle.rootPath, note.relPath)
+    const content = await fs.readFile(filePath, 'utf8')
+    return {
+      id: `${handle.id}:${noteUuid}`,
+      knowledgeBaseId: handle.id,
+      knowledgeBaseName: handle.name,
+      noteUuid,
+      noteIndex: note.index,
+      fileName: note.fileName.replace(/\.md$/i, ''),
+      title: note.title,
+      content,
+      revision: createHash('sha256').update(content).digest('hex')
+    }
   }
 
   async readNote(knowledgeBaseId: string, noteUuid: string): Promise<NoteDocumentDto> {
@@ -384,8 +461,8 @@ export class WorkspaceManager {
     return handle
   }
 
-  private emitChanged(): void {
-    this.events.emit('changed', this.getOverview())
+  private emitChanged(hint?: WorkspaceChangeHint): void {
+    this.events.emit('changed', this.getOverview(), hint)
   }
 }
 

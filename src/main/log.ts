@@ -47,7 +47,8 @@ export function deskLog(scope: string, message: string, detail?: unknown): void 
 
   writeConsoleLine(line)
 
-  for (const win of BrowserWindow.getAllWindows()) {
+  // BrowserWindow is undefined outside Electron (e.g. vitest node env).
+  for (const win of BrowserWindow?.getAllWindows?.() ?? []) {
     try {
       win.webContents.send('desk:log', line)
     } catch {

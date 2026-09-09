@@ -46,6 +46,9 @@ export function registerWeb(getWindow: GetWindow): () => void {
   handle(IPC_CHANNELS.webStop, getWindow, z.string().min(1), (tabId) =>
     webContentsManager.stop(tabId)
   )
+  handle(IPC_CHANNELS.webSelectAll, getWindow, z.string().min(1), (tabId) =>
+    webContentsManager.selectAll(tabId)
+  )
   handle(IPC_CHANNELS.webOpenExternal, getWindow, z.string().min(1), (url) =>
     webContentsManager.openExternal(url)
   )

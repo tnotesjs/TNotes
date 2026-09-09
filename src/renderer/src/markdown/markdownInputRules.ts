@@ -16,6 +16,8 @@ import { $prose } from '@milkdown/kit/utils'
 
 import { TN_NOTES_SLASH_ITEMS } from './slashMenu'
 import type { SlashMenuItem } from './slashMenu'
+import { parseContainerSource } from '../editor/markdown/containerBody'
+import { createDeskCalloutNode, slashCalloutType } from '../editor/markdown/deskCallout'
 
 const OPEN_RAW_SOURCE_META = 'tnotes-open-raw-source'
 const blockShortcutKey = new PluginKey('tnotes-block-shortcuts')
@@ -94,9 +96,17 @@ export function findEnterBlockShortcut(text: string): SlashMenuItem | null {
   return enterShortcuts.get(text.toLowerCase()) ?? null
 }
 
-function isTopLevelParagraph(state: EditorState, position: number): boolean {
+function canReplaceParagraphWith(
+  state: EditorState,
+  position: number,
+  nodeType: NonNullable<EditorState['schema']['nodes'][string]>
+): { from: number; to: number } | null {
   const $position = state.doc.resolve(position)
-  return $position.depth === 1 && $position.parent.type.name === 'paragraph'
+  if ($position.parent.type.name !== 'paragraph') return null
+  if (!$position.node(-1).canReplaceWith($position.index(-1), $position.indexAfter(-1), nodeType)) {
+    return null
+  }
+  return { from: $position.before($position.depth), to: $position.after($position.depth) }
 }
 
 function rawKindFor(item: SlashMenuItem): 'raw-container' | 'raw-component' | 'raw-diagram' | null {
@@ -118,26 +128,41 @@ export function replaceCurrentParagraphWithItem(
   item: SlashMenuItem,
   position: number
 ): Transaction | null {
-  if (!isTopLevelParagraph(state, position)) return null
+  const calloutType = slashCalloutType(item.id)
+  if (calloutType) {
+    const parsed = parseContainerSource(item.insert)
+    const node = createDeskCalloutNode(state.schema, {
+      calloutType,
+      title: parsed.title
+    })
+    if (!node) return null
+    const range = canReplaceParagraphWith(state, position, node.type)
+    if (!range) return null
+    const tr = state.tr.replaceWith(range.from, range.to, node)
+    return tr.setSelection(TextSelection.near(tr.doc.resolve(range.from + 1)))
+  }
 
-  const $position = state.doc.resolve(position)
-  const from = $position.before(1)
-  const to = $position.after(1)
   const codeBlock = state.schema.nodes.code_block
 
   if (item.kind === 'code') {
     if (!codeBlock) return null
+    const range = canReplaceParagraphWith(state, position, codeBlock)
+    if (!range) return null
     const node = codeBlock.create({ language: 'js' })
-    const tr = state.tr.replaceWith(from, to, node)
-    return tr.setSelection(TextSelection.near(tr.doc.resolve(from + 1)))
+    const tr = state.tr.replaceWith(range.from, range.to, node)
+    return tr.setSelection(TextSelection.near(tr.doc.resolve(range.from + 1)))
   }
 
   const rawKind = rawKindFor(item)
   const rawBlock = state.schema.nodes.deskRawBlock
   if (!rawKind || !rawBlock) return null
+  const range = canReplaceParagraphWith(state, position, rawBlock)
+  if (!range) return null
 
   const node = rawBlock.create({ kind: rawKind, source: item.insert, hidden: false })
-  return state.tr.replaceWith(from, to, node).setMeta(OPEN_RAW_SOURCE_META, { pos: from })
+  return state.tr.replaceWith(range.from, range.to, node).setMeta(OPEN_RAW_SOURCE_META, {
+    pos: range.from
+  })
 }
 
 function makeDiagramSpaceRule(pattern: RegExp, item: SlashMenuItem): InputRule {
@@ -355,7 +380,7 @@ export function createBlockShortcutPlugin(options: BlockShortcutOptions): Milkdo
           const { selection } = view.state
           if (!(selection instanceof TextSelection) || !selection.empty) return false
           const { $from } = selection
-          if ($from.depth !== 1 || $from.parent.type.name !== 'paragraph') return false
+          if ($from.parent.type.name !== 'paragraph') return false
 
           const item = findEnterBlockShortcut($from.parent.textContent)
           if (!item) return false
