@@ -1,6 +1,6 @@
 {
   "name": "@tnotesjs/kb",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Workspace layer for TNotes single-file knowledge bases (notes/, TOC.md, assets/, tnotes.json).",
   "type": "module",
   "packageManager": "pnpm@11.10.0",
@@ -15,8 +15,7 @@
     }
   },
   "bin": {
-    "tnotes-kb": "./dist/cli.js",
-    "tnotes-kb-migrate": "./dist/codemod-cli.js"
+    "tnotes-kb": "./dist/cli.js"
   },
   "files": [
     "dist/",
@@ -27,8 +26,7 @@
     "lint": "eslint . --max-warnings=0",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build",
-    "migrate": "node ./dist/codemod-cli.js"
+    "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build"
   },
   "dependencies": {
     "gray-matter": "4.0.3"

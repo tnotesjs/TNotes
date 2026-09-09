@@ -17,7 +17,7 @@ import {
   buildRootReadme,
   writeDeployWorkflowScaffold,
   writePackageJsonScaffold,
-} from "./migrate-scaffold";
+} from "./scaffold";
 import { isValidKbName } from "./name";
 import type { KbConfig } from "./types";
 

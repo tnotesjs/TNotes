@@ -10,7 +10,7 @@ import {
   isKnowledgeBaseRoot,
   STARTER_NOTE_TITLE,
 } from "../src/create";
-import { CANONICAL_GITATTRIBUTES, CANONICAL_GITIGNORE } from "../src/migrate-scaffold";
+import { CANONICAL_GITATTRIBUTES, CANONICAL_GITIGNORE } from "../src/scaffold";
 import { createWorkspace } from "../src/workspace";
 
 const cleanups: Array<() => Promise<void>> = [];

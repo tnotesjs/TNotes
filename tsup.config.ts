@@ -12,7 +12,7 @@ export default defineConfig([
     external: ["gray-matter"],
   },
   {
-    entry: ["src/codemod-cli.ts", "src/cli.ts"],
+    entry: ["src/cli.ts"],
     format: ["esm"],
     dts: false,
     splitting: false,
