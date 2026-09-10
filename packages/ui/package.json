@@ -101,7 +101,6 @@
     "desk"
   ],
   "license": "MIT",
-  "packageManager": "pnpm@11.10.0",
   "scripts": {
     "build": "tsup src/code/highlight.ts src/components/Footprints/parse.ts src/components/Mindmap/markdown.ts src/markdown/image.ts --format esm --dts --out-dir dist --clean",
     "typecheck": "tsc --noEmit -p tsconfig.json",

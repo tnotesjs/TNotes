@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "description": "TNotes 思维导图 Web 应用 —— 数据即 Markdown（*.tn-mindmap.md）",
   "type": "module",
-  "packageManager": "pnpm@10.17.1",
   "private": true,
   "scripts": {
     "dev": "vite",

@@ -3,7 +3,6 @@
   "version": "0.4.1",
   "description": "Workspace layer for TNotes single-file knowledge bases (notes/, TOC.md, assets/, tnotes.json).",
   "type": "module",
-  "packageManager": "pnpm@11.10.0",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",

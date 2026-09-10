@@ -3,7 +3,6 @@
   "version": "0.1.8",
   "description": "A small static-site generator built for TNotes knowledge bases.",
   "type": "module",
-  "packageManager": "pnpm@11.10.0",
   "bin": {
     "tnotes-ssg": "./dist/cli.js"
   },
