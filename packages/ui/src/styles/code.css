@@ -1,0 +1,184 @@
+.tn-code-block {
+  margin: 1rem 0;
+  border: 1px solid var(--tn-c-divider);
+  border-radius: 8px;
+  background: var(--tn-c-bg-soft);
+  color: var(--tn-c-text);
+  overflow: hidden;
+}
+.tn-code-block__header,
+.tn-code-fullscreen > header {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--tn-c-divider);
+  font: 13px/24px var(--tn-font-sans);
+}
+.tn-code-block__title,
+.tn-code-fullscreen > header > span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tn-code-block__language {
+  color: var(--tn-c-text-2);
+}
+.tn-code-block button,
+.tn-code-group__tabs button,
+.tn-code-fullscreen button {
+  color: var(--tn-c-text);
+  font: inherit;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.tn-code-block button.tn-code-block__icon-btn {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 4px 8px;
+}
+.tn-code-block__icon-btn svg {
+  display: block;
+  flex: none;
+  width: 12px;
+  height: 16px;
+}
+.tn-code-block button:hover,
+.tn-code-group__tabs button:hover,
+.tn-code-fullscreen button:hover {
+  background: var(--tn-c-hover);
+}
+.tn-code-block button:focus-visible,
+.tn-code-group button:focus-visible,
+.tn-code-fullscreen button:focus-visible {
+  outline: 2px solid var(--tn-c-brand);
+  outline-offset: -2px;
+}
+.tn-code-block pre {
+  background: transparent;
+  margin: 0;
+  padding: 8px 0;
+  max-height: 480px;
+  overflow: auto;
+  font: 14px/24px var(--tn-font-mono);
+  tab-size: 2;
+}
+.tn-code-block code {
+  font: inherit;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+}
+.tn-code-highlight .line {
+  display: inline-block;
+  min-width: 100%;
+  padding: 0 20px;
+  box-sizing: border-box;
+}
+.tn-code-block.has-line-numbers .line::before {
+  content: attr(data-line);
+  display: inline-block;
+  width: 3ch;
+  padding-right: 16px;
+  text-align: right;
+  color: var(--tn-c-text-2);
+  user-select: none;
+}
+.tn-code-highlight {
+  color: var(--shiki-light);
+  background-color: var(--tn-c-bg-soft);
+}
+.tn-code-highlight span:not(.line) {
+  color: var(--shiki-light);
+  background-color: transparent;
+}
+html.dark:not([data-theme="light"]) .tn-code-highlight,
+html[data-theme="dark"] .tn-code-highlight {
+  color: var(--shiki-dark);
+  background-color: var(--tn-c-bg-soft);
+}
+html.dark:not([data-theme="light"]) .tn-code-highlight span:not(.line),
+html[data-theme="dark"] .tn-code-highlight span:not(.line) {
+  color: var(--shiki-dark);
+  background-color: transparent;
+}
+.tn-code-highlight .line.highlighted {
+  background-color: var(--tn-c-highlight);
+}
+.tn-code-block__plain {
+  padding: 16px !important;
+}
+.tn-code-block__error {
+  color: var(--tn-c-danger);
+  padding: 8px 12px;
+  font-size: 13px;
+}
+.tn-code-group {
+  position: relative;
+  margin: 1rem 0;
+}
+.tn-code-group__tabs {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  gap: 4px;
+  height: 38px;
+  max-width: calc(100% - 148px);
+  padding: 0 8px;
+  border-bottom: 0;
+}
+.tn-code-group__tabs button {
+  flex: none;
+  border-radius: 4px;
+  border-bottom: 2px solid transparent;
+  padding: 4px 10px;
+}
+.tn-code-group__tabs button[aria-selected="true"] {
+  color: var(--tn-c-brand);
+  border-bottom-color: var(--tn-c-brand);
+}
+.tn-code-group .tn-code-block__title {
+  visibility: hidden;
+}
+.tn-code-group__panel > .tn-code-block {
+  margin: 0;
+}
+.tn-code-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: var(--tn-c-bg);
+  color: var(--tn-c-text);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.tn-code-fullscreen > header {
+  position: sticky;
+  top: 0;
+  background: var(--tn-c-bg);
+  z-index: 1;
+}
+.tn-code-fullscreen > .tn-code-block {
+  margin: 16px;
+}
+.tn-code-fullscreen .tn-code-block pre {
+  max-height: none;
+}
