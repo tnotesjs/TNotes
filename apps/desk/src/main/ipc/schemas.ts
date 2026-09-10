@@ -254,6 +254,26 @@ export const githubImageSettingsSchema = z.object({
   fileNameFormat: z.string().trim().min(1).max(240)
 })
 
+/**
+ * 设置页「压缩效果测试」：临时图片只在内存里编码，不上盘、不碰知识库。
+ * 与附件写入同口径限制 25 MB，避免渲染进程塞进超大图。
+ */
+export const imageOptimizePreviewSchema = z.object({
+  fileName: z.string().min(1).max(260),
+  data: z
+    .instanceof(Uint8Array)
+    .refine((data) => data.byteLength > 0, { message: '图片内容为空' })
+    .refine((data) => data.byteLength <= 25 * 1024 * 1024, {
+      message: '测试图片不能超过 25 MB'
+    }),
+  options: z.object({
+    encoder: z.enum(['sharp', 'oxipng']).default('sharp'),
+    quality: z.number().int().min(40).max(100),
+    maxDimension: z.number().int().min(64).max(10_000).nullable(),
+    outputFormat: z.enum(['keep', 'webp', 'jpeg'])
+  })
+})
+
 export const tocMoveSchema = z.object({
   knowledgeBaseId: z.string().min(1),
   source: entryRefSchema,

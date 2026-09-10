@@ -7,6 +7,7 @@ import type {
   AttachmentWriteLocalRequest,
   AttachmentWriteLocalResult,
   ImageSettingsValidateResult,
+  ImageOptimizePreviewResult,
   ImageTokenStatus,
   ImageUploadResult,
   GitOperationResult,
@@ -121,7 +122,9 @@ const api: DeskApi = {
     imageTokenStatus: () => invoke<ImageTokenStatus>(IPC_CHANNELS.imageTokenStatus),
     updateImageToken: (request) => invoke<ImageTokenStatus>(IPC_CHANNELS.imageTokenUpdate, request),
     validateImageSettings: (request) =>
-      invoke<ImageSettingsValidateResult>(IPC_CHANNELS.imageSettingsValidate, request)
+      invoke<ImageSettingsValidateResult>(IPC_CHANNELS.imageSettingsValidate, request),
+    previewOptimizeImage: (request) =>
+      invoke<ImageOptimizePreviewResult>(IPC_CHANNELS.imageOptimizePreview, request)
   },
   knowledgeBases: {
     create: (request: KnowledgeBaseCreateRequest) =>

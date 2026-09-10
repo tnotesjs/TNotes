@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 
 import { pushToast } from '../../stores/toast'
 import { useWorkspaceStore } from '../../stores/workspace'
+import ImageOptimizePlayground from './ImageOptimizePlayground.vue'
 
 import type { AppSettings, DeskResult, ImageTokenStatus } from '../../../../shared/contracts'
 
@@ -89,7 +90,7 @@ onMounted(() => {
       </label>
     </div>
 
-    <div class="sub-block">
+    <div v-if="draft.imageUpload.defaultTarget === 'github'" class="sub-block">
       <header class="sub-heading">
         <strong>GitHub 图床配置</strong>
         <span>仅在上传图片到 GitHub 时使用</span>
@@ -139,6 +140,12 @@ onMounted(() => {
         />
         <small>{{ tokenHint }}</small>
       </label>
+      <p
+        v-if="!draft.imageUpload.github.repository.trim() || !tokenStatus.configured"
+        class="warn-hint"
+      >
+        尚未完成配置（缺少仓库或 Token）：此时上传会回退到本地 assets 目录。
+      </p>
       <div class="token-actions">
         <label v-if="tokenStatus.configured" class="switch-field danger">
           <input v-model="clearToken" type="checkbox" @change="applyToken" />
@@ -201,6 +208,8 @@ onMounted(() => {
         </label>
       </div>
     </div>
+
+    <ImageOptimizePlayground :draft="draft" />
   </section>
 </template>
 
@@ -249,6 +258,13 @@ onMounted(() => {
 .target-choice small {
   color: var(--muted);
   font-size: 9px;
+}
+
+.warn-hint {
+  margin: 10px 0 0;
+  color: var(--danger);
+  font-size: 9px;
+  line-height: 1.5;
 }
 
 .token-actions {

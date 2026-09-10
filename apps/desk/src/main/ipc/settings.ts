@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { dialog } from 'electron'
 import { z } from 'zod'
 
+import { encodeManager } from '../encodeManager'
 import { gitManager } from '../gitManager'
 import { validateGitHubImageSettings } from '../imageBed'
 import { clearGitHubToken, imageTokenStatus, saveGitHubToken } from '../imageSecret'
@@ -15,7 +16,7 @@ import {
 import { updateManager } from '../updateManager'
 import { webContentsManager } from '../webContentsManager'
 import { IPC_CHANNELS } from '../../shared/contracts'
-import { githubImageSettingsSchema } from './schemas'
+import { githubImageSettingsSchema, imageOptimizePreviewSchema } from './schemas'
 import { handle, noInputSchema, type GetWindow } from './shared'
 
 import type { AppSettings } from '../../shared/contracts'
@@ -86,5 +87,31 @@ export function registerSettings(getWindow: GetWindow): void {
       token: z.string().max(2048).optional()
     }),
     ({ github, token }) => validateGitHubImageSettings(github, token)
+  )
+  handle(
+    IPC_CHANNELS.imageOptimizePreview,
+    getWindow,
+    imageOptimizePreviewSchema,
+    async ({ fileName, data, options }) => {
+      // 只编码到内存：不落盘、不写知识库，渲染进程关闭面板即丢弃。
+      const result = await encodeManager.encode(data, fileName, {
+        quality: options.quality,
+        maxDimension: options.maxDimension,
+        outputFormat: options.outputFormat
+      })
+      return {
+        bytesBefore: result.bytesBefore,
+        bytesAfter: result.bytesAfter,
+        width: result.width,
+        height: result.height,
+        ms: result.ms,
+        lossy: result.lossy,
+        encoder: result.encoder,
+        format: result.format,
+        outputExt: result.outputExt,
+        skipped: result.skipped,
+        output: result.output
+      }
+    }
   )
 }

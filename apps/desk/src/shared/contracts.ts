@@ -53,6 +53,7 @@ export const IPC_CHANNELS = {
   imageTokenStatus: 'image:token-status',
   imageTokenUpdate: 'image:token-update',
   imageSettingsValidate: 'image:settings-validate',
+  imageOptimizePreview: 'image:optimize-preview',
   searchQuery: 'search:query',
   kbBuild: 'kb:build',
   gitList: 'git:list',
@@ -510,6 +511,32 @@ export interface AssetOptimizePreviewDto {
   bytesBefore: number
   bytesAfter: number
   skippedCount: number
+}
+
+/**
+ * 设置页「压缩效果测试」入参：临时上传一张图，只做本地编码预览。
+ * 不写文件、不碰任何知识库，渲染进程关闭面板即丢弃。
+ */
+export interface ImageOptimizePreviewRequest {
+  fileName: string
+  data: Uint8Array
+  options: AssetOptimizeSettings
+}
+
+export interface ImageOptimizePreviewResult {
+  bytesBefore: number
+  bytesAfter?: number
+  width?: number
+  height?: number
+  ms: number
+  lossy: true
+  encoder: 'sharp'
+  format?: string
+  outputExt?: string
+  /** 命中跳过规则时的原因（如「优化后没有变小」）；此时不返回 output。 */
+  skipped?: string
+  /** 编码结果，仅供渲染进程做对比预览，不落盘。 */
+  output?: Uint8Array
 }
 
 export interface KnowledgeBaseSettings {
@@ -1046,6 +1073,10 @@ export interface DeskApi {
     validateImageSettings(
       request: ImageSettingsValidateRequest
     ): Promise<DeskResult<ImageSettingsValidateResult>>
+    /** 设置页测试用：临时编码一张图，仅返回对比数据，不落盘。 */
+    previewOptimizeImage(
+      request: ImageOptimizePreviewRequest
+    ): Promise<DeskResult<ImageOptimizePreviewResult>>
   }
   knowledgeBases: {
     create(request: KnowledgeBaseCreateRequest): Promise<DeskResult<KnowledgeBaseCreateResult>>
