@@ -1,0 +1,875 @@
+import type { MilkdownPlugin } from '@milkdown/kit/ctx'
+import { GapCursor } from '@milkdown/kit/prose/gapcursor'
+import { NodeSelection, Plugin, PluginKey, TextSelection } from '@milkdown/kit/prose/state'
+import type { EditorState } from '@milkdown/kit/prose/state'
+import type { EditorView } from '@milkdown/kit/prose/view'
+import { Decoration, DecorationSet } from '@milkdown/kit/prose/view'
+import { $prose } from '@milkdown/kit/utils'
+import { EditorView as CodeMirrorView } from '@codemirror/view'
+import {
+  focusCalloutTitleInput,
+  isCaretEnteringCalloutTitle,
+  isDeskCalloutNode
+} from '../editor/markdown/deskCallout'
+import { isStandaloneImageParagraph } from '../editor/markdown/standaloneImageParagraph'
+import { createMarkVsBlockSelectionPlugin } from './selectionKind'
+import { BlockRangeSelection, createVerticalBlockSelectionPlugin } from './verticalBlockSelection'
+
+export type RawBlockArrowDirection = 'up' | 'down'
+
+let decorationCache: {
+  key: string
+  doc: EditorState['doc'] | null
+  set: DecorationSet | null | undefined
+} = { key: '', doc: null, set: undefined }
+
+/**
+ * Whole-block selection for Crepe `code_block` (not NodeSelection).
+ * Crepe's code nodeView.selectNode() focuses CodeMirror, so NodeSelection cannot
+ * express "highlight whole fence without editing".
+ */
+const codeBlockWholeSelectKey = new PluginKey<number | null>('tnotes-code-block-whole-select')
+
+function isVisibleRawBlock(node: {
+  type: { name: string }
+  attrs: Record<string, unknown>
+}): boolean {
+  return node.type.name === 'deskRawBlock' && node.attrs.hidden !== true
+}
+
+function isCodeBlock(node: { type: { name: string } }): boolean {
+  return node.type.name === 'code_block'
+}
+
+/** Whole-block NodeSelection targets: visible raw atoms, Crepe code, standalone images. */
+export function isSelectableBlockNode(node: {
+  type: { name: string }
+  attrs?: Record<string, unknown>
+  childCount?: number
+  child?: (index: number) => { type: { name: string } }
+}): boolean {
+  if (isCodeBlock(node)) return true
+  if (node.type.name === 'image') return true
+  if (isStandaloneImageParagraph(node as Parameters<typeof isStandaloneImageParagraph>[0])) {
+    return true
+  }
+  return isVisibleRawBlock({
+    type: node.type,
+    attrs: (node.attrs ?? {}) as Record<string, unknown>
+  })
+}
+
+/** Image atoms live inside a paragraph; arrow exit must leave that paragraph. */
+function outerSelectableRange(
+  doc: EditorState['doc'],
+  position: number,
+  node: { type: { name: string }; nodeSize: number }
+): { from: number; size: number } {
+  if (node.type.name === 'image') {
+    const $pos = doc.resolve(position)
+    if ($pos.depth >= 1 && isStandaloneImageParagraph($pos.parent)) {
+      return { from: $pos.before($pos.depth), size: $pos.parent.nodeSize }
+    }
+  }
+  return { from: position, size: node.nodeSize }
+}
+
+function needsRangeSelectionSurface(node: {
+  type: { name: string }
+  attrs: Record<string, unknown>
+}): boolean {
+  return isVisibleRawBlock(node)
+}
+
+/** Position of a decoration-backed whole-selected code_block, if any. */
+export function codeBlockWholeSelectPosition(state: EditorState): number | null {
+  return codeBlockWholeSelectKey.getState(state) ?? null
+}
+
+function textBetweenInParent(
+  $head: EditorState['selection']['$head'],
+  from: number,
+  to: number
+): string {
+  return $head.parent.textBetween(from, to, '\n', '\n')
+}
+
+/** True when the caret is on the last visual line of its textblock (ArrowDown leaves the block). */
+function isOnLastLineOfTextblock($head: EditorState['selection']['$head']): boolean {
+  return !textBetweenInParent($head, $head.parentOffset, $head.parent.content.size).includes('\n')
+}
+
+/** True when the caret is on the first visual line of its textblock (ArrowUp leaves the block). */
+function isOnFirstLineOfTextblock($head: EditorState['selection']['$head']): boolean {
+  return !textBetweenInParent($head, 0, $head.parentOffset).includes('\n')
+}
+
+function neighborSelectableBlockPosition(
+  state: EditorState,
+  boundary: number,
+  direction: RawBlockArrowDirection
+): number | null {
+  const resolved = state.doc.resolve(Math.max(0, Math.min(boundary, state.doc.content.size)))
+  const neighbor = direction === 'down' ? resolved.nodeAfter : resolved.nodeBefore
+  if (!neighbor || !isSelectableBlockNode(neighbor)) return null
+  return direction === 'down' ? boundary : boundary - neighbor.nodeSize
+}
+
+/**
+ * Finds the position of a selectable block immediately above/below the caret's
+ * top-level block. Nested list/table carets only match when the caret is already
+ * at that top-level block's outer edge, so intra-list arrow movement stays with PM.
+ *
+ * ArrowDown/Up match the last/first visual line (not only absolute offset 0/end),
+ * so a mid-line caret on a single-line paragraph still whole-selects the next code.
+ * ArrowRight/Left must instead be at the absolute textblock end/start; moving
+ * within a line belongs to the browser (including grapheme/IME handling).
+ *
+ * Empty paragraphs between the caret and a block are NOT skipped — ProseMirror
+ * should move into the blank line first.
+ */
+export function adjacentRawBlockSelectionPosition(
+  state: EditorState,
+  direction: RawBlockArrowDirection | 'left' | 'right'
+): number | null {
+  const { selection } = state
+  const forward = direction === 'down' || direction === 'right'
+
+  if (selection instanceof GapCursor) {
+    const $pos = selection.$head
+    if (forward) {
+      const next = $pos.nodeAfter
+      return next && isSelectableBlockNode(next) ? $pos.pos : null
+    }
+    const previous = $pos.nodeBefore
+    return previous && isSelectableBlockNode(previous) ? $pos.pos - previous.nodeSize : null
+  }
+
+  if (!(selection instanceof TextSelection) || !selection.empty) return null
+  const { $head } = selection
+  if ($head.depth < 1 || !$head.parent.isTextblock) return null
+  // Caret already inside a code fence: leaving is handled by Crepe CM / whole-select.
+  if (isCodeBlock($head.parent)) return null
+
+  if (forward) {
+    if (
+      direction === 'right'
+        ? $head.parentOffset !== $head.parent.content.size
+        : !isOnLastLineOfTextblock($head)
+    )
+      return null
+    for (let depth = $head.depth; depth > 1; depth -= 1) {
+      if ($head.index(depth - 1) < $head.node(depth - 1).childCount - 1) return null
+    }
+    return neighborSelectableBlockPosition(state, $head.after(1), 'down')
+  }
+
+  if (direction === 'left' ? $head.parentOffset !== 0 : !isOnFirstLineOfTextblock($head))
+    return null
+  // Callout title is outside contentDOM; the first body line is not a fence edge.
+  if (isCaretEnteringCalloutTitle($head, direction === 'left' ? 'left' : 'up')) return null
+  for (let depth = $head.depth; depth > 1; depth -= 1) {
+    if ($head.index(depth - 1) > 0) return null
+  }
+  return neighborSelectableBlockPosition(state, $head.before(1), 'up')
+}
+
+function selectedRawBlockDecorations(state: EditorState): DecorationSet | null {
+  const { selection } = state
+  const decorations: Decoration[] = []
+  const range =
+    !selection.empty && !(selection instanceof NodeSelection)
+      ? { from: selection.from, to: selection.to }
+      : null
+  const codeWhole = codeBlockWholeSelectKey.getState(state)
+  const cacheKey = [
+    selection.from,
+    selection.to,
+    selection.empty ? 1 : 0,
+    selection instanceof NodeSelection ? 1 : 0,
+    codeWhole ?? ''
+  ].join('|')
+  if (
+    cacheKey === decorationCache.key &&
+    decorationCache.doc === state.doc &&
+    decorationCache.set !== undefined
+  ) {
+    return decorationCache.set
+  }
+  if (range) {
+    state.doc.nodesBetween(range.from, range.to, (node, position) => {
+      if (range.from >= position + node.nodeSize || range.to <= position) return
+      if (needsRangeSelectionSurface(node)) {
+        decorations.push(
+          Decoration.node(position, position + node.nodeSize, {
+            class: 'desk-raw-block--range-selected'
+          })
+        )
+      }
+      if (isCodeBlock(node)) {
+        decorations.push(
+          Decoration.node(position, position + node.nodeSize, {
+            class: 'desk-code-block--whole-selected'
+          })
+        )
+      }
+    })
+  }
+
+  const codeNode = codeWhole != null ? state.doc.nodeAt(codeWhole) : null
+  if (codeWhole != null && codeNode && isCodeBlock(codeNode)) {
+    decorations.push(
+      Decoration.node(codeWhole, codeWhole + codeNode.nodeSize, {
+        class: 'desk-code-block--whole-selected'
+      })
+    )
+  }
+
+  const next = decorations.length ? DecorationSet.create(state.doc, decorations) : null
+  decorationCache = { key: cacheKey, doc: state.doc, set: next }
+  return next
+}
+
+/** Keep ProseMirror focused after Crepe's code nodeView.selectNode() focuses CM. */
+function focusEditorKeepingSelection(view: EditorView): void {
+  const selection = view.state.selection
+  const whole = codeBlockWholeSelectKey.getState(view.state) ?? null
+  view.dom.focus({ preventScroll: true })
+  if (
+    view.state.selection.eq(selection) &&
+    (codeBlockWholeSelectKey.getState(view.state) ?? null) === whole
+  ) {
+    return
+  }
+  view.dispatch(
+    view.state.tr.setSelection(selection).setMeta(codeBlockWholeSelectKey, whole).scrollIntoView()
+  )
+}
+
+function reclaimFocusFromCodeMirror(view: EditorView, position: number): void {
+  focusEditorKeepingSelection(view)
+  queueMicrotask(() => {
+    if (codeBlockWholeSelectKey.getState(view.state) !== position) return
+    if (!(view.state.selection instanceof NodeSelection)) return
+    focusEditorKeepingSelection(view)
+  })
+}
+
+function selectSelectableBlock(view: EditorView, position: number): boolean {
+  const node = view.state.doc.nodeAt(position)
+  if (!node || !isSelectableBlockNode(node)) return false
+  // Standalone images are inline atoms in a paragraph — select the image so the
+  // node view shows chrome. Selecting the paragraph would hide the text caret
+  // without calling the image view's selectNode().
+  const selectAt = isStandaloneImageParagraph(node) ? position + 1 : position
+  // Use NodeSelection for both raw atoms and code fences so the caret leaves the
+  // previous line (same UX as deskRawBlock). Crepe's selectNode() will focus CM —
+  // reclaim PM focus and keep a decoration marker for styling / key routing.
+  const isCode = isCodeBlock(node)
+  view.dispatch(
+    view.state.tr
+      .setSelection(NodeSelection.create(view.state.doc, selectAt))
+      .setMeta(codeBlockWholeSelectKey, isCode ? position : null)
+      .scrollIntoView()
+  )
+  if (isCode) reclaimFocusFromCodeMirror(view, position)
+  else view.focus()
+  return true
+}
+
+export interface RawBlockBoundaryControlsOptions {
+  dom: HTMLElement
+  view: EditorView
+  getPos: () => number | undefined
+}
+
+/** Adds slim mouse hit areas that select the whole atom (same as body click). */
+export function attachRawBlockBoundaryControls(
+  options: RawBlockBoundaryControlsOptions
+): () => void {
+  const controls = (['before', 'after'] as const).map((side) => {
+    const control = document.createElement('span')
+    control.className = 'desk-raw-block__boundary-hit'
+    control.dataset.side = side
+    control.contentEditable = 'false'
+    control.setAttribute('aria-label', '选中块')
+    const select = (event: PointerEvent): void => {
+      if (!options.view.editable) return
+      const position = options.getPos()
+      if (position == null) return
+      event.preventDefault()
+      event.stopPropagation()
+      selectSelectableBlock(options.view, position)
+    }
+    control.addEventListener('pointerdown', select)
+    options.dom.append(control)
+    return { control, select }
+  })
+  return () => {
+    controls.forEach(({ control, select }) => {
+      control.removeEventListener('pointerdown', select)
+      control.remove()
+    })
+  }
+}
+
+/** Clears block selection state when the editor crosses into readonly mode. */
+export function clearRawBlockSelectionState(view: EditorView): void {
+  const { selection } = view.state
+  const transaction = view.state.tr.setMeta(codeBlockWholeSelectKey, null)
+  if (
+    selection instanceof BlockRangeSelection ||
+    (selection instanceof NodeSelection && isSelectableBlockNode(selection.node))
+  ) {
+    transaction.setSelection(
+      TextSelection.near(
+        transaction.doc.resolve(Math.min(selection.from, transaction.doc.content.size)),
+        1
+      )
+    )
+  }
+  view.dispatch(transaction)
+}
+
+function selectionHidesCaretInImageParagraph(
+  doc: EditorState['doc'],
+  position: number,
+  bias: number
+): boolean {
+  const next = TextSelection.near(doc.resolve(position), bias)
+  const $head = next.$head
+  return $head.depth >= 1 && isStandaloneImageParagraph($head.parent)
+}
+
+function insertEmptyParagraphAt(view: EditorView, position: number): boolean {
+  const $pos = view.state.doc.resolve(position)
+  const paragraph = view.state.schema.nodes.paragraph?.create()
+  const index = $pos.index()
+  if (!paragraph || !$pos.parent.canReplaceWith(index, index, paragraph.type)) return false
+  const tr = view.state.tr.insert(position, paragraph)
+  view.dispatch(
+    tr
+      .setSelection(TextSelection.create(tr.doc, position + 1))
+      .setMeta(codeBlockWholeSelectKey, null)
+      .scrollIntoView()
+  )
+  view.focus()
+  return true
+}
+
+/** True when Enter should stay in a nested field (caption, CM, mindmap) instead of replacing the block. */
+function enterStaysInNestedField(event: KeyboardEvent): boolean {
+  const target = event.target
+  if (!(target instanceof Element)) return false
+  return Boolean(
+    target.closest('input, textarea, select, .cm-editor, .mm-editor, .is-mindmap-island-active')
+  )
+}
+
+/** Native chrome inside ProseMirror owns arrows; the capture listener must not steal them. */
+function isNativeEditorField(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false
+  return Boolean(target.closest('input, textarea, select'))
+}
+
+/**
+ * Yuque: a non-empty selection + Enter deletes the selection, then leaves one
+ * empty paragraph (Backspace/Delete, then Enter). Same for images, fences, and
+ * multi-block ranges.
+ */
+function replaceRangeWithEmptyLine(view: EditorView, from: number, to: number): boolean {
+  const paragraphType = view.state.schema.nodes.paragraph
+  if (!paragraphType || from === to) return false
+  const start = Math.min(from, to)
+  const end = Math.max(from, to)
+  let tr = view.state.tr.delete(start, end)
+  const insertAt = Math.min(start, tr.doc.content.size)
+  const $pos = tr.doc.resolve(insertAt)
+  if ($pos.parent.type === paragraphType && $pos.parent.content.size === 0) {
+    tr = tr.setSelection(TextSelection.create(tr.doc, $pos.start()))
+  } else if ($pos.parent.canReplaceWith($pos.index(), $pos.index(), paragraphType)) {
+    tr = tr.insert(insertAt, paragraphType.create())
+    tr = tr.setSelection(TextSelection.create(tr.doc, insertAt + 1))
+  } else if ($pos.parent.inlineContent) {
+    tr = tr.split(insertAt)
+    tr = tr.setSelection(TextSelection.near(tr.doc.resolve(tr.mapping.map(insertAt, 1)), 1))
+  } else {
+    return false
+  }
+  view.dispatch(tr.setMeta(codeBlockWholeSelectKey, null).scrollIntoView())
+  view.focus()
+  return true
+}
+
+function handleEnterReplacingSelection(view: EditorView, event: KeyboardEvent): boolean {
+  if (
+    event.key !== 'Enter' ||
+    event.shiftKey ||
+    event.altKey ||
+    event.ctrlKey ||
+    event.metaKey ||
+    event.isComposing
+  ) {
+    return false
+  }
+  if (enterStaysInNestedField(event)) return false
+  if (isMindmapIslandKeyboardOwner(event.target) || isActiveMindmapIslandSelection(view)) {
+    return false
+  }
+
+  const codePos = codeBlockWholeSelectPosition(view.state)
+  if (codePos != null) {
+    const node = view.state.doc.nodeAt(codePos)
+    return Boolean(node && replaceRangeWithEmptyLine(view, codePos, codePos + node.nodeSize))
+  }
+
+  const { selection } = view.state
+  if (selection instanceof NodeSelection && isSelectableBlockNode(selection.node)) {
+    const outer = outerSelectableRange(view.state.doc, selection.from, selection.node)
+    return replaceRangeWithEmptyLine(view, outer.from, outer.from + outer.size)
+  }
+  if (selection instanceof BlockRangeSelection) {
+    return replaceRangeWithEmptyLine(view, selection.from, selection.to)
+  }
+  return false
+}
+
+function exitSelectableBlock(view: EditorView, position: number, bias: number): void {
+  const $pos = view.state.doc.resolve(position)
+  const neighbor = bias > 0 ? $pos.nodeAfter : $pos.nodeBefore
+  // End/start of the note (or a collapsed image paragraph) has no visible caret.
+  // Insert a real empty line — same as leaving a code fence at the document edge.
+  if (!neighbor || selectionHidesCaretInImageParagraph(view.state.doc, position, bias)) {
+    if (insertEmptyParagraphAt(view, position)) return
+  }
+  view.dispatch(
+    view.state.tr
+      .setSelection(TextSelection.near(view.state.doc.resolve(position), bias))
+      .setMeta(codeBlockWholeSelectKey, null)
+      .scrollIntoView()
+  )
+  // Crepe's block handle lives outside view.dom; reclaim focus so the next
+  // ArrowDown is not dropped by the capture-listener's contains() check.
+  view.focus()
+}
+
+/** Bridge an embedded code editor's final caret back into the note, not its DOM island. */
+function exitCodeEditorAtEnd(view: EditorView, event: KeyboardEvent): boolean {
+  if (!isWholeSelectKeyEvent(event)) return false
+  if (event.key !== 'ArrowDown' && event.key !== 'ArrowRight') return false
+  const target = event.target
+  if (!(target instanceof Element) || !target.closest('.cm-content')) return false
+  const cmDom = target.closest('.cm-editor')
+  if (!(cmDom instanceof HTMLElement) || !view.dom.contains(cmDom)) return false
+  const cm = CodeMirrorView.findFromDOM(cmDom)
+  if (!cm || cm.composing || cm.state.selection.ranges.length !== 1) return false
+  const { main } = cm.state.selection
+  if (!main.empty || main.head !== cm.state.doc.length) return false
+
+  const rawBlock = cmDom.closest('.desk-raw-block')
+  // Only inline code previews (fences/includes/code groups), never the raw-source
+  // editor for a container, diagram or component, nor standalone file editors.
+  if (rawBlock && !cmDom.closest('.desk-code-tab')) return false
+  const block = rawBlock ?? cmDom.closest('.milkdown-code-block')
+  if (!block) return false
+  let position: number | null = null
+  view.state.doc.descendants((node, pos) => {
+    if (!isSelectableBlockNode(node)) return
+    if (view.nodeDOM(pos) === block) position = pos
+    return false
+  })
+  if (position == null) return false
+  const node = view.state.doc.nodeAt(position)!
+  const boundary = position + node.nodeSize
+  const $boundary = view.state.doc.resolve(boundary)
+  if (!$boundary.nodeAfter) {
+    // At the end of a note/list item, Selection.near would fall back into the
+    // same code block. Supply a real editable line instead.
+    const paragraph = view.state.schema.nodes.paragraph?.create()
+    const index = $boundary.index()
+    if (!paragraph || !$boundary.parent.canReplaceWith(index, index, paragraph.type)) return false
+    const tr = view.state.tr.insert(boundary, paragraph)
+    view.dispatch(
+      tr
+        .setSelection(TextSelection.create(tr.doc, boundary + 1))
+        .setMeta(codeBlockWholeSelectKey, null)
+        .scrollIntoView()
+    )
+    view.focus()
+    return true
+  }
+  return moveFromBlockBoundary(view, boundary, 'down')
+}
+
+/**
+ * Leave a top-level block at `boundary` (the node's start for up, end for down).
+ * Used by whole-select arrows and by the callout title (outside contentDOM).
+ */
+export function moveFromBlockBoundary(
+  view: EditorView,
+  boundary: number,
+  direction: RawBlockArrowDirection
+): boolean {
+  const immediatePos = neighborSelectableBlockPosition(view.state, boundary, direction)
+  if (immediatePos != null) {
+    return selectSelectableBlock(view, immediatePos)
+  }
+  if (direction === 'down') {
+    const next = view.state.doc.resolve(
+      Math.max(0, Math.min(boundary, view.state.doc.content.size))
+    ).nodeAfter
+    if (next && isDeskCalloutNode(next)) {
+      return focusCalloutTitleInput(view, boundary, 'start')
+    }
+  }
+  // Empty paragraphs are real caret targets (placeholder "输入 / 插入内容").
+  // Do not jump over them to the next fence.
+  exitSelectableBlock(view, boundary, direction === 'down' ? 1 : -1)
+  return true
+}
+
+/** Leave a selected block: next selectable neighbor, else the immediate text. */
+function moveFromSelectableBlock(
+  view: EditorView,
+  position: number,
+  nodeSize: number,
+  direction: RawBlockArrowDirection
+): boolean {
+  const boundary = direction === 'down' ? position + nodeSize : position
+  return moveFromBlockBoundary(view, boundary, direction)
+}
+
+function handleCodeBlockWholeSelect(view: EditorView, event: KeyboardEvent): boolean {
+  const position = codeBlockWholeSelectKey.getState(view.state)
+  if (position == null) return false
+  const node = view.state.doc.nodeAt(position)
+  if (!node || !isCodeBlock(node)) return false
+  const end = position + node.nodeSize
+
+  if (event.key === 'Delete' || event.key === 'Backspace') {
+    const tr = view.state.tr.delete(position, end)
+    tr.setSelection(
+      TextSelection.near(
+        tr.doc.resolve(Math.min(position, tr.doc.content.size)),
+        event.key === 'Backspace' ? -1 : 1
+      )
+    )
+    view.dispatch(tr.setMeta(codeBlockWholeSelectKey, null).scrollIntoView())
+    return true
+  }
+
+  if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+    return moveFromSelectableBlock(view, position, node.nodeSize, 'down')
+  }
+  if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+    return moveFromSelectableBlock(view, position, node.nodeSize, 'up')
+  }
+  return false
+}
+
+function handleSelectedSelectableBlock(view: EditorView, event: KeyboardEvent): boolean {
+  const { selection } = view.state
+  if (!(selection instanceof NodeSelection) || !isSelectableBlockNode(selection.node)) {
+    return false
+  }
+  const position = selection.from
+  const end = position + selection.node.nodeSize
+
+  if (event.key === 'Delete' || event.key === 'Backspace') {
+    const tr = view.state.tr.delete(position, end)
+    tr.setSelection(
+      TextSelection.near(
+        tr.doc.resolve(Math.min(position, tr.doc.content.size)),
+        event.key === 'Backspace' ? -1 : 1
+      )
+    )
+    view.dispatch(tr.setMeta(codeBlockWholeSelectKey, null).scrollIntoView())
+    return true
+  }
+
+  const outer = outerSelectableRange(view.state.doc, position, selection.node)
+  if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+    return moveFromSelectableBlock(view, outer.from, outer.size, 'down')
+  }
+  if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+    return moveFromSelectableBlock(view, outer.from, outer.size, 'up')
+  }
+  return false
+}
+
+/** True when arrow/delete should stay on the whole-select path even if CM has focus. */
+function isWholeSelectKeyEvent(event: KeyboardEvent): boolean {
+  return (
+    !event.shiftKey &&
+    !event.altKey &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    !event.isComposing &&
+    ['ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft', 'Delete', 'Backspace'].includes(event.key)
+  )
+}
+
+/**
+ * Editable mindmap islands nest under ProseMirror and briefly take NodeSelection
+ * so the body caret disappears. Arrow/Delete must stay on the canvas (node focus
+ * navigation), not exit/delete the whole fence — same idea as leaving CM alone.
+ */
+function isMindmapIslandKeyboardOwner(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false
+  const block = target.closest('.desk-raw-block--mindmap')
+  if (!block) return false
+  if (block.classList.contains('is-mindmap-island-active')) return true
+  return Boolean(
+    target.closest(
+      [
+        '.mm-editor',
+        '.mindmap-preview',
+        '.outline-view',
+        '.markdown-view',
+        '.mm-edit-input',
+        '.rich-inline-editor',
+        '.md-textarea',
+        '[contenteditable="true"]'
+      ].join(', ')
+    )
+  )
+}
+
+/** True when PM NodeSelection is on a mindmap fence whose interaction island is live. */
+function isActiveMindmapIslandSelection(view: EditorView): boolean {
+  const { selection } = view.state
+  if (!(selection instanceof NodeSelection) || !isSelectableBlockNode(selection.node)) {
+    return false
+  }
+  const nodeDom = view.nodeDOM(selection.from)
+  if (!(nodeDom instanceof Element)) return false
+  const block =
+    nodeDom.closest('.desk-raw-block--mindmap') ??
+    (nodeDom.classList.contains('desk-raw-block--mindmap') ? nodeDom : null)
+  return Boolean(block?.classList.contains('is-mindmap-island-active'))
+}
+
+function handleWholeSelectKeys(view: EditorView, event: KeyboardEvent): boolean {
+  if (!isWholeSelectKeyEvent(event)) return false
+  if (isMindmapIslandKeyboardOwner(event.target) || isActiveMindmapIslandSelection(view)) {
+    return false
+  }
+  return handleCodeBlockWholeSelect(view, event) || handleSelectedSelectableBlock(view, event)
+}
+
+function isBlockArrowEvent(event: KeyboardEvent): boolean {
+  return (
+    !event.shiftKey &&
+    !event.altKey &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    !event.isComposing &&
+    ['ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft'].includes(event.key) &&
+    !isNativeEditorField(event.target) &&
+    !(event.target instanceof Element && event.target.closest('.cm-editor'))
+  )
+}
+
+/** Shared by DOM capture and PM's fallback so horizontal boundaries cannot drift. */
+function selectAdjacentBlockForArrow(view: EditorView, event: KeyboardEvent): boolean {
+  if (!isBlockArrowEvent(event)) return false
+  const directions: Record<string, RawBlockArrowDirection | 'left' | 'right'> = {
+    ArrowUp: 'up',
+    ArrowDown: 'down',
+    ArrowLeft: 'left',
+    ArrowRight: 'right'
+  }
+  const position = adjacentRawBlockSelectionPosition(view.state, directions[event.key])
+  return position != null && selectSelectableBlock(view, position)
+}
+
+/** Keyboard and visual selection semantics for selectable block nodes. */
+export function createRawBlockSelectionPlugin(): MilkdownPlugin[] {
+  // Capture-phase and ProseMirror handleKeyDown can both see the same key
+  // event. Claiming it once prevents double-steps (e.g. code1→code3).
+  let claimedKeyboardEvent: KeyboardEvent | null = null
+  const evaluatedKeydowns = new WeakSet<KeyboardEvent>()
+
+  const claimEvent = (event: KeyboardEvent): void => {
+    claimedKeyboardEvent = event
+  }
+
+  const selectionPlugin = $prose(
+    () =>
+      new Plugin<number | null>({
+        key: codeBlockWholeSelectKey,
+        state: {
+          init: () => null,
+          apply: (transaction, value) => {
+            const meta = transaction.getMeta(codeBlockWholeSelectKey) as number | null | undefined
+            if (meta !== undefined) return meta
+            if (transaction.docChanged || transaction.selectionSet) return null
+            return value
+          }
+        },
+        props: {
+          decorations: selectedRawBlockDecorations,
+          handleKeyDown: (view, event) => {
+            if (!view.editable) return false
+            if (isNativeEditorField(event.target)) return false
+            // Document capture already evaluated this event; only honor claims.
+            if (evaluatedKeydowns.has(event)) return claimedKeyboardEvent === event
+            if (claimedKeyboardEvent === event) return true
+            const target = event.target as Element | null
+            // Nested mindmap canvas / outline owns arrows while the island is active.
+            if (isMindmapIslandKeyboardOwner(target) || isActiveMindmapIslandSelection(view)) {
+              return false
+            }
+            if (target?.closest('.cm-editor') && codeBlockWholeSelectPosition(view.state) == null) {
+              const handled = exitCodeEditorAtEnd(view, event)
+              if (handled) claimEvent(event)
+              return handled
+            }
+            // Whole-select must win even when Crepe's selectNode() left focus in CM.
+            if (handleWholeSelectKeys(view, event)) {
+              claimEvent(event)
+              return true
+            }
+            if (handleEnterReplacingSelection(view, event)) {
+              claimEvent(event)
+              return true
+            }
+            if (target?.closest('.cm-editor')) return false
+
+            if (selectAdjacentBlockForArrow(view, event)) {
+              claimEvent(event)
+              return true
+            }
+
+            return false
+          }
+        },
+        view: (view) => {
+          let wasWholeSelect = false
+          const hasWholeSelectSelection = (): boolean => {
+            if (codeBlockWholeSelectKey.getState(view.state) != null) return true
+            const { selection } = view.state
+            return selection instanceof NodeSelection && isSelectableBlockNode(selection.node)
+          }
+
+          /** True when the event target is an outside field we must not hijack. */
+          const isForeignTextField = (eventTarget: EventTarget | null): boolean => {
+            if (!(eventTarget instanceof HTMLElement)) return false
+            if (view.dom.contains(eventTarget)) return false
+            const milkdownRoot = view.dom.parentElement
+            if (milkdownRoot?.contains(eventTarget)) return false
+            if (eventTarget.isContentEditable) return true
+            const tag = eventTarget.tagName
+            return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
+          }
+
+          const keydown = (event: KeyboardEvent): void => {
+            evaluatedKeydowns.add(event)
+            if (!view.editable) return
+            if (claimedKeyboardEvent === event) return
+
+            const eventTarget = event.target
+            if (isNativeEditorField(eventTarget)) return
+            // Mindmap island: do not steal Arrow/Delete from .mm-editor (capture runs first).
+            if (
+              isMindmapIslandKeyboardOwner(eventTarget) ||
+              (isActiveMindmapIslandSelection(view) && isWholeSelectKeyEvent(event))
+            ) {
+              return
+            }
+
+            const inProseMirror =
+              eventTarget instanceof Node &&
+              (eventTarget === view.dom || view.dom.contains(eventTarget))
+
+            // A raw code group's PM NodeSelection can remain set while its CM
+            // caret is active. Only explicit whole-code selection may override
+            // that inner editor; otherwise bridge the final caret and leave all
+            // other keys (including Shift selections/Delete) with CodeMirror.
+            if (
+              inProseMirror &&
+              (eventTarget as Element).closest?.('.cm-editor') &&
+              codeBlockWholeSelectPosition(view.state) == null
+            ) {
+              if (exitCodeEditorAtEnd(view, event)) {
+                claimEvent(event)
+                event.preventDefault()
+                event.stopImmediatePropagation()
+              }
+              return
+            }
+
+            // Whole-select must win even when focus left .ProseMirror (Crepe block
+            // handle, body after atom NodeSelection, etc.). Gating on
+            // contains(target) made ↓ appear stuck on the first INFO atom.
+            if (hasWholeSelectSelection() && !isForeignTextField(eventTarget)) {
+              if (handleWholeSelectKeys(view, event)) {
+                claimEvent(event)
+                event.preventDefault()
+                event.stopImmediatePropagation()
+                view.focus()
+                return
+              }
+              if (handleEnterReplacingSelection(view, event)) {
+                claimEvent(event)
+                event.preventDefault()
+                event.stopImmediatePropagation()
+                view.focus()
+                return
+              }
+            }
+
+            if (!inProseMirror) return
+            const inCodeMirror = Boolean((eventTarget as Element).closest?.('.cm-editor'))
+            if (handleWholeSelectKeys(view, event)) {
+              claimEvent(event)
+              event.preventDefault()
+              event.stopImmediatePropagation()
+              return
+            }
+            if (handleEnterReplacingSelection(view, event)) {
+              claimEvent(event)
+              event.preventDefault()
+              event.stopImmediatePropagation()
+              view.focus()
+              return
+            }
+            if (inCodeMirror) return
+
+            if (selectAdjacentBlockForArrow(view, event)) {
+              claimEvent(event)
+              event.preventDefault()
+              event.stopImmediatePropagation()
+              return
+            }
+          }
+          view.dom.ownerDocument.addEventListener('keydown', keydown, true)
+          return {
+            update: () => {
+              const whole = hasWholeSelectSelection()
+              const entering = whole && !wasWholeSelect
+              wasWholeSelect = whole
+              if (!whole) return
+              if (view.hasFocus()) return
+              const active = view.dom.ownerDocument.activeElement
+              // Inline raw-source CM and other real fields keep focus.
+              if (active instanceof Element && active.closest('.desk-raw-block__editor-cm')) {
+                return
+              }
+              // Mindmap canvas / outline keep focus while the interaction island is live.
+              if (isMindmapIslandKeyboardOwner(active)) return
+              if (isForeignTextField(active)) return
+              // Reclaim when entering whole-select, or when focus left PM while still whole-selected.
+              const focusOutsidePm =
+                !(active instanceof Node) || (active !== view.dom && !view.dom.contains(active))
+              if (!entering && !focusOutsidePm) return
+              view.focus()
+            },
+            destroy: () => view.dom.ownerDocument.removeEventListener('keydown', keydown, true)
+          }
+        }
+      })
+  )
+
+  return [createVerticalBlockSelectionPlugin(), createMarkVsBlockSelectionPlugin(), selectionPlugin]
+}

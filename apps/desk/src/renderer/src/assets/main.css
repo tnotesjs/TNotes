@@ -1,0 +1,197 @@
+/* Semantic colors aligned to VitePress theme-default vars.css;
+   brand accent follows TNotes VitePress (--vp-c-brand-1/2). */
+
+:root {
+  --app-bg: var(--tn-c-bg-chrome);
+  --titlebar-bg: var(--tn-c-bg-chrome);
+  --sidebar-bg: var(--tn-c-bg-chrome);
+  --panel: var(--tn-c-bg-soft);
+  --tabs-bg: var(--tn-c-bg-chrome);
+  --editor-bg: var(--tn-c-bg);
+  --document-bg: var(--tn-c-bg-soft);
+  --raised: var(--tn-c-bg-elv);
+  --input-bg: var(--tn-c-bg-input);
+  --text: var(--tn-c-text);
+  --editor-text: var(--tn-c-text);
+  --document-text: var(--tn-c-text);
+  --muted: var(--tn-c-text-2);
+  --border: var(--tn-c-divider);
+  --border-strong: var(--tn-c-divider-strong);
+  --hover: var(--tn-c-hover);
+  --selected: var(--tn-c-highlight);
+  --accent: var(--tn-c-brand);
+  --accent-strong: var(--tn-c-brand-strong);
+  --success: var(--tn-c-success);
+  --success-soft: var(--tn-c-success-soft);
+  --warning: var(--tn-c-warning);
+  --warning-soft: var(--tn-c-warning-soft);
+  --danger: var(--tn-c-danger);
+  --danger-soft: var(--tn-c-danger-soft);
+  --font-sans: var(--tn-font-sans);
+  --font-mono: var(--tn-font-mono);
+  font-family: var(--font-sans);
+  font-optical-sizing: auto;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-density='compact'] {
+  font-size: 13px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--app-bg);
+  color: var(--text);
+}
+
+body {
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.cm-editor .cm-selectionBackground,
+.cm-editor.cm-focused .cm-selectionBackground {
+  background: color-mix(in srgb, var(--accent) 55%, transparent) !important;
+}
+
+.cm-editor .cm-content ::selection,
+.cm-editor .cm-line ::selection {
+  background: color-mix(in srgb, var(--accent) 65%, transparent) !important;
+  color: var(--text) !important;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+input,
+textarea {
+  user-select: text;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
+}
+
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  z-index: 1000;
+  top: calc(100% + 8px);
+  left: 50%;
+  min-width: max-content;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(-3px);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--raised);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--app-bg) 55%, transparent);
+  padding: 7px 9px;
+  color: var(--text);
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 620;
+  line-height: 1.25;
+  transition:
+    opacity 100ms ease 260ms,
+    transform 100ms ease 260ms,
+    visibility 0s linear 360ms;
+}
+
+[data-tooltip]:hover::after,
+[data-tooltip]:focus-visible::after {
+  visibility: visible;
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  transition-delay: 260ms;
+}
+
+[data-tooltip-placement='top']::after {
+  top: auto;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%) translateY(3px);
+}
+
+[data-tooltip-placement='top']:hover::after,
+[data-tooltip-placement='top']:focus-visible::after {
+  transform: translateX(-50%) translateY(0);
+}
+
+.desk-editor-context-menu {
+  position: fixed;
+  z-index: 4000;
+  min-width: 148px;
+  padding: 4px;
+  border: 1px solid color-mix(in srgb, var(--border-strong) 70%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--titlebar-bg) 88%, transparent);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 28%);
+  backdrop-filter: saturate(160%) blur(18px);
+  -webkit-backdrop-filter: saturate(160%) blur(18px);
+}
+
+.desk-editor-context-menu__item {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  font: 12px/1.35 var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+}
+
+.desk-editor-context-menu__item:hover {
+  background: var(--selected);
+}
+
+.desk-editor-context-menu__item.is-danger {
+  color: var(--danger);
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+::-webkit-scrollbar-thumb {
+  min-height: 28px;
+  border: 2px solid transparent;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--border-strong) 85%, transparent);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
