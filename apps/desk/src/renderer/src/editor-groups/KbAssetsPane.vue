@@ -38,6 +38,8 @@ const selectedPath = ref<string | null>(null)
 const view = ref<'files' | 'broken' | 'diagnostics' | 'history'>('files')
 const history = ref<AssetJournalDto[]>([])
 const writeBusy = ref(false)
+// 写入期间文件会移动：旧报告里的缩略图请求会打到已不存在的路径。
+const suppressThumbs = ref(false)
 const writeError = ref<ClassifiedAssetWriteBlock[]>([])
 const renameOpen = ref(false)
 const renameDest = ref('')
@@ -262,6 +264,14 @@ async function cancel(): Promise<void> {
   progress.value = null
 }
 
+/**
+ * 写入成功后旧报告里的路径可能已被移走 / 改名 / 换了扩展名：继续渲染会让 <img>
+ * 向 tnotes-asset 请求已不存在的缩略图并发 404。先卸载列表，再由 scan(true) 重建。
+ */
+function dropStaleReport(): void {
+  report.value = null
+}
+
 function openReference(sourceRelPath: string, noteUuid?: string, noteTitle?: string): void {
   const kb = knowledgeBase.value
   if (!kb || !noteUuid) return
@@ -445,6 +455,7 @@ async function confirmOptimize(): Promise<void> {
     previewPlan.value = planned.value
     writeError.value = classifyAssetWriteBlocks({ planReasons: planned.value.blockedReasons })
     if (planned.value.blockedReasons.length > 0) return
+    suppressThumbs.value = true
     const result = await window.desk.assets.apply(props.tab.knowledgeBaseId, planned.value.id)
     if (!result.ok) {
       setWriteError(result.error)
@@ -462,10 +473,12 @@ async function confirmOptimize(): Promise<void> {
     const dest = planned.value.moves[0]?.toRelPath
     if (dest) selectedPath.value = dest
     closeDialogs()
+    dropStaleReport()
     await scan(true)
     await loadHistory()
   } finally {
     writeBusy.value = false
+    suppressThumbs.value = false
   }
 }
 
@@ -481,6 +494,7 @@ async function applyPreview(): Promise<void> {
   writeBusy.value = true
   writeError.value = []
   try {
+    suppressThumbs.value = true
     const result = await window.desk.assets.apply(props.tab.knowledgeBaseId, plan.id)
     if (!result.ok) {
       setWriteError(result.error)
@@ -498,10 +512,12 @@ async function applyPreview(): Promise<void> {
     if (dest) selectedPath.value = dest
     else if (selectedPath.value && recycled.includes(selectedPath.value)) selectedPath.value = null
     closeDialogs()
+    dropStaleReport()
     await scan(true)
     await loadHistory()
   } finally {
     writeBusy.value = false
+    suppressThumbs.value = false
   }
 }
 
@@ -518,6 +534,7 @@ async function confirmRestore(): Promise<void> {
   writeBusy.value = true
   writeError.value = []
   try {
+    suppressThumbs.value = true
     const result = await window.desk.assets.restore(props.tab.knowledgeBaseId, item.planId)
     if (!result.ok) {
       setWriteError(result.error)
@@ -533,10 +550,12 @@ async function confirmRestore(): Promise<void> {
       return
     }
     closeDialogs()
+    dropStaleReport()
     await scan(true)
     await loadHistory()
   } finally {
     writeBusy.value = false
+    suppressThumbs.value = false
   }
 }
 
@@ -693,7 +712,7 @@ onUnmounted(() => {
               @click="selectedPath = asset.relPath"
             >
               <img
-                v-if="canPreviewThumb(asset)"
+                v-if="!suppressThumbs && canPreviewThumb(asset)"
                 class="thumb"
                 :src="thumbSrc(asset.relPath)"
                 alt=""

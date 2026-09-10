@@ -287,6 +287,38 @@ describe('KbAssetsPane write flow', () => {
     wrapper.unmount()
   })
 
+  it('写入进行中不渲染缩略图，避免请求已被移动的路径', async () => {
+    let releaseApply: (value: unknown) => void = () => undefined
+    const apply = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          releaseApply = resolve
+        })
+    )
+    setupDesk({ apply: apply as never })
+    const wrapper = await mountPane()
+    expect(wrapper.findAll('img.thumb').length).toBeGreaterThan(0)
+
+    const idle = wrapper.findAll('.file-row').find((row) => row.text().includes('idle.png'))
+    await idle!.trigger('click')
+    const recycleButton = wrapper
+      .findAll('.detail-actions button')
+      .find((button) => button.text() === '移入回收区')
+    await recycleButton!.trigger('click')
+    await flushPromises()
+    await wrapper.get('.kb-assets-dialog footer .save-button').trigger('click')
+    await flushPromises()
+
+    expect(apply).toHaveBeenCalledOnce()
+    // 文件此刻已被移走，旧列表若继续渲染会让 <img> 打到不存在的路径。
+    expect(wrapper.findAll('img.thumb')).toHaveLength(0)
+
+    releaseApply({ ok: true, value: { planId: 'plan-1', status: 'applied', changedPaths: [] } })
+    await flushPromises()
+    expect(wrapper.findAll('img.thumb').length).toBeGreaterThan(0)
+    wrapper.unmount()
+  })
+
   it('surfaces dirty-document apply failures as 有未保存文档', async () => {
     const { apply } = setupDesk({
       apply: vi.fn(async () => ({
