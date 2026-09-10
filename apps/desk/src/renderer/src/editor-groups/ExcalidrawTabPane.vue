@@ -26,6 +26,11 @@ const props = defineProps<{ tab: ExcalidrawTab; active: boolean; groupId: string
  */
 const EXCALIDRAW_FONT_BASE = 'tnotes-asset://app/excalidraw/'
 
+/** 应用主题写在 `documentElement.dataset.theme`（见 App.vue applyAppearance）。 */
+function currentTheme(): 'light' | 'dark' {
+  return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'
+}
+
 const editor = useEditorStore()
 const phase = ref<'loading' | 'ready' | 'invalid' | 'error'>('loading')
 const message = ref('')
@@ -35,7 +40,11 @@ const lastError = ref('')
 const hostRef = ref<HTMLDivElement | null>(null)
 const mountRef = ref<HTMLDivElement | null>(null)
 
-let host: { transferTo: () => void; destroy: () => void } | null = null
+let host: {
+  transferTo: () => void
+  setTheme: (theme: 'light' | 'dark') => void
+  destroy: () => void
+} | null = null
 const session = shallowRef<ExcalidrawSession | null>(null)
 let disposed = false
 /** 用户已明确丢弃本地修改：会话销毁后不得再写盘 */
@@ -44,6 +53,8 @@ let abandoned = false
 let baselineAdopted = false
 /** 用户是否已经碰过画布（指针/键盘/粘贴/滚轮） */
 let interacted = false
+/** 跟随应用主题（data-theme 属性）；不重建画布实例 */
+let themeObserver: MutationObserver | null = null
 
 /** 第一次真实交互之后，onChange 才可以当作编辑。 */
 function markInteracted(): void {
@@ -135,7 +146,7 @@ async function boot(): Promise<void> {
   const mounted = mountExcalidrawHost({
     host: mountPoint,
     content: response.value.content,
-    theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light',
+    theme: currentTheme(),
     fontBase: EXCALIDRAW_FONT_BASE,
     onChange: (content: string) => {
       // Excalidraw 载入磁盘场景后会把字段补齐（groupIds/roundness/gridSize…），
@@ -152,8 +163,18 @@ async function boot(): Promise<void> {
   })
   host = {
     transferTo: () => mounted.transferTo(container),
+    setTheme: (theme: 'light' | 'dark') => mounted.setTheme(theme),
     destroy: mounted.destroy
   }
+  themeObserver?.disconnect()
+  themeObserver = new MutationObserver((changes) => {
+    if (!changes.some((change) => change.attributeName === 'data-theme')) return
+    host?.setTheme(currentTheme())
+  })
+  themeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme']
+  })
   phase.value = 'ready'
   syncTabState()
 }
@@ -245,14 +266,20 @@ onMounted(() => {
 // 标签可见 = 它是本组当前标签，且本组是当前分栏
 const visible = computed(() => props.active && editor.activeGroupId === props.groupId)
 
-watch(visible, async (now, before) => {
-  if (now && !before && host && hostRef.value) {
-    // 回到这个标签：不重建实例，只把承载节点接回并重建键盘焦点
-    host.transferTo()
-  }
-  if (before && !now) await session.value?.flush()
-  if (now && !before) await revalidate()
-})
+watch(
+  visible,
+  async (now, before) => {
+    if (now && !before && host && hostRef.value) {
+      // 回到这个标签：不重建实例，只把承载节点接回并重建键盘焦点
+      host.transferTo()
+    }
+    if (before && !now) await session.value?.flush()
+    if (now && !before) await revalidate()
+  },
+  // flush: 'post'——必须等 v-show 真的把面板显示出来再 focus，
+  // 否则 focus() 作用在 display:none 的元素上会静默失败（焦点留在 body，快捷键收不到）
+  { flush: 'post' }
+)
 
 // 资源面板重命名画布后标签身份跟着换路径：内容没变，会话继续用，只重注册标题
 watch(
@@ -279,6 +306,8 @@ watch(
 
 onBeforeUnmount(() => {
   disposed = true
+  themeObserver?.disconnect()
+  themeObserver = null
   void session.value?.flush()
   session.value?.dispose()
   session.value = null

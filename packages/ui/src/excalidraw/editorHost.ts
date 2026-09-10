@@ -15,6 +15,7 @@ import { Excalidraw, serializeAsJSON } from '@excalidraw/excalidraw'
 import '@excalidraw/excalidraw/index.css'
 
 import { setExcalidrawAssetPath } from './fonts'
+import { restoreCanvasKeyboardFocusWhenReady } from './focus'
 
 import type {
   ExcalidrawImperativeAPI,
@@ -44,6 +45,8 @@ export interface ExcalidrawHostHandle {
   transferTo(target: HTMLElement): void
   /** 重建键盘焦点（交接后必须调用） */
   focus(): void
+  /** 跟随宿主主题切换；不重建实例，只改 appState.theme */
+  setTheme(theme: 'light' | 'dark'): void
   getApi(): ExcalidrawImperativeAPI | null
   destroy(): void
 }
@@ -62,19 +65,10 @@ function parseInitial(content: string): ExcalidrawInitialDataState {
   }
 }
 
-/**
- * 重建键盘焦点：blur 掉触发交接的控件（例如"全屏"按钮），把焦点交给
- * 交互画布。画布默认不可聚焦，必须补 tabindex。
- */
-export function restoreCanvasKeyboardFocus(host: HTMLElement): void {
-  if (typeof document === 'undefined') return
-  const active = document.activeElement
-  if (active instanceof HTMLElement) active.blur()
-  const canvas = host.querySelector<HTMLElement>('.excalidraw__canvas.interactive')
-  if (!canvas) return
-  if (!canvas.hasAttribute('tabindex')) canvas.setAttribute('tabindex', '0')
-  canvas.focus()
-}
+export {
+  restoreCanvasKeyboardFocus,
+  restoreCanvasKeyboardFocusWhenReady
+} from './focus'
 
 export function mountExcalidrawHost(options: MountExcalidrawHostOptions): ExcalidrawHostHandle {
   if (options.fontBase) setExcalidrawAssetPath(options.fontBase)
@@ -107,9 +101,12 @@ export function mountExcalidrawHost(options: MountExcalidrawHostOptions): Excali
       if (options.host.parentElement !== target) target.append(options.host)
       // 换了承载容器：画布尺寸与命中区域都要重算，否则指针事件落在旧几何上
       api?.refresh?.()
-      restoreCanvasKeyboardFocus(options.host)
+      restoreCanvasKeyboardFocusWhenReady(options.host)
     },
-    focus: () => restoreCanvasKeyboardFocus(options.host),
+    focus: () => restoreCanvasKeyboardFocusWhenReady(options.host),
+    setTheme: (theme: 'light' | 'dark') => {
+      api?.updateScene({ appState: { theme } })
+    },
     getApi: () => api,
     destroy: () => root.unmount()
   }

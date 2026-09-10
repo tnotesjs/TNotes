@@ -196,6 +196,29 @@ try {
     fontProbe.loaded === true,
     JSON.stringify(fontProbe)
   )
+  // 跟随应用主题：切到深色后画布容器带 theme--dark，且主题不进持久化内容
+  const canvasHasDarkTheme = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll('.excalidraw-pane .excalidraw')].some((node) =>
+        node.classList.contains('theme--dark')
+      )
+    )
+  await page.evaluate(() => {
+    document.documentElement.dataset.theme = 'dark'
+  })
+  await page.waitForTimeout(600)
+  const darkTheme = await canvasHasDarkTheme()
+  await page.evaluate(() => {
+    document.documentElement.dataset.theme = 'light'
+  })
+  await page.waitForTimeout(600)
+  const lightTheme = await canvasHasDarkTheme()
+  record(
+    '跟随应用主题：切深色画布跟到 theme--dark，切回浅色恢复',
+    darkTheme === true && lightTheme === false,
+    `dark=${darkTheme} light=${lightTheme}`
+  )
+  record('主题切换不写盘（主题不属于持久化内容）', readFileSync(canvasPath, 'utf8') === beforeOpen)
   await page.screenshot({ path: join(shots, 'opened.png') })
 
   // 2) 同一文件再次「打开画布」→ 定位已有标签，不产生第二个会话
@@ -236,20 +259,42 @@ try {
   await activateTab('.excalidraw')
   await page.waitForTimeout(400)
   await page.keyboard.press('ControlOrMeta+z')
-  let undoRoute = '键盘 Cmd+Z'
-  let undone = await waitFor(() => countAt() === 2, 4000)
-  if (!undone) {
-    const undoButton = page.locator('[data-testid="button-undo"]:visible').first()
-    if ((await undoButton.count()) > 0 && (await undoButton.isEnabled())) {
-      await undoButton.click()
-      undoRoute = '工具栏撤销按钮'
+  let undoRoute = 'CDP 键盘 Cmd+Z'
+  let undoneByKeyboard = await waitFor(() => countAt(canvasPath) === 2, 3000)
+  if (!undoneByKeyboard) {
+    // 原生输入路径：应用菜单里的 role:'undo' 会抢 Cmd+Z，这里分辨是「焦点没送到」
+    // 还是「只有合成事件能到」
+    await app.evaluate(({ BrowserWindow }) => {
+      const contents = BrowserWindow.getAllWindows()[0]?.webContents
+      contents?.focus()
+      const modifiers = [process.platform === 'darwin' ? 'meta' : 'control']
+      contents?.sendInputEvent({ type: 'keyDown', keyCode: 'Z', modifiers })
+      contents?.sendInputEvent({ type: 'keyUp', keyCode: 'Z', modifiers })
+    })
+    if (await waitFor(() => countAt(canvasPath) === 2, 3000)) {
+      undoneByKeyboard = true
+      undoRoute = '原生输入 Cmd+Z'
     }
   }
-  undone = await waitFor(() => countAt() === 2, 4000)
   record(
-    '标签切换后交接：场景保留且撤销历史仍有效（3 → 2）',
-    Boolean(undone),
-    `elements=${countAt()}，生效路径：${undoRoute}`
+    '标签切换后交接：键盘快捷键送达画布（焦点重建到位，3 → 2）',
+    Boolean(undoneByKeyboard),
+    `elements=${countAt(canvasPath)}，生效路径：${undoRoute}`
+  )
+
+  // 历史本身：交接后再画一笔，用工具栏撤销按钮确认历史没被重建清掉
+  await drawRectangle(200)
+  await waitFor(() => countAt(canvasPath) === 3)
+  const undoButton = page.locator('[data-testid="button-undo"]:visible').first()
+  let undoneByButton = false
+  if ((await undoButton.count()) > 0 && (await undoButton.isEnabled())) {
+    await undoButton.click()
+    undoneByButton = Boolean(await waitFor(() => countAt(canvasPath) === 2, 5000))
+  }
+  record(
+    '交接后撤销历史仍在（工具栏按钮可撤销交接前的绘制）',
+    undoneByButton,
+    `elements=${countAt(canvasPath)}`
   )
 
   // 5b) 拆分不复制画布标签：同一文件永远只有一个编辑会话（单文件单写者）
