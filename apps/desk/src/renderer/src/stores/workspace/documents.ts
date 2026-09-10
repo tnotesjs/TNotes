@@ -49,7 +49,7 @@ export function createDocuments(ctx: DocumentsContext) {
           key,
           setTimeout(() => {
             ctx.autosaveTimers.delete(key)
-            void saveDocument(key).catch(() => undefined)
+            void saveDocument(key, { silent: true }).catch(() => undefined)
           }, ctx.settings.value.autosave.delayMs)
         )
       }
@@ -152,7 +152,9 @@ export function createDocuments(ctx: DocumentsContext) {
       content,
       dirty,
       preserveSourceOnSave,
-      externalConflict: false
+      // 外部冲突标记要保留到用户显式选择「载入磁盘 / 保留编辑」为止：
+      // 之前任何一次击键都会清掉它，冲突横幅消失，用户失去选择权
+      externalConflict: session.externalConflict
     })
     ctx.editor.setNoteDirty(session.document.knowledgeBaseId, session.document.uuid, dirty)
     const currentTimer = ctx.autosaveTimers.get(key)
@@ -175,7 +177,7 @@ export function createDocuments(ctx: DocumentsContext) {
     if (dirty && !pausedAutosave.has(key) && ctx.settings.value?.autosave.enabled) {
       const timer = setTimeout(() => {
         ctx.autosaveTimers.delete(key)
-        void saveDocument(key).catch(() => undefined)
+        void saveDocument(key, { silent: true }).catch(() => undefined)
       }, ctx.settings.value.autosave.delayMs)
       ctx.autosaveTimers.set(key, timer)
     }
@@ -185,11 +187,14 @@ export function createDocuments(ctx: DocumentsContext) {
     if (ctx.activeDocumentKey.value) updateDocumentContent(ctx.activeDocumentKey.value, content)
   }
 
-  function saveDocument(key: string): Promise<void> {
-    return pendingSaves.run(key, () => performSaveDocument(key))
+  function saveDocument(key: string, options: { silent?: boolean } = {}): Promise<void> {
+    return pendingSaves.run(key, () => performSaveDocument(key, options))
   }
 
-  async function performSaveDocument(key: string): Promise<void> {
+  async function performSaveDocument(
+    key: string,
+    options: { silent?: boolean } = {}
+  ): Promise<void> {
     const session = ctx.documents.value[key]
     if (!session || !session.dirty || session.document.readOnly || session.saving) return
     const contentToSave = session.content
@@ -238,9 +243,10 @@ export function createDocuments(ctx: DocumentsContext) {
       const remaining = ctx.documents.value[key]
       if (!remaining?.dirty) {
         deleteRecovery(mutation.note.knowledgeBaseId, mutation.note.uuid)
-        ctx.status.value = '已保存'
+        // 自动保存默认 1s 一次：每次都弹「已保存」会把通知区刷满，只有手动保存才提示
+        if (!options.silent) ctx.status.value = '已保存'
       } else {
-        ctx.status.value = '已保存先前修改，仍有未保存内容'
+        if (!options.silent) ctx.status.value = '已保存先前修改，仍有未保存内容'
         if (
           !pausedAutosave.has(key) &&
           ctx.settings.value?.autosave.enabled &&
@@ -250,7 +256,7 @@ export function createDocuments(ctx: DocumentsContext) {
             key,
             setTimeout(() => {
               ctx.autosaveTimers.delete(key)
-              void saveDocument(key).catch(() => undefined)
+              void saveDocument(key, { silent: true }).catch(() => undefined)
             }, ctx.settings.value.autosave.delayMs)
           )
         }
