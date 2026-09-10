@@ -37,9 +37,5 @@ export const TOC_NOTE_LINE_REGEX = /^( *)(-\s+\[(x|X| )\])\s+(\d{4})(?:\.\s*(.*?
 /** Group line: `- 标题` (no checkbox). */
 export const TOC_GROUP_LINE_REGEX = /^( *)(-\s+(?!\[(?:x|X| )\]).+?)\s*$/
 
-/** Legacy linked note line: `- [x] [0001. 标题](/notes/...)` (read-only). */
-export const TOC_LEGACY_NOTE_LINE_REGEX =
-  /^( *)(-\s+\[(x|X| )\])\s+\[(\d{4})(?:\.[^\]]*)?\]\(([^)]+)\)/
-
 /** Frontmatter whitelist — everything else is stripped by migrations. */
 export const FRONTMATTER_KEYS = ['id', 'description'] as const

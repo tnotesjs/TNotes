@@ -7,18 +7,12 @@
  *   - 分组标题                  group (any depth, 2-space indent)
  *   - [x] 0001. 标题            done note
  *   - [ ] 0001. 标题            pending note
- *   - [x] [0001. 标题](...)     linked form (parsed, never emitted)
  *
  * Unknown lines (blank lines, headings, comments) are preserved in place:
  * mutations edit the raw line array by index and rewrite the file.
  */
 
-import {
-  TOC_GROUP_LINE_REGEX,
-  TOC_INDENT_SPACES,
-  TOC_LEGACY_NOTE_LINE_REGEX,
-  TOC_NOTE_LINE_REGEX
-} from './constants'
+import { TOC_GROUP_LINE_REGEX, TOC_INDENT_SPACES, TOC_NOTE_LINE_REGEX } from './constants'
 import { KbError } from './errors'
 
 import type { TocNode } from './types'
@@ -51,18 +45,6 @@ export function parseTocLine(line: string | undefined | null): ParsedTocLine {
     rawLine
   }
   if (line == null) return unknown
-
-  const legacy = line.match(TOC_LEGACY_NOTE_LINE_REGEX)
-  if (legacy) {
-    return {
-      kind: 'note',
-      indentLevel: parseIndent(legacy[1]),
-      noteIndex: legacy[4],
-      title: null,
-      done: legacy[3].toLowerCase() === 'x',
-      rawLine
-    }
-  }
 
   const note = line.match(TOC_NOTE_LINE_REGEX)
   if (note) {

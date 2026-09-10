@@ -53,17 +53,11 @@ describe('parseTocLine', () => {
     expect(parsed.done).toBe(false)
   })
 
-  it('parses legacy linked note lines', () => {
-    const parsed = parseTocLine('- [x] [0001. 旧格式](/notes/0001.%20旧格式/README)')
-    expect(parsed.kind).toBe('note')
-    expect(parsed.noteIndex).toBe('0001')
-    expect(parsed.done).toBe(true)
-  })
-
   it('treats unrelated lines as unknown', () => {
     expect(parseTocLine('# 标题').kind).toBe('unknown')
     expect(parseTocLine('').kind).toBe('unknown')
     expect(parseTocLine('- [x] 不是笔记').kind).toBe('unknown')
+    expect(parseTocLine('- [x] [0001. 标题](/notes/0001.%20标题/README)').kind).toBe('unknown')
   })
 })
 
