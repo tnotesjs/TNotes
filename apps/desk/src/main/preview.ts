@@ -31,6 +31,8 @@ function notePreviewUrl(baseUrl: string, noteDirName?: string): string {
  */
 export class PreviewManager {
   private handles = new Map<string, PreviewHandle>()
+  /** 正在启动的 KB：并发点击预览复用同一个 in-flight 启动，避免建出两个 dev server。 */
+  private starting = new Map<string, Promise<PreviewStartResult>>()
   private listener: ((state: PreviewStateDto) => void) | null = null
 
   onChanged(listener: (state: PreviewStateDto) => void): () => void {
@@ -57,7 +59,24 @@ export class PreviewManager {
         url: existing.state.baseUrl ? notePreviewUrl(existing.state.baseUrl, noteDirName) : null
       }
     }
+    const inFlight = this.starting.get(knowledgeBaseId)
+    if (inFlight) return await inFlight
 
+    const task = this.beginStart(knowledgeBaseId, knowledgeBaseName, repoDir, noteDirName)
+    this.starting.set(knowledgeBaseId, task)
+    try {
+      return await task
+    } finally {
+      if (this.starting.get(knowledgeBaseId) === task) this.starting.delete(knowledgeBaseId)
+    }
+  }
+
+  private async beginStart(
+    knowledgeBaseId: string,
+    knowledgeBaseName: string,
+    repoDir: string,
+    noteDirName?: string
+  ): Promise<PreviewStartResult> {
     const state: PreviewStateDto = {
       knowledgeBaseId,
       knowledgeBaseName,
@@ -74,6 +93,19 @@ export class PreviewManager {
       const { createDevServer, resolveConfig } = await import('@tnotesjs/ssg')
       const config = await resolveConfig(repoDir)
       const server = await createDevServer(repoDir)
+      // 启动期间被 stop（或被新的 handle 取代）时，不能把这个 server 挂到已移除的
+      // handle 上，否则它永远不会被关闭。直接关掉并保持 idle。
+      if (this.handles.get(knowledgeBaseId) !== handle || handle.stopping) {
+        await this.stopHandle({ state: handle.state, server, stopping: false })
+        handle.state = {
+          ...handle.state,
+          status: 'idle',
+          port: null,
+          baseUrl: null,
+          error: null
+        }
+        return { state: { ...handle.state }, url: null }
+      }
       handle.server = server
       const address = server.httpServer?.address()
       const port = address && typeof address === 'object' ? address.port : config.port
@@ -115,7 +147,8 @@ export class PreviewManager {
       }
     }
     await this.stopHandle(handle)
-    this.handles.delete(knowledgeBaseId)
+    // stop 期间可能已经有新的 handle 接管（用户又点了预览）：只删自己那一个
+    if (this.handles.get(knowledgeBaseId) === handle) this.handles.delete(knowledgeBaseId)
     const state: PreviewStateDto = { ...handle.state, status: 'idle', error: null }
     this.emit(state)
     return state
