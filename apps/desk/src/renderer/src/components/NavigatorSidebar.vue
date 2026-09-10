@@ -199,6 +199,8 @@ function applyMenuAction(action: NavigatorSidebarMenuAction): void {
   else if (action === 'reveal') void revealKnowledgeBase()
   else if (action === 'settings') {
     if (store.knowledgeBase) editor.openKbSettings(store.knowledgeBase)
+  } else if (action === 'assets') {
+    if (store.knowledgeBase) editor.openKbAssets(store.knowledgeBase)
   } else showKnowledgeBaseMenu()
 }
 

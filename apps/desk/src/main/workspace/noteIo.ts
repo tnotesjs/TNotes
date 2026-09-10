@@ -203,10 +203,12 @@ export async function writeLocalAttachment(
     data: request.data
   })
   const absolutePath = path.join(handle.rootPath, result.relPath)
-  effects.markInternalWrites(handle.rootPath, [{ path: result.relPath }])
+  if (!result.reused) {
+    effects.markInternalWrites(handle.rootPath, [{ path: result.relPath }])
+  }
   handle.snapshot = await handle.workspace.scan()
   effects.emitChanged()
-  return { absolutePath, markdownPath: result.markdownPath }
+  return { absolutePath, markdownPath: result.markdownPath, reused: result.reused }
 }
 
 const IMAGE_EXTENSIONS = new Set([

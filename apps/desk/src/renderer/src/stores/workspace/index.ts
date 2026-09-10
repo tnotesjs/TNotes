@@ -16,6 +16,7 @@ import type {
 import type { SplitPlacement } from '../../editor-groups/layoutModel'
 
 import { createDocuments } from './documents'
+import { collectAssetEditorSnapshot } from './assetWriteSnapshot'
 import { createTabClosing, type ClosingResource } from './closeTabs'
 import { createGit } from './git'
 import {
@@ -55,6 +56,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   const gitStates = ref<Record<string, GitRepositoryStateDto>>({})
   const gitAttention = ref<GitAttention | null>(null)
   const pendingGitPublishId = ref<string | null>(null)
+  const assetRevisions = ref<Record<string, number>>({})
   const loading = ref(false)
   const error = ref<string | null>(null)
   const status = ref<string | null>(null)
@@ -69,7 +71,13 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   let unsubscribeExternal: (() => void) | null = null
   let unsubscribeGit: (() => void) | null = null
   let unsubscribeKbSettings: (() => void) | null = null
+  let unsubscribeKbAssets: (() => void) | null = null
+  let unsubscribeAssetGate: (() => void) | null = null
+  let unsubscribeAssetPrepare: (() => void) | null = null
+  let unsubscribeAssetApplied: (() => void) | null = null
+  let unsubscribeAssetSettled: (() => void) | null = null
   let tocFocusSequence = 0
+  const pausedForAssetWrite = new Map<string, () => void>()
 
   const activeDocumentKey = computed(() => {
     const tab = editor.activeTab
@@ -309,6 +317,12 @@ export const useWorkspaceStore = defineStore('workspace', () => {
           if (descriptor) editor.openKbSettings(descriptor)
         }
       )
+      unsubscribeKbAssets = window.desk.knowledgeBases.onOpenAssetsRequested((knowledgeBaseId) => {
+        const descriptor = overview.value.allKnowledgeBases.find(
+          (item) => item.id === knowledgeBaseId
+        )
+        if (descriptor) editor.openKbAssets(descriptor)
+      })
       editor.restore(
         payload.session,
         payload.workspace.allKnowledgeBases,
@@ -341,6 +355,43 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         }
         void reloadDocument(key)
       })
+      unsubscribeAssetGate = window.desk.assets.onGateQuery((event) => {
+        window.desk.assets.replyGate(
+          event.requestId,
+          event.knowledgeBaseId,
+          collectAssetEditorSnapshot({
+            knowledgeBaseId: event.knowledgeBaseId,
+            editor,
+            documents: documents.value,
+            pendingRecoveries: pendingRecoveries.value
+          })
+        )
+      })
+      unsubscribeAssetPrepare = window.desk.assets.onPrepareApply((event) => {
+        for (const noteUuid of event.noteUuids) {
+          const key = documentKey(event.knowledgeBaseId, noteUuid)
+          if (pausedForAssetWrite.has(key)) continue
+          pausedForAssetWrite.set(key, pauseDocumentAutosave(key))
+        }
+      })
+      unsubscribeAssetApplied = window.desk.assets.onApplied((event) => {
+        assetRevisions.value = {
+          ...assetRevisions.value,
+          [event.knowledgeBaseId]: event.revision
+        }
+        for (const noteUuid of event.noteUuids) {
+          const key = documentKey(event.knowledgeBaseId, noteUuid)
+          const session = documents.value[key]
+          if (session && !session.dirty) void reloadDocument(key)
+        }
+      })
+      unsubscribeAssetSettled = window.desk.assets.onApplySettled((event) => {
+        for (const noteUuid of event.noteUuids) {
+          const key = documentKey(event.knowledgeBaseId, noteUuid)
+          pausedForAssetWrite.get(key)?.()
+          pausedForAssetWrite.delete(key)
+        }
+      })
       const initial = payload.workspace.knowledgeBases.find(
         (item) => item.id === payload.session?.selectedKnowledgeBaseId
       )
@@ -366,6 +417,18 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     unsubscribeGit = null
     unsubscribeKbSettings?.()
     unsubscribeKbSettings = null
+    unsubscribeKbAssets?.()
+    unsubscribeKbAssets = null
+    unsubscribeAssetGate?.()
+    unsubscribeAssetGate = null
+    unsubscribeAssetPrepare?.()
+    unsubscribeAssetPrepare = null
+    unsubscribeAssetApplied?.()
+    unsubscribeAssetApplied = null
+    unsubscribeAssetSettled?.()
+    unsubscribeAssetSettled = null
+    for (const resume of pausedForAssetWrite.values()) resume()
+    pausedForAssetWrite.clear()
     for (const timer of autosaveTimers.values()) clearTimeout(timer)
     autosaveTimers.clear()
     for (const timer of recoveryTimers.values()) clearTimeout(timer)
@@ -425,7 +488,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
   async function syncToActiveTab(forceReveal = false): Promise<void> {
     const tab = editor.activeTab
-    if (!tab || tab.type === 'web' || tab.type === 'kb-settings') return
+    if (!tab || tab.type === 'web' || tab.type === 'kb-settings' || tab.type === 'kb-assets') return
     if (tab.type === 'note') await ensureDocument(tab.knowledgeBaseId, tab.noteUuid)
     if (forceReveal || settings.value?.tabs.autoRevealInToc) {
       if (selectedKnowledgeBaseId.value !== tab.knowledgeBaseId) {
@@ -526,6 +589,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     gitStates,
     gitAttention,
     pendingGitPublishId,
+    assetRevisions,
     document,
     editorContent,
     dirty,

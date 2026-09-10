@@ -48,10 +48,23 @@ const kbSettingsTabSchema = z.object({
   dirty: z.boolean().optional()
 })
 
+const kbAssetsTabSchema = z.object({
+  id: z.string().min(1),
+  type: z.literal('kb-assets'),
+  knowledgeBaseId: z.string().min(1),
+  knowledgeBaseName: z.string(),
+  title: z.string(),
+  icon: iconSchema,
+  pinned: z.boolean().optional(),
+  openedAt: z.number().finite().optional(),
+  dirty: z.boolean().optional()
+})
+
 const editorTabSchema = z.discriminatedUnion('type', [
   noteTabSchema,
   webTabSchema,
-  kbSettingsTabSchema
+  kbSettingsTabSchema,
+  kbAssetsTabSchema
 ])
 
 const editorLayoutSchema: z.ZodType<WorkspaceSession['layout']> = z.lazy(() =>

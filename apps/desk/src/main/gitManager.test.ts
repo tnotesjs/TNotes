@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { parseGitStatus } from './gitManager'
+import { parseGitStatus, shouldScheduleAutoPush } from './gitManager'
 
 describe('Git porcelain parser', () => {
   it('parses tracked, untracked, renamed and conflicted paths', () => {
@@ -18,5 +18,28 @@ describe('Git porcelain parser', () => {
       },
       { path: 'TOC.md', status: 'conflicted' }
     ])
+  })
+})
+
+describe('shouldScheduleAutoPush', () => {
+  it('does not reschedule while asset writes are paused', () => {
+    expect(
+      shouldScheduleAutoPush({
+        enabled: true,
+        paused: true,
+        hasChanges: true,
+        conflict: false,
+        behind: 0
+      })
+    ).toBe(false)
+    expect(
+      shouldScheduleAutoPush({
+        enabled: true,
+        paused: false,
+        hasChanges: true,
+        conflict: false,
+        behind: 0
+      })
+    ).toBe(true)
   })
 })

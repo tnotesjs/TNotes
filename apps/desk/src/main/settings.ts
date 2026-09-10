@@ -84,6 +84,19 @@ const settingsSchema = z.object({
           cdnTemplate:
             'https://cdn.jsdelivr.net/gh/${username}/${repository}@${branch}/${filepath}',
           fileNameFormat: '${YY}-${MM}-${DD}-${HH}-${mm}-${ss}'
+        }),
+      optimize: z
+        .object({
+          encoder: z.enum(['sharp', 'oxipng']).default('sharp'),
+          quality: z.number().int().min(40).max(100).default(80),
+          maxDimension: z.number().int().min(64).max(10_000).nullable().default(null),
+          outputFormat: z.enum(['keep', 'webp', 'jpeg']).default('keep')
+        })
+        .default({
+          encoder: 'sharp',
+          quality: 80,
+          maxDimension: null,
+          outputFormat: 'keep'
         })
     })
     .default({
@@ -94,6 +107,12 @@ const settingsSchema = z.object({
         path: '/',
         cdnTemplate: 'https://cdn.jsdelivr.net/gh/${username}/${repository}@${branch}/${filepath}',
         fileNameFormat: '${YY}-${MM}-${DD}-${HH}-${mm}-${ss}'
+      },
+      optimize: {
+        encoder: 'sharp',
+        quality: 80,
+        maxDimension: null,
+        outputFormat: 'keep'
       }
     }),
   hiddenKnowledgeBases: z.array(z.string().min(1)).default([]),
@@ -164,7 +183,8 @@ export function saveSettings(next: Partial<AppSettings>): AppSettings {
     imageUpload: {
       ...current.imageUpload,
       ...next.imageUpload,
-      github: { ...current.imageUpload.github, ...next.imageUpload?.github }
+      github: { ...current.imageUpload.github, ...next.imageUpload?.github },
+      optimize: { ...current.imageUpload.optimize, ...next.imageUpload?.optimize }
     },
     knowledgeBases: { ...current.knowledgeBases, ...next.knowledgeBases }
   })

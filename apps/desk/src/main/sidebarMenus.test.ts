@@ -58,6 +58,7 @@ describe('sidebar native menus', () => {
       '停止站点预览',
       '正在构建站点',
       'separator',
+      '资源',
       '知识库配置',
       '使用 IDE 打开',
       '打开知识库目录'
@@ -76,6 +77,7 @@ describe('sidebar native menus', () => {
       'preview',
       'build',
       'settings',
+      'assets',
       'ide',
       'reveal'
     ]) {

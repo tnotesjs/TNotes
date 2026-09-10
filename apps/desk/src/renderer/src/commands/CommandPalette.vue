@@ -38,6 +38,9 @@ const commands = computed(() =>
     openKbSettings: () => {
       if (workspace.knowledgeBase) editor.openKbSettings(workspace.knowledgeBase)
     },
+    openKbAssets: () => {
+      if (workspace.knowledgeBase) editor.openKbAssets(workspace.knowledgeBase)
+    },
     hasSelectedKnowledgeBase: () => Boolean(workspace.knowledgeBase)
   })
 )
@@ -101,7 +104,7 @@ const placeholder = computed(() => {
 const idleLabel = computed(() => {
   const tab = editor.activeTab
   if (tab?.type === 'note') return tab.title
-  if (tab?.type === 'kb-settings') return tab.title
+  if (tab?.type === 'kb-settings' || tab?.type === 'kb-assets') return tab.title
   if (tab?.type === 'web') return tab.title
   return '搜索笔记'
 })

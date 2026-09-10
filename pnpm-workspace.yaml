@@ -13,6 +13,7 @@ allowBuilds:
   electron-winstaller: true
   '@vscode/vsce-sign': true
   keytar: true
+  sharp: true
 
 # 本组织包刚发布就要能被装到，跳过 minimumReleaseAge 冷却
 minimumReleaseAgeExclude:
@@ -26,3 +27,9 @@ minimumReleaseAgeExclude:
 overrides:
   '@electron/get@^2.0.0': 2.0.3
   '@electron/get@^3.0.0': 3.1.0
+  # remark-stringify 11 声明 mdast-util-to-markdown ^2.0.0，pnpm 全新解析会选出
+  # 2.0.0（没有 compilePattern），而 mdast-util-math 3 声明 ^2.1.0 并要求序列化
+  # state 上存在 state.compilePattern。两份并存时旧版构造的 state 缺该方法，序列化
+  # 行内公式（$...$）会抛 "state.compilePattern is not a function" 并中断编辑器创建。
+  # 统一到 2.1.0（仍在 ^2.0.0 范围内，兼容）。
+  'mdast-util-to-markdown@^2.0.0': 2.1.0

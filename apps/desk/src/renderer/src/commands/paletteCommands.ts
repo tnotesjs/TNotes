@@ -15,6 +15,7 @@ export interface PaletteCommandContext {
   saveDocument: () => Promise<void>
   openSettings: () => void
   openKbSettings: () => void
+  openKbAssets: () => void
   hasSelectedKnowledgeBase: () => boolean
 }
 
@@ -75,6 +76,15 @@ export function createPaletteCommands(context: PaletteCommandContext): PaletteCo
       shortcut: '⌘ S',
       enabled: () => true,
       run: () => context.saveDocument()
+    },
+    {
+      id: 'open-kb-assets',
+      title: '资源',
+      category: '知识库',
+      hint: 'KB Assets',
+      keywords: ['kb', 'assets', '资源', '图片', '附件'],
+      enabled: () => context.hasSelectedKnowledgeBase(),
+      run: () => context.openKbAssets()
     },
     {
       id: 'open-kb-settings',

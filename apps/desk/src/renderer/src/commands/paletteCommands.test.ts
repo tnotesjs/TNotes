@@ -11,6 +11,7 @@ const commands = createPaletteCommands({
   saveDocument: async () => undefined,
   openSettings: () => undefined,
   openKbSettings: () => undefined,
+  openKbAssets: () => undefined,
   hasSelectedKnowledgeBase: () => true
 })
 

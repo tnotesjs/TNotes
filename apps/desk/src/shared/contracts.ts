@@ -16,6 +16,24 @@ export const IPC_CHANNELS = {
   knowledgeBaseReadSettings: 'knowledge-base:read-settings',
   knowledgeBaseWriteSettings: 'knowledge-base:write-settings',
   knowledgeBaseWriteIcon: 'knowledge-base:write-icon',
+  kbOpenAssetsRequested: 'kb:open-assets-requested',
+  assetsScan: 'assets:scan',
+  assetsScanCancel: 'assets:scan-cancel',
+  assetsSummaries: 'assets:summaries',
+  assetsScanProgress: 'assets:scan-progress',
+  assetsPlanRename: 'assets:plan-rename',
+  assetsPlanRecycle: 'assets:plan-recycle',
+  assetsPlanMerge: 'assets:plan-merge',
+  assetsPreviewOptimize: 'assets:preview-optimize',
+  assetsPlanOptimize: 'assets:plan-optimize',
+  assetsApply: 'assets:apply',
+  assetsRestore: 'assets:restore',
+  assetsHistory: 'assets:history',
+  assetsGateQuery: 'assets:gate-query',
+  assetsGateReply: 'assets:gate-reply',
+  assetsPrepareApply: 'assets:prepare-apply',
+  assetsApplied: 'assets:applied',
+  assetsApplySettled: 'assets:apply-settled',
   settingsUpdate: 'settings:update',
   settingsExport: 'settings:export',
   settingsImport: 'settings:import',
@@ -188,6 +206,152 @@ export interface KnowledgeBaseCreateResult {
   knowledgeBaseId: string
 }
 
+export type AssetRecordStatusDto =
+  'referenced' | 'idle-candidate' | 'uncertain-idle' | 'uncertain-affected' | 'protected'
+
+export interface AssetReferenceDto {
+  sourceRelPath: string
+  startOffset: number
+  endOffset: number
+  line: number
+  column: number
+  rawUrl: string
+  decodedPath: string
+  targetRelPath: string | null
+  syntax: string
+  urlKind: string
+  urlSuffix: string
+  rewritable: boolean
+  noteUuid?: string
+  noteTitle?: string
+}
+
+export interface AssetRecordDto {
+  relPath: string
+  name: string
+  size: number
+  mtimeMs: number
+  kind: string
+  status: AssetRecordStatusDto
+  references: AssetReferenceDto[]
+  protection: string[]
+  renameAllowed: boolean
+  ownerNoteIndex?: string | null
+  sha256?: string
+  duplicateGroupId?: string
+}
+
+export interface AssetScanReportDto {
+  generation: number
+  coverageComplete: boolean
+  batchCleanupAllowed: boolean
+  sources: Array<{
+    relPath: string
+    role: string
+    bytes: number
+    error?: string
+  }>
+  assets: AssetRecordDto[]
+  references: AssetReferenceDto[]
+  brokenLinks: Array<{ reference: AssetReferenceDto; reason: string }>
+  diagnostics: Array<{
+    code: string
+    message: string
+    scope: string
+    sourceRelPath?: string
+    targetRelPath?: string
+  }>
+  adapters: Array<{ id: string; status: string; detail: string }>
+  duplicateGroups: Array<{
+    sha256: string
+    ownerNoteIndex: string | null
+    relPaths: string[]
+    mergeable: boolean
+  }>
+  stats: {
+    assetCount: number
+    assetBytes: number
+    determinedReferenceCount: number
+    uncertainReferenceCount: number
+    mergeableDuplicateCount: number
+    crossNoteDuplicateCount: number
+  }
+}
+
+export interface AssetScanProgressDto {
+  knowledgeBaseId: string
+  generation: number
+  done: number
+  total: number
+  current?: string
+}
+
+export interface AssetKbSummaryDto {
+  knowledgeBaseId: string
+  displayName: string
+  fileCount: number
+  bytes: number
+}
+
+export interface AssetOperationPlanDto {
+  id: string
+  kind: 'rename' | 'recycle' | 'restore' | 'merge' | 'optimize'
+  generation: number
+  coverageComplete: boolean
+  blockedReasons: string[]
+  estimated: { filesTouched: number; bytesMoved: number; bytesSaved?: number }
+  moves: Array<{ fromRelPath: string; toRelPath?: string }>
+  sourceRelPaths: string[]
+}
+
+export interface AssetOperationResultDto {
+  planId: string
+  status: 'applied' | 'failed' | 'needs-recovery' | 'blocked'
+  changedPaths: string[]
+  recoveryId?: string
+  error?: string
+}
+
+export interface AssetJournalDto {
+  planId: string
+  kind: 'rename' | 'recycle' | 'restore' | 'merge' | 'optimize'
+  stage: string
+  createdAt: string
+  restorable: boolean
+  estimated: { filesTouched: number; bytesMoved: number }
+  moves: Array<{ fromRelPath: string; toRelPath?: string }>
+}
+
+export interface AssetGateQueryEvent {
+  requestId: string
+  knowledgeBaseId: string
+}
+
+export interface AssetEditorSnapshotDto {
+  dirtyDocuments: Array<{ noteUuid: string; title: string; saving: boolean }>
+  dirtyTabs: Array<{ type: string; title: string }>
+  pendingRecoveries: Array<{ noteUuid: string; title: string }>
+  pendingEdits: Array<{ noteUuid: string }>
+  kbSettingsDirty: boolean
+}
+
+export interface AssetPrepareApplyEvent {
+  knowledgeBaseId: string
+  noteUuids: string[]
+}
+
+export interface AssetAppliedEvent {
+  knowledgeBaseId: string
+  noteUuids: string[]
+  changedRelPaths: string[]
+  revision: number
+}
+
+export interface AssetApplySettledEvent {
+  knowledgeBaseId: string
+  noteUuids: string[]
+}
+
 export type KnowledgeBaseIconWriteRequest =
   | {
       knowledgeBaseId: string
@@ -259,7 +423,7 @@ export type ContextMenuAction =
 export type ContextMenuRequest =
   | { kind: 'note'; pinned: boolean; completed: boolean }
   | { kind: 'group' }
-  | { kind: 'tab'; tabType: 'note' | 'web' | 'kb-settings'; pinned: boolean }
+  | { kind: 'tab'; tabType: 'note' | 'web' | 'kb-settings' | 'kb-assets'; pinned: boolean }
   | { kind: 'code-group-tab' }
 
 export interface KnowledgeSidebarMenuRequest {
@@ -277,7 +441,7 @@ export interface NavigatorSidebarMenuRequest {
 }
 
 export type NavigatorSidebarMenuAction =
-  'create-note' | 'create-group' | 'preview' | 'build' | 'settings' | 'ide' | 'reveal'
+  'create-note' | 'create-group' | 'preview' | 'build' | 'assets' | 'settings' | 'ide' | 'reveal'
 
 export type TabShortcutCommand =
   | { type: 'activate-tab-by-number'; number: number; sourceTabId?: string }
@@ -312,6 +476,40 @@ export interface GitHubImageSettings {
 export interface ImageUploadSettings {
   defaultTarget: ImageDefaultTarget
   github: GitHubImageSettings
+  optimize: AssetOptimizeSettings
+}
+
+export type AssetOptimizeEncoder = 'sharp' | 'oxipng'
+export type AssetOptimizeOutputFormat = 'keep' | 'webp' | 'jpeg'
+
+export interface AssetOptimizeSettings {
+  /** Default encoder. oxipng is reserved and disabled until a later lossless backend lands. */
+  encoder: AssetOptimizeEncoder
+  quality: number
+  maxDimension: number | null
+  outputFormat: AssetOptimizeOutputFormat
+}
+
+export interface AssetOptimizePreviewItemDto {
+  fromRelPath: string
+  toRelPath: string
+  bytesBefore: number
+  bytesAfter?: number
+  width?: number
+  height?: number
+  ms: number
+  skipped?: string
+  lossy: true
+  encoder: 'sharp'
+  format?: string
+  previewDataUrl?: string
+}
+
+export interface AssetOptimizePreviewDto {
+  items: AssetOptimizePreviewItemDto[]
+  bytesBefore: number
+  bytesAfter: number
+  skippedCount: number
 }
 
 export interface KnowledgeBaseSettings {
@@ -444,7 +642,19 @@ export interface KbSettingsEditorTab {
   dirty?: boolean
 }
 
-export type EditorTab = NoteEditorTab | WebEditorTab | KbSettingsEditorTab
+export interface KbAssetsEditorTab {
+  id: string
+  type: 'kb-assets'
+  knowledgeBaseId: string
+  knowledgeBaseName: string
+  title: string
+  icon: KnowledgeBaseIconDto | null
+  pinned?: boolean
+  openedAt?: number
+  dirty?: boolean
+}
+
+export type EditorTab = NoteEditorTab | WebEditorTab | KbSettingsEditorTab | KbAssetsEditorTab
 
 export interface EditorGroupNode {
   type: 'group'
@@ -649,6 +859,7 @@ export interface AttachmentWriteLocalRequest {
 export interface AttachmentWriteLocalResult {
   absolutePath: string
   markdownPath: string
+  reused?: boolean
 }
 
 export interface ImageUploadRequest extends AttachmentWriteLocalRequest {}
@@ -846,6 +1057,51 @@ export interface DeskApi {
     writeIcon(request: KnowledgeBaseIconWriteRequest): Promise<DeskResult<KnowledgeBaseDetail>>
     /** main → renderer：右键菜单点了「知识库配置」。 */
     onOpenSettingsRequested(callback: (knowledgeBaseId: string) => void): () => void
+    /** main → renderer：右键菜单点了「资源」。 */
+    onOpenAssetsRequested(callback: (knowledgeBaseId: string) => void): () => void
+  }
+  assets: {
+    scan(knowledgeBaseId: string, generation: number): Promise<DeskResult<AssetScanReportDto>>
+    cancel(knowledgeBaseId: string): Promise<DeskResult<void>>
+    summaries(): Promise<DeskResult<AssetKbSummaryDto[]>>
+    planRename(
+      knowledgeBaseId: string,
+      fromRelPath: string,
+      toRelPath: string,
+      generation?: number
+    ): Promise<DeskResult<AssetOperationPlanDto>>
+    planRecycle(
+      knowledgeBaseId: string,
+      relPaths: string[],
+      generation?: number
+    ): Promise<DeskResult<AssetOperationPlanDto>>
+    planMerge(
+      knowledgeBaseId: string,
+      keepRelPath: string,
+      dropRelPaths: string[],
+      generation?: number
+    ): Promise<DeskResult<AssetOperationPlanDto>>
+    previewOptimize(
+      knowledgeBaseId: string,
+      relPaths: string[],
+      options: AssetOptimizeSettings,
+      generation?: number
+    ): Promise<DeskResult<AssetOptimizePreviewDto>>
+    planOptimize(
+      knowledgeBaseId: string,
+      relPaths: string[],
+      options: AssetOptimizeSettings,
+      generation?: number
+    ): Promise<DeskResult<AssetOperationPlanDto>>
+    apply(knowledgeBaseId: string, planId: string): Promise<DeskResult<AssetOperationResultDto>>
+    restore(knowledgeBaseId: string, planId: string): Promise<DeskResult<AssetOperationResultDto>>
+    history(knowledgeBaseId: string): Promise<DeskResult<AssetJournalDto[]>>
+    onScanProgress(callback: (progress: AssetScanProgressDto) => void): () => void
+    onGateQuery(callback: (event: AssetGateQueryEvent) => void): () => void
+    replyGate(requestId: string, knowledgeBaseId: string, snapshot: AssetEditorSnapshotDto): void
+    onPrepareApply(callback: (event: AssetPrepareApplyEvent) => void): () => void
+    onApplied(callback: (event: AssetAppliedEvent) => void): () => void
+    onApplySettled(callback: (event: AssetApplySettledEvent) => void): () => void
   }
   notes: {
     read(knowledgeBaseId: string, noteUuid: string): Promise<DeskResult<NoteDocumentDto>>

@@ -3,9 +3,11 @@ import { randomUUID } from 'node:crypto'
 import { watch, type FSWatcher } from 'node:fs'
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { createWorkspace, isKnowledgeBaseRoot } from '@tnotesjs/kb'
+import { createWorkspace, isKnowledgeBaseRoot, type AssetStorePaths } from '@tnotesjs/kb'
 
 import { deskLog } from '../log'
+
+import { knowledgeBaseAssetStore } from './assetStore'
 
 import { knowledgeBaseId } from './dto'
 import type { KnowledgeBaseHandle, WorkspaceManagerEvents } from './types'
@@ -22,6 +24,8 @@ export interface WorkspaceScanState {
   lastWatcherErrorAt: number
   events: EventEmitter<WorkspaceManagerEvents>
   emitChanged: () => void
+  /** Desk userData; asset journals/recycle live here, never under KB assets/. */
+  userDataDir?: string
 }
 
 export function markInternalWrites(
@@ -66,12 +70,38 @@ async function backfillMissingNoteIds(handle: KnowledgeBaseHandle): Promise<void
 }
 
 async function openHandle(
+  state: WorkspaceScanState,
   rootPath: string,
   name: string,
   previousByPath: Map<string, KnowledgeBaseHandle>
 ): Promise<KnowledgeBaseHandle> {
   const existing = previousByPath.get(rootPath)
-  const workspace = existing?.workspace ?? createWorkspace({ rootPath })
+  const assetStore: AssetStorePaths | undefined = state.userDataDir
+    ? knowledgeBaseAssetStore(state.userDataDir, rootPath)
+    : undefined
+  const workspace = existing?.workspace ?? createWorkspace({ rootPath, assetStore })
+  if (assetStore) {
+    try {
+      const recovered = await workspace.assets.recoverIncomplete(assetStore)
+      if (recovered.length > 0) {
+        markInternalWrites(
+          state,
+          rootPath,
+          recovered.flatMap((result) => result.changedPaths.map((changed) => ({ path: changed })))
+        )
+        deskLog('workspace', 'recovered incomplete asset journals', {
+          rootPath,
+          count: recovered.length
+        })
+      }
+    } catch (error) {
+      deskLog(
+        'workspace',
+        'asset journal recover failed',
+        error instanceof Error ? error.message : String(error)
+      )
+    }
+  }
   const handle: KnowledgeBaseHandle = {
     id: existing?.id ?? knowledgeBaseId(rootPath),
     name,
@@ -97,7 +127,7 @@ export async function scan(state: WorkspaceScanState): Promise<void> {
 
   if (await isKnowledgeBaseRoot(state.workspacePath)) {
     const name = path.basename(state.workspacePath)
-    const handle = await openHandle(state.workspacePath, name, previousByPath)
+    const handle = await openHandle(state, state.workspacePath, name, previousByPath)
     next.set(handle.id, handle)
   } else {
     const entries = await fs.readdir(state.workspacePath, { withFileTypes: true })
@@ -108,7 +138,7 @@ export async function scan(state: WorkspaceScanState): Promise<void> {
     for (const entry of directories) {
       const rootPath = path.join(state.workspacePath, entry.name)
       if (!(await isKnowledgeBaseRoot(rootPath))) continue
-      const handle = await openHandle(rootPath, entry.name, previousByPath)
+      const handle = await openHandle(state, rootPath, entry.name, previousByPath)
       next.set(handle.id, handle)
     }
   }

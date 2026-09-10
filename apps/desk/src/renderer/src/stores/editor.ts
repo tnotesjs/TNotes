@@ -37,6 +37,7 @@ import type {
   KnowledgeBaseDescriptor,
   KnowledgeBaseIconDto,
   KbSettingsEditorTab,
+  KbAssetsEditorTab,
   NoteEditorTab,
   NotePageWidth,
   NoteViewMode,
@@ -77,7 +78,7 @@ function sanitizeLayout(
             return false
           }
         }
-        if (tab.type === 'kb-settings') {
+        if (tab.type === 'kb-settings' || tab.type === 'kb-assets') {
           return (
             knowledgeBaseIds.has(tab.knowledgeBaseId) &&
             (!scopedKnowledgeBaseId || tab.knowledgeBaseId === scopedKnowledgeBaseId)
@@ -103,7 +104,7 @@ function sanitizeLayout(
                   : defaultNotePageWidth,
               outlineVisible: tab.outlineVisible !== false
             }
-          : tab.type === 'kb-settings'
+          : tab.type === 'kb-settings' || tab.type === 'kb-assets'
             ? { dirty: Boolean(tab.dirty) }
             : {})
       }))
@@ -743,6 +744,33 @@ export const useEditorStore = defineStore('editor', () => {
     return tab.id
   }
 
+  function openKbAssets(knowledgeBase: KnowledgeBaseDescriptor): string {
+    if (activeKnowledgeBaseId.value !== knowledgeBase.id) switchKnowledgeBase(knowledgeBase.id)
+    const tabId = `kb-assets:${knowledgeBase.id}`
+    for (const group of groups.value) {
+      const existing = group.tabs.find(
+        (tab) => tab.type === 'kb-assets' && tab.knowledgeBaseId === knowledgeBase.id
+      )
+      if (existing) {
+        activate(group.id, existing.id)
+        return existing.id
+      }
+    }
+    ensureRoomForTab()
+    const tab: KbAssetsEditorTab = {
+      id: tabId,
+      type: 'kb-assets',
+      knowledgeBaseId: knowledgeBase.id,
+      knowledgeBaseName: knowledgeBase.displayName,
+      title: `资源 · ${knowledgeBase.displayName}`,
+      icon: knowledgeBase.icon,
+      pinned: false,
+      openedAt: Date.now()
+    }
+    layout.value = insertTab(layout.value, activeGroupId.value, tab)
+    return tab.id
+  }
+
   function setKbSettingsDirty(tabId: string, dirty: boolean): void {
     const located = findTab(layout.value, tabId)
     if (located?.tab.type !== 'kb-settings') return
@@ -988,6 +1016,7 @@ export const useEditorStore = defineStore('editor', () => {
     openNote,
     openWeb,
     openKbSettings,
+    openKbAssets,
     setKbSettingsDirty,
     updateKbSettingsTabMeta,
     startPreview,

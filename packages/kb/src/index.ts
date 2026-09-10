@@ -54,6 +54,49 @@ export type {
 export { isGitRepository, initGitRepository, readOriginRemoteUrl } from './git'
 export { clearKbIcon, replaceKbIcon, listAssets, addAsset, gcAssets } from './assets'
 export {
+  applyAssetPlan,
+  fillPlanHashes,
+  listAssetJournals,
+  listIncompleteJournals,
+  planMerge,
+  planOptimize,
+  planRecycle,
+  planRename,
+  recoverIncompleteJournals,
+  restoreAssetPlan,
+  runSerializedAssetWork,
+  scanAssets,
+  findReusableAsset,
+  hashAssetFiles,
+  hashBytes,
+  ownerNoteIndexFromName
+} from './asset-scan'
+export type {
+  ApplyAssetPlanOptions,
+  AssetBackupSpec,
+  AssetBrokenLink,
+  AssetCoverageAdapter,
+  AssetDiagnostic,
+  AssetDiagnosticCode,
+  AssetDuplicateGroup,
+  AssetFileKind,
+  AssetFileMove,
+  AssetJournalRecord,
+  AssetJournalStage,
+  AssetOperationPlan,
+  AssetOperationResult,
+  AssetRecord,
+  AssetRecordStatus,
+  AssetReference,
+  AssetScanReport,
+  AssetScanSource,
+  AssetSourcePatch,
+  AssetStorePaths,
+  AssetSyntaxKind,
+  AssetUrlKind,
+  ScanAssetsOptions
+} from './asset-scan'
+export {
   parseCompletedNoteIndexes,
   computeCompletedNotesCount,
   updateCompletedNotesStats,

@@ -39,6 +39,12 @@ const settings: AppSettings = {
       path: '/',
       cdnTemplate: '',
       fileNameFormat: '${YY}-${MM}-${DD}-${HH}-${mm}-${ss}'
+    },
+    optimize: {
+      encoder: 'sharp',
+      quality: 80,
+      maxDimension: null,
+      outputFormat: 'keep'
     }
   },
   updates: { autoCheck: true },

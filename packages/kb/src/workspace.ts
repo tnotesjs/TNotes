@@ -11,6 +11,19 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 
 import { addAsset, clearKbIcon, gcAssets, listAssets, replaceKbIcon } from './assets'
+import {
+  applyAssetPlan,
+  fillPlanHashes,
+  listAssetJournals,
+  planMerge,
+  planOptimize,
+  planRecycle,
+  planRename,
+  recoverIncompleteJournals,
+  restoreAssetPlan,
+  runSerializedAssetWork,
+  scanAssets
+} from './asset-scan'
 import { applyAtomicWrites, writeFileAtomic } from './atomic'
 import { ASSETS_DIR, CONFIG_FILE, NOTES_DIR, TOC_FILE } from './constants'
 import { KbError } from './errors'
@@ -42,6 +55,15 @@ import {
 } from './toc'
 
 import type {
+  ApplyAssetPlanOptions,
+  AssetJournalRecord,
+  AssetOperationPlan,
+  AssetOperationResult,
+  AssetScanReport,
+  AssetStorePaths,
+  ScanAssetsOptions
+} from './asset-scan'
+import type {
   AssetEntry,
   ChangedFile,
   KbConfig,
@@ -58,6 +80,11 @@ import type {
 
 export interface CreateWorkspaceOptions {
   rootPath: string
+  /**
+   * Independent journal/recycle dirs (Desk userData). Required for apply/restore
+   * unless those methods receive an explicit store argument.
+   */
+  assetStore?: AssetStorePaths
 }
 
 export interface SaveNoteInput {
@@ -184,10 +211,44 @@ export interface TNotesKbWorkspace {
 
   assets: {
     list(): Promise<AssetEntry[]>
+    /** Read-only reference analysis. Does not write the knowledge base. */
+    analyze(options?: ScanAssetsOptions): Promise<AssetScanReport>
+    planRename(input: {
+      fromRelPath: string
+      toRelPath: string
+      generation?: number
+    }): Promise<AssetOperationPlan>
+    planRecycle(input: { relPaths: string[]; generation?: number }): Promise<AssetOperationPlan>
+    planMerge(input: {
+      keepRelPath: string
+      dropRelPaths: string[]
+      generation?: number
+    }): Promise<AssetOperationPlan>
+    planOptimize(
+      items: Array<{
+        fromRelPath: string
+        toRelPath: string
+        outputSha256: string
+        bytesAfter: number
+      }>,
+      generation?: number
+    ): Promise<AssetOperationPlan>
+    /**
+     * Apply a previously planned rename or recycle. Journal and recycle dirs are
+     * passed by the caller and must not live under `assets/`.
+     */
+    applyPlan(
+      plan: AssetOperationPlan,
+      store?: AssetStorePaths,
+      options?: ApplyAssetPlanOptions
+    ): Promise<AssetOperationResult>
+    restorePlan(planId: string, store?: AssetStorePaths): Promise<AssetOperationResult>
+    recoverIncomplete(store?: AssetStorePaths): Promise<AssetOperationResult[]>
+    listJournals(store?: AssetStorePaths): Promise<AssetJournalRecord[]>
     add(input: {
       fileName: string
       data: Uint8Array
-    }): Promise<{ relPath: string; markdownPath: string }>
+    }): Promise<{ relPath: string; markdownPath: string; reused: boolean }>
     /** Replace KB icon with fixed `assets/.tn-kb-icon.<ext>` (deletes prior icons). */
     replaceIcon(input: {
       ext: string
@@ -212,6 +273,25 @@ export interface TNotesKbWorkspace {
 export function createWorkspace(options: CreateWorkspaceOptions): TNotesKbWorkspace {
   const rootPath = path.resolve(options.rootPath)
   const tocPath = path.join(rootPath, TOC_FILE)
+  const defaultAssetStore = options.assetStore
+
+  function requireAssetStore(store?: AssetStorePaths): AssetStorePaths {
+    const resolved = store ?? defaultAssetStore
+    if (!resolved) {
+      throw new KbError(
+        'INVALID_OPERATION',
+        '资源写操作需要独立的 journalDir/recycleDir，不能放在知识库 assets/ 下'
+      )
+    }
+    const assetsAbs = path.join(rootPath, ASSETS_DIR)
+    for (const dir of [resolved.journalDir, resolved.recycleDir]) {
+      const abs = path.resolve(dir)
+      if (abs === assetsAbs || abs.startsWith(assetsAbs + path.sep)) {
+        throw new KbError('INVALID_OPERATION', '回收区与 journal 不能放在 assets/ 内', { dir })
+      }
+    }
+    return resolved
+  }
 
   async function readNoteFile(index: string): Promise<{ meta: NoteMeta; content: string }> {
     const snapshot = await scanKnowledgeBase(rootPath)
@@ -478,7 +558,47 @@ export function createWorkspace(options: CreateWorkspaceOptions): TNotesKbWorksp
 
     assets: {
       list: () => listAssets(rootPath),
-      add: (input) => addAsset(rootPath, input.fileName, input.data),
+      analyze: (options) => scanAssets(rootPath, options),
+      async planRename(input) {
+        const report = await scanAssets(rootPath, { generation: input.generation })
+        const plan = planRename(report, {
+          fromRelPath: input.fromRelPath,
+          toRelPath: input.toRelPath
+        })
+        if (plan.blockedReasons.length > 0) return plan
+        return fillPlanHashes(rootPath, plan)
+      },
+      async planRecycle(input) {
+        const report = await scanAssets(rootPath, { generation: input.generation })
+        const plan = planRecycle(report, input.relPaths)
+        if (plan.blockedReasons.length > 0) return plan
+        return fillPlanHashes(rootPath, plan)
+      },
+      async planMerge(input) {
+        const report = await scanAssets(rootPath, {
+          generation: input.generation,
+          includeHashes: true
+        })
+        const plan = planMerge(report, {
+          keepRelPath: input.keepRelPath,
+          dropRelPaths: input.dropRelPaths
+        })
+        if (plan.blockedReasons.length > 0) return plan
+        return fillPlanHashes(rootPath, plan)
+      },
+      async planOptimize(items, generation) {
+        const report = await scanAssets(rootPath, { generation })
+        const plan = planOptimize(report, items)
+        if (plan.blockedReasons.length > 0) return plan
+        return fillPlanHashes(rootPath, plan)
+      },
+      applyPlan: (plan, store, options) =>
+        applyAssetPlan(rootPath, plan, requireAssetStore(store), options),
+      restorePlan: (planId, store) => restoreAssetPlan(rootPath, planId, requireAssetStore(store)),
+      recoverIncomplete: (store) => recoverIncompleteJournals(rootPath, requireAssetStore(store)),
+      listJournals: (store) => listAssetJournals(requireAssetStore(store)),
+      add: (input) =>
+        runSerializedAssetWork(rootPath, () => addAsset(rootPath, input.fileName, input.data)),
       replaceIcon: (input) => replaceKbIcon(rootPath, input.ext, input.data),
       clearIcon: () => clearKbIcon(rootPath),
       gc: (options) => gcAssets(rootPath, options)

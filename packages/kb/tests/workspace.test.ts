@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { createWorkspace } from '../src/workspace'
 import { scanKnowledgeBase } from '../src/scanner'
+import { PNG_1X1 } from './helpers/assetScanFixture'
 
 let root = ''
 
@@ -233,6 +234,19 @@ describe('assets', () => {
     const done = await ws.assets.gc({ delete: true })
     expect(done.deleted).toEqual(['assets/orphan.png'])
     expect((await ws.assets.list()).map((x) => x.name)).toEqual(['used.png'])
+  })
+
+  it('reuses same-note same-bytes attachments and keeps cross-note copies', async () => {
+    const ws = createWorkspace({ rootPath: root })
+    const data = new Uint8Array(PNG_1X1)
+    const first = await ws.assets.add({ fileName: '0002-paste.png', data })
+    const again = await ws.assets.add({ fileName: '0002-again.png', data })
+    const otherNote = await ws.assets.add({ fileName: '0003-paste.png', data })
+    expect(first.reused).toBe(false)
+    expect(again.reused).toBe(true)
+    expect(again.relPath).toBe(first.relPath)
+    expect(otherNote.reused).toBe(false)
+    expect(otherNote.relPath).not.toBe(first.relPath)
   })
 })
 

@@ -39,6 +39,18 @@ export function hasPendingEdits(knowledgeBaseId: string, noteUuid: string): bool
   return matching(knowledgeBaseId, noteUuid).some((editor) => editor.dirty())
 }
 
+export function pendingEditNoteUuids(knowledgeBaseId: string): string[] {
+  void version.value
+  const uuids = new Set<string>()
+  for (const editor of editors) {
+    if (editor.knowledgeBaseId?.() === knowledgeBaseId && editor.dirty()) {
+      const noteUuid = editor.noteUuid?.()
+      if (noteUuid) uuids.add(noteUuid)
+    }
+  }
+  return [...uuids]
+}
+
 export function flushPendingEdits(
   knowledgeBaseId: string,
   noteUuid: string,

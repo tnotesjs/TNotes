@@ -4,6 +4,7 @@ import { computed, ref } from 'vue'
 import KnowledgeBaseIcon from '../components/KnowledgeBaseIcon.vue'
 import UiTooltip from '../components/UiTooltip.vue'
 import KbSettingsPane from './KbSettingsPane.vue'
+import KbAssetsPane from './KbAssetsPane.vue'
 import NoteTabPane from './NoteTabPane.vue'
 import WebTabPane from './WebTabPane.vue'
 import { useEditorStore } from '../stores/editor'
@@ -126,7 +127,7 @@ function isDirty(tab: EditorTab): boolean {
 
 function tabAriaLabel(tab: EditorTab): string {
   if (tab.type === 'web') return tab.url
-  if (tab.type === 'kb-settings') return tab.title
+  if (tab.type === 'kb-settings' || tab.type === 'kb-assets') return tab.title
   return `${tab.knowledgeBaseName} · ${tab.title}`
 }
 
@@ -219,7 +220,9 @@ async function runTabAction(action: ContextMenuAction, tab: EditorTab): Promise<
             alt=""
           />
           <span
-            v-else-if="tab.type === 'note' || tab.type === 'kb-settings'"
+            v-else-if="
+              tab.type === 'note' || tab.type === 'kb-settings' || tab.type === 'kb-assets'
+            "
             class="tab-icon knowledge-tab-icon"
           >
             <KnowledgeBaseIcon :icon="tab.icon" :fallback="tab.knowledgeBaseName" />
@@ -257,7 +260,9 @@ async function runTabAction(action: ContextMenuAction, tab: EditorTab): Promise<
             alt=""
           />
           <span
-            v-else-if="tab.type === 'note' || tab.type === 'kb-settings'"
+            v-else-if="
+              tab.type === 'note' || tab.type === 'kb-settings' || tab.type === 'kb-assets'
+            "
             class="tab-icon knowledge-tab-icon"
           >
             <KnowledgeBaseIcon :icon="tab.icon" :fallback="tab.knowledgeBaseName" />
@@ -311,6 +316,11 @@ async function runTabAction(action: ContextMenuAction, tab: EditorTab): Promise<
         />
         <KbSettingsPane
           v-else-if="tab.type === 'kb-settings'"
+          :tab="tab"
+          :active="tab.id === group.activeTabId"
+        />
+        <KbAssetsPane
+          v-else-if="tab.type === 'kb-assets'"
           :tab="tab"
           :active="tab.id === group.activeTabId"
         />

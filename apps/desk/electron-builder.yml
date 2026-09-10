@@ -13,6 +13,8 @@ files:
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
 asarUnpack:
   - 'resources/**'
+  - '**/node_modules/sharp/**'
+  - '**/node_modules/@img/**'
 win:
   icon: build/icon.ico
   executableName: TNotes Desk

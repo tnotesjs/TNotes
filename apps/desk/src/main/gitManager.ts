@@ -115,6 +115,16 @@ export function parseGitStatus(output: string): GitFileChangeDto[] {
   return changes
 }
 
+export function shouldScheduleAutoPush(input: {
+  enabled: boolean
+  paused: boolean
+  hasChanges: boolean
+  conflict: boolean
+  behind: number
+}): boolean {
+  return input.enabled && !input.paused && input.hasChanges && !input.conflict && input.behind <= 0
+}
+
 function defaultState(repository: GitRepositoryDescriptor): GitRepositoryStateDto {
   return {
     knowledgeBaseId: repository.knowledgeBaseId,
@@ -144,6 +154,7 @@ export class GitManager {
   private operationTails = new Map<string, Promise<void>>()
   private autoPushTimers = new Map<string, NodeJS.Timeout>()
   private periodicFetchTimer: NodeJS.Timeout | null = null
+  private assetWritePaused = new Set<string>()
 
   onChanged(listener: (state: GitRepositoryStateDto) => void): () => void {
     this.events.on('changed', listener)
@@ -164,7 +175,11 @@ export class GitManager {
     void this.refresh().then(() => {
       for (const repository of repositories) {
         const state = this.states.get(repository.knowledgeBaseId)
-        if (state?.initialized && !state.lastFetchedAt) {
+        if (
+          state?.initialized &&
+          !state.lastFetchedAt &&
+          !this.assetWritePaused.has(repository.knowledgeBaseId)
+        ) {
           void this.fetch(repository.knowledgeBaseId, true).catch(() => undefined)
         }
       }
@@ -173,7 +188,11 @@ export class GitManager {
     if (!this.periodicFetchTimer) {
       this.periodicFetchTimer = setInterval(() => {
         for (const state of this.states.values()) {
-          if (state.initialized && !state.busy) {
+          if (
+            state.initialized &&
+            !state.busy &&
+            !this.assetWritePaused.has(state.knowledgeBaseId)
+          ) {
             void this.fetch(state.knowledgeBaseId, true).catch(() => undefined)
           }
         }
@@ -272,24 +291,63 @@ export class GitManager {
       // 库级约定（tnotes.json）唯一来源；desk 侧旧值已迁移。
       const override = repository.autoPush
       const existing = this.autoPushTimers.get(repository.knowledgeBaseId)
-      if (existing && (reset || !override?.enabled)) {
+      if (
+        existing &&
+        (reset || !override?.enabled || this.assetWritePaused.has(repository.knowledgeBaseId))
+      ) {
         clearTimeout(existing)
         this.autoPushTimers.delete(repository.knowledgeBaseId)
       }
       const state = this.states.get(repository.knowledgeBaseId)
-      if (!override?.enabled || !state?.changes.length || state.conflict || state.behind > 0)
+      if (
+        !shouldScheduleAutoPush({
+          enabled: Boolean(override?.enabled),
+          paused: this.assetWritePaused.has(repository.knowledgeBaseId),
+          hasChanges: Boolean(state?.changes.length),
+          conflict: Boolean(state?.conflict),
+          behind: state?.behind ?? 0
+        })
+      ) {
         continue
+      }
       if (this.autoPushTimers.has(repository.knowledgeBaseId)) continue
       this.autoPushTimers.set(
         repository.knowledgeBaseId,
-        setTimeout(() => {
-          this.autoPushTimers.delete(repository.knowledgeBaseId)
-          void this.publish(repository.knowledgeBaseId).catch((error) =>
-            deskLog('git:auto-push', 'failed', operationMessage(error))
-          )
-        }, override.idleMinutes * 60_000)
+        setTimeout(
+          () => {
+            this.autoPushTimers.delete(repository.knowledgeBaseId)
+            if (this.assetWritePaused.has(repository.knowledgeBaseId)) return
+            void this.publish(repository.knowledgeBaseId).catch((error) =>
+              deskLog('git:auto-push', 'failed', operationMessage(error))
+            )
+          },
+          (override?.idleMinutes ?? 1) * 60_000
+        )
       )
     }
+  }
+
+  pauseForAssetWrite(knowledgeBaseId: string): void {
+    this.assetWritePaused.add(knowledgeBaseId)
+    const timer = this.autoPushTimers.get(knowledgeBaseId)
+    if (timer) {
+      clearTimeout(timer)
+      this.autoPushTimers.delete(knowledgeBaseId)
+    }
+  }
+
+  resumeAfterAssetWrite(knowledgeBaseId: string): void {
+    if (!this.assetWritePaused.delete(knowledgeBaseId)) return
+    this.applyAutoPushSchedules()
+  }
+
+  isPausedForAssetWrite(knowledgeBaseId: string): boolean {
+    return this.assetWritePaused.has(knowledgeBaseId)
+  }
+
+  async waitForIdle(knowledgeBaseId: string): Promise<void> {
+    const tail = this.operationTails.get(knowledgeBaseId)
+    if (tail) await tail.catch(() => undefined)
   }
 
   async dispose(): Promise<void> {
@@ -444,9 +502,17 @@ export class GitManager {
     knowledgeBaseId: string,
     operation: (repository: GitRepositoryDescriptor) => Promise<GitOperationResult>
   ): Promise<GitOperationResult> {
+    if (this.assetWritePaused.has(knowledgeBaseId)) {
+      throw new Error('资源整理进行中，Git 操作已暂停')
+    }
     const repository = this.getRepository(knowledgeBaseId)
     const previous = this.operationTails.get(knowledgeBaseId) ?? Promise.resolve()
-    const result = previous.then(() => operation(repository))
+    const result = previous.then(async () => {
+      if (this.assetWritePaused.has(knowledgeBaseId)) {
+        throw new Error('资源整理进行中，Git 操作已暂停')
+      }
+      return operation(repository)
+    })
     const tail = result.then(
       () => undefined,
       async (error) => {

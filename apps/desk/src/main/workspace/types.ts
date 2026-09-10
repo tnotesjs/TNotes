@@ -1,5 +1,9 @@
 import type { KbSnapshot, TNotesKbWorkspace } from '@tnotesjs/kb'
-import type { ExternalNoteChangeEvent, WorkspaceOverview } from '../../shared/contracts'
+import type {
+  AssetScanProgressDto,
+  ExternalNoteChangeEvent,
+  WorkspaceOverview
+} from '../../shared/contracts'
 
 export interface KnowledgeBaseHandle {
   id: string
@@ -19,6 +23,7 @@ export interface WorkspaceChangeHint {
 export interface WorkspaceManagerEvents {
   changed: [WorkspaceOverview, WorkspaceChangeHint?]
   noteExternalChanged: [ExternalNoteChangeEvent]
+  assetScanProgress: [AssetScanProgressDto]
 }
 
 export interface GitRepositoryDescriptor {

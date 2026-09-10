@@ -29,7 +29,7 @@ export function registerWorkspace(getWindow: GetWindow): () => void {
       z.object({ kind: z.literal('group') }),
       z.object({
         kind: z.literal('tab'),
-        tabType: z.enum(['note', 'web', 'kb-settings']),
+        tabType: z.enum(['note', 'web', 'kb-settings', 'kb-assets']),
         pinned: z.boolean()
       }),
       z.object({ kind: z.literal('code-group-tab') })

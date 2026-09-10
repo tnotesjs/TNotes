@@ -2,6 +2,8 @@
 
 TNotes 知识库的静态站点生成器。
 
+自由绘图将与 Desk 共用 `@tnotesjs/ui` 的 Excalidraw 组件，数据源是 `assets/*.excalidraw`。在组件落地前，构建不要丢弃这些文件，也不要用派生 SVG 覆盖它们。`copyAssets` 递归原样复制整个 `assets/`，不要把 journal、回收区或缩略图缓存放进该目录。
+
 ```ts
 import { defineConfig } from '@tnotesjs/ssg'
 

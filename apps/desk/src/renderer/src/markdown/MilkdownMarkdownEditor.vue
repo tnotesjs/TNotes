@@ -9,7 +9,7 @@ import {
 } from '@milkdown/kit/core'
 import { uploadConfig } from '@milkdown/kit/plugin/upload'
 import { blockConfig } from '@milkdown/kit/plugin/block'
-import { Plugin } from '@milkdown/kit/prose/state'
+import { Plugin, TextSelection } from '@milkdown/kit/prose/state'
 import type { EditorView } from '@milkdown/kit/prose/view'
 import { buildTNotesSlashGroup, installSlashMenuPresentation } from './slashMenu'
 import type { SlashMenuItem } from './slashMenu'
@@ -74,6 +74,7 @@ import {
 import { serializeDeskCalloutMdast } from '../editor/markdown/deskCallout'
 import { reconcileMarkdownSource } from '../editor/markdown/sourcePreservation'
 import { renumberHeadings, stripHeadingNumbers } from '../editor/markdown/headingNumbering'
+import { clampViewPosition } from '../editor/markdown/noteViewPosition'
 import { flushPendingEdits } from '../editor/markdown/pendingEdits'
 import { createDeskRawBlockView } from './createDeskRawBlockView'
 import { createDeskCalloutView, deskCalloutKeymapPlugin } from './deskCalloutView'
@@ -548,8 +549,11 @@ function applyReadonlyState(): void {
   if (!readOnly) return
 
   closeBlockActionMenu(false)
+  // `crepe` is assigned before `editor.create()` resolves; until then the editor
+  // view ctx still holds Milkdown's placeholder — a non-null object without
+  // `state`. Require a ready editor with an initialized view before touching it.
   const view = editorView()
-  if (!view) return
+  if (!ready || !view?.state) return
   clearRawBlockSelectionState(view)
   const activeElement = document.activeElement
   if (activeElement instanceof HTMLElement && view.dom.contains(activeElement)) {
@@ -795,8 +799,20 @@ function queueCurrentContentSync(): void {
   })
 }
 
+function editorScrollElement(view: EditorView | null): HTMLElement | null {
+  if (!view) return host.value
+  return (view.dom.closest('.milkdown') as HTMLElement | null) ?? host.value
+}
+
 async function syncExternalContent(content: string): Promise<void> {
   if (!crepe || !ready) return
+  const previous = editorView()
+  const scrollEl = editorScrollElement(previous)
+  const captured = {
+    from: previous?.state.selection.from ?? 0,
+    to: previous?.state.selection.to ?? 0,
+    scrollTop: scrollEl?.scrollTop ?? 0
+  }
   synchronizing = true
   originalSource = content
   lastEmitted = null
@@ -805,6 +821,27 @@ async function syncExternalContent(content: string): Promise<void> {
     baselineCanonical = crepe.getMarkdown()
     applyGeneratedTocDisplay()
     refreshOutline()
+    const view = editorView()
+    if (view) {
+      const restored = clampViewPosition(
+        captured,
+        view.state.doc.content.size,
+        Math.max(0, (scrollEl?.scrollHeight ?? 0) - (scrollEl?.clientHeight ?? 0))
+      )
+      try {
+        view.dispatch(
+          view.state.tr.setSelection(
+            TextSelection.between(
+              view.state.doc.resolve(restored.from),
+              view.state.doc.resolve(restored.to)
+            )
+          )
+        )
+      } catch {
+        // Positions that cannot be resolved after a structural rewrite stay at the default caret.
+      }
+      if (scrollEl) scrollEl.scrollTop = restored.scrollTop
+    }
   } finally {
     synchronizing = false
   }
@@ -1036,7 +1073,12 @@ watch(
 
 watch(
   () => [props.mode, props.readOnly] as const,
-  () => applyReadonlyState()
+  () => {
+    // Before `editor.create()` resolves there is no view to update; onMounted
+    // applies the readonly state once ready, so skip the pre-ready window.
+    if (!ready || !crepe) return
+    applyReadonlyState()
+  }
 )
 
 watch(

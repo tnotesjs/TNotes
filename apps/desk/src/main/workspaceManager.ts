@@ -2,11 +2,19 @@ import { createHash } from 'node:crypto'
 import { EventEmitter } from 'node:events'
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { createKnowledgeBase as createKbOnDisk, isKnowledgeBaseRoot } from '@tnotesjs/kb'
+import { app } from 'electron'
+import {
+  createKnowledgeBase as createKbOnDisk,
+  isKnowledgeBaseRoot,
+  listIncompleteJournals
+} from '@tnotesjs/kb'
 
 import { deskLog } from './log'
+import { assetWriteGate } from './assetWriteGate'
+import { gitManager } from './gitManager'
 import { loadSettings, settingsForKnowledgeBase } from './settings'
 import { loadWorkspace, saveWorkspace } from './workspace'
+import { knowledgeBaseAssetHashCache, knowledgeBaseAssetStore } from './workspace/assetStore'
 import { descriptor, toDetail, toSettingsDto } from './workspace/dto'
 import * as noteIo from './workspace/noteIo'
 import {
@@ -29,6 +37,9 @@ import type {
 import type { SearchIndexDocument } from './searchModel'
 import type {
   DeletePreviewDto,
+  AssetKbSummaryDto,
+  AssetScanProgressDto,
+  AssetScanReportDto,
   AttachmentWriteLocalRequest,
   AttachmentWriteLocalResult,
   ExternalNoteChangeEvent,
@@ -69,6 +80,15 @@ export class WorkspaceManager {
     lastWatcherErrorAt: 0,
     events: this.events,
     emitChanged: () => this.emitChanged()
+  }
+  private readonly assetScans = new Map<string, AbortController>()
+
+  private bindAssetUserData(): void {
+    try {
+      this.scanState.userDataDir = app.getPath('userData')
+    } catch {
+      // app not ready in some unit tests; recover/apply stay unavailable.
+    }
   }
 
   private mutationEffects(): {
@@ -116,7 +136,9 @@ export class WorkspaceManager {
     this.scanState.workspacePath = normalized
     if (persist) saveWorkspace(normalized)
     if (normalized) {
+      this.bindAssetUserData()
       await scan(this.scanState)
+      await this.syncAssetWriteHolds()
       startWatchers(this.scanState, normalized)
     }
     const overview = this.getOverview()
@@ -125,7 +147,9 @@ export class WorkspaceManager {
   }
 
   async refresh(): Promise<WorkspaceOverview> {
+    this.bindAssetUserData()
     await enqueueScan(this.scanState)
+    await this.syncAssetWriteHolds()
     return this.getOverview()
   }
 
@@ -158,7 +182,9 @@ export class WorkspaceManager {
       { path: '.gitattributes' },
       ...created.extras.map((path) => ({ path }))
     ])
+    this.bindAssetUserData()
     await enqueueScan(this.scanState)
+    await this.syncAssetWriteHolds()
     const overview = this.getOverview()
     this.events.emit('changed', overview)
 
@@ -192,6 +218,7 @@ export class WorkspaceManager {
   }
 
   async writeSettings(request: KnowledgeBaseSettingsWriteRequest): Promise<KnowledgeBaseDetail> {
+    this.assertWritable(request.knowledgeBaseId)
     const handle = this.getHandle(request.knowledgeBaseId)
     const existing = handle.snapshot.config
     const stats =
@@ -223,6 +250,7 @@ export class WorkspaceManager {
   }
 
   async writeIcon(request: KnowledgeBaseIconWriteRequest): Promise<KnowledgeBaseDetail> {
+    this.assertWritable(request.knowledgeBaseId)
     const handle = this.getHandle(request.knowledgeBaseId)
     const changedFiles: Array<{ path: string }> = []
 
@@ -373,10 +401,12 @@ export class WorkspaceManager {
   }
 
   async saveNote(request: NoteSaveRequest): Promise<NoteMutationDto> {
+    this.assertWritable(request.knowledgeBaseId)
     return noteIo.saveNote(this.getHandle(request.knowledgeBaseId), request, this.mutationEffects())
   }
 
   async createNote(request: NoteCreateRequest): Promise<NoteMutationDto> {
+    this.assertWritable(request.knowledgeBaseId)
     return noteIo.createNote(
       this.getHandle(request.knowledgeBaseId),
       request,
@@ -385,6 +415,7 @@ export class WorkspaceManager {
   }
 
   async renameNote(request: NoteRenameRequest): Promise<NoteMutationDto> {
+    this.assertWritable(request.knowledgeBaseId)
     return noteIo.renameNote(
       this.getHandle(request.knowledgeBaseId),
       request,
@@ -393,6 +424,7 @@ export class WorkspaceManager {
   }
 
   async updateNoteConfig(request: NoteUpdateConfigRequest): Promise<NoteMutationDto> {
+    this.assertWritable(request.knowledgeBaseId)
     return noteIo.updateNoteConfig(
       this.getHandle(request.knowledgeBaseId),
       request,
@@ -403,11 +435,17 @@ export class WorkspaceManager {
   async writeLocalAttachment(
     request: AttachmentWriteLocalRequest
   ): Promise<AttachmentWriteLocalResult> {
-    return noteIo.writeLocalAttachment(
-      this.getHandle(request.knowledgeBaseId),
-      request,
-      this.mutationEffects()
-    )
+    this.assertWritable(request.knowledgeBaseId)
+    assetWriteGate.beginAttachment(request.knowledgeBaseId)
+    try {
+      return await noteIo.writeLocalAttachment(
+        this.getHandle(request.knowledgeBaseId),
+        request,
+        this.mutationEffects()
+      )
+    } finally {
+      assetWriteGate.endAttachment(request.knowledgeBaseId)
+    }
   }
 
   async resolveNoteAsset(knowledgeBaseId: string, requestedPath: string): Promise<string> {
@@ -422,10 +460,12 @@ export class WorkspaceManager {
   }
 
   async moveToc(request: TocMoveRequest): Promise<KnowledgeBaseDetail> {
+    this.assertWritable(request.knowledgeBaseId)
     return toc.moveToc(this.getHandle(request.knowledgeBaseId), request, this.mutationEffects())
   }
 
   async createTocGroup(request: TocCreateGroupRequest): Promise<KnowledgeBaseDetail> {
+    this.assertWritable(request.knowledgeBaseId)
     return toc.createTocGroup(
       this.getHandle(request.knowledgeBaseId),
       request,
@@ -434,6 +474,7 @@ export class WorkspaceManager {
   }
 
   async renameTocGroup(request: TocRenameGroupRequest): Promise<KnowledgeBaseDetail> {
+    this.assertWritable(request.knowledgeBaseId)
     return toc.renameTocGroup(
       this.getHandle(request.knowledgeBaseId),
       request,
@@ -446,12 +487,75 @@ export class WorkspaceManager {
   }
 
   async deleteToc(request: TocDeleteRequest): Promise<KnowledgeBaseDetail> {
+    this.assertWritable(request.knowledgeBaseId)
     return toc.deleteToc(this.getHandle(request.knowledgeBaseId), request, this.mutationEffects())
+  }
+
+  async scanAssets(knowledgeBaseId: string, generation: number): Promise<AssetScanReportDto> {
+    const handle = this.getHandle(knowledgeBaseId)
+    this.cancelAssetScan(knowledgeBaseId)
+    const controller = new AbortController()
+    this.assetScans.set(knowledgeBaseId, controller)
+    try {
+      return await handle.workspace.assets.analyze({
+        generation,
+        signal: controller.signal,
+        includeHashes: true,
+        hashCachePath: this.scanState.userDataDir
+          ? knowledgeBaseAssetHashCache(this.scanState.userDataDir, handle.rootPath)
+          : undefined,
+        onProgress: (progress) => {
+          this.events.emit('assetScanProgress', {
+            knowledgeBaseId,
+            generation,
+            done: progress.done,
+            total: progress.total,
+            current: progress.current
+          })
+        }
+      })
+    } catch (error) {
+      if (controller.signal.aborted || (error instanceof Error && error.name === 'AbortError')) {
+        const aborted = new Error('ASSET_SCAN_ABORTED')
+        aborted.name = 'AbortError'
+        throw aborted
+      }
+      throw error
+    } finally {
+      if (this.assetScans.get(knowledgeBaseId) === controller)
+        this.assetScans.delete(knowledgeBaseId)
+    }
+  }
+
+  cancelAssetScan(knowledgeBaseId: string): void {
+    this.assetScans.get(knowledgeBaseId)?.abort()
+    this.assetScans.delete(knowledgeBaseId)
+  }
+
+  async listAssetSummaries(): Promise<AssetKbSummaryDto[]> {
+    const summaries: AssetKbSummaryDto[] = []
+    for (const handle of this.scanState.handles.values()) {
+      const assets = await handle.workspace.assets.list()
+      summaries.push({
+        knowledgeBaseId: handle.id,
+        displayName: handle.snapshot.config.title || handle.name,
+        fileCount: assets.length,
+        bytes: assets.reduce((sum, item) => sum + item.size, 0)
+      })
+    }
+    return summaries.sort((a, b) => a.displayName.localeCompare(b.displayName, 'zh'))
+  }
+
+  onAssetScanProgress(listener: (progress: AssetScanProgressDto) => void): () => void {
+    this.events.on('assetScanProgress', listener)
+    return () => this.events.off('assetScanProgress', listener)
   }
 
   async dispose(): Promise<void> {
     if (this.disposed) return
     this.disposed = true
+    for (const controller of this.assetScans.values()) controller.abort()
+    this.assetScans.clear()
     if (this.scanState.refreshTimer) clearTimeout(this.scanState.refreshTimer)
     await stopWatcher(this.scanState)
     await disposeHandles(this.scanState)
@@ -462,10 +566,46 @@ export class WorkspaceManager {
     if (this.disposed) throw new Error('WorkspaceManager 已释放')
   }
 
-  private getHandle(knowledgeBaseId: string): KnowledgeBaseHandle {
+  private assertWritable(knowledgeBaseId: string): void {
+    assetWriteGate.assertCanMutate(knowledgeBaseId)
+  }
+
+  getHandle(knowledgeBaseId: string): KnowledgeBaseHandle {
     const handle = this.scanState.handles.get(knowledgeBaseId)
     if (!handle) throw new Error(`知识库不存在：${knowledgeBaseId}`)
     return handle
+  }
+
+  assetUserDataDir(): string | undefined {
+    return this.scanState.userDataDir
+  }
+
+  markAssetMutation(rootPath: string, relPaths: string[]): void {
+    markInternalWrites(
+      this.scanState,
+      rootPath,
+      relPaths.map((relPath) => ({ path: relPath }))
+    )
+  }
+
+  emitNoteExternalChanged(knowledgeBaseId: string, noteUuid: string): void {
+    this.events.emit('noteExternalChanged', { knowledgeBaseId, noteUuid })
+  }
+
+  async syncAssetWriteHolds(): Promise<void> {
+    const userDataDir = this.scanState.userDataDir
+    if (!userDataDir) return
+    for (const handle of this.scanState.handles.values()) {
+      const store = knowledgeBaseAssetStore(userDataDir, handle.rootPath)
+      const incomplete = await listIncompleteJournals(store)
+      if (incomplete.length > 0) {
+        assetWriteGate.setSticky(handle.id, 'incomplete-journal')
+        gitManager.pauseForAssetWrite(handle.id)
+      } else if (!assetWriteGate.inTransaction(handle.id)) {
+        assetWriteGate.clearSticky(handle.id)
+        gitManager.resumeAfterAssetWrite(handle.id)
+      }
+    }
   }
 
   private emitChanged(hint?: WorkspaceChangeHint): void {

@@ -10,6 +10,8 @@ import path from 'node:path'
 
 import { ASSETS_DIR, KB_ICON_BASENAME, KB_ICON_EXTENSIONS, NOTES_DIR } from './constants'
 import { writeFileAtomic } from './atomic'
+import { findReusableAsset } from './asset-scan/dedupe'
+import { ownerNoteIndexFromName } from './asset-scan/owner'
 
 import type { AssetEntry, KbIcon } from './types'
 
@@ -73,14 +75,29 @@ export async function addAsset(
   rootPath: string,
   fileName: string,
   data: Uint8Array
-): Promise<{ relPath: string; markdownPath: string }> {
+): Promise<{ relPath: string; markdownPath: string; reused: boolean }> {
+  const baseName = path.basename(fileName)
+  const ownerNoteIndex = ownerNoteIndexFromName(baseName)
+  if (ownerNoteIndex) {
+    const listed = await listAssets(rootPath)
+    const reused = await findReusableAsset({
+      rootPath,
+      data,
+      fileName: baseName,
+      ownerNoteIndex,
+      assets: listed
+    })
+    if (reused) {
+      return { relPath: reused.relPath, markdownPath: `../${reused.relPath}`, reused: true }
+    }
+  }
   const assetsDir = path.join(rootPath, ASSETS_DIR)
   await fs.mkdir(assetsDir, { recursive: true })
   const existing = new Set(await fs.readdir(assetsDir))
-  const finalName = dedupeFileName(existing, path.basename(fileName))
+  const finalName = dedupeFileName(existing, baseName)
   const relPath = `${ASSETS_DIR}/${finalName}`
   await writeFileAtomic(path.join(rootPath, relPath), data)
-  return { relPath, markdownPath: `../${relPath}` }
+  return { relPath, markdownPath: `../${relPath}`, reused: false }
 }
 
 function normalizeIconExt(ext: string): string {
@@ -162,7 +179,13 @@ export interface AssetsGcResult {
   deleted: string[]
 }
 
-/** Find (and optionally delete) assets not referenced from any note. */
+/**
+ * Find (and optionally delete) assets not referenced from any note.
+ *
+ * Scan is limited: `notes/` top-level `.md` only, whole-file regex, immediate
+ * `fs.rm` when `delete: true`. Do not use as the safety basis for the resource
+ * panel; new cleanup must go through analyze + operation plans.
+ */
 export async function gcAssets(
   rootPath: string,
   options: { delete?: boolean } = {}

@@ -154,6 +154,53 @@ onMounted(() => {
         </button>
       </div>
     </div>
+
+    <div class="sub-block">
+      <header class="sub-heading">
+        <strong>本地资源压缩（有损 sharp）</strong>
+        <span>优先速度和体积。每次仍要在资源面板预览后执行；oxipng 无损后端尚未接入。</span>
+      </header>
+      <div class="field-grid cols-2">
+        <label class="field">
+          <span>默认质量 {{ draft.imageUpload.optimize.quality }}</span>
+          <input
+            v-model.number="draft.imageUpload.optimize.quality"
+            type="range"
+            min="40"
+            max="100"
+          />
+        </label>
+        <label class="field">
+          <span>默认输出</span>
+          <select v-model="draft.imageUpload.optimize.outputFormat">
+            <option value="keep">保持原格式</option>
+            <option value="webp">WebP</option>
+            <option value="jpeg">JPEG</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>默认最大边</span>
+          <input
+            :value="draft.imageUpload.optimize.maxDimension ?? ''"
+            type="number"
+            min="64"
+            placeholder="不缩放"
+            @change="
+              draft.imageUpload.optimize.maxDimension = ($event.target as HTMLInputElement).value
+                ? Number(($event.target as HTMLInputElement).value)
+                : null
+            "
+          />
+        </label>
+        <label class="field">
+          <span>编码器</span>
+          <select v-model="draft.imageUpload.optimize.encoder" disabled>
+            <option value="sharp">sharp（有损，当前）</option>
+            <option value="oxipng">oxipng（无损，未接入）</option>
+          </select>
+        </label>
+      </div>
+    </div>
   </section>
 </template>
 

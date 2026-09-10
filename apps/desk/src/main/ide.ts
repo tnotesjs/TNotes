@@ -38,17 +38,23 @@ export function showIdeContextMenu(
   window: BrowserWindow,
   targetPath: string,
   links?: { repositoryUrl?: string; pageUrl?: string },
-  options?: { onOpenSettings?: () => void }
+  options?: { onOpenSettings?: () => void; onOpenAssets?: () => void }
 ): void {
   const template: MenuItemConstructorOptions[] = []
-  if (options?.onOpenSettings) {
-    template.push(
-      {
+  if (options?.onOpenSettings || options?.onOpenAssets) {
+    if (options.onOpenAssets) {
+      template.push({
+        label: '资源',
+        click: () => options.onOpenAssets?.()
+      })
+    }
+    if (options.onOpenSettings) {
+      template.push({
         label: '知识库配置',
         click: () => options.onOpenSettings?.()
-      },
-      { type: 'separator' }
-    )
+      })
+    }
+    template.push({ type: 'separator' })
   }
   template.push(
     {

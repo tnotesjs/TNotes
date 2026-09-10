@@ -99,6 +99,12 @@ const groupDefaults: Record<string, Partial<AppSettings>> = {
         path: '/',
         cdnTemplate: 'https://cdn.jsdelivr.net/gh/${username}/${repository}@${branch}/${filepath}',
         fileNameFormat: '${YY}-${MM}-${DD}-${HH}-${mm}-${ss}'
+      },
+      optimize: {
+        encoder: 'sharp',
+        quality: 80,
+        maxDimension: null,
+        outputFormat: 'keep'
       }
     }
   }

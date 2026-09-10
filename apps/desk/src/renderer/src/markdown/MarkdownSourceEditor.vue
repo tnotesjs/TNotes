@@ -332,6 +332,7 @@ watch(
   (content) => {
     if (!view || content === view.state.doc.toString()) return
     const selection = view.state.selection.main
+    const scrollTop = view.scrollDOM.scrollTop
     const nextLength = content.length
     view.dispatch({
       changes: { from: 0, to: view.state.doc.length, insert: content },
@@ -341,6 +342,10 @@ watch(
       },
       annotations: externalDocumentSync.of(true)
     })
+    view.scrollDOM.scrollTop = Math.min(
+      scrollTop,
+      Math.max(0, view.scrollDOM.scrollHeight - view.scrollDOM.clientHeight)
+    )
   }
 )
 

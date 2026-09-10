@@ -8,8 +8,10 @@ export default defineConfig({
       rollupOptions: {
         input: {
           index: resolve('src/main/index.ts'),
-          searchWorker: resolve('src/main/searchWorker.ts')
-        }
+          searchWorker: resolve('src/main/searchWorker.ts'),
+          encodeWorker: resolve('src/main/encodeWorker.ts')
+        },
+        external: ['sharp']
       }
     }
   },

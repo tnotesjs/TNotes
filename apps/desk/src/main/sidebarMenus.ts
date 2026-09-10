@@ -62,6 +62,7 @@ export function navigatorSidebarMenuTemplate(
     item('preview', request.previewLabel, ready),
     item('build', request.buildBusy ? '正在构建站点' : '构建站点', ready && !request.buildBusy),
     { type: 'separator' },
+    item('assets', '资源', ready),
     item('settings', '知识库配置', ready),
     item('ide', '使用 IDE 打开', ready),
     item('reveal', '打开知识库目录', ready)

@@ -21,6 +21,17 @@ import type {
   KnowledgeBaseCreateRequest,
   KnowledgeBaseCreateResult,
   KnowledgeBaseSettingsDto,
+  AssetKbSummaryDto,
+  AssetScanProgressDto,
+  AssetScanReportDto,
+  AssetJournalDto,
+  AssetOperationPlanDto,
+  AssetOperationResultDto,
+  AssetOptimizePreviewDto,
+  AssetGateQueryEvent,
+  AssetPrepareApplyEvent,
+  AssetAppliedEvent,
+  AssetApplySettledEvent,
   NoteCreateRequest,
   NoteDocumentDto,
   NotesTableResolveRequest,
@@ -128,6 +139,91 @@ const api: DeskApi = {
         callback(knowledgeBaseId)
       ipcRenderer.on(IPC_CHANNELS.kbOpenSettingsRequested, listener)
       return () => ipcRenderer.removeListener(IPC_CHANNELS.kbOpenSettingsRequested, listener)
+    },
+    onOpenAssetsRequested: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, knowledgeBaseId: string): void =>
+        callback(knowledgeBaseId)
+      ipcRenderer.on(IPC_CHANNELS.kbOpenAssetsRequested, listener)
+      return () => ipcRenderer.removeListener(IPC_CHANNELS.kbOpenAssetsRequested, listener)
+    }
+  },
+  assets: {
+    scan: (knowledgeBaseId, generation) =>
+      invoke<AssetScanReportDto>(IPC_CHANNELS.assetsScan, { knowledgeBaseId, generation }),
+    cancel: (knowledgeBaseId) => invoke<void>(IPC_CHANNELS.assetsScanCancel, knowledgeBaseId),
+    summaries: () => invoke<AssetKbSummaryDto[]>(IPC_CHANNELS.assetsSummaries),
+    planRename: (knowledgeBaseId, fromRelPath, toRelPath, generation) =>
+      invoke<AssetOperationPlanDto>(IPC_CHANNELS.assetsPlanRename, {
+        knowledgeBaseId,
+        fromRelPath,
+        toRelPath,
+        generation
+      }),
+    planRecycle: (knowledgeBaseId, relPaths, generation) =>
+      invoke<AssetOperationPlanDto>(IPC_CHANNELS.assetsPlanRecycle, {
+        knowledgeBaseId,
+        relPaths,
+        generation
+      }),
+    planMerge: (knowledgeBaseId, keepRelPath, dropRelPaths, generation) =>
+      invoke<AssetOperationPlanDto>(IPC_CHANNELS.assetsPlanMerge, {
+        knowledgeBaseId,
+        keepRelPath,
+        dropRelPaths,
+        generation
+      }),
+    previewOptimize: (knowledgeBaseId, relPaths, options, generation) =>
+      invoke<AssetOptimizePreviewDto>(IPC_CHANNELS.assetsPreviewOptimize, {
+        knowledgeBaseId,
+        relPaths,
+        options,
+        generation
+      }),
+    planOptimize: (knowledgeBaseId, relPaths, options, generation) =>
+      invoke<AssetOperationPlanDto>(IPC_CHANNELS.assetsPlanOptimize, {
+        knowledgeBaseId,
+        relPaths,
+        options,
+        generation
+      }),
+    apply: (knowledgeBaseId, planId) =>
+      invoke<AssetOperationResultDto>(IPC_CHANNELS.assetsApply, { knowledgeBaseId, planId }),
+    restore: (knowledgeBaseId, planId) =>
+      invoke<AssetOperationResultDto>(IPC_CHANNELS.assetsRestore, { knowledgeBaseId, planId }),
+    history: (knowledgeBaseId) =>
+      invoke<AssetJournalDto[]>(IPC_CHANNELS.assetsHistory, knowledgeBaseId),
+    onScanProgress: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, progress: AssetScanProgressDto): void =>
+        callback(progress)
+      ipcRenderer.on(IPC_CHANNELS.assetsScanProgress, listener)
+      return () => ipcRenderer.removeListener(IPC_CHANNELS.assetsScanProgress, listener)
+    },
+    onGateQuery: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, event: AssetGateQueryEvent): void =>
+        callback(event)
+      ipcRenderer.on(IPC_CHANNELS.assetsGateQuery, listener)
+      return () => ipcRenderer.removeListener(IPC_CHANNELS.assetsGateQuery, listener)
+    },
+    replyGate: (requestId, knowledgeBaseId, snapshot) => {
+      ipcRenderer.send(IPC_CHANNELS.assetsGateReply, { requestId, knowledgeBaseId, snapshot })
+    },
+    onPrepareApply: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, event: AssetPrepareApplyEvent): void =>
+        callback(event)
+      ipcRenderer.on(IPC_CHANNELS.assetsPrepareApply, listener)
+      return () => ipcRenderer.removeListener(IPC_CHANNELS.assetsPrepareApply, listener)
+    },
+    onApplied: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, event: AssetAppliedEvent): void =>
+        callback(event)
+      ipcRenderer.on(IPC_CHANNELS.assetsApplied, listener)
+      return () => ipcRenderer.removeListener(IPC_CHANNELS.assetsApplied, listener)
+    },
+    onApplySettled: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, event: AssetApplySettledEvent): void =>
+        callback(event)
+      ipcRenderer.on(IPC_CHANNELS.assetsApplySettled, listener)
+      return () => ipcRenderer.removeListener(IPC_CHANNELS.assetsApplySettled, listener)
     }
   },
   notes: {

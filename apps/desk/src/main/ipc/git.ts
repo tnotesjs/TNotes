@@ -36,6 +36,9 @@ export function registerGit(getWindow: GetWindow): () => void {
       {
         onOpenSettings: () => {
           window.webContents.send(IPC_CHANNELS.kbOpenSettingsRequested, knowledgeBaseId)
+        },
+        onOpenAssets: () => {
+          window.webContents.send(IPC_CHANNELS.kbOpenAssetsRequested, knowledgeBaseId)
         }
       }
     )
