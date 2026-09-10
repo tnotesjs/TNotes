@@ -26,6 +26,8 @@ export interface GitRepositoryDescriptor {
   knowledgeBaseName: string
   configId: string
   rootPath: string
+  /** 库级约定（tnotes.json）：自动提交推送。undefined = 未启用。 */
+  autoPush?: { enabled: boolean; idleMinutes: number }
   notes: Array<{
     uuid: string
     index: string

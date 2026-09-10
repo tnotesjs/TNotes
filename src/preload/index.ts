@@ -122,7 +122,13 @@ const api: DeskApi = {
     writeSettings: (request) =>
       invoke<KnowledgeBaseDetail>(IPC_CHANNELS.knowledgeBaseWriteSettings, request),
     writeIcon: (request) =>
-      invoke<KnowledgeBaseDetail>(IPC_CHANNELS.knowledgeBaseWriteIcon, request)
+      invoke<KnowledgeBaseDetail>(IPC_CHANNELS.knowledgeBaseWriteIcon, request),
+    onOpenSettingsRequested: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, knowledgeBaseId: string): void =>
+        callback(knowledgeBaseId)
+      ipcRenderer.on(IPC_CHANNELS.kbOpenSettingsRequested, listener)
+      return () => ipcRenderer.removeListener(IPC_CHANNELS.kbOpenSettingsRequested, listener)
+    }
   },
   notes: {
     read: (knowledgeBaseId, noteUuid) =>

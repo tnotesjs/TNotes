@@ -48,8 +48,8 @@ importers:
         specifier: 7.22.1
         version: 7.22.1(@codemirror/language@6.12.4)(@codemirror/state@6.7.1)(@codemirror/view@6.43.9)(typescript@5.9.3)
       '@tnotesjs/kb':
-        specifier: ^0.3.0
-        version: 0.3.0
+        specifier: ^0.4.1
+        version: 0.4.1
       '@tnotesjs/mindmap-core':
         specifier: ^0.2.2
         version: 0.2.2
@@ -1282,8 +1282,8 @@ packages:
     engines: {node: '>=22.0.0'}
     hasBin: true
 
-  '@tnotesjs/kb@0.3.0':
-    resolution: {integrity: sha512-o7XfZjJ1zUS1jCS+mUbQCWVDcV7/kCFf5gWj+gCKv9erLDxmho+DhQT1rIlR7jYxgj4XNs5cRykV9rYJ/dDPwQ==}
+  '@tnotesjs/kb@0.4.1':
+    resolution: {integrity: sha512-kzN9iLxHwN04S+3nnXMjwdUfA/iQn5LwPu+GjTEXTSG+nJSx0xAugT9b/Pq34kV4bRghyzUyj+Gnb/qJZQQXuA==}
     engines: {node: '>=22.0.0'}
     hasBin: true
 
@@ -5700,7 +5700,7 @@ snapshots:
     dependencies:
       gray-matter: 4.0.3
 
-  '@tnotesjs/kb@0.3.0':
+  '@tnotesjs/kb@0.4.1':
     dependencies:
       gray-matter: 4.0.3
 

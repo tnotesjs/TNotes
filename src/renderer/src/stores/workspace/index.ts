@@ -68,6 +68,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   let unsubscribeWorkspace: (() => void) | null = null
   let unsubscribeExternal: (() => void) | null = null
   let unsubscribeGit: (() => void) | null = null
+  let unsubscribeKbSettings: (() => void) | null = null
   let tocFocusSequence = 0
 
   const activeDocumentKey = computed(() => {
@@ -299,6 +300,15 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       unsubscribeGit = window.desk.git.onStateChanged((state) => {
         gitStates.value = { ...gitStates.value, [state.knowledgeBaseId]: state }
       })
+      // 知识库列表右键菜单「知识库配置」（main 侧菜单 → 事件 → 打开设置页）
+      unsubscribeKbSettings = window.desk.knowledgeBases.onOpenSettingsRequested(
+        (knowledgeBaseId) => {
+          const descriptor = overview.value.allKnowledgeBases.find(
+            (item) => item.id === knowledgeBaseId
+          )
+          if (descriptor) editor.openKbSettings(descriptor)
+        }
+      )
       editor.restore(
         payload.session,
         payload.workspace.allKnowledgeBases,
@@ -354,6 +364,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     unsubscribeExternal = null
     unsubscribeGit?.()
     unsubscribeGit = null
+    unsubscribeKbSettings?.()
+    unsubscribeKbSettings = null
     for (const timer of autosaveTimers.values()) clearTimeout(timer)
     autosaveTimers.clear()
     for (const timer of recoveryTimers.values()) clearTimeout(timer)

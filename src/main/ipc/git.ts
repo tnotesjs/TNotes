@@ -26,10 +26,19 @@ export function registerGit(getWindow: GetWindow): () => void {
     if (!window) throw new Error('Desk 主窗口不可用')
     const location = workspaceManager.getLocation(knowledgeBaseId)
     const detail = workspaceManager.getDetail(knowledgeBaseId)
-    showIdeContextMenu(window, location.rootPath, {
-      repositoryUrl: detail.repositoryUrl,
-      pageUrl: detail.pageUrl
-    })
+    showIdeContextMenu(
+      window,
+      location.rootPath,
+      {
+        repositoryUrl: detail.repositoryUrl,
+        pageUrl: detail.pageUrl
+      },
+      {
+        onOpenSettings: () => {
+          window.webContents.send(IPC_CHANNELS.kbOpenSettingsRequested, knowledgeBaseId)
+        }
+      }
+    )
   })
   handle(
     IPC_CHANNELS.ideShowNoteMenu,

@@ -43,6 +43,7 @@ export const IPC_CHANNELS = {
   gitPull: 'git:pull',
   gitPublish: 'git:publish',
   ideShowKnowledgeBaseMenu: 'ide:show-knowledge-base-menu',
+  kbOpenSettingsRequested: 'kb:open-settings-requested',
   ideShowNoteMenu: 'ide:show-note-menu',
   ideShowFileMenu: 'ide:show-file-menu',
   ideOpenKnowledgeBase: 'ide:open-knowledge-base',
@@ -121,6 +122,12 @@ export interface KnowledgeBaseDescriptor {
   port?: number
   rootUrl?: string
   statsEnabled?: boolean
+  /** 库级约定（tnotes.json）：保存时格式化。undefined = 未设置，跟随 desk 全局。 */
+  prettier?: boolean
+  /** 库级约定（tnotes.json）：自动提交推送。 */
+  autoPush?: { enabled: boolean; idleMinutes: number }
+  /** 库级约定（tnotes.json）：标题编号层级上限（1-6）。 */
+  headingNumberMaxDepth?: number
   health: 'ready' | 'invalid' | 'future-schema'
   diagnostics: WorkspaceDiagnosticDto[]
   noteCount: number
@@ -142,6 +149,10 @@ export interface KnowledgeBaseSettingsDto {
   originUrl: string | null
   /** Suggested name when `name` is empty (origin / directory). */
   suggestedName: string | null
+  /** 库级约定，null = 未设置（跟随 desk 全局）。 */
+  prettier: boolean | null
+  autoPush: { enabled: boolean; idleMinutes: number } | null
+  headingNumberMaxDepth: number | null
 }
 
 export interface KnowledgeBaseSettingsWriteRequest {
@@ -153,6 +164,10 @@ export interface KnowledgeBaseSettingsWriteRequest {
   port: number
   pageUrl?: string
   statsEnabled: boolean
+  /** null = 从 tnotes.json 删除该键（跟随全局）。 */
+  prettier?: boolean | null
+  autoPush?: { enabled: boolean; idleMinutes: number } | null
+  headingNumberMaxDepth?: number | null
 }
 
 export interface KnowledgeBaseCreateRequest {
@@ -301,11 +316,6 @@ export interface ImageUploadSettings {
 
 export interface KnowledgeBaseSettings {
   hidden?: boolean
-  prettier?: boolean
-  autoPush?: {
-    enabled: boolean
-    idleMinutes: number
-  }
 }
 
 export interface AppSettings {
@@ -834,6 +844,8 @@ export interface DeskApi {
       request: KnowledgeBaseSettingsWriteRequest
     ): Promise<DeskResult<KnowledgeBaseDetail>>
     writeIcon(request: KnowledgeBaseIconWriteRequest): Promise<DeskResult<KnowledgeBaseDetail>>
+    /** main → renderer：右键菜单点了「知识库配置」。 */
+    onOpenSettingsRequested(callback: (knowledgeBaseId: string) => void): () => void
   }
   notes: {
     read(knowledgeBaseId: string, noteUuid: string): Promise<DeskResult<NoteDocumentDto>>

@@ -107,6 +107,9 @@ export function descriptor(handle: KnowledgeBaseHandle): KnowledgeBaseDescriptor
     port: resolvePort(snapshot.config.port),
     rootUrl: optionalString(snapshot.config.rootUrl),
     statsEnabled: snapshot.config.stats?.enabled === true,
+    prettier: snapshot.config.prettier,
+    autoPush: snapshot.config.autoPush ?? undefined,
+    headingNumberMaxDepth: snapshot.config.headingNumberMaxDepth,
     health: hasError ? 'invalid' : 'ready',
     diagnostics: snapshot.diagnostics,
     noteCount: snapshot.notes.length,
@@ -140,7 +143,10 @@ export async function toSettingsDto(
     statsEnabled: config.stats?.enabled === true,
     isGitRepo,
     originUrl,
-    suggestedName
+    suggestedName,
+    prettier: config.prettier ?? null,
+    autoPush: config.autoPush ?? null,
+    headingNumberMaxDepth: config.headingNumberMaxDepth ?? null
   }
 }
 

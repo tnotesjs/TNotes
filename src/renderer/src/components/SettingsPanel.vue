@@ -114,18 +114,6 @@ function resetGroup(id: string): void {
     })
   }
   const next: AppSettings = { ...draft.value, ...defaults }
-  if (id === 'tools') {
-    const configId = store.selectedKnowledgeBase?.configId
-    if (configId) {
-      next.knowledgeBases = {
-        ...next.knowledgeBases,
-        [configId]: {
-          ...next.knowledgeBases[configId],
-          autoPush: { enabled: false, idleMinutes: 10 }
-        }
-      }
-    }
-  }
   draft.value = next
 }
 

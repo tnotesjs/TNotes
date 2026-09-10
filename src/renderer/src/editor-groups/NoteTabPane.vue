@@ -61,6 +61,14 @@ const markdownEditor = computed(() =>
   props.tab.viewMode === 'source' ? markdownSourceEditor.value : milkdownMarkdownEditor.value
 )
 const pageWidthLabel = computed(() => (props.tab.pageWidth === 'wide' ? '超宽显示' : '标准页宽'))
+// 标题编号深度生效值：库级约定（tnotes.json）→ desk 全局 → 内置默认
+const headingNumberMaxDepth = computed(
+  () =>
+    workspace.overview.allKnowledgeBases.find((kb) => kb.id === props.tab.knowledgeBaseId)
+      ?.headingNumberMaxDepth ??
+    workspace.settings?.headingNumberMaxDepth ??
+    HEADING_NUMBER_DEFAULT_MAX_DEPTH
+)
 const outlineVisible = computed(() => {
   const located = findTab(editor.layout, props.tab.id)
   const tab = located?.tab.type === 'note' ? located.tab : props.tab
@@ -319,11 +327,7 @@ function openLink(url: string): void {
               type="button"
               aria-label="标题编号（重排）"
               :disabled="formatDisabled"
-              @click="
-                markdownEditor?.addHeadingNumbers(
-                  workspace.settings?.headingNumberMaxDepth ?? HEADING_NUMBER_DEFAULT_MAX_DEPTH
-                )
-              "
+              @click="markdownEditor?.addHeadingNumbers(headingNumberMaxDepth)"
             >
               <FormatIcon name="heading-number" />
             </button>

@@ -10,7 +10,7 @@ import {
   type Placement
 } from '@tnotesjs/kb'
 import { formatImageFileName, LOCAL_PASTED_ASSET_NAME_FORMAT } from '../imageBed'
-import { loadSettings, settingsForKnowledgeBase } from '../settings'
+import { loadSettings } from '../settings'
 
 import type {
   AttachmentWriteLocalRequest,
@@ -119,8 +119,8 @@ export async function saveNote(
   effects: MutationSideEffects
 ): Promise<NoteMutationDto> {
   const settings = loadSettings()
-  const override = settingsForKnowledgeBase(settings, handle.id)
-  const usePrettier = request.prettier ?? override.prettier ?? settings.prettier
+  // 生效链：单次请求 > 库级约定（tnotes.json）> desk 全局默认
+  const usePrettier = request.prettier ?? handle.snapshot.config.prettier ?? settings.prettier
   let content = request.content
   if (usePrettier) {
     try {

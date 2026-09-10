@@ -37,9 +37,20 @@ export async function openInConfiguredIde(targetPath: string): Promise<void> {
 export function showIdeContextMenu(
   window: BrowserWindow,
   targetPath: string,
-  links?: { repositoryUrl?: string; pageUrl?: string }
+  links?: { repositoryUrl?: string; pageUrl?: string },
+  options?: { onOpenSettings?: () => void }
 ): void {
-  const template: MenuItemConstructorOptions[] = [
+  const template: MenuItemConstructorOptions[] = []
+  if (options?.onOpenSettings) {
+    template.push(
+      {
+        label: '知识库配置',
+        click: () => options.onOpenSettings?.()
+      },
+      { type: 'separator' }
+    )
+  }
+  template.push(
     {
       label: `在 ${ideLabel()} 中打开`,
       click: () => void openInConfiguredIde(targetPath)
@@ -49,7 +60,7 @@ export function showIdeContextMenu(
       label: '在文件管理器中显示',
       click: () => shell.showItemInFolder(targetPath)
     }
-  ]
+  )
   if (links?.repositoryUrl || links?.pageUrl) {
     template.push(
       { type: 'separator' },

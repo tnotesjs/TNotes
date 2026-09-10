@@ -3,7 +3,7 @@ import path from 'node:path'
 import { spawn } from 'node:child_process'
 
 import { deskLog } from './log'
-import { loadSettings, settingsForKnowledgeBase } from './settings'
+import { loadSettings } from './settings'
 
 import type { GitRepositoryDescriptor } from './workspaceManager'
 import type {
@@ -268,9 +268,9 @@ export class GitManager {
   }
 
   applyAutoPushSchedules(reset = false): void {
-    const settings = loadSettings()
     for (const repository of this.repositories.values()) {
-      const override = settingsForKnowledgeBase(settings, repository.configId).autoPush
+      // 库级约定（tnotes.json）唯一来源；desk 侧旧值已迁移。
+      const override = repository.autoPush
       const existing = this.autoPushTimers.get(repository.knowledgeBaseId)
       if (existing && (reset || !override?.enabled)) {
         clearTimeout(existing)

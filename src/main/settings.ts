@@ -13,6 +13,9 @@ import type { AppSettings, KnowledgeBaseSettings } from '../shared/contracts'
 
 const knowledgeBaseSettingsSchema = z.object({
   hidden: z.boolean().optional(),
+  // 旧版 per-KB 约定：已迁至 tnotes.json（库级约定）。保留在 schema 中仅为
+  // 让 loadSettings 不剥掉它们，供 workspaceManager 的迁移逻辑读取；
+  // 迁移完成后这些键会从设置文件中清除。
   prettier: z.boolean().optional(),
   autoPush: z
     .object({
