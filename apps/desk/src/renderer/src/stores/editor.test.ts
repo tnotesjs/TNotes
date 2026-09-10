@@ -129,6 +129,22 @@ describe('editor store tab semantics', () => {
     expect(editor.activeTab).toMatchObject({ noteUuid: 'note-b', pageWidth: 'standard' })
   })
 
+  it('改无关设置不会重置标签的页宽覆盖', () => {
+    const editor = useEditorStore()
+    editor.configure(settings)
+    const tabId = editor.openNote(knowledgeBase, 'note-a', 'A', 'visual', undefined, 'permanent')
+    editor.toggleNotePageWidth(tabId)
+    expect(editor.activeTab).toMatchObject({ id: tabId, pageWidth: 'wide' })
+
+    // 只改主题：默认页宽没变，覆盖必须保留
+    editor.configure({ ...settings, theme: 'dark' })
+    expect(editor.activeTab).toMatchObject({ id: tabId, pageWidth: 'wide' })
+
+    // 默认页宽真的变了才回写
+    editor.configure({ ...settings, defaultNotePageWidth: 'wide' })
+    expect(editor.activeTab).toMatchObject({ id: tabId, pageWidth: 'wide' })
+  })
+
   it('toggles the side outline independently of page width', () => {
     const editor = useEditorStore()
     editor.configure(settings)

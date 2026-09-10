@@ -219,8 +219,10 @@ export const useEditorStore = defineStore('editor', () => {
   function configure(settings: AppSettings): void {
     maxOpenTabCount.value = settings.tabs.maxOpenCount
     wrapTabs.value = settings.tabs.wrap
+    const widthChanged = defaultNotePageWidth.value !== settings.defaultNotePageWidth
     defaultNotePageWidth.value = settings.defaultNotePageWidth
-    applyDefaultNotePageWidth(settings.defaultNotePageWidth)
+    // 改主题 / 自动保存等无关设置不应该重置每个标签的页宽覆盖
+    if (widthChanged) applyDefaultNotePageWidth(settings.defaultNotePageWidth)
     trimToLimit()
   }
 
