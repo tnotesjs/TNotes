@@ -1,4 +1,4 @@
-import type { ComputedRef, Ref } from 'vue'
+import { nextTick, type ComputedRef, type Ref } from 'vue'
 
 import type { useEditorStore } from '../editor'
 
@@ -12,6 +12,7 @@ import type {
   WorkspaceOverview
 } from '../../../../shared/contracts'
 
+import { flushPendingEdits } from '../../editor/markdown/pendingEdits'
 import { documentKey, resultValue, type DocumentSession } from './helpers'
 import { createPendingSaves } from './pendingSaves'
 
@@ -321,11 +322,31 @@ export function createDocuments(ctx: DocumentsContext) {
     if (!result.ok) ctx.error.value = result.error.message
   }
 
+  /**
+   * 块内 Edit 面板里的草稿还不属于文档正文：⌘S 之前必须先 flush 并等一次
+   * nextTick，否则落盘 / 提交的是不含该草稿的旧内容。
+   */
+  async function flushBlockDrafts(keys: string[]): Promise<void> {
+    if (keys.length === 0) return
+    if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur()
+    }
+    for (const key of keys) {
+      const session = ctx.documents.value[key]
+      if (session) flushPendingEdits(session.document.knowledgeBaseId, session.document.uuid)
+    }
+    await nextTick()
+  }
+
   async function saveCurrentDocument(): Promise<void> {
-    if (ctx.activeDocumentKey.value) await saveDocument(ctx.activeDocumentKey.value)
+    const key = ctx.activeDocumentKey.value
+    if (!key) return
+    await flushBlockDrafts([key])
+    await saveDocument(key)
   }
 
   async function saveAllDocuments(): Promise<void> {
+    await flushBlockDrafts(Object.keys(ctx.documents.value))
     for (const [key, session] of Object.entries(ctx.documents.value)) {
       if (session.dirty) await saveDocument(key)
     }

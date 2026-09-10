@@ -3,6 +3,7 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { hasPendingEdits, registerPendingEdit } from '../editor/markdown/pendingEdits'
 import { useEditorStore } from './editor'
 import { useWorkspaceStore } from './workspace'
 
@@ -544,6 +545,35 @@ describe('workspace document saving', () => {
     })
 
     pendingSaves[0].resolve(mutation('source edit', 'revision-2'))
+    await saving
+  })
+
+  it('⌘S（保存全部）会先提交块内草稿再落盘', async () => {
+    const workspace = useWorkspaceStore()
+    const editor = useEditorStore()
+    const key = `${knowledgeBase.id}:note-a`
+    await workspace.ensureDocument(knowledgeBase.id, 'note-a')
+    editor.openNote(knowledgeBase, 'note-a', 'A', 'visual', undefined, 'permanent')
+
+    // 模拟某个 raw 块的 Edit 面板里还有未提交的草稿
+    const registration = registerPendingEdit({
+      knowledgeBaseId: () => knowledgeBase.id,
+      noteUuid: () => 'note-a',
+      dirty: () => true,
+      flush: () => {
+        workspace.updateDocumentContent(key, '块内草稿已提交', true)
+        registration.dispose()
+      }
+    })
+    expect(hasPendingEdits(knowledgeBase.id, 'note-a')).toBe(true)
+
+    const saving = workspace.saveAllDocuments()
+    for (let tick = 0; tick < 5; tick += 1) await Promise.resolve()
+
+    expect(saveRequests[0]).toMatchObject({ content: '块内草稿已提交', noteUuid: 'note-a' })
+    expect(hasPendingEdits(knowledgeBase.id, 'note-a')).toBe(false)
+
+    pendingSaves[0].resolve(mutation('块内草稿已提交', 'revision-2'))
     await saving
   })
 
