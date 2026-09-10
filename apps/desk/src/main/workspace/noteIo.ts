@@ -251,13 +251,22 @@ export async function resolveNoteAsset(
   const normalized = requestedPath.replaceAll('\\', '/')
   const match = normalized.match(/^(?:\.\.\/|\.\/)?(assets\/.+)$/)
   if (!match) throw new Error('不支持的资源路径')
-  const absolutePath = path.resolve(handle.rootPath, match[1])
-  if (!absolutePath.startsWith(path.resolve(handle.rootPath) + path.sep)) {
+  const root = path.resolve(handle.rootPath)
+  // 先归一化再校验：`assets/../cover.png` 用 path.resolve 会落到库根下，
+  // 只比 startsWith(root) 是拦不住的
+  const relWithinAssets = path.normalize(match[1]).replaceAll('\\', '/')
+  if (!relWithinAssets.startsWith('assets/')) throw new Error('资源路径越界')
+  const absolutePath = path.resolve(root, relWithinAssets)
+  if (!absolutePath.startsWith(root + path.sep)) {
     throw new Error('资源路径越界')
   }
   const extension = path.extname(absolutePath).toLocaleLowerCase()
   if (!IMAGE_EXTENSIONS.has(extension)) throw new Error('不支持的图片类型')
   const stat = await fs.stat(absolutePath)
   if (!stat.isFile()) throw new Error('图片不存在')
+  // 符号链接可以指向库外：按真实路径再确认一次
+  const realRoot = await fs.realpath(root)
+  const realTarget = await fs.realpath(absolutePath)
+  if (!realTarget.startsWith(realRoot + path.sep)) throw new Error('资源路径越界')
   return absolutePath
 }

@@ -164,6 +164,32 @@ describe('desk noteIo over @tnotesjs/kb', () => {
     await expect(resolveNoteAsset(handle, '../assets/pic.exe')).rejects.toThrowError()
   })
 
+  it('拒绝 assets 内的路径穿越与指向库外的符号链接', async () => {
+    const handle = await makeHandle()
+    await fs.mkdir(path.join(handle.rootPath, 'assets'), { recursive: true })
+    await fs.writeFile(path.join(handle.rootPath, 'assets', 'pic.png'), 'png')
+    // 库根下的封面：归一化后会逃出 assets/
+    await fs.writeFile(path.join(handle.rootPath, 'cover.png'), 'png')
+    await expect(resolveNoteAsset(handle, '../assets/../cover.png')).rejects.toThrowError(
+      /越界|不支持/
+    )
+
+    // assets 里的符号链接指向库外文件
+    const outside = await fs.mkdtemp(path.join(os.tmpdir(), 'desk-outside-'))
+    cleanups.push(async () => fs.rm(outside, { recursive: true, force: true }))
+    await fs.writeFile(path.join(outside, 'secret.png'), 'png')
+    await fs.symlink(
+      path.join(outside, 'secret.png'),
+      path.join(handle.rootPath, 'assets', 'link.png')
+    )
+    await expect(resolveNoteAsset(handle, '../assets/link.png')).rejects.toThrowError(/越界/)
+
+    // 库内正常文件不受影响
+    await expect(resolveNoteAsset(handle, './assets/pic.png')).resolves.toBe(
+      path.join(handle.rootPath, 'assets', 'pic.png')
+    )
+  })
+
   it('maps note documents without leaking legacy fields', async () => {
     const handle = await makeHandle()
     const doc = await readNote(handle, '0001')
