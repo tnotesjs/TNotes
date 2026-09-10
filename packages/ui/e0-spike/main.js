@@ -128,8 +128,75 @@ async function exportProbe() {
   }
 }
 
+/**
+ * E0 发现：移动宿主 DOM 后键盘快捷键失效（指针正常）。这里把候选修法都暴露出来，
+ * 由驱动脚本逐个验证，找到真正有效的那一种再落进宿主组件。
+ */
+const strategies = {
+  clickInteractiveCanvas: async () => {
+    const canvas = document.querySelector('.excalidraw__canvas.interactive')
+    const box = canvas?.getBoundingClientRect()
+    if (!canvas || !box) return 'no-canvas'
+    canvas.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        bubbles: true,
+        clientX: box.left + 20,
+        clientY: box.top + 20,
+        pointerId: 1,
+        isPrimary: true
+      })
+    )
+    canvas.dispatchEvent(
+      new PointerEvent('pointerup', {
+        bubbles: true,
+        clientX: box.left + 20,
+        clientY: box.top + 20,
+        pointerId: 1,
+        isPrimary: true
+      })
+    )
+    return 'clickInteractiveCanvas'
+  },
+  setActiveTool: async () => {
+    api?.setActiveTool?.({ type: 'selection' })
+    return 'setActiveTool'
+  },
+  focusTextarea: async () => {
+    document.querySelector('.excalidraw textarea')?.focus?.()
+    return 'focusTextarea'
+  },
+  rafThenFocusTextarea: async () => {
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+    document.querySelector('.excalidraw textarea')?.focus?.()
+    return 'rafThenFocusTextarea'
+  },
+  blurThenFocusCanvas: async () => {
+    document.activeElement?.blur?.()
+    const canvas = document.querySelector('.excalidraw__canvas.interactive')
+    canvas?.setAttribute('tabindex', '0')
+    canvas?.focus?.()
+    return 'blurThenFocusCanvas'
+  },
+  containerFocusHandler: async () => {
+    const container = document.querySelector('.excalidraw')
+    container?.dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
+    document.querySelector('.excalidraw textarea')?.focus?.()
+    return 'containerFocusHandler'
+  }
+}
+
 window.__e0 = {
   exportProbe,
+  focusWith: async (name) => {
+    const strategy = strategies[name]
+    if (!strategy) return 'unknown'
+    return await strategy()
+  },
+  activeElement: () => {
+    const element = document.activeElement
+    if (!element) return 'none'
+    return `${element.tagName.toLowerCase()}.${(element.className || '').toString().slice(0, 40)}`
+  },
   statusText: '',
   mount,
   unmount,

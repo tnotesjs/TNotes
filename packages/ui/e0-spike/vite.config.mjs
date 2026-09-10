@@ -10,7 +10,8 @@ export default {
     rollupOptions: {
       input: {
         main: new URL('./index.html', import.meta.url).pathname,
-        view: new URL('./view.html', import.meta.url).pathname
+        view: new URL('./view.html', import.meta.url).pathname,
+        editor: new URL('./editor.html', import.meta.url).pathname
       }
     }
   }

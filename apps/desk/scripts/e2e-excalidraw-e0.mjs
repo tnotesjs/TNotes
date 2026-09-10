@@ -137,6 +137,78 @@ async function checkReadOnlyView(page, record, shots) {
   record('只读视图：无页面错误', errors.length === 0, errors.slice(0, 2).join(' | '))
 }
 
+/** E3：编辑会话自动写盘、承载交接后撤销仍有效、flush 立即落盘 */
+async function checkEditorSession(page, record, shots) {
+  const errors = []
+  page.on('pageerror', (error) => errors.push(String(error.message ?? error)))
+
+  await page.goto(`http://127.0.0.1:${page.__port}/editor.html`, { waitUntil: 'domcontentloaded' })
+  await page.waitForFunction(() => Boolean(window.__e0api), null, { timeout: 60000 })
+  await page.waitForTimeout(1200)
+
+  // 先悬停再按下：Excalidraw 需要 pointermove 置位 isInteractive，否则合成鼠标事件
+  // 不会开始绘制（这是测试脚本的坑，不是产品缺陷）
+  const draw = async (settleMs = 500) => {
+    const canvas = await page.$('.excalidraw__canvas.interactive')
+    const box = await canvas.boundingBox()
+    const startX = box.x + box.width * 0.25
+    const startY = box.y + box.height * 0.35
+    await page.evaluate(() => window.__e3.setActiveTool('rectangle'))
+    await page.mouse.move(startX, startY)
+    await page.waitForTimeout(200)
+    await page.mouse.move(startX + 20, startY + 20, { steps: 3 })
+    await page.mouse.down()
+    await page.mouse.move(startX + 220, startY + 160, { steps: 10 })
+    await page.mouse.up()
+    await page.waitForTimeout(settleMs)
+  }
+
+  await draw()
+  const afterDraw = await page.evaluate(() => ({
+    elements: window.__e3.elements(),
+    saves: window.__e3.saves.length,
+    lastSaves: window.__e3.saves.at(-1)?.elements ?? -1
+  }))
+  record(
+    '会话：编辑后自动写盘（无保存按钮）',
+    afterDraw.elements === 1 && afterDraw.saves >= 1 && afterDraw.lastSaves === 1,
+    JSON.stringify(afterDraw)
+  )
+
+  await page.click('#move')
+  await page.waitForTimeout(600)
+  await page.keyboard.press('ControlOrMeta+z')
+  await page.waitForTimeout(600)
+  const afterUndo = await page.evaluate(() => window.__e3.elements())
+  record('交接：移动到全屏后键盘撤销仍有效（焦点已重建）', afterUndo === 0, `elements=${afterUndo}`)
+
+  // 立刻 flush：防抖还没到点，待写内容必须被同步写出去
+  await draw(50)
+  const beforeFlush = await page.evaluate(() => ({
+    saves: window.__e3.saves.length,
+    elements: window.__e3.elements(),
+    pending: window.__e3.pending()
+  }))
+  await page.click('#flush')
+  await page.waitForTimeout(400)
+  const afterFlush = await page.evaluate(() => ({
+    saves: window.__e3.saves.length,
+    pending: window.__e3.pending(),
+    lastSaves: window.__e3.saves.at(-1)?.elements ?? -1
+  }))
+  record(
+    'flush：立即写盘并清空待写（关闭入口/切换承载时使用）',
+    beforeFlush.elements === 1 &&
+      beforeFlush.pending === true &&
+      afterFlush.saves > beforeFlush.saves &&
+      afterFlush.pending === false &&
+      afterFlush.lastSaves === 1,
+    `before=${JSON.stringify(beforeFlush)} after=${JSON.stringify(afterFlush)}`
+  )
+  await page.screenshot({ path: join(shots, 'editor-session.png') })
+  record('会话：无页面错误', errors.length === 0, errors.slice(0, 2).join(' | '))
+}
+
 const results = []
 const record = (name, ok, detail = '') => {
   results.push({ name, ok, detail })
@@ -152,6 +224,18 @@ try {
   page.__port = port
   const errors = []
   page.on('pageerror', (error) => errors.push(String(error.message ?? error)))
+
+  const editorMode = process.argv.includes('--editor')
+  if (editorMode) {
+    await checkEditorSession(page, record, shots)
+    const passed = results.length > 0 && results.every((item) => item.ok)
+    console.log(`\n${passed ? 'ALL PASS' : 'HAS FAILURES'}（${results.length} 项）`)
+    console.log(`screenshots: ${shots}`)
+    process.exitCode = passed ? 0 : 1
+    await browser.close()
+    await new Promise((resolve) => server.close(resolve))
+    process.exit(process.exitCode ?? 0)
+  }
 
   const viewMode = process.argv.includes('--view')
   if (viewMode) {

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Excalidraw E3 编辑会话</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: -apple-system, sans-serif;
+        background: #1e1e1e;
+        color: #e6e6e6;
+      }
+      #controls {
+        position: relative;
+        z-index: 50;
+        display: flex;
+        gap: 8px;
+        padding: 8px 12px;
+        background: #1e1e1e;
+      }
+      #card {
+        position: relative;
+        width: 900px;
+        height: 420px;
+        margin: 12px;
+        border: 1px solid #444;
+      }
+      #fullscreen {
+        position: fixed;
+        inset: 0;
+        display: none;
+        z-index: 10;
+        background: #fff;
+      }
+      #fullscreen.active {
+        display: block;
+      }
+      #host {
+        width: 100%;
+        height: 100%;
+      }
+      /* overlay 模式：不搬 DOM，只把同一个宿主定位到全屏 */
+      body.overlay #card {
+        visibility: hidden;
+      }
+      body.overlay #host {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 20;
+        background: #fff;
+      }
+      #status {
+        margin-left: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="controls">
+      <button id="move">移动到全屏</button>
+      <button id="back">回到卡片</button>
+      <button id="flush">立即写盘</button>
+      <button id="overlay">定位切全屏</button>
+      <span id="status"></span>
+    </div>
+    <div id="card"><div id="host"></div></div>
+    <div id="fullscreen"></div>
+    <script type="module" src="./editor-main.js"></script>
+  </body>
+</html>
