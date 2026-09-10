@@ -73,6 +73,12 @@ const api: DeskApi = {
   bootstrap: () => invoke<BootstrapPayload>(IPC_CHANNELS.bootstrap),
   app: {
     closeWindow: () => invoke<void>(IPC_CHANNELS.windowClose),
+    onBeforeClose: (callback) => {
+      const listener = (): void => callback()
+      ipcRenderer.on(IPC_CHANNELS.appBeforeClose, listener)
+      return () => ipcRenderer.removeListener(IPC_CHANNELS.appBeforeClose, listener)
+    },
+    confirmCloseReady: (proceed) => invoke<void>(IPC_CHANNELS.appCloseReady, { proceed }),
     confirmTabClose: (titles) => invoke<TabCloseChoice>(IPC_CHANNELS.tabConfirmClose, titles),
     showContextMenu: (request) =>
       invoke<ContextMenuAction | null>(IPC_CHANNELS.contextMenuShow, request),

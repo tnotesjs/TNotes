@@ -207,33 +207,34 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     await saveCurrentNoteDocument()
   }
 
-  const { requestCloseTab, requestCloseTabs, isTabDirty, closingTabs } = createTabClosing({
-    editor,
-    error,
-    status,
-    resourcesFor: (tab) => {
-      if (tab.type === 'web') return []
-      const resources: ClosingResource[] = []
-      if (tab.type === 'note') {
-        const key = documentKey(tab.knowledgeBaseId, tab.noteUuid)
-        resources.push({
-          key,
-          title: tab.title,
-          dirty: () => Boolean(documents.value[key]?.dirty),
-          saving: () => Boolean(documents.value[key]?.saving),
-          pauseAutosave: () => pauseDocumentAutosave(key),
-          waitForSave: () => waitForDocumentSave(key),
-          save: () => saveDocument(key),
-          discard: () => discardDocumentChanges(key)
-        })
+  const { requestCloseTab, requestCloseTabs, isTabDirty, closingTabs, prepareToQuit } =
+    createTabClosing({
+      editor,
+      error,
+      status,
+      resourcesFor: (tab) => {
+        if (tab.type === 'web') return []
+        const resources: ClosingResource[] = []
+        if (tab.type === 'note') {
+          const key = documentKey(tab.knowledgeBaseId, tab.noteUuid)
+          resources.push({
+            key,
+            title: tab.title,
+            dirty: () => Boolean(documents.value[key]?.dirty),
+            saving: () => Boolean(documents.value[key]?.saving),
+            pauseAutosave: () => pauseDocumentAutosave(key),
+            waitForSave: () => waitForDocumentSave(key),
+            save: () => saveDocument(key),
+            discard: () => discardDocumentChanges(key)
+          })
+        }
+        if (tab.type === 'kb-settings') {
+          const resource = kbSettingsCloseResource(tab.id)
+          if (resource) resources.push(resource)
+        }
+        return resources
       }
-      if (tab.type === 'kb-settings') {
-        const resource = kbSettingsCloseResource(tab.id)
-        if (resource) resources.push(resource)
-      }
-      return resources
-    }
-  })
+    })
 
   async function saveAllDocuments(): Promise<void> {
     await saveAllNoteDocuments()
@@ -624,6 +625,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     saveCurrentDocument,
     requestCloseTab,
     requestCloseTabs,
+    prepareToQuit,
     isTabDirty,
     closingTabs,
     saveAllDocuments,

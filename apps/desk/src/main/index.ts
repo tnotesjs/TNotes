@@ -4,6 +4,13 @@ import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 
 import icon from '../../resources/icon.png?asset'
 import { handleAssetProtocol, registerAssetScheme } from './assetProtocol'
+import { CloseGuard } from './closeGuard'
+import {
+  ensureQuitGuard,
+  getWindowGuard,
+  registerWindowGuard,
+  unregisterWindowGuard
+} from './closeGuards'
 import { gitManager } from './gitManager'
 import { registerIpc } from './ipc'
 import { deskLog } from './log'
@@ -141,7 +148,25 @@ function createWindow(): BrowserWindow {
     webContentsManager.setZoomFactor(loadSettings().appZoomPercent / 100)
   })
   webContentsManager.onTabShortcut((command) => sendTabShortcut(window, command))
+  // 红叉 / ⌘W：先让渲染端 flush 并处理未保存内容，再真正关闭
+  const closeGuard = new CloseGuard({
+    requestFlush: () => {
+      if (!window.isDestroyed()) window.webContents.send(IPC_CHANNELS.appBeforeClose)
+    },
+    close: () => window.close(),
+    onTimeout: (waited) =>
+      deskLog('desk', 'close guard timed out waiting for renderer', { waited, window: window.id }),
+    onUnavailable: (error) =>
+      deskLog('desk', 'close guard could not reach renderer', {
+        message: error instanceof Error ? error.message : String(error)
+      })
+  })
+  registerWindowGuard(window, closeGuard)
+  window.on('close', (event) => {
+    closeGuard.intercept(event)
+  })
   window.on('closed', () => {
+    unregisterWindowGuard(window)
     if (mainWindow === window) mainWindow = null
   })
 
@@ -210,7 +235,33 @@ if (!hasSingleInstanceLock) {
   })
 }
 
-app.on('before-quit', () => {
+app.on('before-quit', (event) => {
+  const target = mainWindow && !mainWindow.isDestroyed() ? mainWindow : null
+  if (!target) {
+    void previewManager.stopAll()
+    return
+  }
+  const guard = ensureQuitGuard(
+    () =>
+      new CloseGuard({
+        requestFlush: () => {
+          if (!target.isDestroyed()) target.webContents.send(IPC_CHANNELS.appBeforeClose)
+        },
+        close: () => {
+          // 退出流程已经处理过 flush：随后的窗口 close 直接放行
+          getWindowGuard(target)?.approve()
+          app.quit()
+        },
+        onTimeout: (waited) =>
+          deskLog('desk', 'quit guard timed out waiting for renderer', { waited }),
+        onUnavailable: (error) =>
+          deskLog('desk', 'quit guard could not reach renderer', {
+            message: error instanceof Error ? error.message : String(error)
+          })
+      })
+  )
+  if (guard.intercept(event)) return
+  // 已批准退出：停预览后放行
   void previewManager.stopAll()
 })
 

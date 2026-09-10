@@ -457,6 +457,9 @@ describe('workspace document saving', () => {
           return pending.promise
         })
       },
+      app: {
+        confirmTabClose: vi.fn(async () => ({ ok: true, value: 'save' }) as const)
+      },
       recovery: { delete: deleteRecovery }
     } as unknown as DeskApi
     Object.defineProperty(window, 'desk', { configurable: true, value: desk })
@@ -546,6 +549,42 @@ describe('workspace document saving', () => {
 
     pendingSaves[0].resolve(mutation('source edit', 'revision-2'))
     await saving
+  })
+
+  it('退出前把未保存内容交给确认对话框，选「保存」后才允许退出', async () => {
+    const workspace = useWorkspaceStore()
+    const editor = useEditorStore()
+    const key = `${knowledgeBase.id}:note-a`
+    await workspace.ensureDocument(knowledgeBase.id, 'note-a')
+    editor.openNote(knowledgeBase, 'note-a', 'A', 'visual', undefined, 'permanent')
+    workspace.updateDocumentContent(key, '未保存内容', true)
+
+    const confirmTabClose = vi.mocked(window.desk.app.confirmTabClose)
+    const quitting = workspace.prepareToQuit()
+    for (let tick = 0; tick < 50; tick += 1) await Promise.resolve()
+
+    expect(confirmTabClose).toHaveBeenCalledWith(['A'])
+    expect(saveRequests[0]).toMatchObject({ content: '未保存内容' })
+
+    pendingSaves[0].resolve(mutation('未保存内容', 'revision-2'))
+    await expect(quitting).resolves.toBe(true)
+  })
+
+  it('用户在退出确认里取消时不允许退出，也不落盘', async () => {
+    const workspace = useWorkspaceStore()
+    const editor = useEditorStore()
+    const key = `${knowledgeBase.id}:note-a`
+    await workspace.ensureDocument(knowledgeBase.id, 'note-a')
+    editor.openNote(knowledgeBase, 'note-a', 'A', 'visual', undefined, 'permanent')
+    workspace.updateDocumentContent(key, '未保存内容', true)
+    vi.mocked(window.desk.app.confirmTabClose).mockResolvedValueOnce({
+      ok: true,
+      value: 'cancel'
+    } as never)
+
+    await expect(workspace.prepareToQuit()).resolves.toBe(false)
+    expect(saveRequests).toHaveLength(0)
+    expect(workspace.status).toBe('已取消退出：请先处理未保存的更改')
   })
 
   it('⌘S（保存全部）会先提交块内草稿再落盘', async () => {

@@ -72,6 +72,7 @@ let sessionTimer: ReturnType<typeof setTimeout> | null = null
 let statusTimer: ReturnType<typeof setTimeout> | null = null
 let systemTheme: MediaQueryList | null = null
 let unsubscribeTabShortcut: (() => void) | null = null
+let unsubscribeBeforeClose: (() => void) | null = null
 let unsubscribeUpdates: (() => void) | null = null
 
 const workspaceColumns = computed(() => {
@@ -484,6 +485,13 @@ onMounted(async () => {
   unsubscribeTabShortcut = window.desk.app.onTabShortcut((command) => {
     void handleTabShortcut(command)
   })
+  // 红叉 / ⌘Q：主进程接管关闭，这里把未保存内容处理干净再回执
+  unsubscribeBeforeClose = window.desk.app.onBeforeClose(() => {
+    void (async () => {
+      const proceed = await store.prepareToQuit()
+      await window.desk.app.confirmCloseReady(proceed)
+    })()
+  })
   unsubscribeUpdates = initUpdateWatcher()
   systemTheme = window.matchMedia('(prefers-color-scheme: dark)')
   systemTheme.addEventListener('change', applyAppearance)
@@ -496,6 +504,8 @@ onUnmounted(() => {
   window.removeEventListener('keydown', onKeydown)
   unsubscribeTabShortcut?.()
   unsubscribeTabShortcut = null
+  unsubscribeBeforeClose?.()
+  unsubscribeBeforeClose = null
   unsubscribeUpdates?.()
   unsubscribeUpdates = null
   systemTheme?.removeEventListener('change', applyAppearance)

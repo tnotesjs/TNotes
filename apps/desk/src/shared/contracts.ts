@@ -1,6 +1,8 @@
 export const IPC_CHANNELS = {
   bootstrap: 'desk:bootstrap',
   windowClose: 'window:close',
+  appBeforeClose: 'app:before-close',
+  appCloseReady: 'app:close-ready',
   tabShortcut: 'tab:shortcut',
   tabConfirmClose: 'tab:confirm-close',
   contextMenuShow: 'context-menu:show',
@@ -1039,6 +1041,10 @@ export interface DeskApi {
   bootstrap(): Promise<DeskResult<BootstrapPayload>>
   app: {
     closeWindow(): Promise<DeskResult<void>>
+    /** 主进程在关窗 / 退出前请求渲染端 flush 未保存内容 */
+    onBeforeClose(callback: () => void): () => void
+    /** 渲染端回执：proceed=false 表示用户取消了退出 */
+    confirmCloseReady(proceed: boolean): Promise<DeskResult<void>>
     confirmTabClose(titles: string[]): Promise<DeskResult<TabCloseChoice>>
     showContextMenu(request: ContextMenuRequest): Promise<DeskResult<ContextMenuAction | null>>
     showKnowledgeSidebarMenu(

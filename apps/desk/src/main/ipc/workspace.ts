@@ -18,6 +18,7 @@ import {
   knowledgeBaseSettingsWriteSchema,
   knowledgeBaseIconWriteSchema
 } from './schemas'
+import { settleCloseGuards } from '../closeGuards'
 import { handle, noInputSchema, type GetWindow } from './shared'
 
 export function registerWorkspace(getWindow: GetWindow): () => void {
@@ -83,6 +84,10 @@ export function registerWorkspace(getWindow: GetWindow): () => void {
       recoveries: await loadRecoveries(workspace.path)
     }
   })
+  handle(IPC_CHANNELS.appCloseReady, getWindow, z.object({ proceed: z.boolean() }), (input) => {
+    settleCloseGuards(getWindow() ?? null, input.proceed)
+  })
+
   handle(IPC_CHANNELS.windowClose, getWindow, noInputSchema, () => {
     const window = getWindow()
     if (!window || window.isDestroyed()) return

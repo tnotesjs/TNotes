@@ -38,43 +38,72 @@ export function createTabClosing(ctx: CloseTabsContext) {
     (tab) => isTabDirty(tab) || ctx.resourcesFor(tab).some((resource) => resource.saving())
   )
 
+  /**
+   * 提交块内草稿、等待进行中的保存，并按需询问保存/丢弃。
+   * 返回 false 表示用户取消或缺省仍有未保存内容；resume 需要在调用方 finally 里恢复自动保存。
+   */
+  async function settleUnsavedChanges(
+    targets: EditorTab[],
+    resume: Array<() => void>
+  ): Promise<boolean> {
+    // Commit focused block editors into the shared document before inspecting dirty state.
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+    await nextTick()
+    for (const tab of targets) {
+      if (tab.type === 'note') flushPendingEdits(tab.knowledgeBaseId, tab.noteUuid)
+    }
+    await nextTick()
+    const resources = [
+      ...new Map(
+        targets.flatMap(ctx.resourcesFor).map((resource) => [resource.key, resource])
+      ).values()
+    ].filter((resource) => resource.dirty() || resource.saving())
+    for (const resource of resources) resume.push(resource.pauseAutosave())
+    // An already-running save cannot be undone. Wait for its result and then inspect remaining edits.
+    await Promise.all(resources.map((resource) => resource.waitForSave().catch(() => undefined)))
+    const dirty = resources.filter((resource) => resource.dirty())
+    if (dirty.length) {
+      const choice = resultValue(
+        await window.desk.app.confirmTabClose(dirty.map((resource) => resource.title))
+      )
+      if (choice === 'cancel') return false
+      for (const resource of dirty) {
+        if (!resource.dirty()) continue
+        if (choice === 'save') await resource.save()
+        else await resource.discard()
+        if (resource.dirty()) throw new Error('仍有未保存的更改，已取消关闭标签页。')
+      }
+    }
+    return !targets.flatMap(ctx.resourcesFor).some((resource) => resource.dirty())
+  }
+
+  /** 关窗 / 退出前调用：不关闭标签，只把内容处理干净；false 表示用户取消了退出。 */
+  async function prepareToQuit(): Promise<boolean> {
+    const resume: Array<() => void> = []
+    try {
+      const targets = ctx.editor.groups.flatMap((group) => group.tabs)
+      const clean = await settleUnsavedChanges(targets, resume)
+      if (!clean) ctx.status.value = '已取消退出：请先处理未保存的更改'
+      return clean
+    } catch (cause) {
+      ctx.error.value = cause instanceof Error ? cause.message : String(cause)
+      return false
+    } finally {
+      resume.forEach((restore) => restore())
+    }
+  }
+
   async function closeTargets(ids: string[], allowPinned = false): Promise<boolean> {
     if (closingTabs.value) return false
     closingTabs.value = true
     const resume: Array<() => void> = []
     const knowledgeBaseId = ctx.editor.activeKnowledgeBaseId
     try {
-      // Commit focused block editors into the shared document before inspecting dirty state.
-      if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
-      await nextTick()
       const targets = ctx.editor.groups
         .flatMap((group) => group.tabs)
         .filter((tab) => ids.includes(tab.id) && (allowPinned || !tab.pinned))
-      for (const tab of targets) {
-        if (tab.type === 'note') flushPendingEdits(tab.knowledgeBaseId, tab.noteUuid)
-      }
-      await nextTick()
-      const resources = [
-        ...new Map(
-          targets.flatMap(ctx.resourcesFor).map((resource) => [resource.key, resource])
-        ).values()
-      ].filter((resource) => resource.dirty() || resource.saving())
-      for (const resource of resources) resume.push(resource.pauseAutosave())
-      // An already-running save cannot be undone. Wait for its result and then inspect remaining edits.
-      await Promise.all(resources.map((resource) => resource.waitForSave().catch(() => undefined)))
-      const dirty = resources.filter((resource) => resource.dirty())
-      if (dirty.length) {
-        const choice = resultValue(
-          await window.desk.app.confirmTabClose(dirty.map((resource) => resource.title))
-        )
-        if (choice === 'cancel') return false
-        for (const resource of dirty) {
-          if (!resource.dirty()) continue
-          if (choice === 'save') await resource.save()
-          else await resource.discard()
-          if (resource.dirty()) throw new Error('仍有未保存的更改，已取消关闭标签页。')
-        }
-      }
+      const clean = await settleUnsavedChanges(targets, resume)
+      if (!clean) return false
       if (targets.flatMap(ctx.resourcesFor).some((resource) => resource.dirty())) {
         throw new Error('仍有未保存的更改，已取消关闭标签页。')
       }
@@ -120,5 +149,5 @@ export function createTabClosing(ctx: CloseTabsContext) {
     return closeTargets(targets.map((tab) => tab.id))
   }
 
-  return { requestCloseTab, requestCloseTabs, isTabDirty, closingTabs }
+  return { requestCloseTab, requestCloseTabs, isTabDirty, closingTabs, prepareToQuit }
 }
