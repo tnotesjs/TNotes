@@ -230,9 +230,16 @@ describe('container inline source editor', () => {
     const wrapper = mount(MilkdownMarkdownEditor, {
       attachTo: document.body,
       props: {
-        content: ['上方段落', '', '::: tip 提示题', '', '这是 PowerShell 的经典坑', '', ':::', ''].join(
-          '\n'
-        ),
+        content: [
+          '上方段落',
+          '',
+          '::: tip 提示题',
+          '',
+          '这是 PowerShell 的经典坑',
+          '',
+          ':::',
+          ''
+        ].join('\n'),
         mode: 'visual',
         readOnly: false,
         knowledgeBaseId: 'kb-a',

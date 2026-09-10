@@ -592,7 +592,10 @@ onUnmounted(() => {
       <div class="welcome-card">
         <span class="welcome-mark">T</span>
         <h1>打开你的 TNotes 工作区</h1>
-        <p>Desk 会扫描所选目录：若根目录有 tnotes.json 则作为单库打开；否则扫描含 tnotes.json 的直接子目录。</p>
+        <p>
+          Desk 会扫描所选目录：若根目录有 tnotes.json 则作为单库打开；否则扫描含 tnotes.json
+          的直接子目录。
+        </p>
         <button type="button" :disabled="store.loading" @click="store.chooseWorkspace">
           {{ store.loading ? '正在检查…' : '选择工作区' }}
         </button>
@@ -643,11 +646,7 @@ onUnmounted(() => {
         </header>
         <label>
           <span>文件夹名</span>
-          <input
-            v-model="createKbFolderName"
-            autofocus
-            placeholder="例如 demo-kb 或 TNotes.demo"
-          />
+          <input v-model="createKbFolderName" autofocus placeholder="例如 demo-kb 或 TNotes.demo" />
         </label>
         <p v-if="createKbFolderError" class="dialog-error">{{ createKbFolderError }}</p>
         <label>

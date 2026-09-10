@@ -238,9 +238,7 @@ export const useEditorStore = defineStore('editor', () => {
       if (node.type === 'group') {
         return {
           ...node,
-          tabs: node.tabs.map((tab) =>
-            tab.type === 'note' ? { ...tab, pageWidth } : tab
-          )
+          tabs: node.tabs.map((tab) => (tab.type === 'note' ? { ...tab, pageWidth } : tab))
         }
       }
       return {

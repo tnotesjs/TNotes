@@ -186,10 +186,12 @@ describe('block math preview-first', () => {
       await block.get('.preview-panel > .desk-raw-block__edit').trigger('click')
       await vi.waitFor(() => {
         expect(block.find('.codemirror-host').classes()).not.toContain('hidden')
-        expect(block.get('.preview-panel > .desk-raw-block__edit').attributes('hidden')).toBeDefined()
-        expect(block.get('.codemirror-host > .desk-raw-block__editor-done').attributes('aria-label')).toBe(
-          '完成编辑'
-        )
+        expect(
+          block.get('.preview-panel > .desk-raw-block__edit').attributes('hidden')
+        ).toBeDefined()
+        expect(
+          block.get('.codemirror-host > .desk-raw-block__editor-done').attributes('aria-label')
+        ).toBe('完成编辑')
       })
     } finally {
       wrapper.unmount()

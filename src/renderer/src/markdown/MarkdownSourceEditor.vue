@@ -170,7 +170,14 @@ function selectAll(): void {
   view.focus()
 }
 
-defineExpose({ insertTextAt, wrapSelection, prefixSelection, setLinePrefix, insertTable, selectAll })
+defineExpose({
+  insertTextAt,
+  wrapSelection,
+  prefixSelection,
+  setLinePrefix,
+  insertTable,
+  selectAll
+})
 
 function baseExtensions(): Extension[] {
   return [

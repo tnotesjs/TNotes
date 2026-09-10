@@ -40,10 +40,7 @@ describe('sidebar native menus', () => {
   })
 
   it('disables create/refresh while loading and reveal without workspace', () => {
-    const template = knowledgeSidebarMenuTemplate(
-      { hasWorkspace: false, loading: true },
-      vi.fn()
-    )
+    const template = knowledgeSidebarMenuTemplate({ hasWorkspace: false, loading: true }, vi.fn())
     expect(template.find((item) => item.id === 'create')?.enabled).toBe(false)
     expect(template.find((item) => item.id === 'refresh')?.enabled).toBe(false)
     expect(template.find((item) => item.id === 'reveal-workspace')?.enabled).toBe(false)

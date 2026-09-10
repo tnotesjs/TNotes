@@ -159,7 +159,9 @@ describe('document select-all', () => {
       expect(view.state.doc.textContent).toBe('')
       expect(view.state.doc.toString()).toContain('deskRawBlock')
       expect(
-        [...Array(view.state.doc.childCount)].map((_, index) => view.state.doc.child(index).type.name)
+        [...Array(view.state.doc.childCount)].map(
+          (_, index) => view.state.doc.child(index).type.name
+        )
       ).toEqual(['deskRawBlock', 'paragraph'])
       expect(view.state.selection).toBeInstanceOf(TextSelection)
       expect(view.state.selection.$head.parent.type.name).toBe('paragraph')
@@ -233,7 +235,9 @@ describe('document select-all', () => {
         bubbles: true,
         cancelable: true
       })
-      expect(view.someProp('handleKeyDown', (handle) => handle(view, backspace)) ?? false).toBe(true)
+      expect(view.someProp('handleKeyDown', (handle) => handle(view, backspace)) ?? false).toBe(
+        true
+      )
       expect(view.state.doc.textContent).toBe('')
     })
   })

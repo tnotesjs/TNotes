@@ -6,20 +6,13 @@ import { languages } from '@codemirror/language-data'
  * `@codemirror/language-data` often stores short ids (`py`, `rs`, `md`) as
  * file extensions, so clone those onto alias without changing fence source.
  */
-export function withFenceAliases(
-  descs: readonly LanguageDescription[]
-): LanguageDescription[] {
+export function withFenceAliases(descs: readonly LanguageDescription[]): LanguageDescription[] {
   return descs.map((desc) => {
-    const extra = desc.extensions.filter(
-      (ext) => !desc.alias.includes(ext.toLowerCase())
-    )
+    const extra = desc.extensions.filter((ext) => !desc.alias.includes(ext.toLowerCase()))
     if (extra.length === 0) return desc
     return LanguageDescription.of({
       name: desc.name,
-      alias: [
-        ...desc.alias.filter((alias) => alias !== desc.name.toLowerCase()),
-        ...extra
-      ],
+      alias: [...desc.alias.filter((alias) => alias !== desc.name.toLowerCase()), ...extra],
       extensions: [...desc.extensions],
       ...(desc.filename ? { filename: desc.filename } : {}),
       load: () => desc.load()

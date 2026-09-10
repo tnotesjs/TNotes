@@ -134,7 +134,7 @@ export class PreviewManager {
     if (server.close) {
       await Promise.race([
         Promise.resolve(server.close()),
-        new Promise<void>((resolve) => setTimeout(resolve, 2500)),
+        new Promise<void>((resolve) => setTimeout(resolve, 2500))
       ])
       return
     }

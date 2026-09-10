@@ -6,7 +6,11 @@ import type { EditorView } from '@milkdown/kit/prose/view'
 import { Decoration, DecorationSet } from '@milkdown/kit/prose/view'
 import { $prose } from '@milkdown/kit/utils'
 import { EditorView as CodeMirrorView } from '@codemirror/view'
-import { focusCalloutTitleInput, isCaretEnteringCalloutTitle, isDeskCalloutNode } from '../editor/markdown/deskCallout'
+import {
+  focusCalloutTitleInput,
+  isCaretEnteringCalloutTitle,
+  isDeskCalloutNode
+} from '../editor/markdown/deskCallout'
 import { isStandaloneImageParagraph } from '../editor/markdown/standaloneImageParagraph'
 import { createMarkVsBlockSelectionPlugin } from './selectionKind'
 import { BlockRangeSelection, createVerticalBlockSelectionPlugin } from './verticalBlockSelection'

@@ -97,9 +97,7 @@ export function isCaretStuckOnHiddenAtom(state: EditorState): boolean {
   if (selection instanceof GapCursor) {
     const $pos = selection.$head
     return (
-      isHiddenAtom($pos.nodeBefore) ||
-      isHiddenAtom($pos.nodeAfter) ||
-      isHiddenAtom(doc.firstChild)
+      isHiddenAtom($pos.nodeBefore) || isHiddenAtom($pos.nodeAfter) || isHiddenAtom(doc.firstChild)
     )
   }
   return false

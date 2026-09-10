@@ -6,10 +6,7 @@ import UiTooltip from './UiTooltip.vue'
 import { useEditorStore, KNOWLEDGE_SIDEBAR_COMPACT } from '../stores/editor'
 import { useWorkspaceStore } from '../stores/workspace'
 
-import type {
-  KnowledgeBaseDescriptor,
-  KnowledgeSidebarMenuAction
-} from '../../../shared/contracts'
+import type { KnowledgeBaseDescriptor, KnowledgeSidebarMenuAction } from '../../../shared/contracts'
 
 const emit = defineEmits<{
   'create-knowledge-base': []

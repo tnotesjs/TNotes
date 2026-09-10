@@ -50,11 +50,7 @@ describe('HTML comment helpers', () => {
   })
 
   it('strips comments outside code and keeps fenced or inline examples', () => {
-    const list = [
-      '- `index3.js`',
-      '  <!-- - ![2.zip](2.zip.png) -->',
-      '  - nested'
-    ].join('\n')
+    const list = ['- `index3.js`', '  <!-- - ![2.zip](2.zip.png) -->', '  - nested'].join('\n')
     expect(stripHtmlCommentsOutsideCode(list)).toBe(['- `index3.js`', '  - nested'].join('\n'))
     expect(stripHtmlCommentsOutsideCode('```html\n<!-- keep -->\n```')).toBe(
       '```html\n<!-- keep -->\n```'
@@ -439,9 +435,7 @@ describe('Milkdown raw block projection', () => {
       .map(readProjectedRawBlockMarker)
       .filter((block): block is ProjectedRawBlock => Boolean(block))
 
-    expect(markers).toEqual([
-      { kind: 'html', source: '<!-- leftover todo -->', hidden: true }
-    ])
+    expect(markers).toEqual([{ kind: 'html', source: '<!-- leftover todo -->', hidden: true }])
     expect(projected).not.toContain('![2.zip](2.zip.png)')
     expect(projected).toContain('index3.js')
     expect(projected).toContain('<!-- keep in fence -->')

@@ -473,7 +473,9 @@ describe('MilkdownMarkdownEditor synchronization', () => {
     const pm = wrapper.get('.ProseMirror').element as HTMLElement
     expect(pm.textContent).toContain('认识 webpack')
     window.dispatchEvent(new Event(DESK_SELECT_ALL_EVENT))
-    pm.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }))
+    pm.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true })
+    )
     await vi.waitFor(() => {
       const last = wrapper.emitted<string[]>('change')?.at(-1)?.[0] ?? ''
       expect(last).toContain('id: c9b10d0b-e8f9-4b98-8199-8a2156f439ea')

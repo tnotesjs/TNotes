@@ -2553,8 +2553,7 @@
   opacity: 1;
 }
 
-.milkdown-markdown-editor
-  :deep(.desk-latex-block .preview-panel > .desk-raw-block__edit svg),
+.milkdown-markdown-editor :deep(.desk-latex-block .preview-panel > .desk-raw-block__edit svg),
 .milkdown-markdown-editor
   :deep(.desk-latex-block .codemirror-host > .desk-raw-block__editor-done svg) {
   width: 16px;

@@ -2,11 +2,7 @@ import { LanguageDescription } from '@codemirror/language'
 import { languages } from '@codemirror/language-data'
 import { describe, expect, it } from 'vitest'
 
-import {
-  deskCodeMirrorLanguages,
-  matchDeskLanguage,
-  withFenceAliases
-} from './codeMirrorLanguages'
+import { deskCodeMirrorLanguages, matchDeskLanguage, withFenceAliases } from './codeMirrorLanguages'
 
 describe('deskCodeMirrorLanguages', () => {
   it('does not match py on the stock language-data list', () => {

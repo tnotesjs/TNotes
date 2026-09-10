@@ -125,11 +125,8 @@ export function registerWorkspace(getWindow: GetWindow): () => void {
     const error = await shell.openPath(path)
     if (error) throw new Error(error)
   })
-  handle(
-    IPC_CHANNELS.knowledgeBaseCreate,
-    getWindow,
-    knowledgeBaseCreateSchema,
-    (request) => workspaceManager.createKnowledgeBase(request)
+  handle(IPC_CHANNELS.knowledgeBaseCreate, getWindow, knowledgeBaseCreateSchema, (request) =>
+    workspaceManager.createKnowledgeBase(request)
   )
   handle(
     IPC_CHANNELS.workspaceRevealKnowledgeBase,

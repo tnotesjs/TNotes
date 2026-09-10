@@ -310,10 +310,7 @@ export function calloutDepthAt($pos: ResolvedPos): number {
  * True when ArrowUp / ArrowLeft from the caret should enter the callout title
  * instead of leaving the container (title lives outside contentDOM).
  */
-export function isCaretEnteringCalloutTitle(
-  $head: ResolvedPos,
-  direction: 'up' | 'left'
-): boolean {
+export function isCaretEnteringCalloutTitle($head: ResolvedPos, direction: 'up' | 'left'): boolean {
   if (!$head.parent.isTextblock) return false
   const calloutDepth = calloutDepthAt($head)
   if (calloutDepth < 0) return false
@@ -333,7 +330,9 @@ export function calloutPosEnteredFromAbove(
   if (direction === 'right') {
     if ($head.parentOffset !== $head.parent.content.size) return null
   } else if (
-    $head.parent.textBetween($head.parentOffset, $head.parent.content.size, '\n', '\n').includes('\n')
+    $head.parent
+      .textBetween($head.parentOffset, $head.parent.content.size, '\n', '\n')
+      .includes('\n')
   ) {
     return null
   }

@@ -253,10 +253,7 @@ export interface KnowledgeSidebarMenuRequest {
 }
 
 export type KnowledgeSidebarMenuAction =
-  | 'create'
-  | 'refresh'
-  | 'reveal-workspace'
-  | 'choose-workspace'
+  'create' | 'refresh' | 'reveal-workspace' | 'choose-workspace'
 
 export interface NavigatorSidebarMenuRequest {
   ready: boolean
@@ -265,13 +262,7 @@ export interface NavigatorSidebarMenuRequest {
 }
 
 export type NavigatorSidebarMenuAction =
-  | 'create-note'
-  | 'create-group'
-  | 'preview'
-  | 'build'
-  | 'settings'
-  | 'ide'
-  | 'reveal'
+  'create-note' | 'create-group' | 'preview' | 'build' | 'settings' | 'ide' | 'reveal'
 
 export type TabShortcutCommand =
   | { type: 'activate-tab-by-number'; number: number; sourceTabId?: string }
