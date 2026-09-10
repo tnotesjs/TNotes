@@ -41,12 +41,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # 先构建 workspace 依赖（ui / mindmap-core 的 dist），测试和自身构建都依赖它们
+      - name: Build workspace dependencies
+        run: pnpm --filter '@tnotesjs/mindmap-web^...' --if-present run build
+
       - name: Test
         run: pnpm --filter @tnotesjs/mindmap-web test
 
-      # `...` 连同 workspace 依赖（ui / mindmap-core）一起构建
       - name: Build
-        run: pnpm --filter '@tnotesjs/mindmap-web...' run build
+        run: pnpm --filter @tnotesjs/mindmap-web run build
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
