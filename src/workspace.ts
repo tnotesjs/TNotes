@@ -545,6 +545,36 @@ export function createWorkspace(options: CreateWorkspaceOptions): TNotesKbWorksp
           const title = String(updates.title).trim();
           updates = { ...updates, title: title || undefined };
         }
+        if (
+          updates.headingNumberMaxDepth !== undefined &&
+          updates.headingNumberMaxDepth !== null
+        ) {
+          const depth = Number(updates.headingNumberMaxDepth);
+          if (!Number.isInteger(depth) || depth < 1 || depth > 6) {
+            throw new KbError(
+              "INVALID_OPERATION",
+              "标题编号层级上限须为 1–6 的整数",
+              { headingNumberMaxDepth: updates.headingNumberMaxDepth },
+            );
+          }
+          updates = { ...updates, headingNumberMaxDepth: depth };
+        }
+        if (updates.autoPush !== undefined && updates.autoPush !== null) {
+          const autoPush = updates.autoPush;
+          const idleMinutes = Number(autoPush.idleMinutes);
+          if (
+            typeof autoPush.enabled !== "boolean" ||
+            !Number.isInteger(idleMinutes) ||
+            idleMinutes < 1
+          ) {
+            throw new KbError(
+              "INVALID_OPERATION",
+              "autoPush 须为 { enabled: boolean, idleMinutes: 正整数 }",
+              { autoPush: updates.autoPush },
+            );
+          }
+          updates = { ...updates, autoPush: { enabled: autoPush.enabled, idleMinutes } };
+        }
 
         const { config } = await readKbConfig(rootPath);
         const next: KbConfig = { ...config };
