@@ -1,0 +1,116 @@
+name: Release Desk
+
+on:
+  push:
+    tags:
+      - 'desk@*'
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    name: Package ${{ matrix.platform }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macOS
+            runner: macos-15
+            command: build:mac
+            args: --arm64
+          - platform: Windows
+            runner: windows-latest
+            command: build:win
+            args: --x64
+          - platform: Linux
+            runner: ubuntu-latest
+            command: build:linux
+            args: --x64
+
+    steps:
+      - name: Check out monorepo
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.10.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # desk 以 workspace:* 消费 kb/ssg/ui/mindmap-core，需先构建出 dist
+      - name: Build workspace dependencies
+        run: pnpm --filter 'desk^...' --if-present run build
+
+      - name: Build package
+        working-directory: apps/desk
+        run: pnpm run ${{ matrix.command }} -- ${{ matrix.args }}
+
+      - name: Verify macOS bundle signing
+        if: matrix.platform == 'macOS'
+        working-directory: apps/desk
+        shell: bash
+        run: |
+          app_path=$(find dist -maxdepth 2 -type d -name 'TNotes Desk.app' -print -quit)
+          test -n "$app_path"
+          codesign --verify --deep --strict --verbose=2 "$app_path"
+          entitlements=$(codesign -d --entitlements - "$app_path")
+          printf '%s\n' "$entitlements"
+          printf '%s\n' "$entitlements" \
+            | grep -A2 -F '[Key] com.apple.security.cs.disable-library-validation' \
+            | grep -Fq '[Bool] true'
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: desk-${{ matrix.platform }}
+          if-no-files-found: error
+          path: |
+            apps/desk/dist/*.dmg
+            apps/desk/dist/*.zip
+            apps/desk/dist/*.exe
+            apps/desk/dist/*.AppImage
+            apps/desk/dist/*.deb
+            apps/desk/dist/*.blockmap
+            apps/desk/dist/latest*.yml
+
+  publish:
+    name: Publish GitHub Release
+    needs: package
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out monorepo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download packages
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shopt -s nullglob
+          files=(artifacts/*)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No package artifacts uploaded; skipping release."
+            exit 1
+          fi
+          version="${GITHUB_REF_NAME#desk@}"
+          gh release create "$GITHUB_REF_NAME" "${files[@]}" --generate-notes --title "TNotes Desk $version"
