@@ -12,6 +12,7 @@ import {
   resolveNoteAsset,
   resolveNoteIndex,
   saveNote,
+  updateNoteConfig,
   writeLocalAttachment
 } from './noteIo'
 import type { KnowledgeBaseHandle } from './types'
@@ -173,5 +174,38 @@ describe('desk noteIo over @tnotesjs/kb', () => {
     expect(dto).not.toHaveProperty('readmePath')
     expect(dto).not.toHaveProperty('configPath')
     expect(doc.dirName).toBe('0001. 第一篇')
+  })
+})
+
+describe('updateNoteConfig 的 done 同步', () => {
+  it('done 写入 TOC 并反映到返回的快照，两个文件都标记为内部写入', async () => {
+    const handle = await makeHandle()
+    const marked: string[] = []
+    const effects = {
+      markInternalWrites: (_rootPath: string, files: Array<{ path: string }>) => {
+        marked.push(...files.map((file) => file.path))
+      },
+      emitChanged: () => {}
+    }
+
+    const before = await readNote(handle, '0001')
+    const result = await updateNoteConfig(
+      handle,
+      {
+        knowledgeBaseId: 'kb-test',
+        noteUuid: '0001',
+        expectedRevision: before.revision,
+        updates: { done: true }
+      } as never,
+      effects
+    )
+
+    const noteNode = result.knowledgeBase.toc.find(
+      (node) => node.type === 'note' && node.noteIndex === '0001'
+    )
+    expect(noteNode && noteNode.type === 'note' ? noteNode.completed : null).toBe(true)
+    expect(await fs.readFile(path.join(handle.rootPath, 'TOC.md'), 'utf8')).toMatch(/- \[x\] 0001/)
+    expect(marked).toContain('TOC.md')
+    expect(handle.snapshot.notes.find((note) => note.index === '0001')?.done).toBe(true)
   })
 })

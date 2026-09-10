@@ -47,14 +47,20 @@ export function markInternalWrites(
  * Hand-written notes may lack a frontmatter id (the renderer identity and the
  * comment mapping key). Backfill once, logged, idempotent.
  */
-async function backfillMissingNoteIds(handle: KnowledgeBaseHandle): Promise<void> {
+export async function backfillMissingNoteIds(
+  state: WorkspaceScanState,
+  handle: KnowledgeBaseHandle
+): Promise<void> {
   const missing = handle.snapshot.notes.filter((note) => !note.frontmatter.id)
   for (const note of missing) {
     try {
-      await handle.workspace.notes.setFrontmatter({
+      const result = await handle.workspace.notes.setFrontmatter({
         index: note.index,
         updates: { id: randomUUID() }
       })
+      // 回填是我们自己写的盘：不标记的话 fs.watch 会当成外部修改，给正在编辑的
+      // 文档弹假冲突，并让已加载文档的 revision 失效
+      markInternalWrites(state, handle.rootPath, result.changedFiles)
       deskLog('workspace', 'backfilled note id', { relPath: note.relPath })
     } catch (error) {
       deskLog(
@@ -109,7 +115,7 @@ async function openHandle(
     workspace,
     snapshot: await workspace.scan()
   }
-  await backfillMissingNoteIds(handle)
+  await backfillMissingNoteIds(state, handle)
   return handle
 }
 

@@ -6,6 +6,7 @@ import {
   KbError,
   parseNoteContent,
   serializeNoteContent,
+  type ChangedFile,
   type NoteFrontmatter,
   type Placement
 } from '@tnotesjs/kb'
@@ -23,7 +24,7 @@ import type {
   NoteUpdateConfigRequest
 } from '../../shared/contracts'
 
-import { toNoteDocument } from './dto'
+import { toDetail, toNoteDocument } from './dto'
 import { applyNoteMutation, type MutationSideEffects } from './mutations'
 import type { KnowledgeBaseHandle } from './types'
 
@@ -172,16 +173,31 @@ export async function updateNoteConfig(
 ): Promise<NoteMutationDto> {
   const index = resolveNoteIndex(handle, request.noteUuid)
   const { done, ...frontmatterUpdates } = request.updates
+  let tocChangedFiles: ChangedFile[] = []
 
   // done 归 TOC 复选框所有；description 归 frontmatter。
   if (typeof done === 'boolean') {
-    await handle.workspace.toc.setDone({ index, done })
+    const doneResult = await handle.workspace.toc.setDone({ index, done })
+    tocChangedFiles = doneResult.changedFiles
+    // TOC 也是我们写的：标记内部写入，否则 watcher 会报外部修改
+    effects.markInternalWrites(handle.rootPath, tocChangedFiles)
   }
   const result = await handle.workspace.notes.setFrontmatter({
     index,
     updates: frontmatterUpdates,
     expectedRevision: request.expectedRevision
   })
+  if (typeof done === 'boolean') {
+    // done 存在 TOC / NoteMeta 上，只打 frontmatter 补丁会让返回的快照仍是旧完成态。
+    effects.markInternalWrites(handle.rootPath, result.changedFiles)
+    handle.snapshot = await handle.workspace.scan()
+    effects.emitChanged()
+    return {
+      note: toNoteDocument(handle, result.value),
+      knowledgeBase: toDetail(handle),
+      changedFiles: [...tocChangedFiles, ...result.changedFiles]
+    }
+  }
   return applyNoteMutation(handle, result, effects)
 }
 
