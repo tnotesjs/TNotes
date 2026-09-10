@@ -1,0 +1,13 @@
+/**
+ * 只读画布入口：Desk 笔记卡片与 SSG 站点共用同一套渲染逻辑。
+ * 导出能力（Excalidraw 本体）由渲染器内部动态 import，首屏不会引入编辑器。
+ */
+export { default as ExcalidrawSvg } from '../excalidraw/ExcalidrawSvg.vue'
+export { createExcalidrawSvgRenderer, toSvgDataUrl } from '../excalidraw/renderer'
+export type {
+  ExcalidrawSvgRenderer,
+  ExcalidrawSvgRendererOptions,
+  ExcalidrawViewState
+} from '../excalidraw/renderer'
+export { parseExcalidrawScene, sceneCacheKey, svgCache, SvgCache } from '../excalidraw/scene'
+export type { ExcalidrawScene, SceneParseResult } from '../excalidraw/scene'

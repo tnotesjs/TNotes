@@ -5,7 +5,7 @@ import '@excalidraw/excalidraw/index.css'
 
 import React, { createElement } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Excalidraw } from '@excalidraw/excalidraw'
+import { Excalidraw, exportToSvg } from '@excalidraw/excalidraw'
 
 const host = document.getElementById('host')
 const status = document.getElementById('status')
@@ -46,7 +46,90 @@ function unmount() {
   window.__e0api = null
 }
 
+/**
+ * E2 探针：只读 SVG 导出到底长什么样——字体是否内嵌、图片是否 data URL、
+ * 有没有 foreignObject / 外链，决定了 <img> 与 SSG 能否视觉一致。
+ */
+async function exportProbe() {
+  const element = {
+    id: 'rect-1',
+    type: 'rectangle',
+    x: 20,
+    y: 20,
+    width: 200,
+    height: 120,
+    angle: 0,
+    strokeColor: '#1e1e1e',
+    backgroundColor: '#a5d8ff',
+    fillStyle: 'hachure',
+    strokeWidth: 2,
+    roughness: 1,
+    opacity: 100,
+    seed: 1,
+    version: 1,
+    versionNonce: 1,
+    isDeleted: false,
+    boundElements: null,
+    updated: 1,
+    link: null,
+    locked: false
+  }
+  const label = {
+    ...element,
+    id: 'text-1',
+    type: 'text',
+    x: 30,
+    y: 160,
+    width: 220,
+    height: 25,
+    text: '中文标签 TNotes',
+    fontSize: 20,
+    fontFamily: 1,
+    textAlign: 'left',
+    verticalAlign: 'top',
+    containerId: null,
+    originalText: '中文标签 TNotes',
+    lineHeight: 1.25,
+    baseline: 18
+  }
+  const dataURL =
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+  const files = {
+    'file-1': { id: 'file-1', mimeType: 'image/png', dataURL, created: 1 }
+  }
+  const image = {
+    ...element,
+    id: 'image-1',
+    type: 'image',
+    x: 260,
+    y: 20,
+    width: 60,
+    height: 60,
+    fileId: 'file-1',
+    status: 'saved',
+    scale: [1, 1]
+  }
+  const svg = await exportToSvg({
+    elements: [element, label, image],
+    appState: { exportWithDarkMode: false, exportBackground: true },
+    files
+  })
+  const markup = svg.outerHTML
+  const urls = [...markup.matchAll(/url\((?:"|')?([^"')]+)/g)]
+    .map((match) => match[1])
+    .filter((url) => !url.startsWith('data:'))
+  return {
+    length: markup.length,
+    hasFontFace: markup.includes('@font-face'),
+    hasForeignObject: markup.includes('foreignObject'),
+    inlinesImage: markup.includes('data:image/png'),
+    externalUrls: [...new Set(urls)].slice(0, 5),
+    mentionsVirgil: /Virgil|Excalifont|Nunito/.test(markup)
+  }
+}
+
 window.__e0 = {
+  exportProbe,
   statusText: '',
   mount,
   unmount,

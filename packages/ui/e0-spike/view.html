@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Excalidraw E2 只读视图</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 16px;
+        font-family: -apple-system, sans-serif;
+        background: #ffffff;
+        color: #1a1a1a;
+      }
+      body.dark {
+        background: #121212;
+        color: #e6e6e6;
+      }
+      #mount {
+        width: 720px;
+        margin-top: 12px;
+      }
+      button {
+        font: inherit;
+        padding: 4px 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <button id="theme">切换主题</button>
+    <div id="mount"></div>
+    <script type="module" src="./view-main.js"></script>
+  </body>
+</html>

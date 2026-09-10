@@ -50,7 +50,12 @@
     "./mermaid": "./src/entries/mermaid.ts",
     "./mindmap": "./src/entries/mindmap.ts",
     "./notes-table": "./src/entries/notes-table.ts",
-    "./word-list": "./src/entries/word-list.ts"
+    "./word-list": "./src/entries/word-list.ts",
+    "./excalidraw-view": {
+      "types": "./src/entries/excalidraw-view.ts",
+      "import": "./src/entries/excalidraw-view.ts",
+      "default": "./src/entries/excalidraw-view.ts"
+    }
   },
   "files": [
     "dist",

@@ -58,6 +58,63 @@ const cachedChromium = [
   '/Users/huyouda/Library/Caches/ms-playwright/chromium_headless_shell-1187/chrome-headless-shell-mac-arm64/chrome-headless-shell'
 ].find((candidate) => existsSync(candidate))
 
+/** E2：共享只读组件在真实浏览器里的渲染（中文/箭头/透明图 + 深浅主题） */
+async function checkReadOnlyView(page, record, shots) {
+  const errors = []
+  const externalRequests = []
+  page.on('pageerror', (error) => errors.push(String(error.message ?? error)))
+  page.on('request', (request) => {
+    const url = request.url()
+    if (!url.startsWith('http://127.0.0.1')) externalRequests.push(url)
+  })
+
+  await page.goto(`http://127.0.0.1:${page.__port}/view.html`, { waitUntil: 'domcontentloaded' })
+  await page.waitForSelector('.tn-excalidraw-view[data-state="ready"]', { timeout: 60000 })
+  await page.waitForTimeout(800)
+
+  const light = await page.evaluate(() => {
+    const image = document.querySelector('.tn-excalidraw-view__image')
+    return {
+      srcPrefix: image?.getAttribute('src')?.slice(0, 30) ?? '',
+      naturalWidth: image?.naturalWidth ?? 0,
+      length: image?.getAttribute('src')?.length ?? 0
+    }
+  })
+  record(
+    '只读视图：渲染出可见 SVG 图片（中文文本场景）',
+    light.naturalWidth > 0 && light.srcPrefix.startsWith('data:image/svg+xml'),
+    `naturalWidth=${light.naturalWidth}`
+  )
+  await page.screenshot({ path: join(shots, 'view-light.png') })
+
+  await page.click('#theme')
+  await page.waitForTimeout(1200)
+  const dark = await page.evaluate(() => {
+    const image = document.querySelector('.tn-excalidraw-view__image')
+    return { src: image?.getAttribute('src') ?? '', naturalWidth: image?.naturalWidth ?? 0 }
+  })
+  record(
+    '只读视图：切到深色主题后重新导出且图片仍可见',
+    dark.naturalWidth > 0 && dark.src !== light.srcPrefix,
+    `naturalWidth=${dark.naturalWidth}`
+  )
+  const markup = decodeURIComponent(dark.src)
+  record(
+    '只读视图：SVG 自包含（内嵌字体、无外链、无 foreignObject）',
+    markup.includes('@font-face') &&
+      !/url\((?!"|')?(https?:)?\/\//.test(markup) &&
+      !markup.includes('foreignObject'),
+    `含 @font-face=${markup.includes('@font-face')} 含外链=${/https?:\/\//.test(markup)}`
+  )
+  record(
+    '只读视图：渲染过程无外部请求',
+    externalRequests.length === 0,
+    externalRequests.slice(0, 3).join(' | ')
+  )
+  await page.screenshot({ path: join(shots, 'view-dark.png') })
+  record('只读视图：无页面错误', errors.length === 0, errors.slice(0, 2).join(' | '))
+}
+
 const results = []
 const record = (name, ok, detail = '') => {
   results.push({ name, ok, detail })
@@ -70,9 +127,21 @@ const browser = await chromium.launch({
 })
 try {
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
+  page.__port = port
   const errors = []
   page.on('pageerror', (error) => errors.push(String(error.message ?? error)))
 
+  const viewMode = process.argv.includes('--view')
+  if (viewMode) {
+    await checkReadOnlyView(page, record, shots)
+    const passed = results.length > 0 && results.every((item) => item.ok)
+    console.log(`\n${passed ? 'ALL PASS' : 'HAS FAILURES'}（${results.length} 项）`)
+    console.log(`screenshots: ${shots}`)
+    process.exitCode = passed ? 0 : 1
+    await browser.close()
+    await new Promise((resolve) => server.close(resolve))
+    process.exit(process.exitCode ?? 0)
+  }
   await page.goto(`http://127.0.0.1:${port}/index.html`, { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('.excalidraw', { timeout: 60000 })
   await page.waitForFunction(() => Boolean(window.__e0api), null, { timeout: 60000 })
