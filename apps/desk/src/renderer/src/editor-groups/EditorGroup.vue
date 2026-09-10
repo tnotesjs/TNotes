@@ -4,6 +4,7 @@ import { computed, ref } from 'vue'
 import KnowledgeBaseIcon from '../components/KnowledgeBaseIcon.vue'
 import UiTooltip from '../components/UiTooltip.vue'
 import KbSettingsPane from './KbSettingsPane.vue'
+import ExcalidrawTabPane from './ExcalidrawTabPane.vue'
 import KbAssetsPane from './KbAssetsPane.vue'
 import NoteTabPane from './NoteTabPane.vue'
 import WebTabPane from './WebTabPane.vue'
@@ -321,6 +322,11 @@ async function runTabAction(action: ContextMenuAction, tab: EditorTab): Promise<
         />
         <KbAssetsPane
           v-else-if="tab.type === 'kb-assets'"
+          :tab="tab"
+          :active="tab.id === group.activeTabId"
+        />
+        <ExcalidrawTabPane
+          v-else-if="tab.type === 'excalidraw'"
           :tab="tab"
           :active="tab.id === group.activeTabId"
         />

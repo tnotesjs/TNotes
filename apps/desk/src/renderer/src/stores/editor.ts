@@ -38,6 +38,7 @@ import type {
   KnowledgeBaseIconDto,
   KbSettingsEditorTab,
   KbAssetsEditorTab,
+  ExcalidrawEditorTab,
   NoteEditorTab,
   NotePageWidth,
   NoteViewMode,
@@ -78,7 +79,7 @@ function sanitizeLayout(
             return false
           }
         }
-        if (tab.type === 'kb-settings' || tab.type === 'kb-assets') {
+        if (tab.type === 'kb-settings' || tab.type === 'kb-assets' || tab.type === 'excalidraw') {
           return (
             knowledgeBaseIds.has(tab.knowledgeBaseId) &&
             (!scopedKnowledgeBaseId || tab.knowledgeBaseId === scopedKnowledgeBaseId)
@@ -106,7 +107,9 @@ function sanitizeLayout(
             }
           : tab.type === 'kb-settings' || tab.type === 'kb-assets'
             ? { dirty: Boolean(tab.dirty) }
-            : {})
+            : tab.type === 'excalidraw'
+              ? { dirty: Boolean(tab.dirty), invalid: Boolean(tab.invalid) }
+              : {})
       }))
     return {
       ...node,
@@ -773,6 +776,74 @@ export const useEditorStore = defineStore('editor', () => {
     return tab.id
   }
 
+  /** 文件名四位前缀即归属笔记编号；与 kb 层同一规则，这里只做展示用解析。 */
+  function ownerIndexFromPath(relPath: string): string | null {
+    const name = relPath.split('/').pop() ?? ''
+    return /^(\d{4})-/.exec(name)?.[1] ?? null
+  }
+
+  /**
+   * 打开画布源文件。同一文件只保留一个标签页：再次打开定位到已有实例，
+   * 避免出现第二个编辑会话（计划 2.3 单文件单写者）。
+   */
+  function openExcalidraw(
+    knowledgeBase: KnowledgeBaseDescriptor,
+    relPath: string,
+    meta: { title?: string; ownerNoteIndex?: string | null } = {}
+  ): string {
+    if (activeKnowledgeBaseId.value !== knowledgeBase.id) switchKnowledgeBase(knowledgeBase.id)
+    for (const group of groups.value) {
+      const existing = group.tabs.find(
+        (tab) =>
+          tab.type === 'excalidraw' &&
+          tab.knowledgeBaseId === knowledgeBase.id &&
+          tab.relPath === relPath
+      )
+      if (existing) {
+        activate(group.id, existing.id)
+        return existing.id
+      }
+    }
+    ensureRoomForTab()
+    const fileName = relPath.split('/').pop() ?? relPath
+    const tab: ExcalidrawEditorTab = {
+      id: `excalidraw:${knowledgeBase.id}:${relPath}`,
+      type: 'excalidraw',
+      knowledgeBaseId: knowledgeBase.id,
+      knowledgeBaseName: knowledgeBase.displayName,
+      relPath,
+      ownerNoteIndex: meta.ownerNoteIndex ?? ownerIndexFromPath(relPath),
+      title: meta.title ?? fileName,
+      icon: knowledgeBase.icon,
+      pinned: false,
+      openedAt: Date.now()
+    }
+    layout.value = insertTab(layout.value, activeGroupId.value, tab)
+    return tab.id
+  }
+
+  /** 重命名/外部变更后更新标签身份；文件失效时置 invalid 而不是重建。 */
+  function updateExcalidrawTabMeta(
+    tabId: string,
+    meta: {
+      relPath?: string
+      title?: string
+      ownerNoteIndex?: string | null
+      dirty?: boolean
+      invalid?: boolean
+    }
+  ): void {
+    const located = findTab(layout.value, tabId)
+    if (located?.tab.type !== 'excalidraw') return
+    const tab = located.tab
+    if (meta.relPath !== undefined) tab.relPath = meta.relPath
+    if (meta.title !== undefined) tab.title = meta.title
+    if (meta.ownerNoteIndex !== undefined) tab.ownerNoteIndex = meta.ownerNoteIndex
+    if (meta.dirty !== undefined) tab.dirty = meta.dirty
+    if (meta.invalid !== undefined) tab.invalid = meta.invalid
+    layout.value = { ...layout.value }
+  }
+
   function setKbSettingsDirty(tabId: string, dirty: boolean): void {
     const located = findTab(layout.value, tabId)
     if (located?.tab.type !== 'kb-settings') return
@@ -1019,6 +1090,8 @@ export const useEditorStore = defineStore('editor', () => {
     openWeb,
     openKbSettings,
     openKbAssets,
+    openExcalidraw,
+    updateExcalidrawTabMeta,
     setKbSettingsDirty,
     updateKbSettingsTabMeta,
     startPreview,

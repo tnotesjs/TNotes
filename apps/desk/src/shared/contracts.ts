@@ -430,7 +430,11 @@ export type ContextMenuAction =
 export type ContextMenuRequest =
   | { kind: 'note'; pinned: boolean; completed: boolean }
   | { kind: 'group' }
-  | { kind: 'tab'; tabType: 'note' | 'web' | 'kb-settings' | 'kb-assets'; pinned: boolean }
+  | {
+      kind: 'tab'
+      tabType: 'note' | 'web' | 'kb-settings' | 'kb-assets' | 'excalidraw'
+      pinned: boolean
+    }
   | { kind: 'code-group-tab' }
 
 export interface KnowledgeSidebarMenuRequest {
@@ -690,7 +694,28 @@ export interface KbAssetsEditorTab {
   dirty?: boolean
 }
 
-export type EditorTab = NoteEditorTab | WebEditorTab | KbSettingsEditorTab | KbAssetsEditorTab
+/**
+ * 画布源文件的独立标签页。`relPath` 是 KB 相对路径（assets/*.excalidraw），
+ * 归属由文件名四位前缀决定；文件缺失/损坏时 `invalid` 置位，只显示失效状态，
+ * 不按旧路径自动重建。
+ */
+export interface ExcalidrawEditorTab {
+  id: string
+  type: 'excalidraw'
+  knowledgeBaseId: string
+  knowledgeBaseName: string
+  relPath: string
+  ownerNoteIndex: string | null
+  title: string
+  icon: KnowledgeBaseIconDto | null
+  pinned?: boolean
+  openedAt?: number
+  dirty?: boolean
+  invalid?: boolean
+}
+
+export type EditorTab =
+  NoteEditorTab | WebEditorTab | KbSettingsEditorTab | KbAssetsEditorTab | ExcalidrawEditorTab
 
 export interface EditorGroupNode {
   type: 'group'

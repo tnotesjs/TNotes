@@ -278,6 +278,18 @@ function openReference(sourceRelPath: string, noteUuid?: string, noteTitle?: str
   editor.openNote(kb, noteUuid, noteTitle || sourceRelPath, 'source', undefined, 'permanent')
 }
 
+/** 画布源文件在独立标签页里编辑；同一文件定位已有标签，不新开会话。 */
+function openExcalidrawDocument(relPath: string): void {
+  const kb = knowledgeBase.value
+  if (!kb) return
+  const owner =
+    relPath
+      .split('/')
+      .pop()
+      ?.match(/^(\d{4})-/)?.[1] ?? null
+  editor.openExcalidraw(kb, relPath, { ownerNoteIndex: owner })
+}
+
 function openOtherKb(knowledgeBaseId: string): void {
   const descriptor = workspace.overview.allKnowledgeBases.find(
     (item) => item.id === knowledgeBaseId
@@ -760,6 +772,16 @@ onUnmounted(() => {
               合并重复
             </button>
             <button
+              v-if="selected.kind === 'excalidraw'"
+              type="button"
+              class="ghost"
+              :disabled="writeBusy"
+              @click="openExcalidrawDocument(selected.relPath)"
+            >
+              打开画布
+            </button>
+            <button
+              v-else
               type="button"
               class="ghost"
               :disabled="writeBusy || selected.kind !== 'image'"

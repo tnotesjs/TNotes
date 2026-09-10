@@ -250,3 +250,79 @@ describe('editor store tab semantics', () => {
     expect(editor.activeTab).toMatchObject({ type: 'note', noteUuid: 'note-b' })
   })
 })
+
+describe('画布标签页（E4）', () => {
+  const path = 'assets/0042-26-09-11-10-20-30.excalidraw'
+
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    useEditorStore().configure(settings)
+  })
+
+  it('同一文件重复打开只保留一个标签页，并定位到已有实例', () => {
+    const editor = useEditorStore()
+    const first = editor.openExcalidraw(knowledgeBase, path)
+    const second = editor.openExcalidraw(knowledgeBase, path)
+
+    expect(second).toBe(first)
+    expect(editor.groups.flatMap((group) => group.tabs)).toHaveLength(1)
+    expect(editor.activeTab).toMatchObject({
+      type: 'excalidraw',
+      relPath: path,
+      ownerNoteIndex: '0042',
+      title: '0042-26-09-11-10-20-30.excalidraw'
+    })
+  })
+
+  it('不同文件各自开标签，KB 切换后各自保留', () => {
+    const editor = useEditorStore()
+    editor.openExcalidraw(knowledgeBase, path)
+    editor.openExcalidraw(knowledgeBase, 'assets/0043-26-09-11-10-20-30.excalidraw')
+    expect(editor.groups.flatMap((group) => group.tabs)).toHaveLength(2)
+
+    editor.switchKnowledgeBase(otherKnowledgeBase.id, new Set(['react-a']))
+    editor.switchKnowledgeBase(knowledgeBase.id, new Set(['note-a']))
+    expect(
+      editor.groups
+        .flatMap((group) => group.tabs)
+        .filter((tab) => tab.type === 'excalidraw')
+        .map((tab) => tab.relPath)
+    ).toEqual([path, 'assets/0043-26-09-11-10-20-30.excalidraw'])
+  })
+
+  it('失效状态与重命名后的身份可以更新，并可跨会话恢复', () => {
+    const editor = useEditorStore()
+    const tabId = editor.openExcalidraw(knowledgeBase, path)
+    editor.updateExcalidrawTabMeta(tabId, {
+      relPath: 'assets/0042-26-09-11-11-00-00.excalidraw',
+      title: '0042-26-09-11-11-00-00.excalidraw',
+      invalid: true
+    })
+    expect(editor.activeTab).toMatchObject({
+      relPath: 'assets/0042-26-09-11-11-00-00.excalidraw',
+      invalid: true
+    })
+
+    const session = editor.toSession(knowledgeBase.id)
+    setActivePinia(createPinia())
+    const restored = useEditorStore()
+    restored.configure(settings)
+    restored.restore(session, [knowledgeBase, otherKnowledgeBase])
+
+    // 文件缺失/损坏是状态，不是重建理由：恢复后仍带着 invalid 标记
+    expect(restored.activeTab).toMatchObject({ type: 'excalidraw', invalid: true })
+  })
+
+  it('反序列化时丢弃未知知识库的画布标签，但保留没有 noteUuid 的合法标签', () => {
+    const editor = useEditorStore()
+    editor.openExcalidraw(knowledgeBase, path)
+    const session = editor.toSession(knowledgeBase.id)
+
+    setActivePinia(createPinia())
+    const restored = useEditorStore()
+    restored.configure(settings)
+    // 只认识另一个 KB：本 KB 的画布标签应被丢弃，且不抛错
+    restored.restore(session, [otherKnowledgeBase])
+    expect(restored.groups.flatMap((group) => group.tabs)).toHaveLength(0)
+  })
+})

@@ -489,7 +489,15 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
   async function syncToActiveTab(forceReveal = false): Promise<void> {
     const tab = editor.activeTab
-    if (!tab || tab.type === 'web' || tab.type === 'kb-settings' || tab.type === 'kb-assets') return
+    if (
+      !tab ||
+      tab.type === 'web' ||
+      tab.type === 'kb-settings' ||
+      tab.type === 'kb-assets' ||
+      tab.type === 'excalidraw'
+    ) {
+      return
+    }
     if (tab.type === 'note') await ensureDocument(tab.knowledgeBaseId, tab.noteUuid)
     if (forceReveal || settings.value?.tabs.autoRevealInToc) {
       if (selectedKnowledgeBaseId.value !== tab.knowledgeBaseId) {
