@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
   createSearchIndex,
@@ -94,5 +94,24 @@ describe('搜索缓存指纹', () => {
       searchFingerprintSignature({ ...second, ...first })
     )
     expect(searchFingerprintSignature(renamed)).not.toBe(searchFingerprintSignature(first))
+  })
+})
+
+describe('搜索分词器复用', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('不再为每次分词新建 Intl.Segmenter', () => {
+    const spy = vi.spyOn(Intl, 'Segmenter')
+    tokenizeSearchText('中文 English 混排')
+    tokenizeSearchText('第二次调用')
+    expect(spy).not.toHaveBeenCalled()
+  })
+
+  it('按固定 locale 归一化大小写', () => {
+    // zh-CN 下 'I' → 'i'；土耳其语环境会映射成 'ı'，固定 locale 才能保证跨机器一致
+    expect(tokenizeSearchText('I')).toEqual(['i'])
+    expect(tokenizeSearchText('FOO BAR')).toEqual(['foo', 'bar'])
   })
 })

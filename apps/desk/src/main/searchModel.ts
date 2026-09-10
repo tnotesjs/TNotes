@@ -36,10 +36,18 @@ export function searchFingerprintSignature(fingerprints: Record<string, string>)
   return hash.digest('hex')
 }
 
+/**
+ * MiniSearch 会对每个文档的每个字段调用一次 tokenize；每次新建 Intl.Segmenter
+ * 是纯浪费（构建期 N×4 次分配）。同时固定 locale：不写参数的 toLocaleLowerCase
+ * 会随系统 locale 变化，土耳其语环境下大小写映射会改变字符串长度，令摘要偏移错位、
+ * 跨环境缓存也无法复用。
+ */
+const SEARCH_LOCALE = 'zh-CN'
+const searchSegmenter = new Intl.Segmenter([SEARCH_LOCALE, 'en'], { granularity: 'word' })
+
 export function tokenizeSearchText(value: string): string[] {
-  const normalized = value.normalize('NFKC').toLocaleLowerCase()
-  const segmenter = new Intl.Segmenter(['zh-CN', 'en'], { granularity: 'word' })
-  return [...segmenter.segment(normalized)]
+  const normalized = value.normalize('NFKC').toLocaleLowerCase(SEARCH_LOCALE)
+  return [...searchSegmenter.segment(normalized)]
     .filter((part) => part.isWordLike)
     .map((part) => part.segment.trim())
     .filter(Boolean)
@@ -58,7 +66,7 @@ export function searchOptions(): ConstructorParameters<typeof MiniSearch<SearchI
       'content'
     ],
     tokenize: tokenizeSearchText,
-    processTerm: (term) => term.normalize('NFKC').toLocaleLowerCase()
+    processTerm: (term) => term.normalize('NFKC').toLocaleLowerCase(SEARCH_LOCALE)
   }
 }
 
