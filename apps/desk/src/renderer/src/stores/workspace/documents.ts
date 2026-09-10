@@ -100,6 +100,14 @@ export function createDocuments(ctx: DocumentsContext) {
   }
 
   async function prepareRecoveries(records: RecoveryRecord[]): Promise<void> {
+    // 旧版 Desk 为 README.md 写过恢复快照（带 path）。本版本只能恢复笔记，
+    // 直接丢掉会让用户以为「没有草稿」；这里明确提示，并且**不删除**这些记录。
+    const unsupported = records.filter((item) => item.path)
+    if (unsupported.length > 0) {
+      const titles = unsupported.map((item) => item.path ?? item.title).join('、')
+      ctx.error.value = `有 ${unsupported.length} 个旧版 README 恢复快照无法在当前版本恢复（已保留）：${titles}`
+    }
+
     const candidates: RecoveryRecord[] = []
     for (const record of records.filter((item) => !item.path)) {
       try {

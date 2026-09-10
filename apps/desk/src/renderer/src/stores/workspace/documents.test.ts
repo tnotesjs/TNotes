@@ -4,6 +4,8 @@ import { ref } from 'vue'
 
 import { describe, expect, it, vi } from 'vitest'
 
+import type { RecoveryRecord } from '../../../../shared/contracts'
+
 import { createDocuments, type DocumentsContext } from './documents'
 import type { DocumentSession } from './helpers'
 
@@ -25,10 +27,21 @@ function makeSession(overrides: Partial<DocumentSession> = {}): DocumentSession 
   } as unknown as DocumentSession
 }
 
-function makeContext(session: DocumentSession) {
+function makeContext(session: DocumentSession = makeSession()) {
   const documents = ref<Record<string, DocumentSession>>({ 'kb:note-1': session })
   const error = ref<string | null>(null)
   const status = ref<string | null>(null)
+  const pendingRecoveries = ref<RecoveryRecord[]>([])
+  const deleteRecoveryApi = vi.fn(async () => ({ ok: true, value: undefined }) as const)
+  Object.defineProperty(window, 'desk', {
+    configurable: true,
+    value: {
+      recovery: { delete: deleteRecoveryApi },
+      notes: {
+        read: vi.fn(async () => ({ ok: true, value: { content: '# 磁盘内容\n' } }) as const)
+      }
+    }
+  })
   const ctx = {
     editor: { setNoteDirty: vi.fn() },
     documents,
@@ -41,9 +54,30 @@ function makeContext(session: DocumentSession) {
     setDocumentSession: (key: string, next: DocumentSession) => {
       documents.value = { ...documents.value, [key]: next }
     },
+    pendingRecoveries,
     deleteRecovery: vi.fn()
   } as unknown as DocumentsContext
-  return { ctx, documents, editor: ctx.editor as { setNoteDirty: ReturnType<typeof vi.fn> } }
+  return {
+    ctx,
+    documents,
+    error,
+    pendingRecoveries,
+    recoveryDelete: deleteRecoveryApi,
+    editor: ctx.editor as { setNoteDirty: ReturnType<typeof vi.fn> }
+  }
+}
+
+function recoveryRecord(overrides: Partial<RecoveryRecord> = {}): RecoveryRecord {
+  return {
+    version: 1,
+    knowledgeBaseId: 'kb',
+    noteUuid: 'note-1',
+    title: '笔记',
+    content: '# 草稿\n',
+    revision: 'r1',
+    updatedAt: new Date(0).toISOString(),
+    ...overrides
+  }
 }
 
 describe('外部冲突标记', () => {
@@ -65,5 +99,36 @@ describe('外部冲突标记', () => {
     docs.updateDocumentContent('kb:note-1', '# 原文\n\n编辑\n', true)
 
     expect(documents.value['kb:note-1']?.externalConflict).toBe(false)
+  })
+})
+
+describe('恢复快照的 path 记录', () => {
+  it('旧版带 path 的记录不会被静默丢弃：给出提示且不删除', async () => {
+    const { ctx, error, pendingRecoveries, recoveryDelete } = makeContext()
+    const docs = createDocuments(ctx)
+
+    await docs.prepareRecoveries([
+      recoveryRecord({ path: 'README.md', title: 'README' }),
+      recoveryRecord({ noteUuid: 'note-1' })
+    ])
+
+    expect(pendingRecoveries.value).toHaveLength(1)
+    expect(pendingRecoveries.value[0]?.noteUuid).toBe('note-1')
+    expect(error.value).toMatch(/README/)
+    // 不删：用户至少还能在磁盘上找到这份快照
+    expect(recoveryDelete).not.toHaveBeenCalledWith({
+      knowledgeBaseId: 'kb',
+      noteUuid: 'note-1'
+    })
+  })
+
+  it('磁盘内容与快照一致时清理该条记录', async () => {
+    const { ctx, pendingRecoveries, recoveryDelete } = makeContext()
+    const docs = createDocuments(ctx)
+
+    await docs.prepareRecoveries([recoveryRecord({ content: '# 磁盘内容\n' })])
+
+    expect(pendingRecoveries.value).toHaveLength(0)
+    expect(recoveryDelete).toHaveBeenCalledOnce()
   })
 })
