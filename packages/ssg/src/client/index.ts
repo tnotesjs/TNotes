@@ -1,0 +1,1 @@
+export { registerTNotesComponents } from "./register";

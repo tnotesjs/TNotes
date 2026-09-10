@@ -1,0 +1,78 @@
+{
+  "name": "@tnotesjs/ssg",
+  "version": "0.1.8",
+  "description": "A small static-site generator built for TNotes knowledge bases.",
+  "type": "module",
+  "packageManager": "pnpm@11.10.0",
+  "bin": {
+    "tnotes-ssg": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "src/client/",
+    "src/types.ts",
+    "src/env.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "lint": "eslint . --max-warnings=0",
+    "test": "vitest run",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.json",
+    "prepublishOnly": "pnpm lint && pnpm test && pnpm typecheck && pnpm build"
+  },
+  "dependencies": {
+    "@mdit-vue/plugin-component": "2.1.4",
+    "@mdit-vue/plugin-frontmatter": "2.1.4",
+    "@mdit-vue/plugin-sfc": "2.1.4",
+    "@tnotesjs/kb": "^0.2.0",
+    "@tnotesjs/ui": "^0.1.5",
+    "@vitejs/plugin-vue": "6.0.8",
+    "@vue/server-renderer": "3.5.41",
+    "github-slugger": "2.0.0",
+    "gray-matter": "4.0.3",
+    "markdown-it": "14.1.0",
+    "markdown-it-anchor": "9.2.0",
+    "markdown-it-container": "4.0.0",
+    "markdown-it-emoji": "3.0.0",
+    "markdown-it-mathjax3": "4.3.2",
+    "markdown-it-task-lists": "2.1.1",
+    "minisearch": "7.2.0",
+    "sass-embedded": "1.100.0",
+    "tinyglobby": "0.2.15",
+    "vite": "7.3.6",
+    "vue": "3.5.41"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.4",
+    "@types/markdown-it": "14.2.0",
+    "@types/node": "24.6.2",
+    "eslint": "9.39.4",
+    "globals": "17.6.0",
+    "happy-dom": "20.12.0",
+    "tsup": "8.5.1",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.59.1",
+    "vitest": "4.1.6",
+    "vue-tsc": "3.2.7"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tnotesjs/ssg.git"
+  }
+}
