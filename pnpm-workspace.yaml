@@ -20,3 +20,9 @@ minimumReleaseAgeExclude:
   - '@tnotesjs/kb'
   - '@tnotesjs/ssg'
   - '@tnotesjs/mindmap-core'
+
+# 钉死 @electron/get：app-builder-lib 26.15.3 需要 3.1.0 的 ElectronDownloadCacheMode，
+# 但 pnpm 11.10.0 全新解析会选出 3.0.0（老 desk 仓 lockfile 里是 3.1.0）
+overrides:
+  '@electron/get@^2.0.0': 2.0.3
+  '@electron/get@^3.0.0': 3.1.0
