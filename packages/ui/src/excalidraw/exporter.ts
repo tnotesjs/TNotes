@@ -4,6 +4,8 @@
  */
 import { exportToSvg } from '@excalidraw/excalidraw'
 
+import { getExcalidrawAssetPath, inlineExcalidrawFonts } from './fonts'
+
 import type { ExcalidrawScene } from './scene'
 
 export interface ExcalidrawExportOptions {
@@ -11,6 +13,10 @@ export interface ExcalidrawExportOptions {
   dark: boolean
   /** 导出背景；文档自身语义优先，默认沿用场景里的 viewBackgroundColor */
   background?: boolean
+  /** 本地字体基址；缺省用 window.EXCALIDRAW_ASSET_PATH */
+  fontBase?: string
+  /** 便于测试注入 */
+  fetchImpl?: typeof fetch
 }
 
 /**
@@ -31,5 +37,14 @@ export async function renderExcalidrawSvg(
     },
     files: (scene.files ?? {}) as never
   })
-  return svg.outerHTML
+  // 只读路径必须自包含：把 CDN/相对字体换成 data URL，离线与 <img> 渲染才不掉字体
+  const inlined = await inlineExcalidrawFonts(svg.outerHTML, {
+    base: options.fontBase ?? getExcalidrawAssetPath(),
+    fetchImpl: options.fetchImpl
+  })
+  if (inlined.remaining.length > 0) {
+    // 不能静默：宿主据此提示「字体未内联，离线可能掉字体」
+    console.warn('[tnotes] excalidraw fonts not inlined', inlined.remaining.slice(0, 3))
+  }
+  return inlined.svg
 }

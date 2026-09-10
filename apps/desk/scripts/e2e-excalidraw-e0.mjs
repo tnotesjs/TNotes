@@ -4,7 +4,7 @@
 // 然后： node apps/desk/scripts/e2e-excalidraw-e0.mjs
 import { createServer } from 'node:http'
 import { readFile, stat } from 'node:fs/promises'
-import { existsSync, mkdirSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync } from 'node:fs'
 import { dirname, extname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
@@ -13,6 +13,23 @@ const repoRoot = join(deskDir, '..', '..')
 const siteRoot = join(repoRoot, 'packages', 'ui', 'e0-spike', '.e0-dist')
 const shots = join(deskDir, 'scripts', 'shots', 'excalidraw-e0')
 mkdirSync(shots, { recursive: true })
+
+// 只读视图要离线自包含：把官方字体复制到站点根目录（默认会指向 esm.sh CDN）
+const fontSource = join(
+  repoRoot,
+  'packages',
+  'ui',
+  'node_modules',
+  '@excalidraw',
+  'excalidraw',
+  'dist',
+  'prod',
+  'fonts'
+)
+const fontTarget = join(siteRoot, 'fonts')
+if (existsSync(fontSource) && !existsSync(fontTarget)) {
+  cpSync(fontSource, fontTarget, { recursive: true })
+}
 
 const types = {
   '.html': 'text/html; charset=utf-8',
@@ -99,12 +116,17 @@ async function checkReadOnlyView(page, record, shots) {
     `naturalWidth=${dark.naturalWidth}`
   )
   const markup = decodeURIComponent(dark.src)
+  // 允许 xmlns 里的 w3.org 命名空间，其余外部 URL 一律视为未自包含
+  const externalRefs = [...markup.matchAll(/(?:url\(|href=")([^"')]+)/g)]
+    .map((match) => match[1])
+    .filter((url) => /^https?:\/\//.test(url) && !url.startsWith('http://www.w3.org/'))
   record(
-    '只读视图：SVG 自包含（内嵌字体、无外链、无 foreignObject）',
+    '只读视图：SVG 自包含（内嵌字体、无外部引用、无 foreignObject）',
     markup.includes('@font-face') &&
-      !/url\((?!"|')?(https?:)?\/\//.test(markup) &&
+      markup.includes('data:font/woff2;base64,') &&
+      externalRefs.length === 0 &&
       !markup.includes('foreignObject'),
-    `含 @font-face=${markup.includes('@font-face')} 含外链=${/https?:\/\//.test(markup)}`
+    `@font-face=${markup.includes('@font-face')} 外部引用=${externalRefs.length}`
   )
   record(
     '只读视图：渲染过程无外部请求',

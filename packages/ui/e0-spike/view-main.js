@@ -2,6 +2,10 @@
 import { createApp, h, ref } from 'vue'
 
 import { ExcalidrawSvg } from '../src/entries/excalidraw-view'
+import { setExcalidrawAssetPath } from '../src/excalidraw/fonts'
+
+// 离线必需：让文本度量与导出都从本地字体目录取字形（默认会指向 esm.sh CDN）
+setExcalidrawAssetPath('/')
 
 const TRANSPARENT =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
