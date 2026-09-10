@@ -458,6 +458,9 @@ try {
     `对话框次数=${dialogCount}，剩余窗口=${windowsLeft}`
   )
   record('全流程无页面错误', pageErrors.length === 0, pageErrors.slice(0, 2).join(' | '))
+} catch (error) {
+  record('运行未完成（未捕获异常）', false, String(error).split('\n')[0])
+  throw error
 } finally {
   await app.close().catch(() => {})
   if (!process.env.KEEP_FIXTURE) rmSync(fixture, { recursive: true, force: true })

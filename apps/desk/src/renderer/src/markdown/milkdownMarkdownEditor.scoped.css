@@ -3066,3 +3066,133 @@
     padding: 22px 40px 40px 80px;
   }
 }
+
+/* ── Excalidraw 内嵌画布卡片（E5）────────────────────────────────────────────
+   只读时是共享 SVG 卡片，点「编辑」切到 E3 编辑器；全屏是 CSS overlay，
+   与 Mindmap 的 200000 层级互斥（同一时刻只允许一个全屏）。 */
+.milkdown-markdown-editor :deep(.desk-raw-block--excalidraw) {
+  display: block;
+  margin: 12px 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.milkdown-markdown-editor :deep(.desk-raw-block--excalidraw:hover),
+.milkdown-markdown-editor :deep(.desk-raw-block--excalidraw:focus-within),
+.milkdown-markdown-editor :deep(.desk-raw-block--excalidraw.is-canvas-island-active) {
+  border-color: var(--accent-strong);
+}
+
+.milkdown-markdown-editor :deep(.desk-excalidraw) {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* 作者样式里的 display 会盖掉 UA 的 [hidden]，按钮/容器必须显式隐藏 */
+.milkdown-markdown-editor :deep(.desk-excalidraw [hidden]) {
+  display: none !important;
+}
+
+.milkdown-markdown-editor :deep(.desk-excalidraw__bar) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  font: 12px/1.6 var(--font-sans);
+  color: var(--text);
+}
+
+.milkdown-markdown-editor :deep(.desk-excalidraw__title) {
+  font-weight: 600;
+}
+
+.milkdown-markdown-editor :deep(.desk-excalidraw__status) {
+  color: var(--muted);
+}
+
+.milkdown-markdown-editor :deep(.desk-excalidraw__actions) {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.milkdown-markdown-editor :deep(.desk-excalidraw__actions button) {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--input-bg);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.milkdown-markdown-editor :deep(.desk-excalidraw__actions button:hover:not(:disabled)) {
+  border-color: var(--accent-strong);
+  color: var(--accent-strong);
+}
+
+.milkdown-markdown-editor :deep(.desk-excalidraw__height) {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+}
+
+.milkdown-markdown-editor :deep(.desk-excalidraw__height select) {
+  padding: 1px 4px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--input-bg);
+  color: var(--text);
+  font: inherit;
+}
+
+.milkdown-markdown-editor :deep(.desk-excalidraw__stage) {
+  position: relative;
+  min-width: 0;
+}
+
+.milkdown-markdown-editor :deep(.desk-excalidraw__svg),
+.milkdown-markdown-editor :deep(.desk-excalidraw__editor) {
+  position: relative;
+  min-width: 0;
+}
+
+.milkdown-markdown-editor :deep(.desk-excalidraw__placeholder),
+.milkdown-markdown-editor :deep(.desk-excalidraw__error) {
+  margin: 0;
+  padding: 14px 12px;
+  color: var(--muted);
+  font: 12px/1.7 var(--font-sans);
+}
+
+.milkdown-markdown-editor :deep(.desk-excalidraw.is-fullscreen) {
+  position: fixed;
+  inset: 0;
+  z-index: 200000;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--editor-bg);
+}
+
+.milkdown-markdown-editor :deep(.desk-excalidraw.is-fullscreen .desk-excalidraw__stage) {
+  flex: 1;
+  min-height: 0;
+}
+
+.milkdown-markdown-editor :deep(.desk-excalidraw.is-fullscreen .desk-excalidraw__svg),
+.milkdown-markdown-editor :deep(.desk-excalidraw.is-fullscreen .desk-excalidraw__editor) {
+  height: 100% !important;
+}
+
+/* dataset.tnCanvasFs → DOM 属性是 data-tn-canvas-fs */
+body[data-tn-canvas-fs='1'] {
+  overflow: hidden;
+}

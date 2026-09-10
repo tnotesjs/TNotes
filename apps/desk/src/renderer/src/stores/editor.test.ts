@@ -347,6 +347,20 @@ describe('画布标签页（E4）', () => {
     expect(editor.groups.flatMap((group) => group.tabs)).toHaveLength(1)
   })
 
+  it('excalidrawTabIdFor 能查到前台与后台布局里已打开的画布', () => {
+    const editor = useEditorStore()
+    const tabId = editor.openExcalidraw(knowledgeBase, path)
+    expect(editor.excalidrawTabIdFor(knowledgeBase.id, path)).toBe(tabId)
+    expect(editor.excalidrawTabIdFor(otherKnowledgeBase.id, path)).toBeNull()
+    expect(
+      editor.excalidrawTabIdFor(knowledgeBase.id, 'assets/0043-26-09-11-10-20-30.excalidraw')
+    ).toBeNull()
+
+    // 切到别的库：本库布局变成后台布局，仍然要查得到（内嵌卡片靠它避免第二个会话）
+    editor.switchKnowledgeBase(otherKnowledgeBase.id, new Set(['react-a']))
+    expect(editor.excalidrawTabIdFor(knowledgeBase.id, path)).toBe(tabId)
+  })
+
   it('拆分画布标签只搬移、不复制（同一文件不出现两个编辑会话）', () => {
     const editor = useEditorStore()
     const canvasTabId = editor.openExcalidraw(knowledgeBase, path)

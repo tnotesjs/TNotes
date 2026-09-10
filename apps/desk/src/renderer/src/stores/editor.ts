@@ -783,6 +783,38 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   /**
+   * 该文件是否已经在某个标签页里打开（含后台 KB 的布局）。
+   *
+   * 笔记内嵌卡片用它保证「单文件单写者」：文件已在标签页里编辑时，卡片只跳转不过去
+   * 再开第二个会话。
+   */
+  function excalidrawTabIdFor(knowledgeBaseId: string, relPath: string): string | null {
+    let found: string | null = null
+    const search = (editorLayout: EditorLayoutNode): void => {
+      if (found) return
+      for (const group of listGroups(editorLayout)) {
+        const tab = group.tabs.find(
+          (item) =>
+            item.type === 'excalidraw' &&
+            item.knowledgeBaseId === knowledgeBaseId &&
+            item.relPath === relPath
+        )
+        if (tab) {
+          found = tab.id
+          return
+        }
+      }
+    }
+    search(layout.value)
+    for (const [storedKnowledgeBaseId, session] of Object.entries(knowledgeBaseEditors.value)) {
+      if (storedKnowledgeBaseId === activeKnowledgeBaseId.value) continue
+      search(session.layout)
+      if (found) break
+    }
+    return found
+  }
+
+  /**
    * 打开画布源文件。同一文件只保留一个标签页：再次打开定位到已有实例，
    * 避免出现第二个编辑会话（计划 2.3 单文件单写者）。
    */
@@ -1136,6 +1168,7 @@ export const useEditorStore = defineStore('editor', () => {
     openKbSettings,
     openKbAssets,
     openExcalidraw,
+    excalidrawTabIdFor,
     updateExcalidrawTabMeta,
     repathExcalidrawTab,
     setKbSettingsDirty,
