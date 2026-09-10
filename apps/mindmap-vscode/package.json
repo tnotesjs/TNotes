@@ -8,7 +8,8 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tnotesjs/mindmap-vscode.git"
+    "url": "git+https://github.com/tnotesjs/tnotesjs.git",
+    "directory": "apps/mindmap-vscode"
   },
   "engines": {
     "vscode": "^1.104.0"

@@ -91,10 +91,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/tnotesjs/nav.git"
+    "url": "git+https://github.com/tnotesjs/tnotesjs.git",
+    "directory": "apps/nav"
   },
   "bugs": {
-    "url": "https://github.com/tnotesjs/nav/issues"
+    "url": "https://github.com/tnotesjs/tnotesjs/issues"
   },
-  "homepage": "https://github.com/tnotesjs/nav#readme"
+  "homepage": "https://github.com/tnotesjs/tnotesjs/tree/main/apps/nav#readme"
 }

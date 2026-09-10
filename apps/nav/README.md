@@ -3,7 +3,7 @@
 本地 TNotes 知识库导航扩展：在 Activity Bar 中浏览知识库列表与只读 TOC，快速打开笔记。
 
 - 扩展 id：`tnotesjs.tnotes-nav`
-- 仓库：[github.com/tnotesjs/nav](https://github.com/tnotesjs/nav)
+- 仓库：[github.com/tnotesjs/tnotesjs](https://github.com/tnotesjs/tnotesjs/tree/main/apps/nav)
 
 ## 使用方式
 

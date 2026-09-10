@@ -6,13 +6,16 @@ import { deskLog } from './log'
 
 import type { UpdateStatusDto } from '../shared/contracts'
 
-const RELEASES_API = 'https://api.github.com/repos/tnotesjs/desk/releases/latest'
-export const RELEASES_PAGE = 'https://github.com/tnotesjs/desk/releases'
+// monorepo（tnotesjs/tnotesjs）里只有 desk 会创建 GitHub Release，tag 形如 desk@x.y.z；
+// 用列表端点 + 前缀过滤，避免将来其他包建 Release 后 /releases/latest 误中
+const RELEASES_API = 'https://api.github.com/repos/tnotesjs/tnotesjs/releases?per_page=10'
+export const RELEASES_PAGE = 'https://github.com/tnotesjs/tnotesjs/releases'
+const TAG_PREFIX = 'desk@'
 const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000
 const STARTUP_DELAY_MS = 8000
 const REQUEST_TIMEOUT_MS = 10_000
 
-interface LatestReleasePayload {
+interface ReleasePayloadItem {
   tag_name?: unknown
   html_url?: unknown
 }
@@ -80,18 +83,23 @@ class UpdateManager {
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
       })
       if (!response.ok) throw new Error(`GitHub 返回异常状态（${response.status}）`)
-      const payload = (await response.json()) as LatestReleasePayload
+      const payload = (await response.json()) as ReleasePayloadItem[] | unknown
+      const release = Array.isArray(payload)
+        ? payload.find(
+            (item) => typeof item.tag_name === 'string' && item.tag_name.startsWith(TAG_PREFIX)
+          )
+        : undefined
       const latestVersion =
-        typeof payload.tag_name === 'string' ? payload.tag_name.replace(/^v/i, '') : ''
-      if (!latestVersion) throw new Error('未从 GitHub 获取到版本号')
+        typeof release?.tag_name === 'string' ? release.tag_name.slice(TAG_PREFIX.length) : ''
+      if (!latestVersion) throw new Error('未从 GitHub 获取到 desk 版本号')
       const hasUpdate = compareVersions(latestVersion, currentVersion) > 0
       this.setStatus({
         state: hasUpdate ? 'available' : 'up-to-date',
         currentVersion,
         latestVersion,
         releaseUrl:
-          typeof payload.html_url === 'string' && payload.html_url.startsWith('https://')
-            ? payload.html_url
+          typeof release?.html_url === 'string' && release.html_url.startsWith('https://')
+            ? release.html_url
             : RELEASES_PAGE,
         checkedAt: new Date().toISOString()
       })

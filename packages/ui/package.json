@@ -88,11 +88,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tnotesjs/ui.git"
+    "url": "git+https://github.com/tnotesjs/tnotesjs.git",
+    "directory": "packages/ui"
   },
-  "homepage": "https://github.com/tnotesjs/ui#readme",
+  "homepage": "https://github.com/tnotesjs/tnotesjs/tree/main/packages/ui#readme",
   "bugs": {
-    "url": "https://github.com/tnotesjs/ui/issues"
+    "url": "https://github.com/tnotesjs/tnotesjs/issues"
   },
   "keywords": [
     "tnotesjs",

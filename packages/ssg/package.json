@@ -72,6 +72,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tnotesjs/ssg.git"
+    "url": "git+https://github.com/tnotesjs/tnotesjs.git",
+    "directory": "packages/ssg"
   }
 }
