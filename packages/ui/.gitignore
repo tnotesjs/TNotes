@@ -2,3 +2,4 @@ node_modules
 dist
 *.log
 .DS_Store
+e0-spike/.e0-dist

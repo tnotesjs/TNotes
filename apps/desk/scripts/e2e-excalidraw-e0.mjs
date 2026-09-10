@@ -1,0 +1,220 @@
+// Excalidraw E0 验证：Vue/DOM 宿主内挂载 React 编辑器、换承载位置后原生撤销历史、
+// 首屏代价与产物体积。需要先构建 fixture：
+//   cd packages/ui && ../../apps/desk/node_modules/.bin/vite build e0-spike --outDir e0-spike/.e0-dist
+// 然后： node apps/desk/scripts/e2e-excalidraw-e0.mjs
+import { createServer } from 'node:http'
+import { readFile, stat } from 'node:fs/promises'
+import { existsSync, mkdirSync } from 'node:fs'
+import { dirname, extname, join } from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+
+const deskDir = join(dirname(fileURLToPath(import.meta.url)), '..')
+const repoRoot = join(deskDir, '..', '..')
+const siteRoot = join(repoRoot, 'packages', 'ui', 'e0-spike', '.e0-dist')
+const shots = join(deskDir, 'scripts', 'shots', 'excalidraw-e0')
+mkdirSync(shots, { recursive: true })
+
+const types = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript',
+  '.css': 'text/css',
+  '.json': 'application/json',
+  '.woff2': 'font/woff2',
+  '.woff': 'font/woff',
+  '.ttf': 'font/ttf',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png'
+}
+
+const server = createServer(async (request, response) => {
+  const pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname)
+  for (const candidate of [
+    join(siteRoot, pathname),
+    join(siteRoot, `${pathname}.html`),
+    join(siteRoot, pathname, 'index.html')
+  ]) {
+    try {
+      if ((await stat(candidate)).isFile()) {
+        response.writeHead(200, {
+          'content-type': types[extname(candidate)] ?? 'application/octet-stream'
+        })
+        response.end(await readFile(candidate))
+        return
+      }
+    } catch {
+      // try next
+    }
+  }
+  response.writeHead(404)
+  response.end('not found')
+})
+
+const port = 8124
+await new Promise((resolve) => server.listen(port, '127.0.0.1', resolve))
+
+const { chromium } = await import('playwright-core')
+const cachedChromium = [
+  '/Users/huyouda/Library/Caches/ms-playwright/chromium-1187/chrome-mac/Chromium.app/Contents/MacOS/Chromium',
+  '/Users/huyouda/Library/Caches/ms-playwright/chromium_headless_shell-1187/chrome-headless-shell-mac-arm64/chrome-headless-shell'
+].find((candidate) => existsSync(candidate))
+
+const results = []
+const record = (name, ok, detail = '') => {
+  results.push({ name, ok, detail })
+  console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? ` — ${detail}` : ''}`)
+}
+
+const browser = await chromium.launch({
+  args: ['--no-sandbox'],
+  ...(cachedChromium ? { executablePath: cachedChromium } : {})
+})
+try {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
+  const errors = []
+  page.on('pageerror', (error) => errors.push(String(error.message ?? error)))
+
+  await page.goto(`http://127.0.0.1:${port}/index.html`, { waitUntil: 'domcontentloaded' })
+  await page.waitForSelector('.excalidraw', { timeout: 60000 })
+  await page.waitForFunction(() => Boolean(window.__e0api), null, { timeout: 60000 })
+  await page.waitForTimeout(1200)
+  record('挂载：React 编辑器在纯 DOM 宿主内渲染成功', true)
+
+  const firstPaint = await page.evaluate(() => window.__e0.firstPaintMs())
+  record('首屏：编辑器 API 就绪耗时已采集', true, `${Math.round(firstPaint)} ms`)
+  await page.screenshot({ path: join(shots, 'mounted.png') })
+
+  // 画一个矩形（真实鼠标事件 → 产生撤销历史）
+  const canvas = await page.$('.excalidraw__canvas')
+  const box = await canvas.boundingBox()
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+  await page.keyboard.press('r')
+  await page.mouse.move(box.x + 200, box.y + 150)
+  await page.mouse.down()
+  await page.mouse.move(box.x + 420, box.y + 300, { steps: 12 })
+  await page.mouse.up()
+  await page.waitForTimeout(400)
+  const afterDraw = await page.evaluate(() => window.__e0.elements())
+  record('编辑：可在画布上绘制图形', afterDraw === 1, `elements=${afterDraw}`)
+  await page.screenshot({ path: join(shots, 'drawn.png') })
+
+  const undoState = () => page.evaluate(() => window.__e0.undoButtonState())
+  /** mode=js：程序化 focus；mode=mouse：真实鼠标点画布后再按键 */
+  const undoByKeyboard = async (mode = 'js') => {
+    if (mode === 'mouse') {
+      const target =
+        (await page.$('.excalidraw__canvas.interactive')) ?? (await page.$('.excalidraw__canvas'))
+      const area = await target.boundingBox()
+      await page.mouse.click(area.x + area.width - 80, area.y + area.height - 80)
+    } else {
+      await page.evaluate(() => window.__e0.focusCanvas())
+    }
+    await page.waitForTimeout(250)
+    await page.keyboard.press('ControlOrMeta+z')
+    await page.waitForTimeout(500)
+  }
+
+  // 基线：不移动承载位置时，键盘撤销必须有效（否则后面的失败说明不了问题）
+  const baselineUndoEnabled = await undoState()
+  await undoByKeyboard()
+  const afterBaselineUndo = await page.evaluate(() => window.__e0.elements())
+  record(
+    '基线：未移动承载位置时 Ctrl/Cmd+Z 能撤销',
+    afterBaselineUndo === 0,
+    `elements=${afterBaselineUndo}，撤销按钮之前 ${JSON.stringify(baselineUndoEnabled)}`
+  )
+
+  // 再画一个，用于「移动后撤销」的验证
+  await page.evaluate(() => window.__e0.focusCanvas())
+  await page.keyboard.press('r')
+  await page.mouse.move(box.x + 200, box.y + 150)
+  await page.mouse.down()
+  await page.mouse.move(box.x + 420, box.y + 300, { steps: 12 })
+  await page.mouse.up()
+  await page.waitForTimeout(400)
+  const redrawn = await page.evaluate(() => window.__e0.elements())
+  const undoEnabledBeforeMove = await undoState()
+  record(
+    '重绘一个图形并确认撤销可用',
+    redrawn === 1 && undoEnabledBeforeMove.disabled === false,
+    `elements=${redrawn}`
+  )
+
+  // 关键验证：只移动宿主节点（不卸载 React 树），撤销历史是否保留
+  await page.click('#move')
+  await page.waitForTimeout(600)
+  const moved = await page.evaluate(() => window.__e0.statusText)
+  record('交接：宿主节点搬到全屏容器（未重新挂载）', moved === 'moved:fullscreen')
+  await page.screenshot({ path: join(shots, 'fullscreen.png') })
+
+  const undoEnabledAfterMove = await undoState()
+  await undoByKeyboard('js')
+  let afterMoveUndo = await page.evaluate(() => window.__e0.elements())
+  let undoRoute = '程序化 focus + 快捷键'
+  if (afterMoveUndo !== 0) {
+    await undoByKeyboard('mouse')
+    afterMoveUndo = await page.evaluate(() => window.__e0.elements())
+    undoRoute = '鼠标点击画布 + 快捷键'
+  }
+  if (afterMoveUndo !== 0) {
+    // 最后的判定：直接点工具栏撤销按钮（指针路径）。它若有效，说明历史在、只是快捷键没送到
+    await page.click('[data-testid="button-undo"]')
+    await page.waitForTimeout(500)
+    afterMoveUndo = await page.evaluate(() => window.__e0.elements())
+    undoRoute = '点击撤销按钮'
+  }
+  record(
+    '撤销历史：换承载位置后仍能撤销上一个入口的操作',
+    afterMoveUndo === 0,
+    `elements=${afterMoveUndo}，生效路径：${undoRoute}；移动后撤销按钮 ${JSON.stringify(undoEnabledAfterMove)}`
+  )
+  await page.screenshot({ path: join(shots, 'undo-after-move.png') })
+
+  // 对照：卸载重挂（新实例）后场景与历史都丢
+  await page.click('#back')
+  await page.waitForTimeout(300)
+  await page.click('#remount')
+  await page.waitForTimeout(1500)
+  const afterRemount = await page.evaluate(() => window.__e0.elements())
+  record(
+    '对照：卸载重挂会丢场景与撤销历史（首版靠保留同一实例，而不是重建）',
+    afterRemount === 0,
+    `elements=${afterRemount}`
+  )
+
+  record('运行期无页面错误', errors.length === 0, errors.join(' | '))
+
+  // 首屏真实代价：用 performance resource timing 统计脚本/字体/样式的传输量
+  const budget = await page.evaluate(() => {
+    const entries = performance.getEntriesByType('resource')
+    const byType = {}
+    let total = 0
+    let encoded = 0
+    for (const entry of entries) {
+      const type = entry.initiatorType || 'other'
+      byType[type] = (byType[type] ?? 0) + entry.decodedBodySize
+      total += entry.decodedBodySize
+      encoded += entry.encodedBodySize
+    }
+    return { total, encoded, byType, count: entries.length }
+  })
+  console.log(
+    `\n测量：首屏 API 就绪 ${Math.round(firstPaint)} ms · 资源 ${budget.count} 个 / 解码 ${(
+      budget.total / 1024
+    ).toFixed(0)} KB / 传输 ${(budget.encoded / 1024).toFixed(0)} KB`
+  )
+  console.log(
+    '分类（解码 KB）：',
+    JSON.stringify(
+      Object.fromEntries(
+        Object.entries(budget.byType).map(([key, value]) => [key, Math.round(value / 1024)])
+      )
+    )
+  )
+} finally {
+  await browser.close()
+  await new Promise((resolve) => server.close(resolve))
+  const passed = results.length > 0 && results.every((item) => item.ok)
+  console.log(`\n${passed ? 'ALL PASS' : 'HAS FAILURES'}（${results.length} 项）`)
+  console.log(`screenshots: ${shots}`)
+  process.exitCode = passed ? 0 : 1
+}
