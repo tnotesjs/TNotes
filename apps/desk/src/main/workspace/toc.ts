@@ -2,6 +2,7 @@ import {
   collectSubtreeNoteIndexes,
   findGroupLineIndex,
   findNoteLineIndex,
+  KbError,
   readTocLines,
   type TocEntryRef
 } from '@tnotesjs/kb'
@@ -108,11 +109,25 @@ export async function previewDelete(
   }
 }
 
+/**
+ * 渲染端在预览里带下快照版本，主进程此前直接忽略：预览与确认之间知识库若被外部
+ * 改动（git pull / 另一个窗口），按当前索引解析会删掉另一个子树，且底层是
+ * fs.rm + force，没有回收站。
+ */
+function assertFreshSnapshot(handle: KnowledgeBaseHandle, expected: string | undefined): void {
+  if (!expected || expected === handle.snapshot.revision) return
+  throw new KbError('REVISION_CONFLICT', '知识库已被外部修改，请重新预览要删除的内容', {
+    expected,
+    actual: handle.snapshot.revision
+  })
+}
+
 export async function deleteToc(
   handle: KnowledgeBaseHandle,
   request: TocDeleteRequest,
   effects: MutationSideEffects
 ): Promise<KnowledgeBaseDetail> {
+  assertFreshSnapshot(handle, request.expectedSnapshotRevision)
   const result = await handle.workspace.toc.removeEntry(kbEntryRef(handle, request.entry))
   return applySnapshotMutation(handle, result, effects)
 }
