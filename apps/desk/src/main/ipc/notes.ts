@@ -3,6 +3,7 @@ import { z } from 'zod'
 
 import { gitManager } from '../gitManager'
 import { imageBedManager } from '../imageBed'
+import { maybeOptimizeUploadRequest } from '../imageUploadOptimize'
 import { workspaceManager } from '../workspaceManager'
 import { IPC_CHANNELS } from '../../shared/contracts'
 import {
@@ -83,8 +84,12 @@ export function registerNotes(getWindow: GetWindow): void {
       shell.showItemInFolder(note.filePath)
     }
   )
-  handle(IPC_CHANNELS.attachmentWriteLocal, getWindow, attachmentWriteLocalSchema, (input) =>
-    workspaceManager.writeLocalAttachment(input as AttachmentWriteLocalRequest)
+  // Same optimize defaults as paste/target upload: this channel is a parallel
+  // local-assets entry point, so it must not write an uncompressed original.
+  handle(IPC_CHANNELS.attachmentWriteLocal, getWindow, attachmentWriteLocalSchema, async (input) =>
+    workspaceManager.writeLocalAttachment(
+      await maybeOptimizeUploadRequest(input as AttachmentWriteLocalRequest)
+    )
   )
   handle(IPC_CHANNELS.attachmentUploadImage, getWindow, attachmentWriteLocalSchema, (input) =>
     imageBedManager.upload(input as ImageUploadRequest)

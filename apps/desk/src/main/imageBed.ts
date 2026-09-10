@@ -1,6 +1,7 @@
 import { extname, posix } from 'node:path'
 
 import { readGitHubToken } from './imageSecret'
+import { maybeOptimizeUploadRequest } from './imageUploadOptimize'
 import { loadSettings } from './settings'
 import { workspaceManager } from './workspaceManager'
 
@@ -216,13 +217,15 @@ class ImageBedManager {
 
   private async performUpload(request: ImageUploadRequest): Promise<ImageUploadResult> {
     const settings = loadSettings().imageUpload
+    // Paste/upload uses the same optimize defaults as the settings playground.
+    const prepared = await maybeOptimizeUploadRequest(request)
     if (settings.defaultTarget === 'github') {
       const token = readGitHubToken()
       try {
         if (!token) throw new Error('尚未配置 GitHub Token')
-        return await uploadToGitHub(request, settings.github, token)
+        return await uploadToGitHub(prepared, settings.github, token)
       } catch (error) {
-        const local = await workspaceManager.writeLocalAttachment(request)
+        const local = await workspaceManager.writeLocalAttachment(prepared)
         const reason = error instanceof Error ? error.message : String(error)
         return {
           ...local,
@@ -232,7 +235,7 @@ class ImageBedManager {
         }
       }
     }
-    const local = await workspaceManager.writeLocalAttachment(request)
+    const local = await workspaceManager.writeLocalAttachment(prepared)
     return { ...local, target: 'local', fallback: false }
   }
 }

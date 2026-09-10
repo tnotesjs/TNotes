@@ -45,7 +45,7 @@ const settings: AppSettings = {
     },
     optimize: {
       encoder: 'sharp',
-      quality: 80,
+      strength: 'medium',
       maxDimension: null,
       outputFormat: 'keep'
     }
@@ -165,15 +165,15 @@ describe('SettingsPanel GitHub image-bed config', () => {
     const wrapper = mount(SettingsPanel)
     await wrapper.get('button.nav-item:nth-child(5)').trigger('click')
 
-    // 本地 assets：不渲染 GitHub 详细配置，只保留与图床无关的本地压缩块
+    // 本地 assets：不渲染 GitHub 详细配置，只保留压缩块
     expect(
       wrapper
         .findAll('.sub-block')
         .some((block) => block.find('.sub-heading strong').text() === 'GitHub 图床配置')
     ).toBe(false)
-    expect(
-      wrapper.findAll('.sub-block').some((block) => block.text().includes('本地资源压缩'))
-    ).toBe(true)
+    expect(wrapper.findAll('.sub-block').some((block) => block.text().includes('图片压缩'))).toBe(
+      true
+    )
 
     // 切到 GitHub：配置块出现，且未填完时给出回退提示
     await wrapper.get('.target-choice input[value="github"]').setValue('github')

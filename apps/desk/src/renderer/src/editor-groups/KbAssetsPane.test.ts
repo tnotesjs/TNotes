@@ -319,3 +319,60 @@ describe('KbAssetsPane write flow', () => {
     wrapper.unmount()
   })
 })
+
+it('requires a fresh preview after switching encoders and clears hidden conversion options', async () => {
+  const previewOptimize = vi.fn(async () => ({
+    ok: true,
+    value: {
+      bytesBefore: 80,
+      bytesAfter: 40,
+      skippedCount: 0,
+      items: [
+        {
+          fromRelPath: 'assets/used.png',
+          toRelPath: 'assets/used.png',
+          bytesBefore: 80,
+          bytesAfter: 40,
+          ms: 1,
+          lossy: false,
+          encoder: 'oxipng'
+        }
+      ]
+    }
+  }))
+  setupDesk({ previewOptimize })
+  const wrapper = await mountPane()
+  await wrapper
+    .findAll('.file-row')
+    .find((row) => row.text().includes('used.png'))!
+    .trigger('click')
+  await wrapper
+    .findAll('.detail-actions button')
+    .find((button) => button.text().includes('压缩'))!
+    .trigger('click')
+  const dialog = wrapper.get('.kb-assets-dialog')
+  // selects: 0 encoder · 1 strength · 2 output format (sharp only)
+  await dialog.findAll('select')[2].setValue('webp')
+  await dialog.findAll('select')[0].setValue('oxipng')
+  await dialog
+    .findAll('footer button')
+    .find((button) => button.text() === '预览')!
+    .trigger('click')
+  await flushPromises()
+  expect(previewOptimize).toHaveBeenCalledWith(
+    'kb-a',
+    ['assets/used.png'],
+    expect.objectContaining({
+      encoder: 'oxipng',
+      strength: 'medium',
+      outputFormat: 'keep',
+      maxDimension: null
+    }),
+    1
+  )
+  expect(dialog.get('.save-button').attributes('disabled')).toBeUndefined()
+  await dialog.get('select').setValue('sharp')
+  expect(dialog.get('.save-button').attributes('disabled')).toBeDefined()
+  expect(dialog.find('.preview').exists()).toBe(false)
+  wrapper.unmount()
+})

@@ -8,6 +8,7 @@ import {
   clampHeadingNumberMaxDepth,
   HEADING_NUMBER_DEFAULT_MAX_DEPTH
 } from '../shared/headingNumbering'
+import { strengthFromLegacyOxipngLevel, strengthFromLegacyQuality } from './optimizeStrength'
 
 import type { AppSettings, KnowledgeBaseSettings } from '../shared/contracts'
 
@@ -85,19 +86,46 @@ const settingsSchema = z.object({
             'https://cdn.jsdelivr.net/gh/${username}/${repository}@${branch}/${filepath}',
           fileNameFormat: '${YY}-${MM}-${DD}-${HH}-${mm}-${ss}'
         }),
-      optimize: z
-        .object({
-          encoder: z.enum(['sharp', 'oxipng']).default('sharp'),
-          quality: z.number().int().min(40).max(100).default(80),
-          maxDimension: z.number().int().min(64).max(10_000).nullable().default(null),
-          outputFormat: z.enum(['keep', 'webp', 'jpeg']).default('keep')
-        })
-        .default({
-          encoder: 'sharp',
-          quality: 80,
-          maxDimension: null,
-          outputFormat: 'keep'
-        })
+      optimize: z.preprocess(
+        (raw) => {
+          if (!raw || typeof raw !== 'object') return raw
+          const input = raw as Record<string, unknown>
+          const next: Record<string, unknown> = { ...input }
+          if (next.strength !== 'low' && next.strength !== 'medium' && next.strength !== 'high') {
+            if (typeof next.quality === 'number') {
+              next.strength = strengthFromLegacyQuality(next.quality)
+            } else if (typeof next.oxipngLevel === 'number') {
+              next.strength = strengthFromLegacyOxipngLevel(next.oxipngLevel)
+            } else {
+              next.strength = 'medium'
+            }
+          }
+          delete next.quality
+          delete next.oxipngLevel
+          return next
+        },
+        z
+          .object({
+            encoder: z.enum(['sharp', 'oxipng']).default('sharp'),
+            strength: z.enum(['low', 'medium', 'high']).default('medium'),
+            // 保留字段以兼容旧配置文件；读写时一律当作不缩放（UI 已移除）。
+            maxDimension: z
+              .number()
+              .int()
+              .min(64)
+              .max(10_000)
+              .nullable()
+              .default(null)
+              .transform(() => null),
+            outputFormat: z.enum(['keep', 'webp', 'jpeg']).default('keep')
+          })
+          .default({
+            encoder: 'sharp',
+            strength: 'medium',
+            maxDimension: null,
+            outputFormat: 'keep'
+          })
+      )
     })
     .default({
       defaultTarget: 'local',
@@ -110,7 +138,7 @@ const settingsSchema = z.object({
       },
       optimize: {
         encoder: 'sharp',
-        quality: 80,
+        strength: 'medium',
         maxDimension: null,
         outputFormat: 'keep'
       }

@@ -164,46 +164,37 @@ onMounted(() => {
 
     <div class="sub-block">
       <header class="sub-heading">
-        <strong>本地资源压缩（有损 sharp）</strong>
-        <span>优先速度和体积。每次仍要在资源面板预览后执行；oxipng 无损后端尚未接入。</span>
+        <strong>图片压缩</strong>
+        <span>
+          {{
+            draft.imageUpload.optimize.encoder === 'oxipng'
+              ? '无损重压 PNG，更小但较慢（秒级）；仅支持 PNG，不转格式不缩放。粘贴 / 图床上传与资源面板共用。'
+              : '有损重编码，优先速度和体积。粘贴与图床上传自动套用；资源面板整理仍须预览后执行。'
+          }}
+        </span>
       </header>
       <div class="field-grid cols-2">
         <label class="field">
-          <span>默认质量 {{ draft.imageUpload.optimize.quality }}</span>
-          <input
-            v-model.number="draft.imageUpload.optimize.quality"
-            type="range"
-            min="40"
-            max="100"
-          />
+          <span>编码器</span>
+          <select v-model="draft.imageUpload.optimize.encoder">
+            <option value="sharp">sharp（有损，快）</option>
+            <option value="oxipng">oxipng（无损，慢）</option>
+          </select>
         </label>
         <label class="field">
+          <span>压缩强度</span>
+          <select v-model="draft.imageUpload.optimize.strength">
+            <option value="low">低 · 少压，偏清晰</option>
+            <option value="medium">中 · 均衡（默认）</option>
+            <option value="high">高 · 多压，偏体积</option>
+          </select>
+        </label>
+        <label v-if="draft.imageUpload.optimize.encoder !== 'oxipng'" class="field">
           <span>默认输出</span>
           <select v-model="draft.imageUpload.optimize.outputFormat">
             <option value="keep">保持原格式</option>
             <option value="webp">WebP</option>
             <option value="jpeg">JPEG</option>
-          </select>
-        </label>
-        <label class="field">
-          <span>默认最大边</span>
-          <input
-            :value="draft.imageUpload.optimize.maxDimension ?? ''"
-            type="number"
-            min="64"
-            placeholder="不缩放"
-            @change="
-              draft.imageUpload.optimize.maxDimension = ($event.target as HTMLInputElement).value
-                ? Number(($event.target as HTMLInputElement).value)
-                : null
-            "
-          />
-        </label>
-        <label class="field">
-          <span>编码器</span>
-          <select v-model="draft.imageUpload.optimize.encoder" disabled>
-            <option value="sharp">sharp（有损，当前）</option>
-            <option value="oxipng">oxipng（无损，未接入）</option>
           </select>
         </label>
       </div>

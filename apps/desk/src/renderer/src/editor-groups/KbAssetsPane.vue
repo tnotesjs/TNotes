@@ -5,7 +5,10 @@ import type {
   AssetJournalDto,
   AssetKbSummaryDto,
   AssetOperationPlanDto,
+  AssetOptimizeEncoder,
   AssetOptimizePreviewDto,
+  AssetOptimizeSettings,
+  AssetOptimizeStrength,
   AssetRecordDto,
   AssetScanProgressDto,
   AssetScanReportDto,
@@ -43,7 +46,8 @@ const restoreOpen = ref(false)
 const mergeOpen = ref(false)
 const optimizeOpen = ref(false)
 const optimizePreview = ref<AssetOptimizePreviewDto | null>(null)
-const optimizeQuality = ref(80)
+const optimizeEncoder = ref<AssetOptimizeEncoder>('sharp')
+const optimizeStrength = ref<AssetOptimizeStrength>('medium')
 const optimizeFormat = ref<'keep' | 'webp' | 'jpeg'>('keep')
 const optimizeMax = ref('')
 const previewPlan = ref<AssetOperationPlanDto | null>(null)
@@ -100,7 +104,7 @@ function planKindLabel(kind: string): string {
   if (kind === 'recycle') return '回收'
   if (kind === 'restore') return '恢复'
   if (kind === 'merge') return '合并重复'
-  if (kind === 'optimize') return '有损压缩'
+  if (kind === 'optimize') return optimizeEncoder.value === 'oxipng' ? '无损优化' : '有损压缩'
   return kind
 }
 
@@ -166,17 +170,13 @@ const selectedMergeGroup = computed(() =>
   mergeableGroups.value.find((group) => group.relPaths.includes(selected.value?.relPath ?? ''))
 )
 
-function defaultOptimizeSettings(): {
-  encoder: 'sharp'
-  quality: number
-  maxDimension: number | null
-  outputFormat: 'keep' | 'webp' | 'jpeg'
-} {
+function defaultOptimizeSettings(): AssetOptimizeSettings {
   const fromSettings = workspace.settings?.imageUpload.optimize
   return {
-    encoder: 'sharp',
-    quality: fromSettings?.quality ?? 80,
-    maxDimension: fromSettings?.maxDimension ?? null,
+    encoder: fromSettings?.encoder ?? 'sharp',
+    strength: fromSettings?.strength ?? 'medium',
+    // 全局设置不再带最大边；资源面板单次整理仍可选手动缩放。
+    maxDimension: null,
     outputFormat: fromSettings?.outputFormat ?? 'keep'
   }
 }
@@ -378,25 +378,22 @@ async function openMerge(): Promise<void> {
   }
 }
 
-function currentOptimizeOptions(): {
-  encoder: 'sharp'
-  quality: number
-  maxDimension: number | null
-  outputFormat: 'keep' | 'webp' | 'jpeg'
-} {
+function currentOptimizeOptions(): AssetOptimizeSettings {
   const max = Number.parseInt(optimizeMax.value, 10)
   return {
-    encoder: 'sharp',
-    quality: optimizeQuality.value,
-    maxDimension: Number.isFinite(max) && max >= 64 ? max : null,
-    outputFormat: optimizeFormat.value
+    encoder: optimizeEncoder.value,
+    strength: optimizeStrength.value,
+    maxDimension:
+      optimizeEncoder.value === 'oxipng' ? null : Number.isFinite(max) && max >= 64 ? max : null,
+    outputFormat: optimizeEncoder.value === 'oxipng' ? 'keep' : optimizeFormat.value
   }
 }
 
 function openOptimize(): void {
   if (!selected.value || selected.value.kind !== 'image' || writeBusy.value) return
   const defaults = defaultOptimizeSettings()
-  optimizeQuality.value = defaults.quality
+  optimizeEncoder.value = defaults.encoder
+  optimizeStrength.value = defaults.strength
   optimizeFormat.value = defaults.outputFormat
   optimizeMax.value = defaults.maxDimension ? String(defaults.maxDimension) : ''
   optimizePreview.value = null
@@ -542,6 +539,11 @@ async function confirmRestore(): Promise<void> {
     writeBusy.value = false
   }
 }
+
+watch([optimizeEncoder, optimizeStrength, optimizeFormat, optimizeMax], () => {
+  optimizePreview.value = null
+  previewPlan.value = null
+})
 
 watch(renameDest, (dest) => {
   const planned = previewPlan.value
@@ -1004,33 +1006,52 @@ onUnmounted(() => {
     >
       <section class="kb-assets-dialog dialog">
         <header>
-          <strong>有损压缩（sharp）</strong>
+          <strong>{{
+            optimizeEncoder === 'oxipng' ? '无损优化（oxipng）' : '有损压缩（sharp）'
+          }}</strong>
           <button type="button" class="ghost" :disabled="writeBusy" @click="closeDialogs">
             关闭
           </button>
         </header>
         <p class="hint">
-          优先速度和体积，结果是有损的，不是无损。oxipng 尚未接入。默认不缩放；转 WebP/JPEG
-          会改扩展名并改写引用。
+          <template v-if="optimizeEncoder === 'oxipng'">
+            无损重压 PNG，更小但较慢（秒级）；仅支持 PNG，不做格式转换与缩放。
+          </template>
+          <template v-else>
+            优先速度和体积，结果是有损的。默认不缩放；转 WebP/JPEG 会改扩展名并改写引用。
+          </template>
         </p>
-        <div class="field-grid">
+        <fieldset class="field-grid" :disabled="writeBusy" style="border: 0; padding: 0; margin: 0">
           <label class="field">
-            <span>质量 {{ optimizeQuality }}</span>
-            <input v-model.number="optimizeQuality" type="range" min="40" max="100" />
-          </label>
-          <label class="field">
-            <span>输出格式</span>
-            <select v-model="optimizeFormat">
-              <option value="keep">保持原格式（同路径）</option>
-              <option value="webp">转为 WebP（通常更小）</option>
-              <option value="jpeg">转为 JPEG</option>
+            <span>编码器</span>
+            <select v-model="optimizeEncoder">
+              <option value="sharp">sharp（有损，快）</option>
+              <option value="oxipng">oxipng（无损，慢）</option>
             </select>
           </label>
           <label class="field">
-            <span>最大边（可选）</span>
-            <input v-model="optimizeMax" type="number" min="64" placeholder="不缩放" />
+            <span>压缩强度</span>
+            <select v-model="optimizeStrength">
+              <option value="low">低 · 少压，偏清晰</option>
+              <option value="medium">中 · 均衡（默认）</option>
+              <option value="high">高 · 多压，偏体积</option>
+            </select>
           </label>
-        </div>
+          <template v-if="optimizeEncoder !== 'oxipng'">
+            <label class="field">
+              <span>输出格式</span>
+              <select v-model="optimizeFormat">
+                <option value="keep">保持原格式（同路径）</option>
+                <option value="webp">转为 WebP（通常更小）</option>
+                <option value="jpeg">转为 JPEG</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>最大边（可选）</span>
+              <input v-model="optimizeMax" type="number" min="64" placeholder="不缩放" />
+            </label>
+          </template>
+        </fieldset>
         <div v-if="optimizePreview" class="preview">
           <p>
             {{ formatBytes(optimizePreview.bytesBefore) }} →
@@ -1044,7 +1065,7 @@ onUnmounted(() => {
                 {{ item.fromRelPath }}
                 <span v-if="item.toRelPath !== item.fromRelPath"> → {{ item.toRelPath }}</span>
                 · {{ formatBytes(item.bytesBefore) }} → {{ formatBytes(item.bytesAfter ?? 0) }} ·
-                {{ item.ms }}ms · 有损
+                {{ item.ms }}ms · {{ item.lossy ? '有损' : '无损' }}
               </template>
             </li>
           </ul>
@@ -1078,7 +1099,7 @@ onUnmounted(() => {
             "
             @click="confirmOptimize"
           >
-            执行有损压缩
+            执行{{ optimizeEncoder === 'oxipng' ? '无损优化' : '有损压缩' }}
           </button>
         </footer>
       </section>

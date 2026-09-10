@@ -268,7 +268,7 @@ export const imageOptimizePreviewSchema = z.object({
     }),
   options: z.object({
     encoder: z.enum(['sharp', 'oxipng']).default('sharp'),
-    quality: z.number().int().min(40).max(100),
+    strength: z.enum(['low', 'medium', 'high']).default('medium'),
     maxDimension: z.number().int().min(64).max(10_000).nullable(),
     outputFormat: z.enum(['keep', 'webp', 'jpeg'])
   })

@@ -64,7 +64,7 @@ export function registerAssets(getWindow: GetWindow): () => void {
   )
   const optimizeOptions = z.object({
     encoder: z.enum(['sharp', 'oxipng']),
-    quality: z.number().int().min(40).max(100),
+    strength: z.enum(['low', 'medium', 'high']),
     maxDimension: z.number().int().min(64).max(10_000).nullable(),
     outputFormat: z.enum(['keep', 'webp', 'jpeg'])
   })

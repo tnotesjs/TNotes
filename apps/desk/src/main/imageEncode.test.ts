@@ -109,3 +109,53 @@ describe('encodeImage (sharp, lossy)', () => {
     expect(result.skipped).toBeTruthy()
   })
 })
+
+describe('encodeImage (oxipng, lossless)', () => {
+  it('optimises a PNG and labels the result lossless', async () => {
+    const input = await noisyPng()
+    const result = await encodeImage(input, 'noise.png', {
+      encoder: 'oxipng',
+      oxipngLevel: 2,
+      quality: 80,
+      maxDimension: null,
+      outputFormat: 'keep'
+    })
+    expect(result.skipped).toBeUndefined()
+    expect(result.lossy).toBe(false)
+    expect(result.encoder).toBe('oxipng')
+    expect(await sharp(Buffer.from(result.output!)).ensureAlpha().raw().toBuffer()).toEqual(
+      await sharp(Buffer.from(input)).ensureAlpha().raw().toBuffer()
+    )
+    expect(result.outputExt).toBe('.png')
+    expect(result.bytesAfter).toBeLessThan(result.bytesBefore)
+    expect(result.output?.byteLength).toBe(result.bytesAfter)
+  })
+
+  it('trusts the bytes, not the extension, and skips non-PNG input', async () => {
+    const jpeg = new Uint8Array(
+      await sharp({ create: { width: 8, height: 8, channels: 3, background: '#123456' } })
+        .jpeg()
+        .toBuffer()
+    )
+    const result = await encodeImage(jpeg, 'liar.png', {
+      encoder: 'oxipng',
+      oxipngLevel: 2,
+      quality: 80,
+      maxDimension: null,
+      outputFormat: 'keep'
+    })
+    expect(result.skipped).toMatch(/仅支持 PNG/)
+  })
+
+  it('skips when a format conversion is requested', async () => {
+    const input = await noisyPng()
+    const result = await encodeImage(input, 'noise.png', {
+      encoder: 'oxipng',
+      oxipngLevel: 2,
+      quality: 80,
+      maxDimension: null,
+      outputFormat: 'webp'
+    })
+    expect(result.skipped).toMatch(/不支持转码/)
+  })
+})

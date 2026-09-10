@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 
 import { flushPromises, mount } from '@vue/test-utils'
+import { reactive } from 'vue'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import ImageOptimizePlayground from './ImageOptimizePlayground.vue'
@@ -9,7 +10,7 @@ import type { AppSettings } from '../../../../shared/contracts'
 
 const optimize = {
   encoder: 'sharp' as const,
-  quality: 80,
+  strength: 'medium' as const,
   maxDimension: null,
   outputFormat: 'keep' as const
 }
@@ -32,8 +33,28 @@ async function dropFile(wrapper: ReturnType<typeof mount>): Promise<void> {
   await flushPromises()
 }
 
+function dispatchPaste(clipboardData: DataTransfer, target: EventTarget = window): void {
+  target.dispatchEvent(
+    Object.assign(new Event('paste', { bubbles: true, cancelable: true }), { clipboardData })
+  )
+}
+
+function clipboardWithImage(file: File): DataTransfer {
+  return {
+    items: [
+      {
+        kind: 'file',
+        type: file.type,
+        getAsFile: () => file
+      }
+    ],
+    files: [file]
+  } as unknown as DataTransfer
+}
+
 afterEach(() => {
   Reflect.deleteProperty(window, 'desk')
+  vi.useRealTimers()
   vi.restoreAllMocks()
 })
 
@@ -58,6 +79,7 @@ describe('ImageOptimizePlayground', () => {
 
     expect(wrapper.text()).toContain('压缩效果测试')
     expect(wrapper.text()).toContain('不写入任何知识库')
+    expect(wrapper.text()).toContain('粘贴')
 
     await dropFile(wrapper)
 
@@ -71,6 +93,51 @@ describe('ImageOptimizePlayground', () => {
     const outputSrc = wrapper.get('figure:nth-child(2) img').attributes('src') ?? ''
     expect(originalSrc.startsWith('data:image/png;base64,')).toBe(true)
     expect(outputSrc.startsWith('data:image/jpeg;base64,')).toBe(true)
+  })
+
+  it('accepts a pasted clipboard image without opening the file picker', async () => {
+    installBridge(async () => ({
+      ok: true,
+      value: {
+        bytesBefore: 1000,
+        bytesAfter: 400,
+        ms: 5,
+        lossy: true,
+        encoder: 'sharp',
+        format: 'png',
+        output: new Uint8Array([9, 8, 7])
+      }
+    }))
+    const wrapper = mount(ImageOptimizePlayground, { props: { draft }, attachTo: document.body })
+    const file = new File([new Uint8Array([1, 2, 3, 4])], 'image.png', { type: 'image/png' })
+
+    dispatchPaste(clipboardWithImage(file))
+    await flushPromises()
+
+    expect(window.desk.settings.previewOptimizeImage).toHaveBeenCalledWith(
+      expect.objectContaining({ fileName: 'image.png' })
+    )
+    expect(wrapper.get('[data-testid="saved-percent"]').text()).toContain('-60%')
+    wrapper.unmount()
+  })
+
+  it('does not steal paste while typing in a settings text field', async () => {
+    installBridge(async () => ({
+      ok: true,
+      value: { bytesBefore: 4, ms: 1, lossy: true, encoder: 'sharp' }
+    }))
+    const wrapper = mount(ImageOptimizePlayground, { props: { draft }, attachTo: document.body })
+    const input = document.createElement('input')
+    document.body.appendChild(input)
+    input.focus()
+    const file = new File([new Uint8Array([1, 2, 3])], 'image.png', { type: 'image/png' })
+
+    dispatchPaste(clipboardWithImage(file), input)
+    await flushPromises()
+
+    expect(window.desk.settings.previewOptimizeImage).not.toHaveBeenCalled()
+    input.remove()
+    wrapper.unmount()
   })
 
   it('surfaces the skip reason instead of a fake saving', async () => {
@@ -91,4 +158,74 @@ describe('ImageOptimizePlayground', () => {
     expect(wrapper.text()).toContain('优化后没有变小')
     expect(wrapper.find('[data-testid="saved-percent"]').exists()).toBe(false)
   })
+})
+
+it('uses PNG-only options without overwriting the sharp draft', async () => {
+  installBridge(async () => ({
+    ok: true,
+    value: { bytesBefore: 4, ms: 1, lossy: false, encoder: 'oxipng', skipped: '优化后没有变小' }
+  }))
+  const localDraft = {
+    imageUpload: {
+      optimize: {
+        ...optimize,
+        encoder: 'oxipng',
+        strength: 'high',
+        outputFormat: 'webp',
+        maxDimension: 64
+      }
+    }
+  } as AppSettings
+  const wrapper = mount(ImageOptimizePlayground, { props: { draft: localDraft } })
+  await dropFile(wrapper)
+  expect(window.desk.settings.previewOptimizeImage).toHaveBeenCalledWith(
+    expect.objectContaining({
+      options: expect.objectContaining({
+        encoder: 'oxipng',
+        strength: 'high',
+        outputFormat: 'keep',
+        maxDimension: null
+      })
+    })
+  )
+  expect(localDraft.imageUpload.optimize.outputFormat).toBe('webp')
+  expect(wrapper.get('.lossless-badge').text()).toBe('无损')
+  wrapper.unmount()
+})
+
+it('invalidates an in-flight result immediately while waiting for the oxipng debounce', async () => {
+  vi.useFakeTimers()
+  let finish!: (value: { ok: true; value: Record<string, unknown> }) => void
+  installBridge(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve
+      })
+  )
+  const localDraft = reactive({
+    imageUpload: { optimize: { ...optimize, strength: 'medium' } }
+  }) as AppSettings
+  const wrapper = mount(ImageOptimizePlayground, { props: { draft: localDraft } })
+  await dropFile(wrapper)
+  localDraft.imageUpload.optimize.encoder = 'oxipng'
+  await wrapper.vm.$nextTick()
+  finish({
+    ok: true,
+    value: {
+      bytesBefore: 1000,
+      bytesAfter: 250,
+      ms: 1,
+      lossy: true,
+      output: new Uint8Array([1]),
+      format: 'png'
+    }
+  })
+  await flushPromises()
+  expect(wrapper.find('figure:nth-child(2) img').exists()).toBe(false)
+  expect(wrapper.text()).toContain('无损优化中')
+  await vi.advanceTimersByTimeAsync(999)
+  expect(window.desk.settings.previewOptimizeImage).toHaveBeenCalledTimes(1)
+  await vi.advanceTimersByTimeAsync(1)
+  expect(window.desk.settings.previewOptimizeImage).toHaveBeenCalledTimes(2)
+  wrapper.unmount()
 })

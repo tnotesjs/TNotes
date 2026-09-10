@@ -482,11 +482,14 @@ export interface ImageUploadSettings {
 
 export type AssetOptimizeEncoder = 'sharp' | 'oxipng'
 export type AssetOptimizeOutputFormat = 'keep' | 'webp' | 'jpeg'
+/** 压缩强度：低=少压偏清晰，中=默认，高=多压偏体积。 */
+export type AssetOptimizeStrength = 'low' | 'medium' | 'high'
 
 export interface AssetOptimizeSettings {
-  /** Default encoder. oxipng is reserved and disabled until a later lossless backend lands. */
+  /** Default encoder. oxipng is the lossless PNG backend (slower, PNG-only). */
   encoder: AssetOptimizeEncoder
-  quality: number
+  /** Shared low/medium/high tier for sharp quality and oxipng level. */
+  strength: AssetOptimizeStrength
   maxDimension: number | null
   outputFormat: AssetOptimizeOutputFormat
 }
@@ -500,8 +503,8 @@ export interface AssetOptimizePreviewItemDto {
   height?: number
   ms: number
   skipped?: string
-  lossy: true
-  encoder: 'sharp'
+  lossy: boolean
+  encoder: AssetOptimizeEncoder
   format?: string
   previewDataUrl?: string
 }
@@ -529,8 +532,8 @@ export interface ImageOptimizePreviewResult {
   width?: number
   height?: number
   ms: number
-  lossy: true
-  encoder: 'sharp'
+  lossy: boolean
+  encoder: 'sharp' | 'oxipng'
   format?: string
   outputExt?: string
   /** 命中跳过规则时的原因（如「优化后没有变小」）；此时不返回 output。 */

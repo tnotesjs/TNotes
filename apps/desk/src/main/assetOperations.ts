@@ -32,6 +32,7 @@ import { knowledgeBaseAssetStore } from './workspace/assetStore'
 import { workspaceManager } from './workspaceManager'
 import { encodeManager } from './encodeManager'
 import { outputRelPath } from './imageEncode'
+import { toEncodeImageOptions } from './optimizeStrength'
 
 import type {
   AssetJournalDto,
@@ -197,9 +198,6 @@ async function encodeAssetFiles(
     bytesAfter: number
   }>
 }> {
-  if (options.encoder === 'oxipng') {
-    throw new KbError('INVALID_OPERATION', 'oxipng 尚未接入，请使用 sharp 有损压缩')
-  }
   const handle = workspaceManager.getHandle(knowledgeBaseId)
   const items: AssetOptimizePreviewDto['items'] = []
   const outputs: Record<string, Uint8Array> = {}
@@ -215,11 +213,11 @@ async function encodeAssetFiles(
       throw new KbError('INVALID_OPERATION', `资源路径越界: ${relPath}`)
     }
     const data = new Uint8Array(await fs.readFile(abs))
-    const encoded = await encodeManager.encode(data, path.posix.basename(relPath), {
-      quality: options.quality,
-      maxDimension: options.maxDimension,
-      outputFormat: options.outputFormat
-    })
+    const encoded = await encodeManager.encode(
+      data,
+      path.posix.basename(relPath),
+      toEncodeImageOptions(options)
+    )
     if (encoded.skipped || !encoded.output || encoded.bytesAfter == null) {
       items.push({
         fromRelPath: relPath,
@@ -227,8 +225,8 @@ async function encodeAssetFiles(
         bytesBefore: encoded.bytesBefore,
         ms: encoded.ms,
         skipped: encoded.skipped ?? '无法压缩',
-        lossy: true,
-        encoder: 'sharp',
+        lossy: encoded.lossy,
+        encoder: encoded.encoder,
         width: encoded.width,
         height: encoded.height,
         format: encoded.format
@@ -249,8 +247,8 @@ async function encodeAssetFiles(
       width: encoded.width,
       height: encoded.height,
       ms: encoded.ms,
-      lossy: true,
-      encoder: 'sharp',
+      lossy: encoded.lossy,
+      encoder: encoded.encoder,
       format: encoded.format,
       previewDataUrl
     })

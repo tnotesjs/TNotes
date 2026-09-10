@@ -42,7 +42,7 @@ const settings: AppSettings = {
     },
     optimize: {
       encoder: 'sharp',
-      quality: 80,
+      strength: 'medium',
       maxDimension: null,
       outputFormat: 'keep'
     }

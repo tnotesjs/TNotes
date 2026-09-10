@@ -1,12 +1,12 @@
 <script setup lang="ts">
 /**
- * 设置页「压缩效果测试」：拖一张临时图片，按当前草稿参数试压一次。
+ * 设置页「压缩效果测试」：拖入 / 点选 / 粘贴一张临时图片，按当前草稿参数试压一次。
  * 数据只在内存里（data: URL + IPC 往返），不落盘、不写任何知识库，关闭面板即丢。
  *
  * 注意：本应用的 CSP 是 `img-src 'self' data: https: tnotes-asset:`，不含 blob:，
  * 所以预览必须用 data: URL；`URL.createObjectURL()` 出来的图会被 CSP 拦成破图。
  */
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import ImagePreviewLightbox, { type LightboxItem } from './ImagePreviewLightbox.vue'
 
@@ -17,6 +17,7 @@ const props = defineProps<{ draft: AppSettings }>()
 const MAX_BYTES = 25 * 1024 * 1024
 const PICKABLE = /\.(png|jpe?g|webp|gif|svg|avif|bmp|ico|excalidraw)$/i
 
+const rootEl = ref<HTMLElement | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 const fileName = ref('')
 const fileBytes = ref<Uint8Array | null>(null)
@@ -60,7 +61,7 @@ const lightboxItems = computed<LightboxItem[]>(() => {
     items.push({
       src: outputSrc.value,
       label: '优化后',
-      lossy: true,
+      lossy: result.value?.lossy ?? true,
       meta:
         formatBytes(result.value?.bytesAfter ?? 0) +
         (saved !== null && saved > 0 ? ` · -${saved}%` : '')
@@ -116,11 +117,18 @@ async function runPreview(): Promise<void> {
   if (!bytes) return
   const mySeq = (requestSeq += 1)
   busy.value = true
+  result.value = null
+  outputSrc.value = ''
+  error.value = ''
   try {
     const response = await window.desk.settings.previewOptimizeImage({
       fileName: fileName.value,
       data: bytes,
-      options: { ...options.value }
+      options: {
+        ...options.value,
+        maxDimension: null,
+        ...(options.value.encoder === 'oxipng' ? { outputFormat: 'keep' as const } : {})
+      }
     })
     // 滑块又动过：丢弃过期结果，避免旧图盖新图。
     if (mySeq !== requestSeq) return
@@ -155,9 +163,11 @@ async function pickFile(file: File): Promise<void> {
     return
   }
   const bytes = new Uint8Array(await file.arrayBuffer())
-  fileName.value = file.name
+  // 截图粘贴常无文件名，或只有 MIME；给一个可读的默认名方便展示。
+  fileName.value =
+    file.name?.trim() || `paste.${(file.type.split('/')[1] || 'png').replace('jpeg', 'jpg')}`
   fileBytes.value = bytes
-  originalSrc.value = toDataUrl(bytes, file.type || mimeFromName(file.name))
+  originalSrc.value = toDataUrl(bytes, file.type || mimeFromName(fileName.value))
   outputSrc.value = ''
   result.value = null
   await runPreview()
@@ -176,6 +186,38 @@ function onDrop(event: DragEvent): void {
   if (file) void pickFile(file)
 }
 
+/** 从剪贴板取出第一张图片（截图粘贴通常是 image/png，且可能没有文件名）。 */
+function imageFromClipboard(clipboard: DataTransfer | null): File | null {
+  if (!clipboard) return null
+  const fromItems = [...(clipboard.items ?? [])]
+    .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
+    .map((item) => item.getAsFile())
+    .find((item): item is File => Boolean(item))
+  if (fromItems) return fromItems
+  return [...(clipboard.files ?? [])].find((file) => file.type.startsWith('image/')) ?? null
+}
+
+function isTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false
+  if (target.isContentEditable) return true
+  const tag = target.tagName
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
+}
+
+/**
+ * 组件挂载期间接管 Cmd/Ctrl+V：有图片就试压。
+ * 焦点在设置页的文本输入里时不抢粘贴，避免干扰 Token / 仓库等字段。
+ */
+function onDocumentPaste(event: ClipboardEvent): void {
+  if (isTypingTarget(event.target)) return
+  // 设置面板可能叠着别的对话框；组件已卸载或节点不在文档里时忽略。
+  if (!rootEl.value?.isConnected) return
+  const image = imageFromClipboard(event.clipboardData)
+  if (!image) return
+  event.preventDefault()
+  void pickFile(image)
+}
+
 function clearFile(): void {
   requestSeq += 1
   if (debounceTimer) {
@@ -191,35 +233,47 @@ function clearFile(): void {
   busy.value = false
 }
 
-// 参数跟随上方草稿：拖完滑块 350ms 后再编码，避免每个刻度都发一次 IPC。
+// 参数跟随上方草稿：松开后按编码器防抖再编码（oxipng 慢，给 1s；sharp 给 0.35s）。
 watch(
-  () => [options.value.quality, options.value.maxDimension, options.value.outputFormat] as const,
+  () => [options.value.encoder, options.value.strength, options.value.outputFormat] as const,
   () => {
     if (!fileBytes.value) return
+    requestSeq += 1
+    result.value = null
+    outputSrc.value = ''
+    error.value = ''
+    busy.value = true
     if (debounceTimer) clearTimeout(debounceTimer)
+    const delay = options.value.encoder === 'oxipng' ? 1000 : 350
     debounceTimer = setTimeout(() => {
       debounceTimer = null
       void runPreview()
-    }, 350)
+    }, delay)
   }
 )
 
+onMounted(() => {
+  window.addEventListener('paste', onDocumentPaste)
+})
+
 onBeforeUnmount(() => {
+  window.removeEventListener('paste', onDocumentPaste)
   requestSeq += 1
   if (debounceTimer) clearTimeout(debounceTimer)
 })
 </script>
 
 <template>
-  <div class="sub-block optimize-playground">
+  <div ref="rootEl" class="sub-block optimize-playground">
     <header class="sub-heading">
       <strong>压缩效果测试</strong>
-      <span>拖一张图进来，按上方参数试压一次；仅本地测试，不写入任何知识库</span>
+      <span>拖入、点选或粘贴一张图试压；仅本地测试，不写入任何知识库</span>
     </header>
 
     <div
       class="drop-zone"
       :class="{ dragging, filled: Boolean(fileName) }"
+      tabindex="0"
       @dragenter.prevent="dragging = true"
       @dragover.prevent="dragging = true"
       @dragleave.prevent="dragging = false"
@@ -234,12 +288,16 @@ onBeforeUnmount(() => {
         @change="onFileChange"
       />
       <template v-if="!fileName">
-        <span class="drop-title">点击或拖入一张图片</span>
-        <span class="drop-sub">PNG / JPEG / WebP，≤ 25 MB；GIF、SVG、.excalidraw 会直接跳过</span>
+        <span class="drop-title">点击、拖入或粘贴一张图片</span>
+        <span class="drop-sub">
+          PNG / JPEG / WebP，≤ 25 MB；支持 Cmd/Ctrl+V；GIF、SVG、.excalidraw 会直接跳过
+        </span>
       </template>
       <template v-else>
         <span class="drop-title">{{ fileName }}</span>
-        <span class="drop-sub">{{ formatBytes(result?.bytesBefore ?? 0) }} · 点击可换一张</span>
+        <span class="drop-sub">
+          {{ formatBytes(result?.bytesBefore ?? 0) }} · 点击可换一张，也可再粘贴
+        </span>
       </template>
     </div>
 
@@ -260,8 +318,18 @@ onBeforeUnmount(() => {
       <figure>
         <figcaption>
           优化后
-          <span class="lossy-badge">有损</span>
-          <span v-if="busy" class="busy">编码中…</span>
+          <span
+            :class="
+              (result ? !result.lossy : options.encoder === 'oxipng')
+                ? 'lossless-badge'
+                : 'lossy-badge'
+            "
+          >
+            {{ (result ? !result.lossy : options.encoder === 'oxipng') ? '无损' : '有损' }}
+          </span>
+          <span v-if="busy" class="busy">
+            {{ options.encoder === 'oxipng' ? '无损优化中…（较慢）' : '编码中…' }}
+          </span>
         </figcaption>
         <img
           v-if="outputSrc"
@@ -271,7 +339,15 @@ onBeforeUnmount(() => {
           title="点击放大查看"
           @click="openLightbox('output')"
         />
-        <div v-else class="placeholder">{{ busy ? '编码中…' : '暂无优化结果' }}</div>
+        <div v-else class="placeholder">
+          {{
+            busy
+              ? options.encoder === 'oxipng'
+                ? '无损优化中…（较慢）'
+                : '编码中…'
+              : '暂无优化结果'
+          }}
+        </div>
       </figure>
     </div>
 
@@ -406,6 +482,14 @@ onBeforeUnmount(() => {
   border: 1px solid var(--accent);
   border-radius: 5px;
   color: var(--accent);
+  padding: 0 5px;
+  font-size: 9px;
+}
+
+.lossless-badge {
+  border: 1px solid var(--muted);
+  border-radius: 5px;
+  color: var(--muted);
   padding: 0 5px;
   font-size: 9px;
 }

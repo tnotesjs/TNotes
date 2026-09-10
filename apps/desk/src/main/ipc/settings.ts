@@ -6,6 +6,7 @@ import { encodeManager } from '../encodeManager'
 import { gitManager } from '../gitManager'
 import { validateGitHubImageSettings } from '../imageBed'
 import { clearGitHubToken, imageTokenStatus, saveGitHubToken } from '../imageSecret'
+import { toEncodeImageOptions } from '../optimizeStrength'
 import {
   importSettings,
   readSettingsFile,
@@ -94,11 +95,12 @@ export function registerSettings(getWindow: GetWindow): void {
     imageOptimizePreviewSchema,
     async ({ fileName, data, options }) => {
       // 只编码到内存：不落盘、不写知识库，渲染进程关闭面板即丢弃。
-      const result = await encodeManager.encode(data, fileName, {
-        quality: options.quality,
-        maxDimension: options.maxDimension,
-        outputFormat: options.outputFormat
-      })
+      // 设置页试压与粘贴上传一致：不按最大边缩放。
+      const result = await encodeManager.encode(
+        data,
+        fileName,
+        toEncodeImageOptions({ ...options, maxDimension: null })
+      )
       return {
         bytesBefore: result.bytesBefore,
         bytesAfter: result.bytesAfter,

@@ -90,7 +90,12 @@ onBeforeUnmount(() => {
         />
         <figcaption>
           <strong>{{ current?.label }}</strong>
-          <span v-if="current?.lossy" class="lossy-badge">有损</span>
+          <span
+            v-if="typeof current?.lossy === 'boolean'"
+            :class="current.lossy ? 'lossy-badge' : 'lossless-badge'"
+          >
+            {{ current.lossy ? '有损' : '无损' }}
+          </span>
           <span v-if="current?.meta" class="meta">{{ current.meta }}</span>
           <span v-if="hasMultiple" class="counter">{{ index + 1 }} / {{ items.length }}</span>
         </figcaption>
@@ -163,6 +168,14 @@ onBeforeUnmount(() => {
   border: 1px solid var(--accent);
   border-radius: 5px;
   color: var(--accent);
+  padding: 0 5px;
+  font-size: 9px;
+}
+
+.lossless-badge {
+  border: 1px solid rgb(255 255 255 / 30%);
+  border-radius: 5px;
+  color: #cfcfcf;
   padding: 0 5px;
   font-size: 9px;
 }
