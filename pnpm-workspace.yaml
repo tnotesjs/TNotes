@@ -13,7 +13,6 @@ allowBuilds:
   electron-winstaller: true
   '@vscode/vsce-sign': true
   keytar: true
-  esbuild: set this to true or false
 
 # 本组织包刚发布就要能被装到，跳过 minimumReleaseAge 冷却
 minimumReleaseAgeExclude:
