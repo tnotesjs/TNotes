@@ -2,7 +2,7 @@
 
 - 编辑与保存
   - **保留 Markdown 样式**
-  - [访问 mindmap-web](https://github.com/tnotesjs/mindmap-web)
+  - [访问 mindmap-web](https://github.com/tnotesjs/tnotesjs/tree/main/apps/mindmap-web)
 - 三种视图
   - 大纲
   - 脑图
