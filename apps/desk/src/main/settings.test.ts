@@ -17,19 +17,6 @@ afterEach(() => {
 })
 
 describe('persisted app zoom', () => {
-  it('migrates the prior note-only zoom setting without keeping a second zoom level', () => {
-    writeFileSync(
-      join(environment.profile, '.tn-desk-config.json'),
-      JSON.stringify({
-        theme: 'dark',
-        noteZoomPercent: 130
-      })
-    )
-    expect(loadSettings()).toMatchObject({ theme: 'dark', appZoomPercent: 130 })
-    const saved = saveSettings({ appZoomPercent: 140 })
-    expect(saved.appZoomPercent).toBe(140)
-    expect(saved).not.toHaveProperty('noteZoomPercent')
-  })
   it('defaults new and existing profiles to 100 without resetting other preferences', () => {
     expect(loadSettings().appZoomPercent).toBe(100)
     writeFileSync(

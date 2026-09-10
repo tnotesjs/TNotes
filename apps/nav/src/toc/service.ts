@@ -1,4 +1,3 @@
-import { existsSync } from 'fs'
 import { join } from 'path'
 import type { KbSnapshot, TocEntryRef, TocNode as KbTocNode } from '@tnotesjs/kb'
 import {
@@ -78,16 +77,7 @@ export interface TocReadResult {
   revision: string
 }
 
-/** Require tnotes.json. A leftover `.tnotes.json` is an error, not an empty tree. */
-function assertSingleFileFormat(repoRoot: string): void {
-  if (existsSync(join(repoRoot, 'tnotes.json'))) return
-  if (existsSync(join(repoRoot, '.tnotes.json'))) {
-    throw new Error('该知识库仍是旧格式（.tnotes.json），当前版本已不再支持')
-  }
-}
-
 export async function readToc(repoRoot: string): Promise<TocReadResult> {
-  assertSingleFileFormat(repoRoot)
   const snapshot = await getWorkspace(repoRoot).scan()
   return { toc: toNavTocNodes(snapshot), revision: snapshot.revision }
 }

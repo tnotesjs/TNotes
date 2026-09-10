@@ -3,8 +3,7 @@
  *
  * The TNotes markdown pipeline: markdown-it + Vue SFC, shared code blocks,
  * custom containers, and the TNotes block set (mermaid / mindmap / footprints
- * / swiper). Snippet imports (`<<< path`) were removed by decision — all
- * content lives inside the note file.
+ * / swiper). All content lives inside the note file.
  */
 
 import path from 'node:path'

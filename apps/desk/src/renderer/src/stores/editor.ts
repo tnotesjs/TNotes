@@ -64,14 +64,12 @@ function sanitizeLayout(
   knowledgeBaseIds: Set<string>,
   defaultNotePageWidth: NotePageWidth,
   scopedKnowledgeBaseId?: string,
-  validNoteUuids?: ReadonlySet<string>,
-  includeWebTabs = true
+  validNoteUuids?: ReadonlySet<string>
 ): EditorLayoutNode {
   if (node.type === 'group') {
     const tabs = node.tabs
       .filter((tab) => {
         if (tab.type === 'web') {
-          if (!includeWebTabs) return false
           try {
             const url = new URL(tab.url)
             return url.protocol === 'http:' || url.protocol === 'https:'
@@ -125,16 +123,14 @@ function sanitizeLayout(
       knowledgeBaseIds,
       defaultNotePageWidth,
       scopedKnowledgeBaseId,
-      validNoteUuids,
-      includeWebTabs
+      validNoteUuids
     ),
     second: sanitizeLayout(
       node.second,
       knowledgeBaseIds,
       defaultNotePageWidth,
       scopedKnowledgeBaseId,
-      validNoteUuids,
-      includeWebTabs
+      validNoteUuids
     )
   })
 }
@@ -144,16 +140,14 @@ function normalizeEditorSession(
   knowledgeBaseIds: Set<string>,
   defaultNotePageWidth: NotePageWidth,
   knowledgeBaseId: string,
-  validNoteUuids?: ReadonlySet<string>,
-  includeWebTabs = true
+  validNoteUuids?: ReadonlySet<string>
 ): KnowledgeBaseEditorSession {
   const layout = sanitizeLayout(
     session.layout,
     knowledgeBaseIds,
     defaultNotePageWidth,
     knowledgeBaseId,
-    validNoteUuids,
-    includeWebTabs
+    validNoteUuids
   )
   const groups = listGroups(layout)
   const validGroupIds = new Set(groups.map((group) => group.id))
@@ -175,10 +169,6 @@ function normalizeEditorSession(
 function emptyEditorSession(): KnowledgeBaseEditorSession {
   const group = createGroup()
   return { layout: group, activeGroupId: group.id, lastNoteByGroup: {} }
-}
-
-function hasTabs(session: KnowledgeBaseEditorSession): boolean {
-  return listGroups(session.layout).some((group) => group.tabs.length > 0)
 }
 
 export const useEditorStore = defineStore('editor', () => {
@@ -389,34 +379,16 @@ export const useEditorStore = defineStore('editor', () => {
       return
     }
     const restoredEditors: Record<string, KnowledgeBaseEditorSession> = {}
-    const persistedEditors = session.knowledgeBaseEditors ?? {}
-    if (Object.keys(persistedEditors).length > 0) {
-      for (const [knowledgeBaseId, editorSession] of Object.entries(persistedEditors)) {
-        if (!knowledgeBaseIds.has(knowledgeBaseId)) continue
-        restoredEditors[knowledgeBaseId] = normalizeEditorSession(
-          editorSession,
-          knowledgeBaseIds,
-          defaultNotePageWidth.value,
-          knowledgeBaseId
-        )
-      }
-    } else {
-      // Legacy sessions stored every knowledge base in one mixed layout. Split
-      // note tabs by their owning knowledge base and assign web tabs to the
-      // knowledge base that was selected when the session was saved.
-      for (const knowledgeBaseId of knowledgeBaseIds) {
-        const migrated = normalizeEditorSession(
-          { layout: session.layout, activeGroupId: session.activeGroupId },
-          knowledgeBaseIds,
-          defaultNotePageWidth.value,
-          knowledgeBaseId,
-          undefined,
-          knowledgeBaseId === session.selectedKnowledgeBaseId
-        )
-        if (hasTabs(migrated) || knowledgeBaseId === session.selectedKnowledgeBaseId) {
-          restoredEditors[knowledgeBaseId] = migrated
-        }
-      }
+    for (const [knowledgeBaseId, editorSession] of Object.entries(
+      session.knowledgeBaseEditors ?? {}
+    )) {
+      if (!knowledgeBaseIds.has(knowledgeBaseId)) continue
+      restoredEditors[knowledgeBaseId] = normalizeEditorSession(
+        editorSession,
+        knowledgeBaseIds,
+        defaultNotePageWidth.value,
+        knowledgeBaseId
+      )
     }
     knowledgeBaseEditors.value = restoredEditors
     const selectedKnowledgeBaseId =

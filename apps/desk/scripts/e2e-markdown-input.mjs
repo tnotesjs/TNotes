@@ -34,7 +34,7 @@ writeFileSync(
   `${JSON.stringify({ path: workspace }, null, 2)}\n`
 )
 writeFileSync(
-  join(profile, 'settings.json'),
+  join(profile, '.tn-desk-config.json'),
   `${JSON.stringify({ version: 1, defaultNoteView: 'visual', theme: 'light' }, null, 2)}\n`
 )
 

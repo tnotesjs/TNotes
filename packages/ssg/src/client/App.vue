@@ -49,7 +49,6 @@
 </template>
 
 <script setup lang="ts">
-import GithubSlugger from 'github-slugger'
 import MiniSearch from 'minisearch'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import ImagePreview from '@tnotesjs/ui/image-preview'
@@ -67,16 +66,7 @@ const props = defineProps<{
 
 type SearchResult = Pick<PageData, 'route' | 'title' | 'text'>
 
-/** Accept structured headings, or legacy string[] from an older ssg build. */
-const outlineHeadings = computed<PageHeading[]>(() => {
-  const slugger = new GithubSlugger()
-  return props.data.headings.map((item, index) => {
-    if (typeof item === 'string') {
-      return { text: item, level: 2, id: slugger.slug(item) || `heading-${index + 1}` }
-    }
-    return item
-  })
-})
+const outlineHeadings = computed<PageHeading[]>(() => props.data.headings)
 
 const searchOpen = ref(false)
 const searching = ref(false)

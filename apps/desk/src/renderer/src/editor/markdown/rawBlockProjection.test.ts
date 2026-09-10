@@ -85,9 +85,7 @@ describe('Milkdown raw block projection', () => {
       '```',
       '::::',
       '',
-      '<<< ./shared.md',
-      '',
-      '<EnWordList :words="[\'one\']" />',
+      '<WordList :words="[\'one\']" />',
       '',
       '<div class="note">',
       'raw html',
@@ -246,10 +244,10 @@ describe('Milkdown raw block projection', () => {
 
   it('keeps a break deletion when surrounding paragraphs also changed', async () => {
     const fill = Array.from({ length: 28 }, (_, index) => `填充段落 ${index + 1}`).join('\n\n')
-    const source = `# Block interactions\n\n顶部段落\n\n组件上方\n\n<B id="selection-e2e" />\n\n组件下方\n\n${fill}\n\n底部段落\n\n<br />\n\n<br />\n\n<br />\n`
+    const source = `# Block interactions\n\n顶部段落\n\n组件上方\n\n<BilibiliVideo id="selection-e2e" />\n\n组件下方\n\n${fill}\n\n底部段落\n\n<br />\n\n<br />\n\n<br />\n`
     const baselineEditor = await createEditor(source)
     const baseline = baselineEditor.action(getMarkdown())
-    const edited = `# Block interactions\n\n/\n\n组件上方\n\n<B id="selection-e2e" />\n\n组件下方\n\n${fill}\n\n底部段落\n\n<br />\n\n<br />\n\n/\n`
+    const edited = `# Block interactions\n\n/\n\n组件上方\n\n<BilibiliVideo id="selection-e2e" />\n\n组件下方\n\n${fill}\n\n底部段落\n\n<br />\n\n<br />\n\n/\n`
     const currentEditor = await createEditor(edited)
     const current = currentEditor.action(getMarkdown())
     const reconciled = reconcileMarkdownSource(source, baseline, current)

@@ -1,6 +1,5 @@
 /**
  * Parse / rebuild Vue-tag components used as deskRawBlock atoms.
- * Canonical full names only on rebuild; legacy tags still parse.
  */
 
 export interface ParsedBilibiliVideo {
@@ -12,9 +11,9 @@ export interface ParsedBilibiliVideo {
   trailingNewline: boolean
 }
 
-const BILIBILI_TAG = /^ {0,3}<(?<tag>BilibiliVideo|BilibiliOutsidePlayer|B)\b([^>]*)\/?\s*>\s*$/m
+const BILIBILI_TAG = /^ {0,3}<(?<tag>BilibiliVideo)\b([^>]*)\/?\s*>\s*$/m
 
-/** True when source is a Bilibili video tag (canonical or legacy). */
+/** True when source is a Bilibili video tag. */
 export function isBilibiliVideoSource(source: string): boolean {
   return BILIBILI_TAG.test(source.trim())
 }
@@ -85,9 +84,9 @@ export interface ParsedWordList {
   trailingNewline: boolean
 }
 
-const WORD_LIST_OPEN = /^ {0,3}<(?<tag>WordList|EnWordList|E)\b/m
+const WORD_LIST_OPEN = /^ {0,3}<(?<tag>WordList)\b/m
 
-/** True when source is a WordList tag (canonical or legacy). */
+/** True when source is a WordList tag. */
 export function isWordListSource(source: string): boolean {
   return WORD_LIST_OPEN.test(source.trim())
 }
@@ -148,7 +147,7 @@ export interface ParsedNotesTable {
   trailingNewline: boolean
 }
 
-const NOTES_TABLE_OPEN = /^ {0,3}<(?<tag>NotesTable|N)\b/m
+const NOTES_TABLE_OPEN = /^ {0,3}<(?<tag>NotesTable)\b/m
 
 export function isNotesTableSource(source: string): boolean {
   return NOTES_TABLE_OPEN.test(source.trim())

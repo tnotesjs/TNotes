@@ -16,8 +16,7 @@ export interface PageData {
   relativePath: string
   title: string
   description: string
-  /** Structured outline entries. Older builds may still emit plain strings. */
-  headings: Array<PageHeading | string>
+  headings: PageHeading[]
   text: string
   frontmatter: Record<string, unknown>
 }

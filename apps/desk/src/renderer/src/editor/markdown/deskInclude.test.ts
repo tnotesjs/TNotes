@@ -35,12 +35,6 @@ describe('code-group entries', () => {
     expect(serialized).toContain('```ts [b.ts]')
   })
 
-  it('ignores legacy <<< include lines (syntax removed)', () => {
-    const body = ['<<< ./demos/17/1.js', '', '```js [inline.js]', 'const x = 1', '```'].join('\n')
-    const entries = parseCodeGroupEntries(body)
-    expect(entries.map((entry) => entry.kind)).toEqual(['fence'])
-  })
-
   it('parses and rewrites fence highlight ranges', () => {
     const entries = parseCodeGroupEntries('```js {1,2,3} [demo]\nconst a = 1\n```\n')
     expect(entries[0]).toMatchObject({

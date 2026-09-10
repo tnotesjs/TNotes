@@ -26,7 +26,7 @@ writeFileSync(
 )
 // Force the visual editor view deterministically (fresh profile has no settings).
 writeFileSync(
-  join(PROFILE, 'settings.json'),
+  join(PROFILE, '.tn-desk-config.json'),
   JSON.stringify({ version: 1, defaultNoteView: 'visual', theme: 'system' }, null, 2) + '\n'
 )
 

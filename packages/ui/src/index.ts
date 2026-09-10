@@ -13,12 +13,10 @@ export {
 export type { WordListFeatures } from './components/WordList/wordListFeatures'
 export {
   normalizeMindmapMarkdown,
-  parseMindmapFence,
-  parseMindmapReference
+  parseMindmapFence
 } from './components/Mindmap/markdown'
 export type {
   MindmapFenceOptions,
-  MindmapReference,
   NormalizeMindmapOptions
 } from './components/Mindmap/markdown'
 export type { NotesTableRow } from './components/NotesTable/types'

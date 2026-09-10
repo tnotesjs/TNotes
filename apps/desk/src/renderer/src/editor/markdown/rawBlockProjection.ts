@@ -36,7 +36,6 @@ type SourceProjectedKind = Extract<
   MarkdownSourceBlockKind,
   | 'raw-frontmatter'
   | 'raw-container'
-  | 'raw-include'
   | 'raw-component'
   | 'raw-reference-definition'
   | 'raw-generated-title'
@@ -56,7 +55,6 @@ export interface ProjectedRawBlock {
 const PROJECTED_KINDS = new Set<ProjectedRawBlockKind>([
   'raw-frontmatter',
   'raw-container',
-  'raw-include',
   'raw-component',
   'raw-reference-definition',
   'raw-generated-title',
@@ -67,7 +65,7 @@ const PROJECTED_KINDS = new Set<ProjectedRawBlockKind>([
 ])
 
 const MARKER =
-  /^<!--desk-raw-block:v1:(raw-frontmatter|raw-container|raw-include|raw-component|raw-reference-definition|raw-generated-title|raw-generated-toc|raw-diagram|table|html):([01]):([A-Za-z0-9+/]*={0,2})-->$/
+  /^<!--desk-raw-block:v1:(raw-frontmatter|raw-container|raw-component|raw-reference-definition|raw-generated-title|raw-generated-toc|raw-diagram|table|html):([01]):([A-Za-z0-9+/]*={0,2})-->$/
 const REGION_COMMENT = /^ {0,3}<!--\s*(?:end)?region(?::[\s\S]*?)?\s*-->\s*$/i
 const HTML_TAG = /<\/?[A-Za-z][\w.-]*(?=[\s/>])/
 /** Standalone HTML breaks stay in the source for Milkdown's remark-preserve-empty-line. */
@@ -398,7 +396,6 @@ function rawBlockLabel(block: ProjectedRawBlock): string {
   if (block.kind === 'raw-frontmatter') return 'Frontmatter'
   if (block.kind === 'raw-generated-title') return '自动生成标题'
   if (block.kind === 'raw-generated-toc') return '自动生成目录'
-  if (block.kind === 'raw-include') return '文件引用'
   if (block.kind === 'raw-reference-definition') return '链接定义'
   if (block.kind === 'raw-diagram') {
     const lang = fenceLanguage(block.source)
@@ -780,7 +777,7 @@ export function isHiddenRawBlock(node: {
   return node.type.name === 'deskRawBlock' && node.attrs.hidden === true
 }
 
-/** Locked cards (frontmatter, includes, generated TOC, …) cannot be deleted in-place. */
+/** Locked cards (frontmatter, generated TOC, …) cannot be deleted in-place. */
 export function isImmutableRawBlock(node: {
   type: { name: string }
   attrs: Record<string, unknown>

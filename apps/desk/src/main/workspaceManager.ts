@@ -117,7 +117,6 @@ export class WorkspaceManager {
     if (persist) saveWorkspace(normalized)
     if (normalized) {
       await scan(this.scanState)
-      await this.migrateLegacyKbConventions()
       startWatchers(this.scanState, normalized)
     }
     const overview = this.getOverview()
@@ -127,59 +126,7 @@ export class WorkspaceManager {
 
   async refresh(): Promise<WorkspaceOverview> {
     await enqueueScan(this.scanState)
-    await this.migrateLegacyKbConventions()
     return this.getOverview()
-  }
-
-  /**
-   * 一次性迁移：desk 侧旧版 per-KB 的 prettier/autoPush 约定 → tnotes.json。
-   * 只补 tnotes.json 没有的键（库内已有约定优先），随后从 desk 设置清除。
-   * 库已不在工作区时仅清理 desk 侧残留。
-   */
-  private async migrateLegacyKbConventions(): Promise<void> {
-    interface LegacyKbConventions {
-      prettier?: boolean
-      autoPush?: { enabled: boolean; idleMinutes: number }
-    }
-    const settings = loadSettings()
-    const pending = Object.entries(settings.knowledgeBases)
-      .map(([id, override]) => ({ id, legacy: override as LegacyKbConventions }))
-      .filter(({ legacy }) => legacy.prettier !== undefined || legacy.autoPush !== undefined)
-    if (!pending.length) return
-
-    const knowledgeBases = { ...settings.knowledgeBases }
-    for (const { id, legacy } of pending) {
-      const { prettier, autoPush, ...rest } = legacy
-      if (Object.keys(rest).length) knowledgeBases[id] = rest
-      else delete knowledgeBases[id]
-
-      const handle = this.scanState.handles.get(id)
-      if (!handle) continue
-      const updates: { prettier?: boolean; autoPush?: { enabled: boolean; idleMinutes: number } } =
-        {}
-      if (prettier !== undefined && handle.snapshot.config.prettier === undefined) {
-        updates.prettier = prettier
-      }
-      if (autoPush !== undefined && handle.snapshot.config.autoPush === undefined) {
-        updates.autoPush = autoPush
-      }
-      if (!Object.keys(updates).length) continue
-      try {
-        const result = await handle.workspace.config.set(updates)
-        this.mutationEffects().markInternalWrites(handle.rootPath, result.changedFiles)
-        handle.snapshot = await handle.workspace.scan()
-        deskLog('workspace', 'migrated legacy kb conventions to tnotes.json', {
-          knowledgeBaseId: id,
-          keys: Object.keys(updates)
-        })
-      } catch (cause) {
-        deskLog('workspace', 'legacy kb conventions migration failed', {
-          knowledgeBaseId: id,
-          error: String(cause)
-        })
-      }
-    }
-    saveSettings({ knowledgeBases })
   }
 
   async createKnowledgeBase(

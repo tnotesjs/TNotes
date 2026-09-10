@@ -7,7 +7,6 @@ const styleNodes = new Set(['Emphasis', 'StrongEmphasis', 'Strikethrough'])
 const opaqueKinds = new Set([
   'raw-frontmatter',
   'raw-component',
-  'raw-include',
   'raw-reference-definition',
   'raw-fence',
   'indented-code',

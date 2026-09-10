@@ -63,9 +63,7 @@ describe('Markdown source preservation', () => {
       '```',
       '::::',
       '',
-      '<<< ./assets/example.md [Example]',
-      '',
-      '<EnWordList :words="[',
+      '<WordList :words="[',
       "'one',",
       "'two',]\" />",
       '',
@@ -84,13 +82,12 @@ describe('Markdown source preservation', () => {
 
     expect(document.blocks.map((block) => block.kind)).toEqual([
       'raw-container',
-      'paragraph',
       'raw-component',
       'raw-component',
       'raw-fence'
     ])
     expect(document.blocks[0].source).toContain('```ts [TypeScript]')
-    expect(document.blocks[4].source).toContain('```mermaid')
+    expect(document.blocks[3].source).toContain('```mermaid')
     expect(serializeMarkdownSource(document)).toBe(source)
   })
 
@@ -119,7 +116,7 @@ describe('Markdown source preservation', () => {
       '````',
       '::::',
       '',
-      "<EnWordList :words=\"['one', 'two']\" />",
+      "<WordList :words=\"['one', 'two']\" />",
       '',
       'Paragraph with  hard break.  ',
       ''
@@ -131,7 +128,7 @@ describe('Markdown source preservation', () => {
       '````',
       '::::',
       '',
-      "<EnWordList :words=\"['one', 'two']\" />",
+      "<WordList :words=\"['one', 'two']\" />",
       '',
       'Paragraph with hard break.',
       ''
@@ -146,7 +143,7 @@ describe('Markdown source preservation', () => {
         '````',
         '::::',
         '',
-        "<EnWordList :words=\"['one', 'two']\" />",
+        "<WordList :words=\"['one', 'two']\" />",
         '',
         'Edited paragraph.',
         ''

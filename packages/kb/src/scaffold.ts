@@ -5,18 +5,6 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-const KNOWN_OLD_SCRIPTS = new Set([
-  'tn:build',
-  'tn:create-notes',
-  'tn:dev',
-  'tn:help',
-  'tn:preview',
-  'tn:pull',
-  'tn:push',
-  'tn:update',
-  'tn:update-completed-count'
-])
-
 /** Knowledge-base gitignore. */
 export const CANONICAL_GITIGNORE = `node_modules/
 .tnotes/dist
@@ -44,12 +32,6 @@ export const CANONICAL_GITATTRIBUTES = `# Normalize text; keep notes and config 
 *.zip binary
 `
 
-export const LEFTOVER_ENGINEERING_FILES = [
-  '.prettierignore',
-  '.github/copilot-instructions.md'
-] as const
-export const LEFTOVER_ENGINEERING_DIRS = ['.vscode', 'public'] as const
-
 /** Fresh KBs need this so pnpm can install newly published @tnotesjs packages. */
 export const CANONICAL_PNPM_WORKSPACE = `allowBuilds:
   esbuild: true
@@ -63,7 +45,7 @@ minimumReleaseAgeExclude:
 export const CANONICAL_NPMRC = `@tnotesjs:registry=https://registry.npmjs.org/
 `
 
-export const MIGRATE_PACKAGE_JSON = {
+export const PACKAGE_JSON_DEPS = {
   kb: '^0.2.1',
   ssg: '^0.1.5'
 } as const
@@ -131,45 +113,22 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-  # notify:
-  #   needs: deploy
-  #   runs-on: ubuntu-latest
-  #   name: Notify TNotes
-  #   steps:
-  #     - name: Trigger root repo collect
-  #       run: |
-  #         curl -s -X POST \\
-  #           -H "Accept: application/vnd.github.v3+json" \\
-  #           -H "Authorization: token \${{ secrets.TNOTES_DISPATCH_TOKEN }}" \\
-  #           https://api.github.com/repos/tnotesjs/TNotes/dispatches \\
-  #           -d '{"event_type":"sub_repo_updated","client_payload":{"repo":"\${{ github.event.repository.name }}"}}'
+  notify:
+    needs: deploy
+    runs-on: ubuntu-latest
+    name: Notify TNotes
+    steps:
+      - name: Trigger root repo collect
+        run: |
+          curl -sf --max-time 15 -X POST \\
+            -H "Accept: application/vnd.github+json" \\
+            -H "X-GitHub-Api-Version: 2022-11-28" \\
+            -H "Authorization: Bearer \${{ secrets.TNOTES_DISPATCH_TOKEN }}" \\
+            https://api.github.com/repos/tnotesjs/TNotes/dispatches \\
+            -d '{"event_type":"sub_repo_updated","client_payload":{"repo":"\${{ github.event.repository.name }}","sha":"\${{ github.sha }}"}}'
 `
 
-function asRecord(value: unknown): Record<string, unknown> | null {
-  if (value && typeof value === 'object' && !Array.isArray(value)) {
-    return value as Record<string, unknown>
-  }
-  return null
-}
-
-/** Keep non-tnotes scripts from the old package.json. */
-export function extraPackageScripts(
-  oldPackage: Record<string, unknown> | null
-): Record<string, string> {
-  const scripts = asRecord(oldPackage?.scripts)
-  if (!scripts) return {}
-  const extra: Record<string, string> = {}
-  for (const [name, command] of Object.entries(scripts)) {
-    if (KNOWN_OLD_SCRIPTS.has(name)) continue
-    if (typeof command === 'string' && command.trim()) extra[name] = command
-  }
-  return extra
-}
-
-export function buildMigratedPackageJson(
-  oldPackage: Record<string, unknown> | null
-): Record<string, unknown> {
-  const extraScripts = extraPackageScripts(oldPackage)
+export function buildPackageJson(name?: string): Record<string, unknown> {
   const pkg: Record<string, unknown> = {
     private: true,
     type: 'module',
@@ -177,28 +136,18 @@ export function buildMigratedPackageJson(
       'tn:update': 'tnotes-kb update',
       'tn:build': 'tnotes-ssg build',
       'tn:dev': 'tnotes-ssg dev',
-      'tn:preview': 'tnotes-ssg preview',
-      ...extraScripts
+      'tn:preview': 'tnotes-ssg preview'
     },
     devDependencies: {
-      '@tnotesjs/kb': MIGRATE_PACKAGE_JSON.kb,
-      '@tnotesjs/ssg': MIGRATE_PACKAGE_JSON.ssg
+      '@tnotesjs/kb': PACKAGE_JSON_DEPS.kb,
+      '@tnotesjs/ssg': PACKAGE_JSON_DEPS.ssg
     },
     packageManager: 'pnpm@11.10.0',
     engines: { node: '>=22' }
   }
-  const name = typeof oldPackage?.name === 'string' ? oldPackage.name.trim() : ''
-  if (name) pkg.name = name
+  const trimmed = name?.trim()
+  if (trimmed) pkg.name = trimmed
   return pkg
-}
-
-export async function removeLeftoverEngineering(rootPath: string): Promise<void> {
-  for (const name of LEFTOVER_ENGINEERING_FILES) {
-    await fs.rm(path.join(rootPath, name), { force: true })
-  }
-  for (const name of LEFTOVER_ENGINEERING_DIRS) {
-    await fs.rm(path.join(rootPath, name), { recursive: true, force: true })
-  }
 }
 
 export function buildRootReadme(title: string, folderName: string): string {
@@ -211,12 +160,12 @@ export function buildRootReadme(title: string, folderName: string): string {
 
 export async function writePackageJsonScaffold(
   rootPath: string,
-  oldPackage: Record<string, unknown> | null = null
+  name?: string
 ): Promise<string[]> {
   const written: string[] = []
   await fs.writeFile(
     path.join(rootPath, 'package.json'),
-    `${JSON.stringify(buildMigratedPackageJson(oldPackage), null, 2)}\n`
+    `${JSON.stringify(buildPackageJson(name), null, 2)}\n`
   )
   written.push('package.json')
   await fs.writeFile(path.join(rootPath, 'pnpm-workspace.yaml'), CANONICAL_PNPM_WORKSPACE)
@@ -231,24 +180,4 @@ export async function writeDeployWorkflowScaffold(rootPath: string): Promise<str
   await fs.mkdir(path.dirname(workflowPath), { recursive: true })
   await fs.writeFile(workflowPath, DEPLOY_WORKFLOW)
   return ['.github/workflows/deploy.yml']
-}
-
-export async function writeMigratedScaffold(
-  rootPath: string,
-  oldPackage: Record<string, unknown> | null
-): Promise<string[]> {
-  const written: string[] = []
-
-  written.push(...(await writePackageJsonScaffold(rootPath, oldPackage)))
-  written.push(...(await writeDeployWorkflowScaffold(rootPath)))
-
-  await fs.writeFile(path.join(rootPath, '.gitignore'), CANONICAL_GITIGNORE)
-  written.push('.gitignore')
-
-  await fs.writeFile(path.join(rootPath, '.gitattributes'), CANONICAL_GITATTRIBUTES)
-  written.push('.gitattributes')
-
-  await removeLeftoverEngineering(rootPath)
-
-  return written
 }

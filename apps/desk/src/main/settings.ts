@@ -12,17 +12,7 @@ import {
 import type { AppSettings, KnowledgeBaseSettings } from '../shared/contracts'
 
 const knowledgeBaseSettingsSchema = z.object({
-  hidden: z.boolean().optional(),
-  // 旧版 per-KB 约定：已迁至 tnotes.json（库级约定）。保留在 schema 中仅为
-  // 让 loadSettings 不剥掉它们，供 workspaceManager 的迁移逻辑读取；
-  // 迁移完成后这些键会从设置文件中清除。
-  prettier: z.boolean().optional(),
-  autoPush: z
-    .object({
-      enabled: z.boolean(),
-      idleMinutes: z.number().int().min(1).max(1440)
-    })
-    .optional()
+  hidden: z.boolean().optional()
 })
 
 const settingsSchema = z.object({
@@ -123,14 +113,6 @@ function settingsPath(): string {
   return join(dir, '.tn-desk-config.json')
 }
 
-function legacySettingsPath(): string {
-  return join(app.getPath('userData'), 'settings.json')
-}
-
-function legacyV1SettingsPath(): string {
-  return join(app.getPath('userData'), 'settings.v1.json')
-}
-
 function uniqueSorted(values: string[]): string[] {
   return [...new Set(values.map((value) => value.trim()).filter(Boolean))].sort((left, right) =>
     left.localeCompare(right)
@@ -148,17 +130,7 @@ function normalizeKnowledgeBaseSettings(
 }
 
 function normalize(input: unknown): AppSettings {
-  // Preserve a zoom value saved while the earlier note-only implementation was in use.
-  const raw = input && typeof input === 'object' ? (input as Record<string, unknown>) : null
-  const parsed = settingsSchema.parse(
-    raw
-      ? {
-          ...raw,
-          appZoomPercent:
-            raw.appZoomPercent === undefined ? raw.noteZoomPercent : raw.appZoomPercent
-        }
-      : input
-  )
+  const parsed = settingsSchema.parse(input)
   return {
     ...parsed,
     hiddenKnowledgeBases: uniqueSorted(parsed.hiddenKnowledgeBases),
@@ -166,34 +138,11 @@ function normalize(input: unknown): AppSettings {
   }
 }
 
-function readLegacyHiddenNames(): string[] {
-  try {
-    const legacy = JSON.parse(readFileSync(legacySettingsPath(), 'utf8')) as {
-      blacklist?: unknown
-    }
-    return Array.isArray(legacy.blacklist)
-      ? legacy.blacklist.filter((item): item is string => typeof item === 'string')
-      : []
-  } catch {
-    return []
-  }
-}
-
 export function loadSettings(): AppSettings {
   try {
     return normalize(JSON.parse(readFileSync(settingsPath(), 'utf8')))
   } catch {
-    try {
-      const migrated = normalize(JSON.parse(readFileSync(legacyV1SettingsPath(), 'utf8')))
-      writeSettingsFile(migrated)
-      return migrated
-    } catch {
-      const legacyHidden = readLegacyHiddenNames()
-      return {
-        ...DEFAULT_SETTINGS,
-        hiddenKnowledgeBases: uniqueSorted(legacyHidden)
-      }
-    }
+    return { ...DEFAULT_SETTINGS }
   }
 }
 

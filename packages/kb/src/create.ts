@@ -139,9 +139,7 @@ export async function createKnowledgeBase(
 
   if (wantPackageJson) {
     extras.push(
-      ...(await writePackageJsonScaffold(rootPath, {
-        name: folderName
-      }))
+      ...(await writePackageJsonScaffold(rootPath, folderName))
     )
   }
   if (wantPages) {

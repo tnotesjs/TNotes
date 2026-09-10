@@ -31,7 +31,7 @@ describe('isEmptyRawBlockSource', () => {
   })
 
   it('requires full clear for components and diagram fences', () => {
-    expect(isEmptyRawBlockSource('<N :ids="[\n  \'\',\n]" />\n')).toBe(false)
+    expect(isEmptyRawBlockSource('<NotesTable :ids="[\n  \'\',\n]" />\n')).toBe(false)
     expect(isEmptyRawBlockSource('```mermaid\n\n```\n')).toBe(false)
     expect(isEmptyRawBlockSource('```mindmap\n\n```\n')).toBe(false)
   })

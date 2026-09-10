@@ -5,14 +5,14 @@ import { parseGitStatus } from './gitManager'
 describe('Git porcelain parser', () => {
   it('parses tracked, untracked, renamed and conflicted paths', () => {
     const result = parseGitStatus(
-      ' M notes/0001/README.md\0?? notes/0001/assets/new.png\0R  notes/0002/README.md\0notes/old/README.md\0UU TOC.md\0'
+      ' M notes/0001. 标题.md\0?? assets/new.png\0R  notes/0002. 新.md\0notes/0002. 旧.md\0UU TOC.md\0'
     )
     expect(result).toMatchObject([
-      { path: 'notes/0001/README.md', status: 'modified', worktree: true },
-      { path: 'notes/0001/assets/new.png', status: 'untracked' },
+      { path: 'notes/0001. 标题.md', status: 'modified', worktree: true },
+      { path: 'assets/new.png', status: 'untracked' },
       {
-        path: 'notes/0002/README.md',
-        previousPath: 'notes/old/README.md',
+        path: 'notes/0002. 新.md',
+        previousPath: 'notes/0002. 旧.md',
         status: 'renamed',
         staged: true
       },

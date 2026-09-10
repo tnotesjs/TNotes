@@ -5,11 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useEditorStore } from './editor'
 
-import type {
-  AppSettings,
-  KnowledgeBaseDescriptor,
-  WorkspaceSession
-} from '../../../shared/contracts'
+import type { AppSettings, KnowledgeBaseDescriptor } from '../../../shared/contracts'
 
 const settings: AppSettings = {
   version: 1,
@@ -232,62 +228,4 @@ describe('editor store tab semantics', () => {
     expect(editor.activeTab).toMatchObject({ type: 'note', noteUuid: 'note-b' })
   })
 
-  it('migrates legacy mixed tabs and assigns web tabs to the selected knowledge base', () => {
-    const legacySession = {
-      version: 1,
-      selectedKnowledgeBaseId: knowledgeBase.id,
-      layout: {
-        type: 'group',
-        id: 'legacy-group',
-        activeTabId: 'web-a',
-        tabs: [
-          {
-            id: 'note-a',
-            type: 'note',
-            knowledgeBaseId: knowledgeBase.id,
-            knowledgeBaseName: knowledgeBase.displayName,
-            noteUuid: 'note-a',
-            title: 'A',
-            icon: null,
-            viewMode: 'visual',
-            pageWidth: 'standard'
-          },
-          {
-            id: 'react-a',
-            type: 'note',
-            knowledgeBaseId: otherKnowledgeBase.id,
-            knowledgeBaseName: otherKnowledgeBase.displayName,
-            noteUuid: 'react-a',
-            title: 'React A',
-            icon: null,
-            viewMode: 'visual',
-            pageWidth: 'standard'
-          },
-          {
-            id: 'web-a',
-            type: 'web',
-            url: 'https://example.com',
-            title: 'Example'
-          }
-        ]
-      },
-      activeGroupId: 'legacy-group',
-      knowledgeSidebarWidth: 218,
-      navigatorSidebarWidth: 292,
-      knowledgeSidebarCollapsed: false,
-      navigatorSidebarCollapsed: false,
-      expandedTocNodes: {}
-    } as unknown as WorkspaceSession
-    const editor = useEditorStore()
-    editor.configure(settings)
-
-    editor.restore(legacySession, [knowledgeBase, otherKnowledgeBase])
-    expect(editor.groups.flatMap((group) => group.tabs).map((tab) => tab.id)).toEqual([
-      'note-a',
-      'web-a'
-    ])
-
-    editor.switchKnowledgeBase(otherKnowledgeBase.id, new Set(['react-a']))
-    expect(editor.groups.flatMap((group) => group.tabs).map((tab) => tab.id)).toEqual(['react-a'])
-  })
 })

@@ -12,10 +12,6 @@ function statePath(): string {
   return join(dir, 'workspace.v1.json')
 }
 
-function legacyStatePath(): string {
-  return join(app.getPath('userData'), 'workspace.json')
-}
-
 function readState(filePath: string): WorkspaceState | null {
   try {
     const data = JSON.parse(readFileSync(filePath, 'utf8')) as WorkspaceState
@@ -28,7 +24,7 @@ function readState(filePath: string): WorkspaceState | null {
 }
 
 export function loadWorkspace(): WorkspaceState {
-  return readState(statePath()) ?? readState(legacyStatePath()) ?? { path: null }
+  return readState(statePath()) ?? { path: null }
 }
 
 export function saveWorkspace(path: string | null): WorkspaceState {

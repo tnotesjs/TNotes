@@ -41,7 +41,6 @@ export function registerTNotesComponents(
   for (const [name, component] of Object.entries({
     Badge,
     BilibiliVideo,
-    BilibiliOutsidePlayer: BilibiliVideo,
     CodeBlock,
     CodeGroup,
     Discussions,
@@ -49,11 +48,9 @@ export function registerTNotesComponents(
     ImagePreview,
     Mermaid,
     Mindmap,
-    MindmapPreview: Mindmap,
     NotesTable: NotesTableAdapter,
     SidebarCard,
-    WordList,
-    EnWordList: WordList
+    WordList
   })) {
     app.component(name, component as Component)
   }

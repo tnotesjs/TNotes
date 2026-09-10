@@ -9,7 +9,7 @@ import {
 } from './componentBody'
 
 describe('bilibili video source', () => {
-  it('parses canonical and legacy tags', () => {
+  it('parses the canonical tag', () => {
     expect(parseBilibiliVideoSource('<BilibiliVideo id="BV1a" />\n')).toEqual({
       name: 'BilibiliVideo',
       id: 'BV1a',
@@ -17,11 +17,8 @@ describe('bilibili video source', () => {
       muted: false,
       trailingNewline: true
     })
-    expect(parseBilibiliVideoSource('<BilibiliOutsidePlayer id="BV1b" />')).toMatchObject({
-      id: 'BV1b',
-      autoplay: false
-    })
-    expect(parseBilibiliVideoSource('<B id="BV1c" />')).toMatchObject({ id: 'BV1c' })
+    expect(parseBilibiliVideoSource('<BilibiliOutsidePlayer id="BV1b" />')).toBe(null)
+    expect(parseBilibiliVideoSource('<B id="BV1c" />')).toBe(null)
   })
 
   it('parses autoplay and muted flags', () => {
@@ -48,7 +45,7 @@ describe('bilibili video source', () => {
 })
 
 describe('word list source', () => {
-  it('parses canonical and legacy tags', () => {
+  it('parses the canonical tag', () => {
     expect(parseWordListSource(`<WordList :words="['a', 'b']" />\n`)).toEqual({
       name: 'WordList',
       words: ['a', 'b'],
@@ -56,12 +53,15 @@ describe('word list source', () => {
       trailingNewline: true
     })
     expect(
-      parseWordListSource(`<EnWordList :words="[\n'cancel',\n]" :needSort="true" />`)
+      parseWordListSource(`<WordList :words="[\n'cancel',\n]" :needSort="true" />`)
     ).toMatchObject({
       words: ['cancel'],
       needSort: true
     })
-    expect(parseWordListSource(`<E :words="['x']" />`)).toMatchObject({ words: ['x'] })
+    expect(
+      parseWordListSource(`<EnWordList :words="[\n'cancel',\n]" :needSort="true" />`)
+    ).toBe(null)
+    expect(parseWordListSource(`<E :words="['x']" />`)).toBe(null)
   })
 
   it('rebuilds canonical multiline words', () => {

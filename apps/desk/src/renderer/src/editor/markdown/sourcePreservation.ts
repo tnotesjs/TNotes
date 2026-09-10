@@ -12,7 +12,6 @@ export type MarkdownSourceBlockKind =
   | 'indented-code'
   | 'raw-frontmatter'
   | 'raw-container'
-  | 'raw-include'
   | 'raw-component'
   | 'raw-reference-definition'
   | 'raw-generated-title'

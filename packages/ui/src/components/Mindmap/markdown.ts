@@ -3,11 +3,6 @@ export interface MindmapFenceOptions {
   initialExpandLevel?: number
 }
 
-export interface MindmapReference {
-  path: string
-  title?: string
-}
-
 function cleanHeadingText(value: string): string {
   return value
     .trim()
@@ -35,23 +30,6 @@ export function parseMindmapFence(openLine: string): MindmapFenceOptions | null 
     options.initialExpandLevel = Math.max(1, Number(rest))
   }
   return options
-}
-
-/** @deprecated Mindmap fences no longer resolve `<<<` includes; kept for body-include parsers / tests. */
-export function parseMindmapReference(line: string): MindmapReference | null {
-  const match = line.trim().match(/^<<<\s+(.+?)\s*$/)
-  if (!match) return null
-
-  let rest = match[1].trim()
-  let title: string | undefined
-  const titleMatch = rest.match(/\s+\[([^\]]+)\]\s*$/)
-  if (titleMatch) {
-    title = cleanHeadingText(titleMatch[1]) || undefined
-    rest = rest.slice(0, titleMatch.index).trim()
-  }
-
-  const path = rest.replace(/^(?:"([\s\S]*)"|'([\s\S]*)')$/, '$1$2').trim()
-  return path ? { path, title } : null
 }
 
 export interface NormalizeMindmapOptions {
