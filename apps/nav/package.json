@@ -1,0 +1,101 @@
+{
+  "name": "tnotes-nav",
+  "displayName": "TNotes Nav",
+  "description": "Local TNotes knowledge-base navigator for VS Code",
+  "version": "0.2.1",
+  "publisher": "tnotesjs",
+  "license": "MIT",
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#1e1e1e",
+    "theme": "dark"
+  },
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "tnotes",
+    "notes",
+    "toc",
+    "knowledge-base",
+    "markdown"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "tnotes-nav",
+          "title": "TNotes Nav",
+          "icon": "media/nav.svg"
+        }
+      ]
+    },
+    "views": {
+      "tnotes-nav": [
+        {
+          "type": "webview",
+          "id": "tnotesNav.panel",
+          "name": "TNotes Nav"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "tnotesNav.refresh",
+        "title": "TNotes Nav: Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "tnotesNav.openWorkspaceFolder",
+        "title": "TNotes Nav: Open Workspace Folder"
+      }
+    ],
+    "configuration": {
+      "title": "TNotes Nav",
+      "properties": {
+        "tnotesNav.rootPath": {
+          "type": "string",
+          "default": "",
+          "description": "TNotes 扫描根目录。留空则使用当前打开的文件夹；也可在面板地址栏修改后点刷新。"
+        },
+        "tnotesNav.blacklist": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "In multi-KB mode, knowledge base folder names to hide from the list."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap",
+    "watch": "npm run build -- --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "package": "npm run typecheck && vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@tnotesjs/kb": "^0.4.0",
+    "@types/node": "^22.10.0",
+    "@types/vscode": "^1.96.0",
+    "@vscode/vsce": "^3.2.2",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.7.2"
+  },
+  "packageManager": "pnpm@10.17.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tnotesjs/nav.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tnotesjs/nav/issues"
+  },
+  "homepage": "https://github.com/tnotesjs/nav#readme"
+}

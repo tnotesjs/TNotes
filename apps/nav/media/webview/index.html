@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="{{csp}}" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="{{cssUri}}" />
+  </head>
+  <body>
+    <div id="shell">
+      <div id="path-bar" class="path-bar">
+        <input
+          id="path-input"
+          class="path-input"
+          type="text"
+          spellcheck="false"
+          autocomplete="off"
+          aria-label="根目录路径"
+          placeholder="扫描根目录路径"
+        />
+        <button id="path-refresh" class="path-refresh" type="button" title="刷新">
+          <span class="codicon" aria-hidden="true">↻</span>
+        </button>
+      </div>
+      <div id="app">
+        <div id="left" class="pane pane-left">
+          <ul id="kb-list" class="kb-list"></ul>
+        </div>
+        <div id="splitter" class="splitter" role="separator" aria-orientation="vertical"></div>
+        <div id="right" class="pane pane-right">
+          <div id="toc-body" class="toc-body"></div>
+        </div>
+      </div>
+    </div>
+    <script src="{{jsUri}}"></script>
+  </body>
+</html>
