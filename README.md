@@ -17,7 +17,7 @@ TNotes 生态系统全部代码包的 monorepo（pnpm workspace）。
 
 ## 约定
 
-- 内部依赖一律 `workspace:*`，发布时由 pnpm 自动改写为真实版本号。
+- 内部依赖一律 `workspace:^`，发布时由 pnpm 自动改写为 caret 范围（如 `^0.4.2`）。
 - tag 格式 `<目录名>@<版本>`（如 `kb@0.4.2`、`desk@0.5.1`）；desk 推 tag 触发 8 平台 Release。
 - npm 发布：`pnpm -r --filter='./packages/*' publish --no-git-checks`（拓扑序：mindmap-core / kb → ui → ssg）。
 - Node >= 22，pnpm 11.10.0（corepack 锁定）。

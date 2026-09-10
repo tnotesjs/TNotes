@@ -27,10 +27,6 @@ pnpm check
 code --install-extension ./tnotes-mindmap-vscode-0.1.0.vsix
 ```
 
-## 仓库关系
+文档模型、会话、布局和 Canvas 通过 `@tnotesjs/mindmap-core` 消费；VSCode Webview 使用的 Vue 编辑组件在 `src/ui`。
 
-插件已从 `mindmap-web` 抽离为独立仓库。文档模型、会话、布局和 Canvas 通过 `@tnotesjs/mindmap-core` 消费；VSCode Webview 使用的 Vue 编辑组件保留在本仓库的 `src/ui` 中，便于插件独立构建和发布。
-
-后续如果 Web 与 VSCode 的 UI 同步成本上升，再将纯 Vue 编辑层抽成独立共享包；平台特有的文件系统、Webview 和应用壳逻辑继续留在各自仓库。
-
-更多设计说明见 [docs/DESIGN.md](docs/DESIGN.md)，自动化与人工验收记录见 [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md)。
+更多设计说明见 [docs/DESIGN.md](docs/DESIGN.md)。

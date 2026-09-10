@@ -59,7 +59,7 @@ function failResult(e: unknown): GitCommandResult {
   return { ok: false, stdout, stderr, error, message: null }
 }
 
-/** Same style as @tnotesjs/core GitService.generateCommitMessage */
+/** `📝 Update notes - YYYY-MM-DD HH:MM:SS` */
 export function generateCommitMessage(): string {
   const now = new Date()
   const date = now.toISOString().split('T')[0]

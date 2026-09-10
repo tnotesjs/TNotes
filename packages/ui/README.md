@@ -2,7 +2,7 @@
 
 Shared Vue UI for TNotes built-in blocks. Consumed by:
 
-- `@tnotesjs/core` VitePress theme (`tn:dev`)
+- `@tnotesjs/ssg` (static sites / `tnotes-ssg dev`)
 - TNotes Desk (Electron visual editor)
 
 ## Package rules
@@ -22,31 +22,23 @@ Requires `vue` `^3.5` (peer).
 
 ## Local development
 
-Sibling checkouts under `tnotesjs/` (optional `file:` while iterating):
-
-```text
-tnotesjs/ui
-tnotesjs/core   # production: "@tnotesjs/ui": "^0.1.0"
-tnotesjs/desk   # production: "@tnotesjs/ui": "^0.1.0"
-```
+From the monorepo root:
 
 ```bash
-cd ui && pnpm install
-cd ../core && pnpm install
-cd ../desk && pnpm install
+pnpm install
+pnpm --filter @tnotesjs/ui test
+pnpm --filter @tnotesjs/ui build
 ```
-
-Published packages should depend on the npm version of `@tnotesjs/ui`, not `file:../ui`.
 
 ## Components
 
 ### Shared rendering contract
 
-Core and Desk import the same token, prose, code-block, and code-group implementation. The
-`SHARED_CODE_GROUP_CONTRACT` fixture is exercised in both repositories' CI suites so changes to
+SSG and Desk import the same token, prose, code-block, and code-group implementation. The
+`SHARED_CODE_GROUP_CONTRACT` fixture is exercised in workspace CI so changes to
 fence metadata, line numbering, titles, or generated markup cannot drift silently.
 
-| Syntax / capability                                       | Core page                              | Desk visual edit                                        | Desk read-only        | Desk source        |
+| Syntax / capability                                       | SSG page                               | Desk visual edit                                        | Desk read-only        | Desk source        |
 | --------------------------------------------------------- | -------------------------------------- | ------------------------------------------------------- | --------------------- | ------------------ |
 | Markdown prose (headings, links, lists, tables, quotes)   | Shared `prose.css`                     | Shared typography + editor hit areas                    | Shared `prose.css`    | Canonical Markdown |
 | Fenced code + lazy Shiki language loading                 | Shared                                 | Shared in code-group previews; CodeMirror while editing | Shared                | Byte-preserved     |
@@ -55,7 +47,7 @@ fence metadata, line numbering, titles, or generated markup cannot drift silentl
 | `{N}` fence line highlights                               | Yes                                    | Yes (CodeMirror)                                        | Yes                   | Byte-preserved     |
 | Shiki `[!code]` annotations                               | No (aligned with Desk)                 | No                                                      | No                    | Shown as source    |
 | Inline `<Badge>`                                          | Shared `Badge`                         | Shared inline projection                                | Shared                | Byte-preserved     |
-| `NotesTable`                                              | Shared component via Core data adapter | Shared component projection                             | Shared                | Byte-preserved     |
+| `NotesTable`                                              | Shared component via host data adapter | Shared component projection                             | Shared                | Byte-preserved     |
 | Math                                                      | TNotes SSG MathJax pipeline            | Milkdown/KaTeX                                          | Milkdown/KaTeX        | Byte-preserved     |
 | Image lightbox, navigation, zoom, and pan                 | Shared `ImagePreview`                  | Shared `ImagePreview`                                   | Shared `ImagePreview` | N/A                |
 | Mermaid / Mindmap / Footprints / BilibiliVideo / WordList | Shared                                 | Shared projection                                       | Shared                | Byte-preserved     |
@@ -98,12 +90,12 @@ not redefine the shared color tokens, prose typography, or code rendering shell.
 
 ### `Mermaid`
 
-Shared diagram preview for core (`tn:dev`) and Desk. Markdown fence language: `mermaid`.
+Shared diagram preview for SSG and Desk. Markdown fence language: `mermaid`.
 
 | Prop                 | Default   | Notes                                            |
 | -------------------- | --------- | ------------------------------------------------ |
 | `source`             | `''`      | Plain Mermaid text (Desk)                        |
-| `graph`              | `''`      | URI-encoded source (VitePress fence)             |
+| `graph`              | `''`      | URI-encoded source (SSG fence)                   |
 | `id`                 | auto      | Mermaid render id                                |
 | `center`             | `false`   | From fence keyword `center`; omit → not centered |
 | `isDark`             | auto      | Or pass explicitly                               |

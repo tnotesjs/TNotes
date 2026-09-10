@@ -1,13 +1,13 @@
 # Desk 开发上下文（给 Agent 的交接文档）
 
-> 跨设备交接用短快照。不要往本仓库堆逐条 bug 笔记（旧 `docs/todos/` 已移除，避免污染 Agent 上下文）。进行中事项写进本文件或当面说明即可；细节以代码与 git 历史为准。
+> 跨设备交接用短快照。进行中事项写进本文件或当面说明即可；细节以代码与 git 历史为准。
 
 ## 项目快照
 
 - 定位：TNotes 本地优先桌面客户端（Electron + Vue 3 + TypeScript）。
 - 编辑器：`@milkdown/crepe`（可视化）+ 独立 CodeMirror 6 源码编辑器。
-- Core：依赖 NPM 发布的 `@tnotesjs/core`，不同级 Core 源码；Core 联动按「Core 发布 → Desk 锁版本 → Desk 验证」。
-- 验证门禁：`pnpm lint && pnpm test && pnpm typecheck && pnpm build && pnpm exec prettier --check .`
+- 知识库读写：workspace 内 `@tnotesjs/kb`；站点预览走 `@tnotesjs/ssg`；共享块走 `@tnotesjs/ui`。
+- 验证门禁（在 `apps/desk` 下，或 root `pnpm --filter desk`）：`pnpm lint && pnpm test && pnpm typecheck && pnpm build && pnpm exec prettier --check .`
 - Dev：`pnpm dev`（Electron + Vite）。运行态 UI 优先用仓库内 Playwright Electron E2E（`scripts/e2e-*.mjs`，验的是 `out/`，改完需先 `pnpm exec electron-vite build`）。
 
 ## 关键决策（勿回退）
@@ -19,5 +19,5 @@
 
 ## 环境
 
-- 测试知识库：`desk/playground` 下各 TNotes.* 知识库。
+- 测试知识库：`apps/desk/playground` 下各 TNotes.* 知识库。
 - Node 22 / pnpm 11（本机可能更高版本）。

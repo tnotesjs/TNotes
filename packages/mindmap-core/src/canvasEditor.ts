@@ -226,7 +226,7 @@ export class CanvasEditor {
     window.addEventListener('pointermove', this.onPointerMove)
     window.addEventListener('pointerup', this.onPointerUp)
     window.addEventListener('resize', this.onViewportResize)
-    // Nested editors (Desk / VitePress) scroll ancestors; keep fixed chrome glued to the canvas.
+    // Nested editors (Desk / SSG) scroll ancestors; keep fixed chrome glued to the canvas.
     document.addEventListener('scroll', this.onViewportResize, true)
 
     session.on('change', this.onSessionChange)

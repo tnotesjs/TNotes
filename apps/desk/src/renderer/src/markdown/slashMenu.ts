@@ -1,7 +1,7 @@
 /**
  * src/renderer/src/markdown/slashMenu.ts
  *
- * 0005：扩展 Crepe 斜杠菜单，加入 VitePress 扩展语法与 Core 组件。
+ * 扩展 Crepe 斜杠菜单，加入 TNotes 容器语法与 UI 组件。
  *
  * - 只扩展 Crepe 现有的 BlockEdit 斜杠菜单（`buildMenu`），不另做右键。
  * - 每项：展示名 + 搜索词（多对一）+ 插入用的 insert 字符串。

@@ -7,7 +7,7 @@
 ## 分层
 
 - `@tnotesjs/mindmap-core`：解析、文档模型、会话、布局与 Canvas 编辑器。
-- Vue 编辑组件：位于本仓库 `src/ui`，与 VSCode Webview 一起独立构建。
+- Vue 编辑组件：位于本包 `src/ui`，与 VSCode Webview 一起独立构建。
 - WebView Host：管理视图状态、格式合法性、搜索、图片粘贴和编辑消息。
 - Extension Host：通过 `CustomTextEditorProvider` 对接 `TextDocument`、`WorkspaceEdit`、`workspace.fs` 和本地资源 URI。
 
@@ -34,4 +34,4 @@ WebView 只在消息传输中临时使用 base64，Markdown 永不存储 base64�
 
 ## 与 Web 版同步
 
-`mindmap-web` 和本插件都依赖 `@tnotesjs/mindmap-core`，核心数据与 Canvas 行为不在 UI 仓库里分叉。当 Web 版的 Vue 交互组件有需要同步的修改时，应将对应变更同步到本仓库并同时运行两端回归；后续可根据维护成本再抽离独立 UI 包。
+`apps/mindmap-web` 和本插件都依赖 `@tnotesjs/mindmap-core`。当 Web 版的 Vue 交互组件有需要同步的修改时，应将对应变更同步到本包并同时运行两端回归。

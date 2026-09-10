@@ -48,7 +48,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # desk 以 workspace:* 消费 kb/ssg/ui/mindmap-core，需先构建出 dist
+      # desk 以 workspace:^ 消费 kb/ssg/ui/mindmap-core，需先构建出 dist
       - name: Build workspace dependencies
         run: pnpm --filter 'desk^...' --if-present run build
 

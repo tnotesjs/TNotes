@@ -2,7 +2,7 @@
 
 极简思维导图 Web 应用，交互复刻幕布。**数据即 Markdown**：一个 `.md` 文件 = 一张脑图，脑图格式文件约定命名为 `*.tn-mindmap.md`。
 
-在线体验：<https://tnotesjs.github.io/mindmap-web/>
+在线体验：<https://tnotesjs.github.io/tnotesjs/>
 
 ## 开发
 
@@ -26,8 +26,6 @@ pnpm build      # 生产构建
 通用：Cmd/Ctrl+F 打开当前文档搜索结果视图（从脑图触发时自动切换到大纲结果视图，结果复用同一富文本编辑面，可直接编辑，并支持替换 / 全部替换）；头部提供相对于当前聚焦根主题的“全部主题 / 1 级 / 2 级 / 3 级”快速折叠菜单，其中“全部主题”递归处理当前子树，Cmd/Ctrl+Alt+1/2/3 切换对应层级，Cmd/Ctrl+Alt+Shift+`.` 切换全部主题；进入任意主题后展示不截断的完整真实祖先路径，悬停任一级可从同层主题菜单快速切换，长路径保持单行并自动横向滚到当前主题；明暗色跟随系统。
 
 行内方言与快捷键：`**粗体**`（Cmd/Ctrl+B）、`*斜体*`（Cmd/Ctrl+I）、`***粗斜体***`、`<u>下划线</u>`（Cmd/Ctrl+U）、`~~删除线~~`（选中文字后 Cmd/Ctrl+Enter）、`==高亮==`、`` `行内代码` ``（Cmd/Ctrl+E）、`[链接](url)`（Cmd/Ctrl+K），Cmd/Ctrl+Shift+L 添加 / 取消待办，Cmd/Ctrl+`\\` 清除样式。光标停在节点内且没有文字选区时，格式快捷键作用于整个节点。高亮与行内代码在同一段文字上互斥；图片入口为 Alt/Option+Enter。
-
-当前桌面端自动化基线（2026-08-20）：Web 侧 12 个测试文件、75 项测试，Core 侧 10 个测试文件、146 项测试，合计 221 项全部通过；两侧的类型检查、lint 与构建均通过。现阶段继续优先验收最新版 Chrome 的桌面编辑体验；桌面端交互验收完成后，再启动移动端 / 小屏适配并主动提醒进入下一阶段。
 
 ## 脑图格式（`*.tn-mindmap.md`）
 
@@ -69,6 +67,4 @@ src/
 
 性能设计：Core 布局 O(n)（实测千级 < 100ms）；Canvas 每帧只画视口内元素（恒定 < 200 个）；大纲万级虚拟滚动；文本测量走 canvas `measureText`。
 
-## 演进
-
-`mindmap-core` 已抽离并以 `@tnotesjs/mindmap-core` 发布。后续由 mindmap-web、`@tnotesjs/core`（VitePress MarkMap 组件）与 `mindmap-vscode`（Custom Editor，`filenamePattern: "*.tn-mindmap.md"`）共同依赖，平台特有的文件系统和 UI 能力留在各消费端。
+消费方：本应用、`apps/mindmap-vscode`（Custom Editor，`filenamePattern: "*.tn-mindmap.md"`）、`@tnotesjs/ssg` 只读渲染。平台特有的文件系统和 UI 能力留在各消费端。

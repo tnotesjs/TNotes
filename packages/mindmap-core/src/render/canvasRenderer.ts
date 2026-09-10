@@ -103,7 +103,7 @@ interface CanvasTheme {
 
 /**
  * `auto` keeps the standalone editor backward compatible by following the OS.
- * Embedders such as VitePress should pass an explicit light/dark value instead.
+ * Embedders such as SSG should pass an explicit light/dark value instead.
  */
 export type CanvasThemeMode = 'auto' | 'light' | 'dark'
 

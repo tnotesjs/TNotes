@@ -1,5 +1,5 @@
 /**
- * Engineering-file drafts written at the end of a legacy-kb migration.
+ * Engineering-file drafts for a new knowledge base (package.json, deploy.yml, gitignore).
  */
 
 import fs from 'node:fs/promises'
@@ -17,7 +17,7 @@ const KNOWN_OLD_SCRIPTS = new Set([
   'tn:update-completed-count'
 ])
 
-/** New-architecture KB gitignore. Replaces the old Core/VitePress dump. */
+/** Knowledge-base gitignore. */
 export const CANONICAL_GITIGNORE = `node_modules/
 .tnotes/dist
 .DS_Store
@@ -131,9 +131,6 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-  # 2026-09-07 暂时关闭：根仓 collect 仍读子库 .tnotes.json / sidebar.json。
-  # 新架构已改为 tnotes.json + TOC.md，notify 会让根站静默留下过期目录和死链。
-  # 根仓 collect 改完后再打开。
   # notify:
   #   needs: deploy
   #   runs-on: ubuntu-latest

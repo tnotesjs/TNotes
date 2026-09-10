@@ -8,7 +8,7 @@ TNotes 的本地优先桌面客户端，使用 Electron、Vue 3、TypeScript、M
 
 - 选择一个父目录并扫描其直接子目录中的 `TNotes.*` 知识库；配置异常的知识库仍会显示诊断信息
 - 三栏导航：知识库、当前知识库的目录与 Git 变更、可拆分的编辑区域
-- 笔记标签支持 Milkdown / Crepe 可视化编辑、只读和 CodeMirror Markdown 源码三种视图；标题、目录和笔记编号规则复用 `@tnotesjs/core`
+- 笔记标签支持 Milkdown / Crepe 可视化编辑、只读和 CodeMirror Markdown 源码三种视图；知识库读写走 `@tnotesjs/kb`
 - 可视化编辑支持传统 Markdown、GFM、任务列表、表格、代码块和 KaTeX；TNotes 特殊组件以只读原子卡片保留，Mermaid 和思维导图暂按代码块编辑，专用交互后续迭代
 - 未编辑内容保存时保持字节级不变；编辑普通块时只更新目标块，避免 Git 中出现整篇格式化 diff
 - 网页标签与笔记标签相互独立，可访问普通网页，也可启动 `pnpm tn:dev` 后打开本地站点
@@ -17,7 +17,7 @@ TNotes 的本地优先桌面客户端，使用 Electron、Vue 3、TypeScript、M
 - 图片默认保存至当前笔记的 `assets`；可选 GitHub 图床，上传失败自动回退到本地
 - 支持 VS Code / Cursor 快捷入口；设置和会话保存在本机，GitHub Token 通过系统安全存储加密
 
-`TOC.md` 是目录结构的唯一真相源。Desk 在目录变更时同步 `TOC.md` 和 `sidebar.json`，不会改写知识库根目录的 `README.md`。
+`TOC.md` 是目录结构的唯一真相源。Desk 在目录变更时同步 `TOC.md`，不会改写知识库根目录的 `README.md`。
 
 ## 安全边界
 
@@ -35,7 +35,7 @@ pnpm install
 pnpm dev
 ```
 
-Desk 使用已发布的 `@tnotesjs/core@0.6.0`，不依赖同级 Core 源码目录，可以单独克隆、安装和构建。
+Desk 在 monorepo 内开发（`apps/desk`），内部依赖 `@tnotesjs/kb` / `@tnotesjs/ssg` / `@tnotesjs/ui` / `@tnotesjs/mindmap-core`。
 
 完整校验：
 
@@ -54,7 +54,7 @@ pnpm build:win
 pnpm build:linux
 ```
 
-推送 `v*` 标签会触发 GitHub Actions 打多平台安装包并创建 Release。macOS 构建使用 ad-hoc 签名（尚无 Apple Developer ID / 公证）；首次打开若提示无法验证开发者，可右键 App → 打开。若仍提示「已损坏」，在终端执行：
+推送 `desk@*` 标签会触发 GitHub Actions 打多平台安装包并创建 Release。macOS 构建使用 ad-hoc 签名（尚无 Apple Developer ID / 公证）；首次打开若提示无法验证开发者，可右键 App → 打开。若仍提示「已损坏」，在终端执行：
 
 ```bash
 xattr -dr com.apple.quarantine "/Applications/TNotes Desk.app"
@@ -62,4 +62,4 @@ xattr -dr com.apple.quarantine "/Applications/TNotes Desk.app"
 
 ## Repository
 
-[github.com/tnotesjs/desk](https://github.com/tnotesjs/desk)
+[github.com/tnotesjs/tnotesjs](https://github.com/tnotesjs/tnotesjs/tree/main/apps/desk)

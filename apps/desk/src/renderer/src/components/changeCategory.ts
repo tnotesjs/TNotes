@@ -3,7 +3,7 @@ export type ChangeCategory = 'noteFile' | 'configFile' | 'otherFile'
 /**
  * Classify a git change path into one of the three "变更" sub-groups:
  * - noteFile: the README.md inside each note directory (`notes/<note-dir>/README.md`)
- * - configFile: knowledge-base root TOC.md / sidebar.json / .tnotes.json, plus each note dir's .tnotes.json
+ * - configFile: knowledge-base root TOC.md / tnotes.json (plus leftover sidebar.json / .tnotes.json if present)
  * - otherFile: everything else
  */
 export function classifyChangePath(path: string): ChangeCategory {
