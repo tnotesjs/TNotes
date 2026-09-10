@@ -103,3 +103,18 @@ export {
   fillCompletedNotesCount,
   toMonthKey
 } from './stats'
+export {
+  EXCALIDRAW_EXTENSION,
+  copyExcalidrawDocument,
+  createExcalidrawDocument,
+  emptyExcalidrawScene,
+  readExcalidrawDocument,
+  writeExcalidrawDocument
+} from './excalidraw'
+export type {
+  CopyExcalidrawDocumentInput,
+  CreateExcalidrawDocumentInput,
+  ExcalidrawDocument,
+  ExcalidrawDocumentRef,
+  WriteExcalidrawDocumentInput
+} from './excalidraw'
