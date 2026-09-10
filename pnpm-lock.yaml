@@ -58,16 +58,16 @@ importers:
         specifier: 7.22.1
         version: 7.22.1(@codemirror/language@6.12.4)(@codemirror/state@6.7.4)(@codemirror/view@6.43.11)(typescript@5.9.3)
       '@tnotesjs/kb':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../packages/kb
       '@tnotesjs/mindmap-core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../packages/mindmap-core
       '@tnotesjs/ssg':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../packages/ssg
       '@tnotesjs/ui':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../packages/ui
       '@types/markdown-it':
         specifier: ^14.2.0
@@ -173,10 +173,10 @@ importers:
   apps/mindmap-vscode:
     dependencies:
       '@tnotesjs/mindmap-core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../packages/mindmap-core
       '@tnotesjs/ui':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../packages/ui
       vue:
         specifier: ^3.5.41
@@ -234,10 +234,10 @@ importers:
   apps/mindmap-web:
     dependencies:
       '@tnotesjs/mindmap-core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../packages/mindmap-core
       '@tnotesjs/ui':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../packages/ui
       vue:
         specifier: ^3.5.41
@@ -283,7 +283,7 @@ importers:
   apps/nav:
     devDependencies:
       '@tnotesjs/kb':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../packages/kb
       '@types/node':
         specifier: ^22.10.0
@@ -371,10 +371,10 @@ importers:
         specifier: 2.1.4
         version: 2.1.4
       '@tnotesjs/kb':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../kb
       '@tnotesjs/ui':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../ui
       '@vitejs/plugin-vue':
         specifier: 6.0.8
@@ -459,7 +459,7 @@ importers:
   packages/ui:
     dependencies:
       '@tnotesjs/mindmap-core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../mindmap-core
       marked:
         specifier: ^15.0.11
