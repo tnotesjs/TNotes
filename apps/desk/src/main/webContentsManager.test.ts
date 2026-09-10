@@ -18,17 +18,21 @@ const mocks = vi.hoisted(() => {
   const createView = vi.fn(function () {
     return view
   })
-  return { contents, view, createView }
+  const sessionOn = vi.fn()
+  const openExternal = vi.fn(async () => undefined)
+  return { contents, view, createView, sessionOn, openExternal }
 })
 vi.mock('electron', () => ({
   WebContentsView: mocks.createView,
+  // deskLog 会遍历窗口广播日志；测试环境里给个空实现
+  BrowserWindow: { getAllWindows: () => [] },
   session: {
-    fromPartition: () => ({ setPermissionRequestHandler: vi.fn(), on: vi.fn() })
+    fromPartition: () => ({ setPermissionRequestHandler: vi.fn(), on: mocks.sessionOn })
   },
-  shell: {}
+  shell: { openExternal: mocks.openExternal }
 }))
 
-import { scaledWebBounds, WebContentsManager } from './webContentsManager'
+import { externalDownloadUrl, scaledWebBounds, WebContentsManager } from './webContentsManager'
 
 describe('native embedded web view app zoom', () => {
   it.each([0.5, 1, 1.1, 2])('converts CSS bounds to native coordinates at %sx', (factor) => {
@@ -113,4 +117,61 @@ it('selects all in a native web tab without touching the Desk chrome', async () 
   await manager.create('web-select', 'https://example.com')
   manager.selectAll('web-select')
   expect(mocks.contents.selectAll).toHaveBeenCalledOnce()
+})
+
+describe('externalDownloadUrl', () => {
+  it('只放行 http/https', () => {
+    expect(externalDownloadUrl('https://example.com/a.zip')).toBe('https://example.com/a.zip')
+    expect(externalDownloadUrl('http://example.com/a.zip')).toBe('http://example.com/a.zip')
+  })
+
+  it('丢弃 file/blob/自定义 scheme 与空值', () => {
+    for (const url of [
+      'file:///etc/passwd',
+      'blob:https://example.com/1234',
+      'ms-msdt:/id',
+      'search-ms:query=x',
+      'javascript:alert(1)',
+      'data:text/html,<script>1</script>',
+      '',
+      undefined,
+      null
+    ]) {
+      expect(externalDownloadUrl(url)).toBeNull()
+    }
+  })
+})
+
+describe('will-download 白名单', () => {
+  const downloadHandler = () => {
+    mocks.sessionOn.mockClear()
+    mocks.openExternal.mockClear()
+    const manager = new WebContentsManager()
+    manager.attachWindow({
+      on: vi.fn(),
+      isDestroyed: () => false,
+      webContents: { setZoomFactor: vi.fn() },
+      contentView: { addChildView: vi.fn() }
+    } as unknown as Electron.BrowserWindow)
+    return mocks.sessionOn.mock.calls.find(([name]) => name === 'will-download')?.[1] as (
+      event: { preventDefault: () => void },
+      item: { getURL: () => string }
+    ) => void
+  }
+
+  it('不会把 file: 下载交给系统处理器', () => {
+    const handler = downloadHandler()
+    const event = { preventDefault: vi.fn() }
+    handler(event, { getURL: () => 'file:///etc/passwd' })
+    expect(event.preventDefault).toHaveBeenCalledOnce()
+    expect(mocks.openExternal).not.toHaveBeenCalled()
+  })
+
+  it('https 下载仍按原行为交给系统浏览器', () => {
+    const handler = downloadHandler()
+    const event = { preventDefault: vi.fn() }
+    handler(event, { getURL: () => 'https://example.com/a.zip' })
+    expect(event.preventDefault).toHaveBeenCalledOnce()
+    expect(mocks.openExternal).toHaveBeenCalledExactlyOnceWith('https://example.com/a.zip')
+  })
 })

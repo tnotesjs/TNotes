@@ -28,6 +28,20 @@ function normalizeWebUrl(value: string): string {
   return url.toString()
 }
 
+/**
+ * 下载事件里的 URL 来自页面，可能是 `file:`、`blob:` 或 `ms-msdt:` 这类自定义
+ * scheme；交给 shell.openExternal 等于把任意协议交给操作系统处理器处理。
+ * 只放行 http/https，其余返回 null 由调用方丢弃。
+ */
+export function externalDownloadUrl(value: string | undefined | null): string | null {
+  if (!value) return null
+  try {
+    return normalizeWebUrl(value)
+  } catch {
+    return null
+  }
+}
+
 export function scaledWebBounds(bounds: WebBounds, zoomFactor: number): Electron.Rectangle {
   return {
     x: Math.max(0, Math.round(bounds.x * zoomFactor)),
@@ -63,8 +77,13 @@ export class WebContentsManager {
     webSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false))
     webSession.on('will-download', (event, item) => {
       event.preventDefault()
-      const url = item.getURL()
-      if (url) void shell.openExternal(url)
+      const requested = item.getURL()
+      const url = externalDownloadUrl(requested)
+      if (!url) {
+        deskLog('web', 'blocked download with non-http(s) url', { url: requested })
+        return
+      }
+      void shell.openExternal(url)
     })
   }
 
