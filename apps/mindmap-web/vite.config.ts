@@ -12,7 +12,7 @@ const uiFocusBreadcrumbs = join(
 )
 
 export default defineConfig({
-  base: env.GITHUB_ACTIONS === 'true' ? '/mindmap-web/' : '/',
+  base: env.GITHUB_ACTIONS === 'true' ? '/tnotesjs/' : '/',
   plugins: [vue()],
   resolve: {
     // Avoid the package barrel — it re-exports WordList (needs sass) and Mermaid.

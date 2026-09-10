@@ -16,7 +16,7 @@ const available: UpdateStatusDto = {
   state: 'available',
   currentVersion: '0.2.1',
   latestVersion: '0.3.0',
-  releaseUrl: 'https://github.com/tnotesjs/desk/releases/tag/v0.3.0',
+  releaseUrl: 'https://github.com/tnotesjs/tnotesjs/releases/tag/desk%400.5.1',
   checkedAt: '2026-09-01T00:00:00.000Z'
 }
 

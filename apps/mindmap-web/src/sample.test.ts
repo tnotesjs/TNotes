@@ -7,9 +7,13 @@ describe('默认测试示例', () => {
     const parsed = parseMarkdown(SAMPLE_MARKDOWN)
     expect(parsed.valid).toBe(true)
     expect(parsed.doc.root.content.text).toBe('TNotes Mindmap 使用指南')
-    expect(SAMPLE_MARKDOWN).toContain('https://github.com/tnotesjs/mindmap-web')
-    expect(SAMPLE_MARKDOWN).toContain('https://tnotesjs.github.io/mindmap-web/')
-    expect(SAMPLE_MARKDOWN).toContain('https://github.com/tnotesjs/mindmap-core')
+    expect(SAMPLE_MARKDOWN).toContain(
+      'https://github.com/tnotesjs/tnotesjs/tree/main/apps/mindmap-web'
+    )
+    expect(SAMPLE_MARKDOWN).toContain('https://tnotesjs.github.io/tnotesjs/')
+    expect(SAMPLE_MARKDOWN).toContain(
+      'https://github.com/tnotesjs/tnotesjs/tree/main/packages/mindmap-core'
+    )
     expect(SAMPLE_MARKDOWN).toContain('https://www.npmjs.com/package/@tnotesjs/mindmap-core')
     expect(SAMPLE_MARKDOWN).toContain('Cmd/Ctrl+E')
   })
