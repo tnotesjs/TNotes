@@ -301,3 +301,38 @@ export const tocDeleteSchema = z.object({
   entry: entryRefSchema,
   expectedSnapshotRevision: z.string().min(1)
 })
+
+/** 画布源文件：relPath 只允许 assets/ 下的 .excalidraw；内容有上限。 */
+const excalidrawRelPathSchema = z
+  .string()
+  .min(1)
+  .max(300)
+  .refine((value) => value.startsWith('assets/'), '画布必须位于 assets/ 下')
+  .refine((value) => value.toLowerCase().endsWith('.excalidraw'), '只允许 .excalidraw 源文件')
+
+export const excalidrawCreateSchema = z.object({
+  knowledgeBaseId: z.string().min(1),
+  noteUuid: z.string().min(1),
+  content: z
+    .string()
+    .max(32 * 1024 * 1024)
+    .optional()
+})
+
+export const excalidrawReadSchema = z.object({
+  knowledgeBaseId: z.string().min(1),
+  relPath: excalidrawRelPathSchema
+})
+
+export const excalidrawWriteSchema = z.object({
+  knowledgeBaseId: z.string().min(1),
+  relPath: excalidrawRelPathSchema,
+  content: z.string().max(32 * 1024 * 1024),
+  expectedRevision: z.string().min(1)
+})
+
+export const excalidrawCopySchema = z.object({
+  knowledgeBaseId: z.string().min(1),
+  fromRelPath: excalidrawRelPathSchema,
+  toNoteUuid: z.string().min(1)
+})

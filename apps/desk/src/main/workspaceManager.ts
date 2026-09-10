@@ -4,9 +4,13 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { app } from 'electron'
 import {
+  copyExcalidrawDocument,
+  createExcalidrawDocument,
   createKnowledgeBase as createKbOnDisk,
   isKnowledgeBaseRoot,
-  listIncompleteJournals
+  listIncompleteJournals,
+  readExcalidrawDocument,
+  writeExcalidrawDocument
 } from '@tnotesjs/kb'
 
 import { deskLog } from './log'
@@ -37,6 +41,8 @@ import type {
 import type { SearchIndexDocument } from './searchModel'
 import type {
   DeletePreviewDto,
+  ExcalidrawDocumentDto,
+  ExcalidrawDocumentRefDto,
   AssetKbSummaryDto,
   AssetScanProgressDto,
   AssetScanReportDto,
@@ -207,6 +213,69 @@ export class WorkspaceManager {
       return !override.hidden && !hidden.has(item.configId) && !hidden.has(item.name)
     })
     return { path: this.scanState.workspacePath, knowledgeBases, allKnowledgeBases }
+  }
+
+  async createExcalidraw(
+    knowledgeBaseId: string,
+    noteUuid: string,
+    content?: string
+  ): Promise<ExcalidrawDocumentRefDto> {
+    const handle = this.getHandle(knowledgeBaseId)
+    const ownerNoteIndex = noteIo.resolveNoteIndex(handle, noteUuid)
+    const created = await createExcalidrawDocument(handle.rootPath, { ownerNoteIndex, content })
+    this.markInternal(handle, [created.relPath])
+    this.emitChanged()
+    return { knowledgeBaseId, ...created }
+  }
+
+  async readExcalidraw(knowledgeBaseId: string, relPath: string): Promise<ExcalidrawDocumentDto> {
+    const handle = this.getHandle(knowledgeBaseId)
+    const document = await readExcalidrawDocument(handle.rootPath, relPath)
+    return {
+      knowledgeBaseId,
+      relPath: document.relPath,
+      ownerNoteIndex: document.ownerNoteIndex,
+      revision: document.revision,
+      content: document.content,
+      valid: document.valid,
+      bytes: document.bytes
+    }
+  }
+
+  async writeExcalidraw(
+    knowledgeBaseId: string,
+    input: { relPath: string; content: string; expectedRevision: string }
+  ): Promise<ExcalidrawDocumentRefDto> {
+    const handle = this.getHandle(knowledgeBaseId)
+    const written = await writeExcalidrawDocument(handle.rootPath, input)
+    this.markInternal(handle, [written.relPath])
+    this.emitChanged()
+    return { knowledgeBaseId, ...written }
+  }
+
+  async copyExcalidraw(
+    knowledgeBaseId: string,
+    fromRelPath: string,
+    toNoteUuid: string
+  ): Promise<ExcalidrawDocumentRefDto> {
+    const handle = this.getHandle(knowledgeBaseId)
+    const toOwnerNoteIndex = noteIo.resolveNoteIndex(handle, toNoteUuid)
+    const copy = await copyExcalidrawDocument(handle.rootPath, {
+      fromRelPath,
+      toOwnerNoteIndex
+    })
+    this.markInternal(handle, [copy.relPath])
+    this.emitChanged()
+    return { knowledgeBaseId, ...copy }
+  }
+
+  private markInternal(handle: KnowledgeBaseHandle, relPaths: string[]): void {
+    // 我们自己写的盘：不标记的话 fs.watch 会当成外部修改，弹假冲突
+    markInternalWrites(
+      this.scanState,
+      handle.rootPath,
+      relPaths.map((relPath) => ({ path: relPath }))
+    )
   }
 
   getDetail(knowledgeBaseId: string): KnowledgeBaseDetail {

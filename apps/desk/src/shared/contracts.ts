@@ -19,6 +19,10 @@ export const IPC_CHANNELS = {
   knowledgeBaseWriteSettings: 'knowledge-base:write-settings',
   knowledgeBaseWriteIcon: 'knowledge-base:write-icon',
   kbOpenAssetsRequested: 'kb:open-assets-requested',
+  excalidrawCreate: 'excalidraw:create',
+  excalidrawRead: 'excalidraw:read',
+  excalidrawWrite: 'excalidraw:write',
+  excalidrawCopy: 'excalidraw:copy',
   assetsScan: 'assets:scan',
   assetsScanCancel: 'assets:scan-cancel',
   assetsSummaries: 'assets:summaries',
@@ -1017,6 +1021,47 @@ export interface TocDeleteRequest {
   expectedSnapshotRevision: string
 }
 
+/** 画布源文件（`.excalidraw`）的受限读写结果。 */
+export interface ExcalidrawDocumentRefDto {
+  knowledgeBaseId: string
+  relPath: string
+  ownerNoteIndex: string
+  revision: string
+}
+
+export interface ExcalidrawDocumentDto extends ExcalidrawDocumentRefDto {
+  content: string
+  /** JSON/type 校验是否通过；false 时宿主只报错，不得写回 */
+  valid: boolean
+  bytes: number
+}
+
+export interface ExcalidrawCreateRequest {
+  knowledgeBaseId: string
+  /** 归属笔记：主进程据此解析四位编号前缀 */
+  noteUuid: string
+  content?: string
+}
+
+export interface ExcalidrawReadRequest {
+  knowledgeBaseId: string
+  relPath: string
+}
+
+export interface ExcalidrawWriteRequest {
+  knowledgeBaseId: string
+  relPath: string
+  content: string
+  expectedRevision: string
+}
+
+export interface ExcalidrawCopyRequest {
+  knowledgeBaseId: string
+  fromRelPath: string
+  /** 目标笔记：复制后必须换前缀 */
+  toNoteUuid: string
+}
+
 export interface DeletePreviewDto {
   knowledgeBaseId: string
   entry: TocEntryRefDto
@@ -1099,6 +1144,12 @@ export interface DeskApi {
     onOpenSettingsRequested(callback: (knowledgeBaseId: string) => void): () => void
     /** main → renderer：右键菜单点了「资源」。 */
     onOpenAssetsRequested(callback: (knowledgeBaseId: string) => void): () => void
+  }
+  excalidraw: {
+    create(request: ExcalidrawCreateRequest): Promise<DeskResult<ExcalidrawDocumentRefDto>>
+    read(request: ExcalidrawReadRequest): Promise<DeskResult<ExcalidrawDocumentDto>>
+    write(request: ExcalidrawWriteRequest): Promise<DeskResult<ExcalidrawDocumentRefDto>>
+    copy(request: ExcalidrawCopyRequest): Promise<DeskResult<ExcalidrawDocumentRefDto>>
   }
   assets: {
     scan(knowledgeBaseId: string, generation: number): Promise<DeskResult<AssetScanReportDto>>

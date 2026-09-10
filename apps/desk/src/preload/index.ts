@@ -5,6 +5,8 @@ import { IPC_CHANNELS } from '../shared/contracts'
 import type {
   AppSettings,
   AttachmentWriteLocalRequest,
+  ExcalidrawDocumentDto,
+  ExcalidrawDocumentRefDto,
   AttachmentWriteLocalResult,
   ImageSettingsValidateResult,
   ImageOptimizePreviewResult,
@@ -155,6 +157,12 @@ const api: DeskApi = {
       ipcRenderer.on(IPC_CHANNELS.kbOpenAssetsRequested, listener)
       return () => ipcRenderer.removeListener(IPC_CHANNELS.kbOpenAssetsRequested, listener)
     }
+  },
+  excalidraw: {
+    create: (request) => invoke<ExcalidrawDocumentRefDto>(IPC_CHANNELS.excalidrawCreate, request),
+    read: (request) => invoke<ExcalidrawDocumentDto>(IPC_CHANNELS.excalidrawRead, request),
+    write: (request) => invoke<ExcalidrawDocumentRefDto>(IPC_CHANNELS.excalidrawWrite, request),
+    copy: (request) => invoke<ExcalidrawDocumentRefDto>(IPC_CHANNELS.excalidrawCopy, request)
   },
   assets: {
     scan: (knowledgeBaseId, generation) =>
