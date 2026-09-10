@@ -587,6 +587,36 @@ describe('workspace document saving', () => {
     expect(workspace.status).toBe('已取消退出：请先处理未保存的更改')
   })
 
+  it('自动保存成功后不再弹「已保存」', async () => {
+    const workspace = useWorkspaceStore()
+    const key = `${knowledgeBase.id}:note-a`
+    workspace.settings = autosaveSettings
+    await workspace.ensureDocument(knowledgeBase.id, 'note-a')
+
+    workspace.updateDocumentContent(key, '自动保存内容', true)
+    await vi.advanceTimersByTimeAsync(50)
+    expect(saveRequests).toHaveLength(1)
+    pendingSaves[0].resolve(mutation('自动保存内容', 'revision-2'))
+    await vi.runAllTimersAsync()
+
+    expect(workspace.status).toBeNull()
+    expect(workspace.getDocumentSession(knowledgeBase.id, 'note-a')?.dirty).toBe(false)
+  })
+
+  it('手动保存仍会提示「已保存」', async () => {
+    const workspace = useWorkspaceStore()
+    const key = `${knowledgeBase.id}:note-a`
+    await workspace.ensureDocument(knowledgeBase.id, 'note-a')
+
+    workspace.updateDocumentContent(key, '手动保存内容', true)
+    const saving = workspace.saveAllDocuments()
+    for (let tick = 0; tick < 20; tick += 1) await Promise.resolve()
+    pendingSaves[0].resolve(mutation('手动保存内容', 'revision-2'))
+    await saving
+
+    expect(workspace.status).toBe('已保存')
+  })
+
   it('⌘S（保存全部）会先提交块内草稿再落盘', async () => {
     const workspace = useWorkspaceStore()
     const editor = useEditorStore()
