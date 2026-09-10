@@ -6,6 +6,7 @@ import { SHARED_CODE_GROUP_CONTRACT } from '@tnotesjs/ui/code'
 import {
   isStructuredCalloutSource,
   parseContainerSource,
+  preservedContainerSource,
   rebuildContainerSource,
   renderContainerFromSource
 } from './containerBody'
@@ -193,5 +194,35 @@ describe('renderContainerFromSource', () => {
     ])
     expect(blocks[0]?.textContent).toContain('console.log(1)')
     expect(blocks[1]?.textContent).toContain('const value: number = 2')
+  })
+})
+
+describe('未改动的结构化容器保持字节不变', () => {
+  const baseline = { source: '::: tip   标题\n\n\n正文\n\n:::  ', title: '标题', body: '正文' }
+
+  it('没改动时返回原始源码（不做模板规范化）', () => {
+    expect(preservedContainerSource(baseline, baseline.source, { body: '正文' })).toBe(
+      baseline.source
+    )
+    expect(
+      preservedContainerSource(baseline, baseline.source, { title: ' 标题 ', body: '正文' })
+    ).toBe(baseline.source)
+  })
+
+  it('正文或标题被改动时返回 null，交给调用方重建', () => {
+    expect(preservedContainerSource(baseline, baseline.source, { body: '改过了' })).toBeNull()
+    expect(
+      preservedContainerSource(baseline, baseline.source, { title: '新标题', body: '正文' })
+    ).toBeNull()
+  })
+
+  it('源码被外部改动时不再沿用基线', () => {
+    expect(
+      preservedContainerSource(baseline, '::: tip 标题\n\n正文\n\n:::', { body: '正文' })
+    ).toBeNull()
+  })
+
+  it('没有基线时返回 null', () => {
+    expect(preservedContainerSource(null, baseline.source, { body: '正文' })).toBeNull()
   })
 })

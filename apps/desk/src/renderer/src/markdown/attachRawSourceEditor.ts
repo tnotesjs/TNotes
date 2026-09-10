@@ -16,7 +16,11 @@ import {
   rebuildWordListSource,
   rebuildNotesTableSource
 } from '../editor/markdown/componentBody'
-import { parseContainerSource, rebuildContainerSource } from '../editor/markdown/containerBody'
+import {
+  parseContainerSource,
+  preservedContainerSource,
+  rebuildContainerSource
+} from '../editor/markdown/containerBody'
 
 export interface AttachRawSourceEditorDeps {
   knowledgeBaseId?: () => string
@@ -113,6 +117,11 @@ export function attachRawSourceEditor(
   let suppressPublish = false
   let draftTitle = ''
   let draftBody = ''
+  /**
+   * 进入编辑时的结构化基线。用户没有改动时保持原始字节：重建只做空白/冒号规范化，
+   * 「打开编辑 → 点完成」不应该把未改动的块弄脏。外部内容同步时会一起更新。
+   */
+  let structuredBaseline: { source: string; title: string; body: string } | null = null
   let draftMermaidBody = ''
   let draftMindmapBody = ''
   let draftNotesTableIds = ''
@@ -238,6 +247,9 @@ export function attachRawSourceEditor(
     return deleteDeskRawBlockAt(ctx.view, position)
   }
 
+  const unchangedStructuredSource = (draft: { title?: string; body: string }): string | null =>
+    preservedContainerSource(structuredBaseline, liveSource(), draft)
+
   const publishDraft = (options?: { ignoreReadOnly?: boolean }): void => {
     if (suppressPublish) return
     if (!options?.ignoreReadOnly && isEffectivelyReadOnly()) return
@@ -280,17 +292,22 @@ export function attachRawSourceEditor(
       })
     } else if (ctx.structuredContainerBody) {
       const parsed = parseContainerSource(liveSource())
-      editorValue = rebuildContainerSource(liveSource(), {
-        title: parsed.title,
-        body: draftContainerBody,
-        name: parsed.name
-      })
+      editorValue =
+        unchangedStructuredSource({ body: draftContainerBody }) ??
+        rebuildContainerSource(liveSource(), {
+          title: parsed.title,
+          body: draftContainerBody,
+          name: parsed.name
+        })
     } else {
-      editorValue = rebuildContainerSource(liveSource(), {
-        title: draftTitle,
-        body: draftBody,
-        name: parseContainerSource(liveSource()).name
-      })
+      const parsed = parseContainerSource(liveSource())
+      editorValue =
+        unchangedStructuredSource({ title: draftTitle.trim(), body: draftBody }) ??
+        rebuildContainerSource(liveSource(), {
+          title: draftTitle,
+          body: draftBody,
+          name: parsed.name
+        })
     }
     fitEditorToSource(editorValue)
     pendingEdit.changed()
@@ -526,6 +543,10 @@ export function attachRawSourceEditor(
       draftContainerBody = ctx.structuredContainerBody
         ? parseContainerSource(liveSource()).body
         : ''
+      if (ctx.structuredContainerBody) {
+        const parsed = parseContainerSource(liveSource())
+        structuredBaseline = { source: liveSource(), title: parsed.title, body: parsed.body }
+      }
       const initial = ctx.structuredMindmap ? draftMindmapBody : draftContainerBody
       fitEditorToSource(editorValue)
 
@@ -612,6 +633,7 @@ export function attachRawSourceEditor(
       draftBody = parsed.body
       // Keep the stored source until the user edits — rebuild only normalizes
       // blank lines and would otherwise dirty an untouched block on Done.
+      structuredBaseline = { source: liveSource(), title: parsed.title, body: parsed.body }
       fitEditorToSource(editorValue)
 
       const done = document.createElement('button')
@@ -751,6 +773,7 @@ export function attachRawSourceEditor(
         const parsed = parseContainerSource(next)
         draftTitle = parsed.title
         draftBody = parsed.body
+        structuredBaseline = { source: next, title: parsed.title, body: parsed.body }
         editorHandle.setValue(draftBody)
         const titleInput = editorHost.querySelector(
           '.desk-raw-block__editor-title'
@@ -761,7 +784,9 @@ export function attachRawSourceEditor(
         return
       }
       if (ctx.structuredContainerBody) {
-        draftContainerBody = parseContainerSource(next).body
+        const parsed = parseContainerSource(next)
+        draftContainerBody = parsed.body
+        structuredBaseline = { source: next, title: parsed.title, body: parsed.body }
         editorHandle.setValue(draftContainerBody)
         return
       }

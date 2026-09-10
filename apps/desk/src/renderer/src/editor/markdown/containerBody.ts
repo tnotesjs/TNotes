@@ -120,6 +120,22 @@ export function rebuildContainerSource(
   return parsed.trailingNewline || previousSource === '' ? `${core}\n` : core
 }
 
+/**
+ * 打开结构化容器编辑时的基线。用户没有改动（且源码没被外部改过）时返回原始源码，
+ * 让调用方跳过一次「按模板重建」——重建只做空白/冒号规范化，会把未改动的块弄脏。
+ */
+export function preservedContainerSource(
+  baseline: { source: string; title: string; body: string } | null,
+  currentSource: string,
+  draft: { title?: string; body: string }
+): string | null {
+  if (!baseline) return null
+  if (currentSource !== baseline.source) return null
+  if (draft.body !== baseline.body) return null
+  if (draft.title !== undefined && draft.title.trim() !== baseline.title.trim()) return null
+  return baseline.source
+}
+
 let markdownIt: InstanceType<typeof MarkdownIt> | null = null
 
 function getMarkdownIt(): InstanceType<typeof MarkdownIt> {
