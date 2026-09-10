@@ -5,7 +5,7 @@ import path from 'node:path'
 import { createKnowledgeBase as createKbOnDisk, isKnowledgeBaseRoot } from '@tnotesjs/kb'
 
 import { deskLog } from './log'
-import { loadSettings, saveSettings, settingsForKnowledgeBase } from './settings'
+import { loadSettings, settingsForKnowledgeBase } from './settings'
 import { loadWorkspace, saveWorkspace } from './workspace'
 import { descriptor, toDetail, toSettingsDto } from './workspace/dto'
 import * as noteIo from './workspace/noteIo'
