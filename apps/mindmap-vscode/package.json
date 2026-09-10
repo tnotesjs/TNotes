@@ -74,8 +74,8 @@
     "package": "pnpm check && vsce package --no-dependencies"
   },
   "dependencies": {
-    "@tnotesjs/mindmap-core": "^0.2.2",
-    "@tnotesjs/ui": "^0.1.1",
+    "@tnotesjs/mindmap-core": "workspace:*",
+    "@tnotesjs/ui": "workspace:*",
     "vue": "^3.5.41"
   },
   "devDependencies": {
