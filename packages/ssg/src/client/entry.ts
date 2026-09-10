@@ -43,7 +43,7 @@ if (canonical && stripBase(location.pathname, site.base) !== canonical) {
     void createSiteApp(route, { data, articleHtml }).then(async ({ app }) => {
       app.mount(root)
       const main = root.querySelector('.tn-site-main')
-      if (main) await hydrateIslands(main)
+      if (main) await hydrateIslands(main, { base: site.base })
     })
   }
 }

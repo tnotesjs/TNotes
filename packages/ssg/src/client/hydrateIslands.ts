@@ -8,6 +8,26 @@
 import { createApp } from 'vue'
 import { hydrateTnSwipers } from '@tnotesjs/ui/swiper'
 
+export interface HydrateIslandsOptions {
+  /** Site base (`/` or `/TNotes.example/`); used to resolve note asset URLs. */
+  base?: string
+}
+
+/**
+ * 笔记里的脑图 fence 保存的是 `./assets/x.png` 这类相对路径，而站点页面在
+ * `<base>notes/<slug>`，浏览器会把它解析到 `notes/assets/...` 而 404。Desk 会
+ * 注入 resolveImageSrc，站点这边也必须把相对资源解析到站点 base 下。
+ */
+export function resolveNoteAssetSrc(src: string, base = '/'): string {
+  const match = src.match(/^(?:\.\.\/|\.\/)?assets\/(.+)$/)
+  if (!match) return src
+  const queryAt = match[1].search(/[?#]/)
+  const pathPart = queryAt < 0 ? match[1] : match[1].slice(0, queryAt)
+  const suffix = queryAt < 0 ? '' : match[1].slice(queryAt)
+  const prefix = base.endsWith('/') ? base : `${base}/`
+  return `${prefix}assets/${pathPart}${suffix}`
+}
+
 async function copyText(text: string): Promise<void> {
   try {
     if (navigator.clipboard?.writeText) {
@@ -181,7 +201,7 @@ async function hydrateMermaids(root: ParentNode): Promise<void> {
   }
 }
 
-async function hydrateMindmaps(root: ParentNode): Promise<void> {
+async function hydrateMindmaps(root: ParentNode, base: string): Promise<void> {
   const nodes = [...root.querySelectorAll<HTMLElement>('[data-tn-island="mindmap"]')].filter(
     (el) => el.dataset.tnReady !== '1'
   )
@@ -193,14 +213,18 @@ async function hydrateMindmaps(root: ParentNode): Promise<void> {
     const expand = el.dataset.expand
     createApp(Mindmap, {
       content: el.dataset.content ?? '',
-      initialExpandLevel: expand === undefined ? undefined : Number(expand)
+      initialExpandLevel: expand === undefined ? undefined : Number(expand),
+      resolveImageSrc: (src: string) => resolveNoteAssetSrc(src, base)
     }).mount(el)
   }
 }
 
-export async function hydrateIslands(root: ParentNode = document): Promise<void> {
+export async function hydrateIslands(
+  root: ParentNode = document,
+  options: HydrateIslandsOptions = {}
+): Promise<void> {
   hydrateCodeGroups(root)
   hydrateCodeBlocks(root)
   hydrateTnSwipers(root)
-  await Promise.all([hydrateMermaids(root), hydrateMindmaps(root)])
+  await Promise.all([hydrateMermaids(root), hydrateMindmaps(root, options.base ?? '/')])
 }
