@@ -3,13 +3,17 @@ packages:
   - 'apps/*'
 
 # 依赖构建脚本白名单（pnpm 11 allowBuilds；对齐各老仓原有配置，其余一律阻止）
+# 注意：esbuild 不能进白名单——其 postinstall 会用 Mach-O 二进制覆盖 bin/esbuild 的
+# JS shim，而 pnpm 的 .bin 包装器固定用 node 加载它，导致 nav 的 esbuild CLI 报
+# SyntaxError。esbuild 不跑 postinstall 也能经 optionalDependencies 正常工作。
 allowBuilds:
-  esbuild: true
+  esbuild: false
   '@parcel/watcher': true
   electron: true
   electron-winstaller: true
   '@vscode/vsce-sign': true
   keytar: true
+  esbuild: set this to true or false
 
 # 本组织包刚发布就要能被装到，跳过 minimumReleaseAge 冷却
 minimumReleaseAgeExclude:
