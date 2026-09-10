@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 import fs from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { parentPort } from 'node:worker_threads'
@@ -7,6 +7,8 @@ import MiniSearch from 'minisearch'
 import {
   createSearchIndex,
   querySearchIndex,
+  searchDocumentFingerprint,
+  searchFingerprintSignature,
   searchOptions,
   type SearchIndexDocument
 } from './searchModel'
@@ -43,38 +45,30 @@ interface ClearRequest {
 type WorkerRequest = BuildRequest | UpsertRequest | SearchRequest | ClearRequest
 
 interface CachedSearchIndex {
-  version: 3
-  /** id → content hash, so upserts can recompute the signature in-worker. */
-  revisions: Record<string, string>
+  version: 4
+  /**
+   * id → 文档指纹（revision + 文件名 + 标题 + 编号），让 upsert 能在 worker 内
+   * 重算签名；只存正文哈希会让重命名后的索引一直命中旧缓存。
+   */
+  fingerprints: Record<string, string>
   index: ReturnType<MiniSearch<SearchIndexDocument>['toJSON']>
 }
 
 let currentIndex = createSearchIndex([])
-let currentRevisions: Record<string, string> = {}
+let currentFingerprints: Record<string, string> = {}
 let cacheWriteTimer: ReturnType<typeof setTimeout> | null = null
-
-function signatureFromRevisions(revisions: Record<string, string>): string {
-  const hash = createHash('sha256')
-  for (const id of Object.keys(revisions).sort()) {
-    hash.update(id)
-    hash.update('\0')
-    hash.update(revisions[id] ?? '')
-    hash.update('\0')
-  }
-  return hash.digest('hex')
-}
 
 async function readCache(cachePath: string, signature: string): Promise<boolean> {
   try {
     const cache = JSON.parse(await fs.readFile(cachePath, 'utf8')) as CachedSearchIndex
-    if (cache.version !== 3 || !cache.revisions) return false
-    // v3 stores per-document revisions; the signature is derived from them.
-    if (signatureFromRevisions(cache.revisions) !== signature) return false
+    if (cache.version !== 4 || !cache.fingerprints) return false
+    // v4 stores per-document fingerprints; the signature is derived from them.
+    if (searchFingerprintSignature(cache.fingerprints) !== signature) return false
     currentIndex = MiniSearch.loadJSON<SearchIndexDocument>(
       JSON.stringify(cache.index),
       searchOptions()
     )
-    currentRevisions = cache.revisions
+    currentFingerprints = cache.fingerprints
     return true
   } catch {
     return false
@@ -86,8 +80,8 @@ async function writeCacheNow(cachePath: string): Promise<void> {
   // Unique tmp name: a debounced write may overlap with a build's write.
   const temporary = `${cachePath}.${randomUUID()}.tmp`
   const payload = `${JSON.stringify({
-    version: 3,
-    revisions: currentRevisions,
+    version: 4,
+    fingerprints: currentFingerprints,
     index: currentIndex.toJSON()
   } satisfies CachedSearchIndex)}\n`
   await fs.writeFile(temporary, payload, 'utf8')
@@ -104,13 +98,15 @@ function scheduleCacheWrite(cachePath: string): void {
 }
 
 async function build(request: BuildRequest): Promise<{ documentCount: number; cached: boolean }> {
-  const revisions: Record<string, string> = {}
-  for (const document of request.documents) revisions[document.id] = document.revision
-  const signature = signatureFromRevisions(revisions)
+  const fingerprints: Record<string, string> = {}
+  for (const document of request.documents) {
+    fingerprints[document.id] = searchDocumentFingerprint(document)
+  }
+  const signature = searchFingerprintSignature(fingerprints)
   const cached = await readCache(request.cachePath, signature)
   if (!cached) {
     currentIndex = createSearchIndex(request.documents)
-    currentRevisions = revisions
+    currentFingerprints = fingerprints
     await writeCacheNow(request.cachePath)
   }
   return { documentCount: currentIndex.documentCount, cached }
@@ -119,7 +115,7 @@ async function build(request: BuildRequest): Promise<{ documentCount: number; ca
 async function upsert(request: UpsertRequest): Promise<{ documentCount: number }> {
   if (currentIndex.has(request.document.id)) currentIndex.discard(request.document.id)
   currentIndex.add(request.document)
-  currentRevisions[request.document.id] = request.document.revision
+  currentFingerprints[request.document.id] = searchDocumentFingerprint(request.document)
   scheduleCacheWrite(request.cachePath)
   return { documentCount: currentIndex.documentCount }
 }
@@ -151,7 +147,7 @@ function handle(request: WorkerRequest): Promise<void> {
       }
       if (request.type === 'clear') {
         currentIndex = createSearchIndex([])
-        currentRevisions = {}
+        currentFingerprints = {}
         sendSuccess(request.requestId, undefined)
         return
       }

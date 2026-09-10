@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto'
+
 import MiniSearch from 'minisearch'
 
 import type { SearchResultDto } from '../shared/contracts'
@@ -12,6 +14,26 @@ export interface SearchIndexDocument {
   title: string
   content: string
   revision: string
+}
+
+/**
+ * 缓存签名必须覆盖索引里所有会被检索或展示的字段。此前只用正文哈希，导致重命名
+ * 笔记 / 改标题（正文不变）时命中旧缓存并跳过重建，fileName/title/noteIndex 一直是
+ * 旧值，落盘后重启依旧陈旧。
+ */
+export function searchDocumentFingerprint(document: SearchIndexDocument): string {
+  return [document.revision, document.fileName, document.title, document.noteIndex].join('\u0000')
+}
+
+export function searchFingerprintSignature(fingerprints: Record<string, string>): string {
+  const hash = createHash('sha256')
+  for (const id of Object.keys(fingerprints).sort()) {
+    hash.update(id)
+    hash.update('\0')
+    hash.update(fingerprints[id] ?? '')
+    hash.update('\0')
+  }
+  return hash.digest('hex')
 }
 
 export function tokenizeSearchText(value: string): string[] {

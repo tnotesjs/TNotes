@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest'
 import {
   createSearchIndex,
   querySearchIndex,
+  searchDocumentFingerprint,
+  searchFingerprintSignature,
   searchSnippet,
   tokenizeSearchText
 } from './searchModel'
@@ -58,5 +60,39 @@ describe('search model', () => {
     expect(
       searchSnippet('## 标题\n\n这是 **正文** 和 [链接](https://example.com)。', '正文')
     ).toContain('这是 **正文**')
+  })
+})
+
+describe('搜索缓存指纹', () => {
+  const base = {
+    id: 'kb:note-1',
+    knowledgeBaseId: 'kb',
+    knowledgeBaseName: 'kb',
+    noteUuid: 'note-1',
+    noteIndex: '0001',
+    fileName: '0001. 旧标题.md',
+    title: '旧标题',
+    content: '# 旧标题\n',
+    revision: 'rev-1'
+  }
+
+  it('正文不变但标题/文件名/编号变化时指纹必须变化', () => {
+    const original = searchDocumentFingerprint(base)
+    expect(searchDocumentFingerprint({ ...base, title: '新标题' })).not.toBe(original)
+    expect(searchDocumentFingerprint({ ...base, fileName: '0001. 新标题.md' })).not.toBe(original)
+    expect(searchDocumentFingerprint({ ...base, noteIndex: '0002' })).not.toBe(original)
+    expect(searchDocumentFingerprint({ ...base })).toBe(original)
+  })
+
+  it('签名随指纹变化，并忽略文档顺序', () => {
+    const first = { 'kb:a': searchDocumentFingerprint({ ...base, id: 'kb:a' }) }
+    const second = { 'kb:b': searchDocumentFingerprint({ ...base, id: 'kb:b' }) }
+    const renamed = {
+      'kb:a': searchDocumentFingerprint({ ...base, id: 'kb:a', title: '改名后' })
+    }
+    expect(searchFingerprintSignature({ ...first, ...second })).toBe(
+      searchFingerprintSignature({ ...second, ...first })
+    )
+    expect(searchFingerprintSignature(renamed)).not.toBe(searchFingerprintSignature(first))
   })
 })
