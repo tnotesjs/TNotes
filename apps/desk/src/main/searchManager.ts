@@ -19,7 +19,13 @@ interface WorkerResponse<T = unknown> {
 interface PendingRequest {
   resolve(value: unknown): void
   reject(error: Error): void
+  timer: NodeJS.Timeout
 }
+
+/** 搜索 / 增量更新是毫秒级操作；超时说明线程已经不响应了。 */
+const REQUEST_TIMEOUT_MS = 15_000
+/** 首次建索引要读并解析整个工作区，给足时间但不能无限等。 */
+const BUILD_TIMEOUT_MS = 120_000
 
 interface SearchManagerEvents {
   changed: [{ status: 'idle' | 'building' | 'ready' | 'error'; documentCount: number }]
@@ -27,7 +33,7 @@ interface SearchManagerEvents {
 
 export class SearchManager {
   private readonly events = new EventEmitter<SearchManagerEvents>()
-  private readonly worker = new Worker(join(__dirname, 'searchWorker.js'))
+  private readonly worker: Worker
   private readonly pending = new Map<number, PendingRequest>()
   private requestId = 0
   private workspacePath: string | null = null
@@ -35,24 +41,38 @@ export class SearchManager {
   private resolveReady: (() => void) | null = null
   private status: 'idle' | 'building' | 'ready' | 'error' = 'idle'
   private documentCount = 0
+  private disposed = false
 
-  constructor() {
+  /** worker 可注入，便于在测试里模拟线程被杀 / 不响应。 */
+  constructor(worker?: Worker) {
+    this.worker = worker ?? new Worker(join(__dirname, 'searchWorker.js'))
     this.worker.on('message', (response: WorkerResponse) => {
       const pending = this.pending.get(response.requestId)
       if (!pending) return
       this.pending.delete(response.requestId)
+      clearTimeout(pending.timer)
       if (response.ok) pending.resolve(response.value)
       else pending.reject(new Error(response.error || '搜索工作线程返回未知错误'))
     })
-    this.worker.on('error', (error) => {
-      deskLog('search', 'worker error', error.message)
-      this.status = 'error'
-      this.emitChanged()
-      for (const pending of this.pending.values()) pending.reject(error)
-      this.pending.clear()
-      this.resolveReady?.()
-      this.resolveReady = null
-    })
+    this.worker.on('error', (error) => this.failWorker('error', error))
+    // OOM / 被杀只会触发 exit：不处理的话 pending 与 ready 都不结算，搜索会永久挂起
+    this.worker.on('exit', (code) =>
+      this.failWorker(`exit ${code}`, new Error('搜索工作线程已退出'))
+    )
+  }
+
+  private failWorker(reason: string, error: Error): void {
+    if (this.disposed) return
+    deskLog('search', 'worker lost', { reason, message: error.message })
+    this.status = 'error'
+    for (const pending of this.pending.values()) {
+      clearTimeout(pending.timer)
+      pending.reject(error)
+    }
+    this.pending.clear()
+    this.resolveReady?.()
+    this.resolveReady = null
+    this.emitChanged()
   }
 
   onChanged(
@@ -138,18 +158,37 @@ export class SearchManager {
   }
 
   async dispose(): Promise<void> {
-    for (const pending of this.pending.values()) pending.reject(new Error('搜索服务已关闭'))
+    this.disposed = true
+    const error = new Error('搜索服务已关闭')
+    for (const pending of this.pending.values()) {
+      clearTimeout(pending.timer)
+      pending.reject(error)
+    }
     this.pending.clear()
+    // 正在等待索引就绪的搜索也必须被放行，否则它们会一直等下去
+    this.resolveReady?.()
+    this.resolveReady = null
     await this.worker.terminate()
     this.events.removeAllListeners()
   }
 
-  private request<T>(type: string, payload: Record<string, unknown>): Promise<T> {
+  private request<T>(
+    type: string,
+    payload: Record<string, unknown>,
+    timeoutMs = type === 'build' ? BUILD_TIMEOUT_MS : REQUEST_TIMEOUT_MS
+  ): Promise<T> {
+    // dispose 之后仍可能有排队的调用（例如搜索在等 ready），直接拒绝而不是挂起
+    if (this.disposed) return Promise.reject(new Error('搜索服务已关闭'))
     const requestId = (this.requestId += 1)
     return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.pending.delete(requestId)
+        reject(new Error(`搜索工作线程 ${timeoutMs}ms 未响应`))
+      }, timeoutMs)
       this.pending.set(requestId, {
         resolve: (value) => resolve(value as T),
-        reject
+        reject,
+        timer
       })
       this.worker.postMessage({ type, requestId, ...payload })
     })
