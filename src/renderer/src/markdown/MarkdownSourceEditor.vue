@@ -25,6 +25,7 @@ import {
 } from '@codemirror/view'
 import { githubDark, githubLight } from '@uiw/codemirror-theme-github'
 import { codeMirrorRectangularSelection } from '../editor/markdown/codeMirrorMultiCursor'
+import { renumberHeadings, stripHeadingNumbers } from '../editor/markdown/headingNumbering'
 import { DESK_SELECT_ALL_EVENT, shouldHandleDeskSelectAll } from './documentSelection'
 import { clearSourceLineStyles } from './clearSourceLineStyles'
 
@@ -161,6 +162,27 @@ function insertTable(): void {
   insertTextAt('\n|  |  |\n| --- | --- |\n|  |  |\n')
 }
 
+/** 标题编号：重排（先剥再按上限重编）与剥除，均为单次 dispatch → 一步撤销。 */
+function addHeadingNumbers(maxDepth: number): void {
+  if (!view || isEffectivelyReadOnly()) return
+  const result = renumberHeadings(view.state.doc.toString(), maxDepth)
+  if (!result.changed) return
+  view.dispatch({
+    changes: { from: 0, to: view.state.doc.length, insert: result.text }
+  })
+  view.focus()
+}
+
+function removeHeadingNumbers(): void {
+  if (!view || isEffectivelyReadOnly()) return
+  const result = stripHeadingNumbers(view.state.doc.toString())
+  if (!result.changed) return
+  view.dispatch({
+    changes: { from: 0, to: view.state.doc.length, insert: result.text }
+  })
+  view.focus()
+}
+
 function selectAll(): void {
   if (!view || !shouldHandleDeskSelectAll(host.value, props.active)) return
   view.dispatch({
@@ -176,6 +198,8 @@ defineExpose({
   prefixSelection,
   setLinePrefix,
   insertTable,
+  addHeadingNumbers,
+  removeHeadingNumbers,
   selectAll
 })
 

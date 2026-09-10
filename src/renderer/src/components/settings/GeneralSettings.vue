@@ -81,6 +81,17 @@ async function checkNow(): Promise<void> {
           <option value="expanded">展开显示</option>
         </select>
       </label>
+      <label class="field">
+        <span>标题编号层级</span>
+        <select v-model.number="draft.headingNumberMaxDepth">
+          <option :value="1">1 层（如 1.）</option>
+          <option :value="2">2 层（如 1.1.）</option>
+          <option :value="3">3 层（如 1.1.1.）</option>
+          <option :value="4">4 层</option>
+          <option :value="5">5 层</option>
+          <option :value="6">6 层</option>
+        </select>
+      </label>
       <AppZoomControl
         :model-value="store.settings?.appZoomPercent ?? 100"
         @update:model-value="setZoom"

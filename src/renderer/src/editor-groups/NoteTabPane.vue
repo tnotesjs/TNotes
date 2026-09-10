@@ -14,6 +14,7 @@ import { useWorkspaceStore } from '../stores/workspace'
 import { registerHeadingFoldRunner } from '../commands/headingFoldBridge'
 import { findTab } from './layoutModel'
 import { pastedImageMarkdown } from '../editor/markdown/pasteImageWidth'
+import { HEADING_NUMBER_DEFAULT_MAX_DEPTH } from '../../../shared/headingNumbering'
 
 import type { NoteEditorTab, NoteViewMode } from '../../../shared/contracts'
 import type { HeadingFoldCommand } from '../markdown/headingSectionCollapse'
@@ -24,6 +25,8 @@ interface MarkdownEditorHandle {
   prefixSelection(prefix: string): void
   setLinePrefix(prefix: string): void
   insertTable(): void
+  addHeadingNumbers(maxDepth: number): void
+  removeHeadingNumbers(): void
   applyHeadingFold?(command: HeadingFoldCommand): boolean
   flush(): void
 }
@@ -79,6 +82,8 @@ const formatActions = [
   'strikethrough',
   'inline-code',
   'heading',
+  'heading-number',
+  'heading-number-remove',
   'quote',
   'unordered-list',
   'ordered-list',
@@ -309,6 +314,30 @@ function openLink(url: string): void {
             :platform="workspace.runtimePlatform"
             @select="markdownEditor?.setLinePrefix($event === 0 ? '' : `${'#'.repeat($event)} `)"
           />
+          <UiTooltip v-else-if="item === 'heading-number'" label="标题编号（重排）">
+            <button
+              type="button"
+              aria-label="标题编号（重排）"
+              :disabled="formatDisabled"
+              @click="
+                markdownEditor?.addHeadingNumbers(
+                  workspace.settings?.headingNumberMaxDepth ?? HEADING_NUMBER_DEFAULT_MAX_DEPTH
+                )
+              "
+            >
+              <FormatIcon name="heading-number" />
+            </button>
+          </UiTooltip>
+          <UiTooltip v-else-if="item === 'heading-number-remove'" label="移除标题编号">
+            <button
+              type="button"
+              aria-label="移除标题编号"
+              :disabled="formatDisabled"
+              @click="markdownEditor?.removeHeadingNumbers()"
+            >
+              <FormatIcon name="heading-number-remove" />
+            </button>
+          </UiTooltip>
           <UiTooltip v-else-if="item === 'quote'" label="引用" shortcut="⇧ ⌘ U">
             <button
               type="button"

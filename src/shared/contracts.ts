@@ -315,6 +315,8 @@ export interface AppSettings {
   defaultNoteView: NoteViewMode
   defaultNotePageWidth: NotePageWidth
   noteTocDisplay: NoteTocDisplay
+  /** 标题编号层级上限（1-6）：1. 与 1.1. 允许出现的最大段数。 */
+  headingNumberMaxDepth: number
   appZoomPercent: number
   autosave: {
     enabled: boolean

@@ -73,6 +73,7 @@ import {
 } from '../editor/markdown/rawBlockProjection'
 import { serializeDeskCalloutMdast } from '../editor/markdown/deskCallout'
 import { reconcileMarkdownSource } from '../editor/markdown/sourcePreservation'
+import { renumberHeadings, stripHeadingNumbers } from '../editor/markdown/headingNumbering'
 import { flushPendingEdits } from '../editor/markdown/pendingEdits'
 import { createDeskRawBlockView } from './createDeskRawBlockView'
 import { createDeskCalloutView, deskCalloutKeymapPlugin } from './deskCalloutView'
@@ -574,6 +575,8 @@ defineExpose({
   setLinePrefix,
   insertCodeBlock,
   insertTable,
+  addHeadingNumbers,
+  removeHeadingNumbers,
   applyHeadingFold,
   focus,
   flush
@@ -738,6 +741,40 @@ function flushCurrentContent(editor = crepe): void {
 function flush(): void {
   flushPendingEdits(props.knowledgeBaseId, props.noteUuid, { requireClean: false })
   flushCurrentContent()
+}
+
+/**
+ * 标题编号：重排（先剥再按上限重编）与剥除。
+ * replaceAll 是单个 ProseMirror 事务，一步撤销；随后刷新基线并 emit。
+ */
+function addHeadingNumbers(maxDepth: number): void {
+  if (!crepe || !ready || isEffectivelyReadOnly()) return
+  flushPendingEdits(props.knowledgeBaseId, props.noteUuid, { requireClean: false })
+  const preserved = reconcileMarkdownSource(originalSource, baselineCanonical, crepe.getMarkdown())
+  const result = renumberHeadings(preserved, maxDepth)
+  if (!result.changed) return
+  crepe.editor.action(replaceAll(projectRawBlocksForMilkdown(result.text), true))
+  originalSource = result.text
+  baselineCanonical = crepe.getMarkdown()
+  applyGeneratedTocDisplay()
+  refreshOutline()
+  flushCurrentContent()
+  focus()
+}
+
+function removeHeadingNumbers(): void {
+  if (!crepe || !ready || isEffectivelyReadOnly()) return
+  flushPendingEdits(props.knowledgeBaseId, props.noteUuid, { requireClean: false })
+  const preserved = reconcileMarkdownSource(originalSource, baselineCanonical, crepe.getMarkdown())
+  const result = stripHeadingNumbers(preserved)
+  if (!result.changed) return
+  crepe.editor.action(replaceAll(projectRawBlocksForMilkdown(result.text), true))
+  originalSource = result.text
+  baselineCanonical = crepe.getMarkdown()
+  applyGeneratedTocDisplay()
+  refreshOutline()
+  flushCurrentContent()
+  focus()
 }
 
 function applyHeadingFold(command: HeadingFoldCommand): boolean {

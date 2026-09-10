@@ -4,6 +4,10 @@ import { join } from 'node:path'
 import { z } from 'zod'
 
 import { clampAppZoom, APP_ZOOM_DEFAULT } from '../shared/appZoom'
+import {
+  clampHeadingNumberMaxDepth,
+  HEADING_NUMBER_DEFAULT_MAX_DEPTH
+} from '../shared/headingNumbering'
 
 import type { AppSettings, KnowledgeBaseSettings } from '../shared/contracts'
 
@@ -25,6 +29,10 @@ const settingsSchema = z.object({
   defaultNoteView: z.enum(['visual', 'readonly', 'source']).default('visual'),
   defaultNotePageWidth: z.enum(['standard', 'wide']).default('standard'),
   noteTocDisplay: z.enum(['hidden', 'collapsed', 'expanded']).default('expanded'),
+  headingNumberMaxDepth: z
+    .number()
+    .transform(clampHeadingNumberMaxDepth)
+    .default(HEADING_NUMBER_DEFAULT_MAX_DEPTH),
   appZoomPercent: z.number().transform(clampAppZoom).default(APP_ZOOM_DEFAULT),
   autosave: z
     .object({
