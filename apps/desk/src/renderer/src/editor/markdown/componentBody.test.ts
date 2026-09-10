@@ -58,9 +58,9 @@ describe('word list source', () => {
       words: ['cancel'],
       needSort: true
     })
-    expect(
-      parseWordListSource(`<EnWordList :words="[\n'cancel',\n]" :needSort="true" />`)
-    ).toBe(null)
+    expect(parseWordListSource(`<EnWordList :words="[\n'cancel',\n]" :needSort="true" />`)).toBe(
+      null
+    )
     expect(parseWordListSource(`<E :words="['x']" />`)).toBe(null)
   })
 

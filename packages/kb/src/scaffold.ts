@@ -158,10 +158,7 @@ export function buildRootReadme(title: string, folderName: string): string {
 `
 }
 
-export async function writePackageJsonScaffold(
-  rootPath: string,
-  name?: string
-): Promise<string[]> {
+export async function writePackageJsonScaffold(rootPath: string, name?: string): Promise<string[]> {
   const written: string[] = []
   await fs.writeFile(
     path.join(rootPath, 'package.json'),

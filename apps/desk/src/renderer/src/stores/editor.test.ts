@@ -227,5 +227,4 @@ describe('editor store tab semantics', () => {
     expect(editor.groups).toHaveLength(1)
     expect(editor.activeTab).toMatchObject({ type: 'note', noteUuid: 'note-b' })
   })
-
 })

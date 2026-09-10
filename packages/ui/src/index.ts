@@ -11,14 +11,8 @@ export {
   resolveWordListFeatures
 } from './components/WordList/wordListFeatures'
 export type { WordListFeatures } from './components/WordList/wordListFeatures'
-export {
-  normalizeMindmapMarkdown,
-  parseMindmapFence
-} from './components/Mindmap/markdown'
-export type {
-  MindmapFenceOptions,
-  NormalizeMindmapOptions
-} from './components/Mindmap/markdown'
+export { normalizeMindmapMarkdown, parseMindmapFence } from './components/Mindmap/markdown'
+export type { MindmapFenceOptions, NormalizeMindmapOptions } from './components/Mindmap/markdown'
 export type { NotesTableRow } from './components/NotesTable/types'
 export {
   parseFootprintsSource,

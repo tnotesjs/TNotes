@@ -138,9 +138,7 @@ export async function createKnowledgeBase(
   const extras: string[] = []
 
   if (wantPackageJson) {
-    extras.push(
-      ...(await writePackageJsonScaffold(rootPath, folderName))
-    )
+    extras.push(...(await writePackageJsonScaffold(rootPath, folderName)))
   }
   if (wantPages) {
     extras.push(...(await writeDeployWorkflowScaffold(rootPath)))
