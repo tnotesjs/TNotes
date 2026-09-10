@@ -224,6 +224,19 @@ export function mountCodeTabEditor(
     })()
   })
 
+  let saveChain: Promise<void> | null = null
+
+  /** 串行化保存：拆除前要等正在进行的保存结束，若期间又变脏就再存一次。 */
+  const saveAllPending = (): Promise<void> => {
+    if (saveChain) return saveChain.then(() => (dirty ? saveAllPending() : undefined))
+    saveChain = save()
+      .catch(() => undefined)
+      .finally(() => {
+        saveChain = null
+      })
+    return saveChain
+  }
+
   const save = async (): Promise<void> => {
     if (!editor || !dirty || saving || cancelled) return
     saving = true
@@ -285,11 +298,20 @@ export function mountCodeTabEditor(
       editor?.setLanguage(language)
     },
     destroy: () => {
-      cancelled = true
-      editor?.destroy()
-      editor = null
+      if (cancelled) return
+      const finish = (): void => {
+        cancelled = true
+        editor?.destroy()
+        editor = null
+      }
+      if (!editor) {
+        finish()
+        return
+      }
+      // 程序化拆除 NodeView 不会触发 focusout：dirty 内容必须先落盘再销毁
+      void saveAllPending().then(finish, finish)
     },
     isDirty: () => dirty,
-    flushSave: () => save()
+    flushSave: () => saveAllPending()
   }
 }
