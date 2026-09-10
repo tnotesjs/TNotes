@@ -1,7 +1,7 @@
 import type { Ref } from 'vue'
 
 import type { useEditorStore } from '../editor'
-import { flushPendingEdits } from '../../editor/markdown/pendingEdits'
+import { flushPendingEdits, hasPendingEdits } from '../../editor/markdown/pendingEdits'
 
 import type {
   AppSettings,
@@ -240,6 +240,24 @@ export function createToc(ctx: TocContext) {
   }
 
   async function deleteNode(preview: DeletePreviewDto): Promise<void> {
+    // 删除会连同会话与恢复快照一起移除，未保存的编辑再也拿不回来：
+    // 先拒绝并说明是哪些笔记，用户保存或撤销后重试。
+    const dirtyTitles = preview.notes
+      .filter((note) => {
+        const key = documentKey(preview.knowledgeBaseId, note.noteUuid)
+        const session = ctx.documents.value[key]
+        return (
+          Boolean(session?.dirty) ||
+          Boolean(session?.saving) ||
+          hasPendingEdits(preview.knowledgeBaseId, note.noteUuid)
+        )
+      })
+      .map((note) => note.title)
+    if (dirtyTitles.length > 0) {
+      const message = `「${dirtyTitles.join('」「')}」有未保存的更改，请先保存或撤销后再删除`
+      ctx.error.value = message
+      throw new Error(message)
+    }
     const detail = resultValue(
       await window.desk.toc.delete(
         ipcPlain({
