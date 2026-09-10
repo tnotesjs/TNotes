@@ -4,7 +4,11 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const environment = vi.hoisted(() => ({ profile: '' }))
-vi.mock('electron', () => ({ app: { getPath: () => environment.profile } }))
+vi.mock('electron', () => ({
+  app: { getPath: () => environment.profile },
+  // deskLog 会遍历窗口广播日志
+  BrowserWindow: { getAllWindows: () => [] }
+}))
 
 import { loadSettings, saveSettings, writeSettingsRaw } from './settings'
 
@@ -43,5 +47,66 @@ describe('persisted app zoom', () => {
       expect(() => saveSettings({ appZoomPercent: value as number })).toThrow()
       expect(readFileSync(path, 'utf8')).toBe(before)
     }
+  })
+})
+
+describe('配置文件字段级容错', () => {
+  const path = () => join(environment.profile, '.tn-desk-config.json')
+
+  it('单个字段非法时只回退该字段，其余偏好保留', () => {
+    writeFileSync(
+      path(),
+      JSON.stringify({ theme: 'dark', appZoomPercent: 135, tabs: { maxOpenCount: 0, wrap: false } })
+    )
+    const settings = loadSettings()
+
+    expect(settings.theme).toBe('dark')
+    expect(settings.appZoomPercent).toBe(135)
+    expect(settings.tabs.maxOpenCount).toBe(10) // 非法值回默认
+    expect(settings.tabs.wrap).toBe(false)
+  })
+
+  it('整个分组非法时只回退该分组', () => {
+    writeFileSync(
+      path(),
+      JSON.stringify({ theme: 'light', autosave: 'nonsense', toc: { doneEmoji: '✅' } })
+    )
+    const settings = loadSettings()
+
+    expect(settings.theme).toBe('light')
+    expect(settings.autosave).toEqual({ enabled: true, delayMs: 1000 })
+    expect(settings.toc.doneEmoji).toBe('✅')
+  })
+
+  it('顶层无法解析的 JSON 仍回默认值', () => {
+    writeFileSync(path(), '{ this is not json')
+    expect(loadSettings().theme).toBe('system')
+  })
+
+  it('丢弃字段时保留一份 .invalid.bak 便于还原', () => {
+    writeFileSync(path(), JSON.stringify({ theme: 'dark', appZoomPercent: 'oops' }))
+    loadSettings()
+    const backup = JSON.parse(readFileSync(`${path()}.invalid.bak`, 'utf8'))
+    expect(backup.appZoomPercent).toBe('oops')
+  })
+
+  it('合法的配置文件不产生备份', () => {
+    writeFileSync(path(), JSON.stringify({ theme: 'dark' }))
+    loadSettings()
+    expect(() => readFileSync(`${path()}.invalid.bak`, 'utf8')).toThrow()
+  })
+
+  it('旧的 quality / oxipngLevel 仍会迁移成 strength（容错不影响迁移）', () => {
+    writeFileSync(
+      path(),
+      JSON.stringify({ imageUpload: { optimize: { encoder: 'sharp', quality: 60 } } })
+    )
+    expect(loadSettings().imageUpload.optimize.strength).toBe('high')
+
+    writeFileSync(
+      path(),
+      JSON.stringify({ imageUpload: { optimize: { encoder: 'oxipng', oxipngLevel: 6 } } })
+    )
+    expect(loadSettings().imageUpload.optimize.strength).toBe('high')
   })
 })

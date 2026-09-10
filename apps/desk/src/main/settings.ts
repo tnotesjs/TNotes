@@ -1,8 +1,16 @@
 import { app } from 'electron'
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  writeFileSync
+} from 'node:fs'
 import { join } from 'node:path'
 import { z } from 'zod'
 
+import { deskLog } from './log'
 import { clampAppZoom, APP_ZOOM_DEFAULT } from '../shared/appZoom'
 import {
   clampHeadingNumberMaxDepth,
@@ -176,8 +184,7 @@ function normalizeKnowledgeBaseSettings(
   )
 }
 
-function normalize(input: unknown): AppSettings {
-  const parsed = settingsSchema.parse(input)
+function finalize(parsed: AppSettings): AppSettings {
   return {
     ...parsed,
     hiddenKnowledgeBases: uniqueSorted(parsed.hiddenKnowledgeBases),
@@ -185,12 +192,112 @@ function normalize(input: unknown): AppSettings {
   }
 }
 
-export function loadSettings(): AppSettings {
+const settingsShape = settingsSchema.shape as Record<string, z.ZodTypeAny>
+
+interface ZodLike {
+  shape?: Record<string, z.ZodTypeAny>
+  def?: { innerType?: unknown }
+  _def?: { innerType?: unknown }
+}
+
+/** 去掉 .default()/.preprocess() 外层，拿到真正描述数据结构的 schema */
+function unwrapSchema(schema: z.ZodTypeAny): ZodLike | null {
+  let current: unknown = schema
+  for (let depth = 0; depth < 5 && current; depth += 1) {
+    const like = current as ZodLike
+    if (like.shape) return like
+    const inner = like.def?.innerType ?? like._def?.innerType
+    if (!inner) return null
+    current = inner
+  }
+  return null
+}
+
+/**
+ * 逐字段抢救：非法字段回默认值，合法字段原样保留（最多递归到子对象，
+ * 这样 `tabs.maxOpenCount: 0` 只会重置这一个字段）。
+ */
+function salvageValue(
+  schema: z.ZodTypeAny,
+  value: unknown,
+  path: string,
+  dropped: string[],
+  depth = 0
+): { ok: true; value: unknown } | { ok: false } {
+  const direct = schema.safeParse(value)
+  if (direct.success) return { ok: true, value: direct.data }
+  const shape = depth < 3 ? unwrapSchema(schema)?.shape : undefined
+  if (shape && value && typeof value === 'object' && !Array.isArray(value)) {
+    const source = value as Record<string, unknown>
+    const salvaged: Record<string, unknown> = {}
+    for (const [key, subSchema] of Object.entries(shape)) {
+      if (!(key in source)) continue
+      const result = salvageValue(subSchema, source[key], `${path}.${key}`, dropped, depth + 1)
+      if (result.ok) salvaged[key] = result.value
+    }
+    const group = schema.safeParse(salvaged)
+    if (group.success) return { ok: true, value: group.data }
+  }
+  dropped.push(path)
+  return { ok: false }
+}
+
+function normalizeWithSalvage(input: unknown): { settings: AppSettings; dropped: string[] } {
+  const whole = settingsSchema.safeParse(input)
+  if (whole.success) return { settings: finalize(whole.data), dropped: [] }
+
+  const source =
+    input && typeof input === 'object' ? (input as Record<string, unknown>) : ({} as const)
+  const salvaged: Record<string, unknown> = {}
+  const dropped: string[] = []
+  for (const [key, fieldSchema] of Object.entries(settingsShape)) {
+    if (!(key in source)) continue
+    const result = salvageValue(fieldSchema, source[key], key, dropped)
+    if (result.ok) salvaged[key] = result.value
+  }
+  const repaired = settingsSchema.safeParse(salvaged)
+  return {
+    settings: repaired.success ? finalize(repaired.data) : { ...DEFAULT_SETTINGS },
+    dropped
+  }
+}
+
+/**
+ * 严格入口：应用自己写入 / 导入的配置必须整体合法，非法就抛错并保持原文件不变。
+ * 只有读取可能被用户手改过的文件时才做逐字段容错。
+ */
+function normalizeStrict(input: unknown): AppSettings {
+  return finalize(settingsSchema.parse(input))
+}
+
+/** 出问题的配置先留一份副本，方便用户或后续排查还原被丢弃的字段。 */
+function backupUnreadableSettings(): void {
+  const target = settingsPath()
+  if (!existsSync(target)) return
   try {
-    return normalize(JSON.parse(readFileSync(settingsPath(), 'utf8')))
+    copyFileSync(target, `${target}.invalid.bak`)
+  } catch (error) {
+    deskLog(
+      'settings',
+      'settings backup failed',
+      error instanceof Error ? error.message : String(error)
+    )
+  }
+}
+
+export function loadSettings(): AppSettings {
+  let raw: unknown
+  try {
+    raw = JSON.parse(readFileSync(settingsPath(), 'utf8'))
   } catch {
     return { ...DEFAULT_SETTINGS }
   }
+  const { settings, dropped } = normalizeWithSalvage(raw)
+  if (dropped.length > 0) {
+    deskLog('settings', 'settings fields reset to default', { dropped })
+    backupUnreadableSettings()
+  }
+  return settings
 }
 
 function writeSettingsFile(settings: AppSettings): AppSettings {
@@ -203,7 +310,7 @@ function writeSettingsFile(settings: AppSettings): AppSettings {
 
 export function saveSettings(next: Partial<AppSettings>): AppSettings {
   const current = loadSettings()
-  const merged = normalize({
+  const merged = normalizeStrict({
     ...current,
     ...next,
     autosave: { ...current.autosave, ...next.autosave },
@@ -229,7 +336,7 @@ export function readSettingsFile(): string {
 
 export function importSettings(content: string): AppSettings {
   const parsed = JSON.parse(content) as unknown
-  return writeSettingsFile(normalize(parsed))
+  return writeSettingsFile(normalizeStrict(parsed))
 }
 
 export function writeSettingsRaw(json: string): AppSettings {
@@ -241,7 +348,7 @@ export function writeSettingsRaw(json: string): AppSettings {
       `配置文件不是合法的 JSON：${cause instanceof Error ? cause.message : String(cause)}`
     )
   }
-  return writeSettingsFile(normalize(parsed))
+  return writeSettingsFile(normalizeStrict(parsed))
 }
 
 export function settingsForKnowledgeBase(
