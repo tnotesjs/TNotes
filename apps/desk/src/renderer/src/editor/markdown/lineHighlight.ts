@@ -1,11 +1,11 @@
 /**
- * VitePress-style fence highlight ranges: `{1,2,5-7}` ↔ Set of 1-based line numbers.
+ * Fence highlight ranges: `{1,2,5-7}` ↔ Set of 1-based line numbers.
  */
 
 const HIGHLIGHT_BLOCK_RE = /\{([0-9,\s-]+)\}/
 const LINE_NUMBERS_RE = /:(?:no-)?line-numbers(?:=\d+)?\b/
 
-/** Preserve the exact VitePress per-fence line-number modifier. */
+/** Preserve the exact per-fence line-number modifier. */
 export function parseFenceLineNumbers(info?: string | null): string {
   return info?.match(LINE_NUMBERS_RE)?.[0] ?? ''
 }

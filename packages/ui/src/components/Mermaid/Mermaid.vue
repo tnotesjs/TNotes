@@ -151,7 +151,7 @@ const props = defineProps({
     type: String,
     default: ''
   },
-  /** URI-encoded source from VitePress fence (`graph="…"`). */
+  /** URI-encoded source from SSG fence (`graph="…"`). */
   graph: {
     type: String,
     default: ''
@@ -366,7 +366,7 @@ async function toggleFullscreen() {
   fullscreenMode = 'css'
   isFullscreen.value = true
 
-  // Best-effort native fullscreen for browser / VitePress (non-blocking).
+  // Best-effort native fullscreen (non-blocking).
   if (!document.fullscreenEnabled || typeof root.requestFullscreen !== 'function') return
   if (/Electron/i.test(navigator.userAgent)) return
   try {

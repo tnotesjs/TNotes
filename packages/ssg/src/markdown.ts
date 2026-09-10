@@ -85,7 +85,7 @@ const resolveRelativeSpecifiers = (source: string, fromFile: string) =>
   )
 
 const slugger = new GithubSlugger()
-/** GitHub-style anchors — must stay identical to the legacy VitePress sites. */
+/** GitHub-style heading anchors. */
 function slugify(value: string) {
   slugger.reset()
   return slugger.slug(value)

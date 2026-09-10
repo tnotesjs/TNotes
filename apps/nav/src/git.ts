@@ -150,8 +150,7 @@ function pathToMarkKey(relPath: string): string | null {
   if (p === 'README.md') return GIT_README_MARK_KEY
   const m = /^notes\/([^/]+)/.exec(p)
   if (!m) return null
-  // New single-file format: notes/NNNN. 标题.md → key is the stem, matching
-  // the old per-note directory name (notes/NNNN. 标题/README.md).
+  // notes/NNNN. 标题.md → stem（与 TOC 行一致）
   const segment = m[1]
   return segment.endsWith('.md') ? segment.slice(0, -3) : segment
 }

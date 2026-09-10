@@ -55,7 +55,7 @@ export function isStructuredCalloutSource(source: string): boolean {
 
 /**
  * Splits a `::: name [title] ... :::` source block into its name, optional
- * VitePress-style title (the bare text after the name, not a `[label]`) and
+ * Container title (the bare text after the name, not a `[label]`) and
  * the inner body. Blank lines at the body edges are stripped.
  */
 export function parseContainerSource(source: string): ParsedContainer {
@@ -102,7 +102,7 @@ export function parseContainerFences(source: string): ParsedContainerFences {
 }
 
 /**
- * Rebuilds a VitePress container source from structured title/body edits,
+ * Rebuilds a container source from structured title/body edits,
  * reusing the original colon count / close fence when possible.
  */
 export function rebuildContainerSource(
@@ -272,7 +272,7 @@ const defaultResolveImage: ResolveImage = (src) =>
 
 /**
  * Renders a `:::` container source into a read-only, faithful DOM node that
- * mirrors VitePress's `.custom-block` / `details` structure. The container
+ * mirrors `.custom-block` / `details` structure. The container
  * remains an atom (non-editable); only its source is stored on the node, so
  * the editor never rewrites it.
  */

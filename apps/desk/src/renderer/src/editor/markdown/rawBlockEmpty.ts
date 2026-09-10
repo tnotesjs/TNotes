@@ -4,7 +4,7 @@
  *
  * Rules:
  * - Whitespace-only source → empty.
- * - VitePress-style `:::` / `::::` container whose body (between open/close
+ * - `:::` / `::::` container whose body (between open/close
  *   fences) is whitespace-only → empty (default titles on the open line do
  *   not count as content).
  * - Everything else (components, diagram fences, code-group with stubs, …)

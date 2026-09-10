@@ -351,7 +351,7 @@ async function toggleFullscreen(): Promise<void> {
   forceExitPeerFullscreen(root)
   void nextTick(() => zoomToFit())
 
-  // Best-effort native fullscreen for browser / VitePress (non-blocking).
+  // Best-effort native fullscreen (non-blocking).
   if (!document.fullscreenEnabled || typeof root.requestFullscreen !== 'function') return
   if (/Electron/i.test(navigator.userAgent)) return
   try {

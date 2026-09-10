@@ -1,4 +1,4 @@
-// Verify local VitePress fonts and note typography without any network access.
+// Verify local Inter fonts and note typography without any network access.
 import assert from 'node:assert/strict'
 import { _electron } from 'playwright-core'
 import { createRequire } from 'node:module'

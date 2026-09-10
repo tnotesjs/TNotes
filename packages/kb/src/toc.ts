@@ -7,7 +7,7 @@
  *   - 分组标题                  group (any depth, 2-space indent)
  *   - [x] 0001. 标题            done note
  *   - [ ] 0001. 标题            pending note
- *   - [x] [0001. 标题](...)     legacy linked form (parsed, never emitted)
+ *   - [x] [0001. 标题](...)     linked form (parsed, never emitted)
  *
  * Unknown lines (blank lines, headings, comments) are preserved in place:
  * mutations edit the raw line array by index and rewrite the file.

@@ -78,10 +78,7 @@ export interface TocReadResult {
   revision: string
 }
 
-/**
- * Nav only reads the single-file format (tnotes.json + TOC.md + notes/*.md).
- * 旧格式（.tnotes.json）已随 core 归档彻底淘汰，遇到时直接报错而非显示空树。
- */
+/** Require tnotes.json. A leftover `.tnotes.json` is an error, not an empty tree. */
 function assertSingleFileFormat(repoRoot: string): void {
   if (existsSync(join(repoRoot, 'tnotes.json'))) return
   if (existsSync(join(repoRoot, '.tnotes.json'))) {

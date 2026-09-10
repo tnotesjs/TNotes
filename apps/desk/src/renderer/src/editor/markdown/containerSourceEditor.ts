@@ -46,7 +46,7 @@ export interface ContainerSourceEditorOptions {
    */
   language?: string
   /**
-   * VitePress-style line highlights. Host already provides `lineNumbers()`,
+   * Fence line highlights. Host already provides `lineNumbers()`,
    * so the extension is installed with `provideLineNumbers: false`.
    */
   lineHighlight?: {

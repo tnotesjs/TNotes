@@ -539,7 +539,7 @@ function renderGeneratedTocNode(source: string): HTMLElement {
 
 /**
  * Builds the DOM that backs a projected raw-block atom. `raw-container` renders
- * its enclosed markdown as a faithful read-only VitePress-style container; every
+ * its enclosed markdown as a faithful read-only container; every
  * other kind keeps the immutable source-card presentation. `resolveImage` lets
  * the hosting editor rewrite note-local relative image paths; when omitted
  * relative paths are dropped defensively.
@@ -720,7 +720,7 @@ export const sourcePreservingCodeBlockSchema = codeBlockSchema.extendSchema((bas
       ...schema.attrs,
       deskMathSource: { default: null },
       title: { default: '' },
-      /** Encoded VitePress highlight ranges, e.g. `{1-3,7}` or `''`. */
+      /** Encoded fence highlight ranges, e.g. `{1-3,7}` or `''`. */
       highlights: { default: '' },
       /** `:line-numbers`, `:line-numbers=30`, `:no-line-numbers`, or empty. */
       lineNumbers: { default: '' }
@@ -841,7 +841,7 @@ export const immutableRawBlockPlugin = $prose(
     })
 )
 
-/** Reflect VitePress line-number meta onto Crepe's code-block DOM. */
+/** Reflect fence line-number meta onto Crepe's code-block DOM. */
 export const codeLineNumberMetaPlugin = $prose(
   () =>
     new Plugin({

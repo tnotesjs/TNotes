@@ -40,7 +40,7 @@ export interface MountCodeTabEditorOptions {
   onDirtyChange?: (dirty: boolean) => void
   /** Mirrors every user or programmatic document update to a shared resource store. */
   onChange?: (content: string) => void
-  /** VitePress-style clickable line highlights for this tab's CodeMirror. */
+  /** Clickable line highlights for this tab's CodeMirror. */
   lineHighlight?: {
     initial?: string
     onChange?: (encoded: string) => void

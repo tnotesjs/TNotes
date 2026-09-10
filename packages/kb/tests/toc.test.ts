@@ -162,7 +162,7 @@ describe('line ops', () => {
   it('normalizes blank lines between content lines', () => {
     const lines = ['- a', '', '', '  - [ ] 0001. t', '', '- b']
     // A blank directly between two content lines is dropped; a run of blanks
-    // collapses to one (matches the legacy core behavior).
+    // collapses to one.
     expect(normalizeTocBlankLines(lines)).toEqual(['- a', '', '  - [ ] 0001. t', '- b'])
   })
 

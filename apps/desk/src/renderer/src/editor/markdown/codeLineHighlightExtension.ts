@@ -50,7 +50,7 @@ function buildDecorations(
 }
 
 /**
- * CodeMirror extensions for VitePress-style clickable line highlights.
+ * CodeMirror extensions for clickable fence line highlights.
  * Returns extensions plus `setHighlights` to sync from outside (PM attrs).
  */
 export function createCodeLineHighlightExtension(options: CodeLineHighlightOptions = {}): {

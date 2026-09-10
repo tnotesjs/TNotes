@@ -253,7 +253,7 @@ function middleButtonRectangularSelection(): Extension {
  * Nested CodeMirror (fences, code groups) lives inside a contenteditable.
  * Focusing the parent — or remounting after leaving source view — makes the
  * browser select the whole nested document. drawSelection then paints a
- * full-line wash that looks like a broken VitePress highlight.
+ * full-line wash that looks like a broken fence highlight.
  */
 export function collapseBrowserSelectAllOnFocus(): Extension {
   return EditorView.domEventHandlers({

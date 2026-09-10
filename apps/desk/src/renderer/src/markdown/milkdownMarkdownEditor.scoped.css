@@ -39,7 +39,7 @@
   --crepe-font-default: var(--font-sans);
   --crepe-font-title: var(--font-sans);
   --crepe-font-code: var(--font-mono);
-  /* VitePress permits synthetic italics for CJK, but not synthetic bold. */
+  /* Allow synthetic italics for CJK; do not synthesize bold. */
   font-synthesis: style;
   --crepe-color-background: var(--editor-bg);
   --crepe-color-on-background: var(--editor-text);
@@ -63,7 +63,7 @@
   --crepe-shadow-2: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
-/* VitePress list markers use the body foreground, not Crepe's outline (our
+/* List markers use the body foreground, not Crepe's outline (our
    border). Ordered numbers inherit this; checkbox SVGs keep Crepe's fill. */
 .milkdown-markdown-editor :deep(.milkdown .milkdown-list-item-block .label-wrapper) {
   color: var(--editor-text);
@@ -286,7 +286,7 @@
   --prosemirror-virtual-cursor-color: var(--accent-strong);
 }
 
-/* Match VitePress's 16px/28px paragraphs. Keep Crepe's block padding and
+/* Paragraph line-height. Keep Crepe's block padding and
    editing hit areas; code editors and callout bodies retain their own metrics. */
 .milkdown-markdown-editor :deep(.ProseMirror p) {
   line-height: 1.75;
@@ -409,9 +409,7 @@
   margin-top: 0;
 }
 
-/* VitePress .vp-doc headings + core `margin: 1rem 0` (tn:dev / published).
-   Use px to keep heading sizes independent of editor chrome. Skip VP’s leftover
-   h2 padding-top: 24px — core already tightened spacing. */
+/* Heading sizes in px so they stay independent of editor chrome. */
 .milkdown-markdown-editor :deep(.ProseMirror h1:not(.desk-generated-title)),
 .milkdown-markdown-editor :deep(.ProseMirror h2),
 .milkdown-markdown-editor :deep(.ProseMirror h3),
@@ -1167,7 +1165,7 @@
   color: var(--editor-text);
 }
 
-/* Soft-tint callouts retain VitePress's compact 16px/24px body typography. */
+/* Soft-tint callouts: compact body typography. */
 .milkdown-markdown-editor :deep(.desk-callout.custom-block-tip),
 .milkdown-markdown-editor :deep(.desk-callout.custom-block-info),
 .milkdown-markdown-editor :deep(.desk-callout.custom-block-warning),
@@ -1213,13 +1211,13 @@
   margin-bottom: 0;
 }
 
-/* tip → brand soft (VitePress --vp-c-tip-soft) */
+/* tip → brand soft */
 .milkdown-markdown-editor :deep(.desk-callout.custom-block-tip),
 .milkdown-markdown-editor :deep(.desk-raw-block--container .custom-block-tip) {
   background-color: var(--selected);
 }
 
-/* info / note / details → gray soft (VitePress --vp-c-default-soft) */
+/* info / note / details → gray soft */
 .milkdown-markdown-editor :deep(.desk-callout.custom-block-info),
 .milkdown-markdown-editor :deep(.desk-raw-block--container .custom-block-info),
 .milkdown-markdown-editor :deep(.desk-raw-block--container .custom-block-note),

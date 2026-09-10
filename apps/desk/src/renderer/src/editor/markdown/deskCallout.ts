@@ -1,5 +1,5 @@
 /**
- * Visual VitePress callouts (tip / info / warning / danger).
+ * Callouts (tip / info / warning / danger).
  *
  * Source mapping:
  *   ::: tip {A}

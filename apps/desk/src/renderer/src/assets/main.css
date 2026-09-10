@@ -1,5 +1,4 @@
-/* Semantic colors aligned to VitePress theme-default vars.css;
-   brand accent follows TNotes VitePress (--vp-c-brand-1/2). */
+/* Semantic colors; brand accent from `--tn-*` tokens. */
 
 :root {
   --app-bg: var(--tn-c-bg-chrome);
