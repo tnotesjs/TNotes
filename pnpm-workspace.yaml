@@ -2,14 +2,14 @@ packages:
   - 'packages/*'
   - 'apps/*'
 
-# 依赖构建脚本白名单（对齐各老仓原有配置；其余一律阻止）
-onlyBuiltDependencies:
-  - esbuild
-  - '@parcel/watcher'
-  - electron
-  - electron-winstaller
-  - '@vscode/vsce-sign'
-  - keytar
+# 依赖构建脚本白名单（pnpm 11 allowBuilds；对齐各老仓原有配置，其余一律阻止）
+allowBuilds:
+  esbuild: true
+  '@parcel/watcher': true
+  electron: true
+  electron-winstaller: true
+  '@vscode/vsce-sign': true
+  keytar: true
 
 # 本组织包刚发布就要能被装到，跳过 minimumReleaseAge 冷却
 minimumReleaseAgeExclude:
