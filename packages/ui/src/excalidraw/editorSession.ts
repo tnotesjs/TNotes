@@ -41,6 +41,13 @@ export interface ExcalidrawSession {
   flush(): Promise<void>
   /** 失败后重试（内容仍在内存里） */
   retry(): Promise<void>
+  /**
+   * 把一段内容当作「已持久化」的基线：丢弃待写队列、更新 revision。
+   *
+   * 用途：编辑器首帧会把磁盘场景规范化（补齐 groupIds/roundness/gridSize 等字段），
+   * 那不是用户编辑，不能因此回写一份「规范化副本」；也可能用于放弃本地修改。
+   */
+  adopt(content: string, revision?: string): void
   currentContent(): string
   pendingContent(): string | null
   hasPending(): boolean
@@ -184,6 +191,17 @@ export function createExcalidrawSession(options: ExcalidrawSessionOptions): Exca
     await flush()
   }
 
+  function adopt(content: string, nextRevision?: string): void {
+    if (disposed) return
+    clearTimers()
+    queued = null
+    savedContent = content
+    savedSignature = persistedSceneSignature(content)
+    if (nextRevision !== undefined) revision.value = nextRevision
+    lastError.value = ''
+    state.value = 'idle'
+  }
+
   function dispose(): void {
     disposed = true
     clearTimers()
@@ -197,6 +215,7 @@ export function createExcalidrawSession(options: ExcalidrawSessionOptions): Exca
     update,
     flush,
     retry,
+    adopt,
     currentContent: () => queued ?? savedContent,
     pendingContent: () => queued,
     hasPending: () => queued !== null,

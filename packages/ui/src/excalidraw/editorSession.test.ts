@@ -156,6 +156,44 @@ describe('画布编辑会话', () => {
     expect(save).not.toHaveBeenCalled()
   })
 
+  it('adopt 把首帧规范化结果当基线：不写盘，且之后相同内容不触发写入', async () => {
+    const { session, save } = setup()
+    // 模拟 Excalidraw 载入后补齐字段：元素与 appState 都被规范化
+    const normalized = scene({
+      elements: [{ id: 'rect-1', groupIds: [], frameId: null, roundness: null }],
+      appState: { viewBackgroundColor: '#ffffff', gridSize: 20, gridStep: 5 }
+    })
+    session.update(normalized)
+    expect(session.state.value).toBe('pending')
+
+    session.adopt(normalized, 'rev-normalized')
+
+    expect(session.state.value).toBe('idle')
+    expect(session.hasPending()).toBe(false)
+    expect(session.revision.value).toBe('rev-normalized')
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(save).not.toHaveBeenCalled()
+
+    // 同一份规范化内容再来一次（编辑器抖动）也不写
+    session.update(normalized)
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(save).not.toHaveBeenCalled()
+
+    // 真正的内容变化照常写盘
+    session.update(scene({ elements: [{ id: 'rect-1' }, { id: 'rect-2' }] }))
+    await vi.advanceTimersByTimeAsync(200)
+    expect(save).toHaveBeenCalledTimes(1)
+  })
+
+  it('adopt 之后 revision 不变时，写入仍会用最新 revision', async () => {
+    const { session, save } = setup()
+    session.adopt(scene({ elements: [{ id: 'normalized' }] }))
+    expect(session.revision.value).toBe('rev-0')
+    session.update(scene({ elements: [{ id: 'drawn' }] }))
+    await vi.advanceTimersByTimeAsync(200)
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ expectedRevision: 'rev-0' }))
+  })
+
   it('持久化指纹忽略展示状态但包含元素与内嵌文件', () => {
     const a = persistedSceneSignature(scene())
     expect(persistedSceneSignature(viewChanged({ scrollX: 10, zoom: { value: 1.5 } }))).toBe(a)

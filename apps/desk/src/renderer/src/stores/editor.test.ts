@@ -325,4 +325,79 @@ describe('画布标签页（E4）', () => {
     restored.restore(session, [otherKnowledgeBase])
     expect(restored.groups.flatMap((group) => group.tabs)).toHaveLength(0)
   })
+
+  it('资源重命名后标签跟随新路径与新归属，不新建标签页', () => {
+    const editor = useEditorStore()
+    editor.openExcalidraw(knowledgeBase, path)
+    const next = 'assets/0043-26-09-11-12-00-00.excalidraw'
+
+    editor.repathExcalidrawTab(knowledgeBase.id, path, next)
+
+    expect(editor.groups.flatMap((group) => group.tabs)).toHaveLength(1)
+    expect(editor.activeTab).toMatchObject({
+      type: 'excalidraw',
+      relPath: next,
+      title: '0043-26-09-11-12-00-00.excalidraw',
+      ownerNoteIndex: '0043',
+      invalid: false
+    })
+    // 改名后再点开新路径仍然定位到同一个标签，不会出现第二个写者
+    const reopened = editor.openExcalidraw(knowledgeBase, next)
+    expect(reopened).toBe(editor.activeTab?.id)
+    expect(editor.groups.flatMap((group) => group.tabs)).toHaveLength(1)
+  })
+
+  it('拆分画布标签只搬移、不复制（同一文件不出现两个编辑会话）', () => {
+    const editor = useEditorStore()
+    const canvasTabId = editor.openExcalidraw(knowledgeBase, path)
+    const noteTabId = editor.openNote(
+      knowledgeBase,
+      'note-a',
+      'A',
+      'visual',
+      undefined,
+      'permanent'
+    )
+    const groupId = editor.activeGroupId
+    expect(editor.groups).toHaveLength(1)
+
+    editor.splitTab(canvasTabId, groupId, 'right')
+
+    const tabs = editor.groups.flatMap((group) => group.tabs)
+    expect(editor.groups).toHaveLength(2)
+    expect(tabs.filter((tab) => tab.type === 'excalidraw')).toHaveLength(1)
+    expect(tabs.map((tab) => tab.id).sort()).toEqual([canvasTabId, noteTabId].sort())
+  })
+
+  it('画布被回收（toRelPath 为空）只置失效，不按旧路径重建', () => {
+    const editor = useEditorStore()
+    editor.openExcalidraw(knowledgeBase, path)
+
+    editor.repathExcalidrawTab(knowledgeBase.id, path, null)
+
+    expect(editor.activeTab).toMatchObject({ type: 'excalidraw', relPath: path, invalid: true })
+  })
+
+  it('重命名只影响目标路径，其他 KB 与别的画布标签不受影响', () => {
+    const editor = useEditorStore()
+    const other = 'assets/0043-26-09-11-12-00-00.excalidraw'
+    editor.openExcalidraw(knowledgeBase, path)
+    editor.openExcalidraw(knowledgeBase, other)
+    editor.openExcalidraw(otherKnowledgeBase, path)
+
+    editor.repathExcalidrawTab(knowledgeBase.id, path, 'assets/0042-26-09-11-13-00-00.excalidraw')
+
+    editor.switchKnowledgeBase(otherKnowledgeBase.id)
+    expect(editor.activeTab).toMatchObject({ type: 'excalidraw', relPath: path, invalid: false })
+    editor.switchKnowledgeBase(knowledgeBase.id)
+    expect(
+      editor.groups
+        .flatMap((group) => group.tabs)
+        .filter((tab) => tab.type === 'excalidraw')
+        .map((tab) => [tab.relPath, Boolean(tab.invalid)])
+    ).toEqual([
+      ['assets/0042-26-09-11-13-00-00.excalidraw', false],
+      [other, false]
+    ])
+  })
 })

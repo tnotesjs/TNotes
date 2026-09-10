@@ -844,6 +844,50 @@ export const useEditorStore = defineStore('editor', () => {
     layout.value = { ...layout.value }
   }
 
+  /**
+   * 资源面板完成重命名/回收后同步画布标签身份。
+   *
+   * - 改名：跟随新路径（内容未变，会话与撤销历史继续有效），并刷新标题与归属前缀
+   * - 回收/合并（`toRelPath` 为空）：文件已离开原路径，只置失效，**不按旧路径重建**
+   */
+  function repathExcalidrawTab(
+    knowledgeBaseId: string,
+    fromRelPath: string,
+    toRelPath: string | null
+  ): void {
+    const updateLayout = (editorLayout: EditorLayoutNode): boolean => {
+      let changed = false
+      for (const group of listGroups(editorLayout)) {
+        for (const tab of group.tabs) {
+          if (
+            tab.type !== 'excalidraw' ||
+            tab.knowledgeBaseId !== knowledgeBaseId ||
+            tab.relPath !== fromRelPath
+          ) {
+            continue
+          }
+          if (toRelPath) {
+            tab.relPath = toRelPath
+            tab.title = toRelPath.split('/').pop() ?? toRelPath
+            tab.ownerNoteIndex = ownerIndexFromPath(toRelPath)
+            tab.invalid = false
+          } else {
+            tab.invalid = true
+          }
+          changed = true
+        }
+      }
+      return changed
+    }
+    if (updateLayout(layout.value)) layout.value = { ...layout.value }
+    let storedChanged = false
+    for (const [storedKnowledgeBaseId, session] of Object.entries(knowledgeBaseEditors.value)) {
+      if (storedKnowledgeBaseId === activeKnowledgeBaseId.value) continue
+      if (updateLayout(session.layout)) storedChanged = true
+    }
+    if (storedChanged) knowledgeBaseEditors.value = { ...knowledgeBaseEditors.value }
+  }
+
   function setKbSettingsDirty(tabId: string, dirty: boolean): void {
     const located = findTab(layout.value, tabId)
     if (located?.tab.type !== 'kb-settings') return
@@ -997,7 +1041,8 @@ export const useEditorStore = defineStore('editor', () => {
     const located = findTab(layout.value, tabId)
     if (!located) return
     const sameGroup = located.group.id === targetGroupId
-    const duplicate = sameGroup && behavior !== 'move'
+    // 画布是单文件单写者：拆分只能搬走标签，复制会出现两个会话同时写一个文件
+    const duplicate = sameGroup && behavior !== 'move' && located.tab.type !== 'excalidraw'
     if (sameGroup && !duplicate && located.group.tabs.length === 1) return
     if (duplicate) ensureRoomForTab(new Set([tabId]))
     const resolvedTargetGroupId = findGroup(layout.value, targetGroupId)
@@ -1092,6 +1137,7 @@ export const useEditorStore = defineStore('editor', () => {
     openKbAssets,
     openExcalidraw,
     updateExcalidrawTabMeta,
+    repathExcalidrawTab,
     setKbSettingsDirty,
     updateKbSettingsTabMeta,
     startPreview,

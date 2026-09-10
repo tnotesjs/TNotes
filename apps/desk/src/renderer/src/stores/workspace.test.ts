@@ -5,8 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { hasPendingEdits, registerPendingEdit } from '../editor/markdown/pendingEdits'
 import { useEditorStore } from './editor'
+import { registerExcalidrawCloseHandler } from './workspace/excalidrawCloseRegistry'
 import { useWorkspaceStore } from './workspace'
 
+import type { ClosingResource } from './workspace/closeTabs'
 import type {
   AppSettings,
   DeskApi,
@@ -358,6 +360,97 @@ describe('workspace unsaved tab close integration', () => {
     expect(await closing).toBe(true)
     expect(save).toHaveBeenCalledOnce()
     expect(editor.activeTab).toBeNull()
+  })
+})
+
+describe('workspace 画布标签关闭集成（E4）', () => {
+  const confirm = vi.fn()
+  const canvasPath = 'assets/0042-26-09-11-10-20-30.excalidraw'
+
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    confirm.mockReset().mockResolvedValue({ ok: true, value: 'cancel' })
+    Object.defineProperty(window, 'desk', {
+      configurable: true,
+      value: { app: { confirmTabClose: confirm }, web: { close: vi.fn() } }
+    })
+  })
+
+  afterEach(() => {
+    Reflect.deleteProperty(window, 'desk')
+  })
+
+  function openCanvas() {
+    const workspace = useWorkspaceStore()
+    workspace.applySettings(autosaveSettings)
+    const editor = useEditorStore()
+    const tab = editor.openExcalidraw(knowledgeBase, canvasPath)
+    editor.updateExcalidrawTabMeta(tab, { dirty: true })
+    return { workspace, editor, tab }
+  }
+
+  function canvasResource(options: { fail?: boolean } = {}) {
+    let pending = true
+    const flush = vi.fn(async () => {
+      if (options.fail) throw new Error('磁盘已被外部修改')
+      pending = false
+    })
+    return {
+      pending: () => pending,
+      flush,
+      entry: {
+        key: `excalidraw:${canvasPath}`,
+        title: canvasPath,
+        dirty: () => pending,
+        saving: () => false,
+        pauseAutosave: () => () => undefined,
+        waitForSave: flush,
+        save: flush,
+        discard: vi.fn(async () => {
+          pending = false
+        })
+      } as ClosingResource
+    }
+  }
+
+  it('未写完的自动保存先 flush，成功后不再弹保存确认', async () => {
+    const { workspace, editor, tab } = openCanvas()
+    const resource = canvasResource()
+    registerExcalidrawCloseHandler(tab, resource.entry)
+
+    expect(await workspace.requestCloseTab(tab)).toBe(true)
+    expect(resource.flush).toHaveBeenCalled()
+    expect(confirm).not.toHaveBeenCalled()
+    expect(editor.activeTab).toBeNull()
+  })
+
+  it('写入失败时保留标签并给出确认，丢弃后才关闭', async () => {
+    const { workspace, editor, tab } = openCanvas()
+    const resource = canvasResource({ fail: true })
+    registerExcalidrawCloseHandler(tab, resource.entry)
+
+    expect(await workspace.requestCloseTab(tab)).toBe(false)
+    expect(confirm).toHaveBeenCalledOnce()
+    expect(editor.activeTab).toMatchObject({ id: tab })
+
+    confirm.mockResolvedValue({ ok: true, value: 'discard' })
+    expect(await workspace.requestCloseTab(tab)).toBe(true)
+    expect(resource.entry.discard).toHaveBeenCalledOnce()
+    expect(editor.activeTab).toBeNull()
+  })
+
+  it('取消关闭时把恢复自动保存交还给会话', async () => {
+    const { workspace, editor, tab } = openCanvas()
+    const resource = canvasResource({ fail: true })
+    const resume = vi.fn()
+    registerExcalidrawCloseHandler(tab, {
+      ...resource.entry,
+      pauseAutosave: () => resume
+    })
+
+    expect(await workspace.requestCloseTab(tab)).toBe(false)
+    expect(resume).toHaveBeenCalledOnce()
+    expect(editor.activeTab).toMatchObject({ id: tab, dirty: true })
   })
 })
 

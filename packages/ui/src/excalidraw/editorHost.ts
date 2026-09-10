@@ -11,6 +11,8 @@
 import { createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { Excalidraw, serializeAsJSON } from '@excalidraw/excalidraw'
+// 官方样式表必须由宿主 import 一次：缺它的容器高度会算成 2^24，画布不可见且点不到
+import '@excalidraw/excalidraw/index.css'
 
 import { setExcalidrawAssetPath } from './fonts'
 
@@ -26,6 +28,13 @@ export interface MountExcalidrawHostOptions {
   theme: 'light' | 'dark'
   /** 本地字体基址；离线必须设置 */
   fontBase?: string
+  /**
+   * 场景序列化回调。
+   *
+   * 注意：Excalidraw 载入磁盘场景时会补齐自己的字段（groupIds/roundness/gridSize…），
+   * 挂载后的第一次回调就是这份「规范化」结果，**不是用户编辑**。调用方要把它当作
+   * 新的持久化基线（`session.adopt`），否则只读打开也会回写一份规范化副本。
+   */
   onChange: (content: string) => void
   onReady?: (api: ExcalidrawImperativeAPI) => void
 }

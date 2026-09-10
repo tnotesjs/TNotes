@@ -6,7 +6,7 @@ import { createServer } from 'node:http'
 import { readFile, stat } from 'node:fs/promises'
 import { cpSync, existsSync, mkdirSync } from 'node:fs'
 import { dirname, extname, join } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { fileURLToPath } from 'node:url'
 
 const deskDir = join(dirname(fileURLToPath(import.meta.url)), '..')
 const repoRoot = join(deskDir, '..', '..')

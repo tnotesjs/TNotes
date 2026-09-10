@@ -26,7 +26,13 @@ function knowledgeBaseTabs(
     )
   ]
   return tabs.filter((tab) => {
-    if (tab.type === 'note' || tab.type === 'kb-settings' || tab.type === 'kb-assets') {
+    if (
+      tab.type === 'note' ||
+      tab.type === 'kb-settings' ||
+      tab.type === 'kb-assets' ||
+      // 画布有未写完的内容时同样不能开始资源事务：重命名/回收会移动它正在写的文件
+      tab.type === 'excalidraw'
+    ) {
       return tab.knowledgeBaseId === knowledgeBaseId
     }
     return false

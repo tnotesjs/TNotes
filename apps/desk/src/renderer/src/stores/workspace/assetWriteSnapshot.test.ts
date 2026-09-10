@@ -76,4 +76,38 @@ describe('collectAssetEditorSnapshot', () => {
     expect(snapshot.kbSettingsDirty).toBe(true)
     expect(snapshot.pendingRecoveries).toEqual([{ noteUuid: 'n2', title: '无 path 草稿' }])
   })
+
+  it('把有未写入内容的画布标签算作写入门禁原因，其他库的画布不算', () => {
+    const layout = createGroup([
+      {
+        id: 'canvas-1',
+        type: 'excalidraw',
+        knowledgeBaseId: 'kb-a',
+        knowledgeBaseName: 'A',
+        relPath: 'assets/0042-x.excalidraw',
+        ownerNoteIndex: '0042',
+        title: '0042-x.excalidraw',
+        icon: null,
+        dirty: true
+      },
+      {
+        id: 'canvas-2',
+        type: 'excalidraw',
+        knowledgeBaseId: 'kb-b',
+        knowledgeBaseName: 'B',
+        relPath: 'assets/0043-y.excalidraw',
+        ownerNoteIndex: '0043',
+        title: '0043-y.excalidraw',
+        icon: null,
+        dirty: true
+      }
+    ])
+    const snapshot = collectAssetEditorSnapshot({
+      knowledgeBaseId: 'kb-a',
+      editor: { layout, knowledgeBaseEditors: {} } as never,
+      documents: {},
+      pendingRecoveries: []
+    })
+    expect(snapshot.dirtyTabs).toEqual([{ type: 'excalidraw', title: '0042-x.excalidraw' }])
+  })
 })

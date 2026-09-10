@@ -328,6 +328,7 @@ async function runTabAction(action: ContextMenuAction, tab: EditorTab): Promise<
         <ExcalidrawTabPane
           v-else-if="tab.type === 'excalidraw'"
           :tab="tab"
+          :group-id="group.id"
           :active="tab.id === group.activeTabId"
         />
         <WebTabPane v-else :tab="tab" :active="tab.id === group.activeTabId" />

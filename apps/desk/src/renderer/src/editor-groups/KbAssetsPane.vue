@@ -290,6 +290,17 @@ function openExcalidrawDocument(relPath: string): void {
   editor.openExcalidraw(kb, relPath, { ownerNoteIndex: owner })
 }
 
+/**
+ * 重命名/回收完成后同步已打开的画布标签：改名跟随新路径，回收只置失效。
+ * 会话不重建——文件内容没变，重建会丢撤销历史。
+ */
+function syncExcalidrawTabs(plan: AssetOperationPlanDto): void {
+  for (const move of plan.moves) {
+    if (!move.fromRelPath.endsWith('.excalidraw')) continue
+    editor.repathExcalidrawTab(props.tab.knowledgeBaseId, move.fromRelPath, move.toRelPath ?? null)
+  }
+}
+
 function openOtherKb(knowledgeBaseId: string): void {
   const descriptor = workspace.overview.allKnowledgeBases.find(
     (item) => item.id === knowledgeBaseId
@@ -484,6 +495,7 @@ async function confirmOptimize(): Promise<void> {
     }
     const dest = planned.value.moves[0]?.toRelPath
     if (dest) selectedPath.value = dest
+    syncExcalidrawTabs(planned.value)
     closeDialogs()
     dropStaleReport()
     await scan(true)
@@ -523,6 +535,7 @@ async function applyPreview(): Promise<void> {
     }
     if (dest) selectedPath.value = dest
     else if (selectedPath.value && recycled.includes(selectedPath.value)) selectedPath.value = null
+    syncExcalidrawTabs(plan)
     closeDialogs()
     dropStaleReport()
     await scan(true)

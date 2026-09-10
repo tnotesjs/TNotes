@@ -26,6 +26,7 @@ import {
   type DocumentSession,
   type GitAttention
 } from './helpers'
+import { excalidrawCloseResource } from './excalidrawCloseRegistry'
 import { kbSettingsCloseResource } from './kbSettingsCloseRegistry'
 import { createSearch } from './search'
 import { createSettings } from './settings'
@@ -230,6 +231,11 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         }
         if (tab.type === 'kb-settings') {
           const resource = kbSettingsCloseResource(tab.id)
+          if (resource) resources.push(resource)
+        }
+        // 画布自动写盘：关闭时先 flush，失败才让用户选择重试或丢弃
+        if (tab.type === 'excalidraw') {
+          const resource = excalidrawCloseResource(tab.id)
           if (resource) resources.push(resource)
         }
         return resources

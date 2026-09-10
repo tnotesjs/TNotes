@@ -220,6 +220,7 @@ export class WorkspaceManager {
     noteUuid: string,
     content?: string
   ): Promise<ExcalidrawDocumentRefDto> {
+    this.assertWritable(knowledgeBaseId)
     const handle = this.getHandle(knowledgeBaseId)
     const ownerNoteIndex = noteIo.resolveNoteIndex(handle, noteUuid)
     const created = await createExcalidrawDocument(handle.rootPath, { ownerNoteIndex, content })
@@ -246,6 +247,7 @@ export class WorkspaceManager {
     knowledgeBaseId: string,
     input: { relPath: string; content: string; expectedRevision: string }
   ): Promise<ExcalidrawDocumentRefDto> {
+    this.assertWritable(knowledgeBaseId)
     const handle = this.getHandle(knowledgeBaseId)
     const written = await writeExcalidrawDocument(handle.rootPath, input)
     this.markInternal(handle, [written.relPath])
@@ -258,6 +260,7 @@ export class WorkspaceManager {
     fromRelPath: string,
     toNoteUuid: string
   ): Promise<ExcalidrawDocumentRefDto> {
+    this.assertWritable(knowledgeBaseId)
     const handle = this.getHandle(knowledgeBaseId)
     const toOwnerNoteIndex = noteIo.resolveNoteIndex(handle, toNoteUuid)
     const copy = await copyExcalidrawDocument(handle.rootPath, {
