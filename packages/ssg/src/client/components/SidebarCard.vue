@@ -11,24 +11,24 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
-import site from "virtual:tnotes-site";
+import { computed } from 'vue'
+import site from 'virtual:tnotes-site'
 
-import type { SidebarItem } from "../../types";
+import type { SidebarItem } from '../../types'
 
-defineProps<{ pending?: boolean }>();
+defineProps<{ pending?: boolean }>()
 
 const flattened = computed(() => {
-  const values: SidebarItem[] = [];
+  const values: SidebarItem[] = []
   const visit = (items: SidebarItem[]) => {
     for (const item of items) {
-      if (item.link) values.push(item);
-      if (item.items) visit(item.items);
+      if (item.link) values.push(item)
+      if (item.items) visit(item.items)
     }
-  };
-  visit(site.sidebar);
-  return values.slice(0, 12);
-});
+  }
+  visit(site.sidebar)
+  return values.slice(0, 12)
+})
 
-const href = (link: string) => `${site.base}${link.replace(/^\//, "")}`;
+const href = (link: string) => `${site.base}${link.replace(/^\//, '')}`
 </script>

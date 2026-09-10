@@ -10,7 +10,7 @@ import {
   setInlineLink,
   stripInline,
   toggleInlineFormat,
-  updateInlineLink,
+  updateInlineLink
 } from './inline'
 
 describe('Markdown 行内模型', () => {
@@ -19,7 +19,9 @@ describe('Markdown 行内模型', () => {
     expect(stripInline(raw)).toBe('粗体 斜体 下划线 删除 高亮 代码 链接')
     const segments = parseInlineSegments(raw)
     expect(segments.some((segment) => segment.marks.bold && segment.text === '粗体')).toBe(true)
-    expect(segments.some((segment) => segment.marks.underline && segment.text === '下划线')).toBe(true)
+    expect(segments.some((segment) => segment.marks.underline && segment.text === '下划线')).toBe(
+      true
+    )
     expect(segments.some((segment) => segment.link?.url === 'https://example.com')).toBe(true)
   })
 
@@ -66,13 +68,17 @@ describe('Markdown 行内模型', () => {
   it('跨格式与链接边界替换时始终生成合法 Markdown', () => {
     expect(replaceInlineRange('**ab**cd', 1, 3, 'X')).toBe('**aX**d')
     expect(replaceInlineDisplayText('**ab**cd', 'aXd')).toBe('**aX**d')
-    expect(replaceInlineRange('[ab](https://example.com)cd', 1, 3, 'X')).toBe('[aX](https://example.com)d')
+    expect(replaceInlineRange('[ab](https://example.com)cd', 1, 3, 'X')).toBe(
+      '[aX](https://example.com)d'
+    )
     expect(stripInline(replaceInlineRange('**ab** *cd*', 1, 4, '新'))).toBe('a新d')
   })
 
   it('在格式或链接 run 内插入和删空时继承语义', () => {
     expect(replaceInlineRange('~~目标~~', 1, 1, '新')).toBe('~~目新标~~')
-    expect(replaceInlineRange('[目标](https://example.com)', 1, 1, '新')).toBe('[目新标](https://example.com)')
+    expect(replaceInlineRange('[目标](https://example.com)', 1, 1, '新')).toBe(
+      '[目新标](https://example.com)'
+    )
     expect(replaceInlineRange('[目标](https://example.com)', 0, 2, '')).toBe('')
   })
 
@@ -88,7 +94,9 @@ describe('Markdown 行内模型', () => {
   it('高亮与行内代码互斥，清除样式时保留链接', () => {
     expect(toggleInlineFormat('==abcdef==', 0, 6, 'code')).toBe('`abcdef`')
     expect(toggleInlineFormat('`abcdef`', 0, 6, 'highlight')).toBe('==abcdef==')
-    expect(clearInlineFormats('[***abc***](https://example.com)', 0, 3)).toBe('[abc](https://example.com)')
+    expect(clearInlineFormats('[***abc***](https://example.com)', 0, 3)).toBe(
+      '[abc](https://example.com)'
+    )
   })
 
   it('给部分文案添加链接，并更新 / 移除这一处链接', () => {
@@ -99,6 +107,8 @@ describe('Markdown 行内模型', () => {
     const updated = updateInlineLink(linked, link!.rawStart, link!.rawEnd, 'https://example.com')
     expect(updated).toBe('访问[桥水官网](https://example.com)')
     const updatedLink = parseInlineSegments(updated).find((segment) => segment.link)?.link
-    expect(updateInlineLink(updated, updatedLink!.rawStart, updatedLink!.rawEnd, null)).toBe('访问桥水官网')
+    expect(updateInlineLink(updated, updatedLink!.rawStart, updatedLink!.rawEnd, null)).toBe(
+      '访问桥水官网'
+    )
   })
 })

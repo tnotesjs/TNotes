@@ -21,7 +21,10 @@ export interface DirectoryHandleLike {
   removeEntry?(name: string, options?: { recursive?: boolean }): Promise<void>
 }
 
-export type DirectoryPicker = (options?: { mode?: 'read' | 'readwrite'; id?: string }) => Promise<DirectoryHandleLike>
+export type DirectoryPicker = (options?: {
+  mode?: 'read' | 'readwrite'
+  id?: string
+}) => Promise<DirectoryHandleLike>
 
 export class ProjectExistsError extends Error {
   constructor(name: string) {
@@ -63,11 +66,16 @@ async function writeFile(handle: FileHandleLike, data: Blob | string): Promise<v
 
 function extensionForMime(mime: string): string {
   switch (mime.toLowerCase()) {
-    case 'image/jpeg': return 'jpg'
-    case 'image/webp': return 'webp'
-    case 'image/gif': return 'gif'
-    case 'image/svg+xml': return 'svg'
-    default: return 'png'
+    case 'image/jpeg':
+      return 'jpg'
+    case 'image/webp':
+      return 'webp'
+    case 'image/gif':
+      return 'gif'
+    case 'image/svg+xml':
+      return 'svg'
+    default:
+      return 'png'
   }
 }
 
@@ -83,7 +91,7 @@ export function createAssetFileName(blob: Blob, now = new Date()): string {
     '-',
     String(now.getHours()).padStart(2, '0'),
     String(now.getMinutes()).padStart(2, '0'),
-    String(now.getSeconds()).padStart(2, '0'),
+    String(now.getSeconds()).padStart(2, '0')
   ].join('')
   return `image-${stamp}-${randomSuffix()}.${extensionForMime(blob.type)}`
 }
@@ -93,14 +101,18 @@ export class LocalProject {
     readonly name: string,
     readonly directory: DirectoryHandleLike,
     private readonly markdownFile: FileHandleLike,
-    private readonly assetsDirectory: DirectoryHandleLike,
+    private readonly assetsDirectory: DirectoryHandleLike
   ) {}
 
   get fileName(): string {
     return `${this.name}.tn-mindmap.md`
   }
 
-  static async create(parent: DirectoryHandleLike, rawName: string, markdown: string): Promise<LocalProject> {
+  static async create(
+    parent: DirectoryHandleLike,
+    rawName: string,
+    markdown: string
+  ): Promise<LocalProject> {
     const name = normalizeProjectName(rawName)
     if (await hasEntry(parent, name)) throw new ProjectExistsError(name)
 
@@ -115,18 +127,25 @@ export class LocalProject {
     } catch (error) {
       // 只回滚本次刚创建的目录；不触碰任何预先存在的用户数据。
       if (created && parent.removeEntry) {
-        try { await parent.removeEntry(name, { recursive: true }) } catch { /* 保留原始错误 */ }
+        try {
+          await parent.removeEntry(name, { recursive: true })
+        } catch {
+          /* 保留原始错误 */
+        }
       }
       throw error
     }
   }
 
-  static async open(directory: DirectoryHandleLike): Promise<{ project: LocalProject; markdown: string }> {
+  static async open(
+    directory: DirectoryHandleLike
+  ): Promise<{ project: LocalProject; markdown: string }> {
     const name = normalizeProjectName(directory.name)
     const expected = `${name}.tn-mindmap.md`
     const mindmapFiles: string[] = []
     for await (const [entryName, entry] of directory.entries()) {
-      if (entry.kind === 'file' && entryName.endsWith('.tn-mindmap.md')) mindmapFiles.push(entryName)
+      if (entry.kind === 'file' && entryName.endsWith('.tn-mindmap.md'))
+        mindmapFiles.push(entryName)
     }
     if (mindmapFiles.length !== 1 || mindmapFiles[0] !== expected) {
       throw new InvalidProjectError(`作品目录中必须只有一个 ${expected} 文件`)
@@ -152,12 +171,14 @@ export class LocalProject {
 
   async readAsset(relativePath: string): Promise<File> {
     const match = /^assets\/([-a-zA-Z0-9_.]+)$/.exec(relativePath)
-    if (!match || match[1] === '.' || match[1] === '..') throw new InvalidProjectError('资源路径不合法')
+    if (!match || match[1] === '.' || match[1] === '..')
+      throw new InvalidProjectError('资源路径不合法')
     return (await this.assetsDirectory.getFileHandle(match[1])).getFile()
   }
 }
 
 export function getDirectoryPicker(): DirectoryPicker | null {
-  const candidate = (window as Window & { showDirectoryPicker?: DirectoryPicker }).showDirectoryPicker
+  const candidate = (window as Window & { showDirectoryPicker?: DirectoryPicker })
+    .showDirectoryPicker
   return candidate ? candidate.bind(window) : null
 }

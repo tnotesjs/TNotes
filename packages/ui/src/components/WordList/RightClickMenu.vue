@@ -1,33 +1,15 @@
 <template>
-  <div
-    v-if="show"
-    class="rightClickMenu"
-    :style="{ left: x + 'px', top: y + 'px' }"
-  >
+  <div v-if="show" class="rightClickMenu" :style="{ left: x + 'px', top: y + 'px' }">
     <div v-if="showPin" class="menuItem" @click="handlePin">📌 Pin</div>
-    <div class="menuItem" @click="(e) => handlePronounce(e, 'en-GB')">
-      📢 Pronounce（英）
-    </div>
-    <div class="menuItem" @click="(e) => handlePronounce(e, 'en-US')">
-      📢 Pronounce（美）
-    </div>
-    <div
-      class="menuItem"
-      @click="(e) => handlePronounceAll(e, 'en-GB')"
-    >
+    <div class="menuItem" @click="(e) => handlePronounce(e, 'en-GB')">📢 Pronounce（英）</div>
+    <div class="menuItem" @click="(e) => handlePronounce(e, 'en-US')">📢 Pronounce（美）</div>
+    <div class="menuItem" @click="(e) => handlePronounceAll(e, 'en-GB')">
       📢 Pronounce All（英）
     </div>
-    <div
-      class="menuItem"
-      @click="(e) => handlePronounceAll(e, 'en-US')"
-    >
+    <div class="menuItem" @click="(e) => handlePronounceAll(e, 'en-US')">
       📢 Pronounce All（美）
     </div>
-    <div
-      v-if="showAutoShowCard"
-      class="menuItem"
-      @click="handleAutoShowCard"
-    >
+    <div v-if="showAutoShowCard" class="menuItem" @click="handleAutoShowCard">
       🔍 Auto Show Card（{{ isAutoShowCard ? '关' : '开' }}）
     </div>
     <div class="menuItem" @click="handleCheckAll">✅ Check All</div>
@@ -43,22 +25,15 @@ defineProps({
   y: Number,
   showPin: {
     type: Boolean,
-    default: true,
+    default: true
   },
   showAutoShowCard: {
     type: Boolean,
-    default: true,
-  },
+    default: true
+  }
 })
 
-const emit = defineEmits([
-  'pin',
-  'pronounce',
-  'pronounceAll',
-  'autoShowCard',
-  'checkAll',
-  'reset',
-])
+const emit = defineEmits(['pin', 'pronounce', 'pronounceAll', 'autoShowCard', 'checkAll', 'reset'])
 const handlePin = (e) => {
   emit('pin')
   e.preventDefault()

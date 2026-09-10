@@ -41,7 +41,7 @@ pnpm build      # 生产构建
   - [链接节点](https://example.com)
   - [ ] 任务节点（未完成）
   - [x] 任务节点（已完成）
-  - ![图片节点|300](https://example.com/a.png)   # |300 为宽度 px（Obsidian 风格）
+  - ![图片节点|300](https://example.com/a.png) # |300 为宽度 px（Obsidian 风格）
 ```
 
 - 无 H1、第二个 H1、frontmatter、普通段落、表格等均视为非法格式

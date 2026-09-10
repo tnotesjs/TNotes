@@ -7,12 +7,12 @@ small responsive shell. It has no VitePress runtime dependency.
 
 ```ts
 // tnotes.config.mts
-import { defineConfig } from "@tnotesjs/ssg";
+import { defineConfig } from '@tnotesjs/ssg'
 
 export default defineConfig({
-  base: "/my-kb/",
-  title: "my-kb",
-});
+  base: '/my-kb/',
+  title: 'my-kb'
+})
 ```
 
 ```sh

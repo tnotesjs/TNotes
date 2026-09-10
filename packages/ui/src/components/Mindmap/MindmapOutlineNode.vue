@@ -17,7 +17,10 @@ defineEmits<{
 </script>
 
 <template>
-  <li class="mindmap-outline-node" :class="{ 'is-root': root, 'is-done': node.content.checked === true }">
+  <li
+    class="mindmap-outline-node"
+    :class="{ 'is-root': root, 'is-done': node.content.checked === true }"
+  >
     <div class="mindmap-outline-row">
       <button
         v-if="node.children.length > 0"

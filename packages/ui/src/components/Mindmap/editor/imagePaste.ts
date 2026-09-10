@@ -7,7 +7,7 @@ export function insertImageIntoSource(
   selectionStart: number,
   selectionEnd: number,
   relativePath: string,
-  alt = '截图',
+  alt = '截图'
 ): string {
   const image = `![${alt.replace(/\]/g, '').trim() || '截图'}](${relativePath})`
   const start = Math.max(0, Math.min(markdown.length, selectionStart))

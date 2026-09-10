@@ -1,48 +1,47 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref, watch } from "vue";
-import CodeBlock from "../CodeBlock/CodeBlock.vue";
-import { parseCodeMeta } from "../../code/highlight";
+import { nextTick, onMounted, ref, watch } from 'vue'
+import CodeBlock from '../CodeBlock/CodeBlock.vue'
+import { parseCodeMeta } from '../../code/highlight'
 
 export interface CodeGroupItem {
-  code?: string;
-  info?: string;
-  highlightedHtml?: string;
-  key?: string;
+  code?: string
+  info?: string
+  highlightedHtml?: string
+  key?: string
 }
-const props = defineProps<{ items: CodeGroupItem[] }>();
-const root = ref<HTMLElement>();
-const active = ref(0);
+const props = defineProps<{ items: CodeGroupItem[] }>()
+const root = ref<HTMLElement>()
+const active = ref(0)
 function syncPanels(): void {
   const panels =
     root.value?.querySelectorAll<HTMLElement>(
-      ":scope > .tn-code-group__panels > .tn-code-group__panel",
-    ) ?? [];
+      ':scope > .tn-code-group__panels > .tn-code-group__panel'
+    ) ?? []
   panels.forEach((panel, index) => {
-    panel.hidden = index !== active.value;
-  });
+    panel.hidden = index !== active.value
+  })
 }
-watch(active, syncPanels, { flush: "post" });
+watch(active, syncPanels, { flush: 'post' })
 watch(
   () => props.items.length,
   (length) => {
-    active.value = Math.max(0, Math.min(active.value, length - 1));
-    nextTick(syncPanels);
-  },
-);
-onMounted(syncPanels);
+    active.value = Math.max(0, Math.min(active.value, length - 1))
+    nextTick(syncPanels)
+  }
+)
+onMounted(syncPanels)
 function navigate(event: KeyboardEvent, index: number): void {
-  let next = index;
-  if (event.key === "ArrowRight") next = (index + 1) % props.items.length;
-  else if (event.key === "ArrowLeft")
-    next = (index - 1 + props.items.length) % props.items.length;
-  else if (event.key === "Home") next = 0;
-  else if (event.key === "End") next = props.items.length - 1;
-  else return;
-  event.preventDefault();
-  active.value = next;
-  (event.currentTarget as HTMLElement).parentElement
-    ?.querySelectorAll<HTMLButtonElement>("button")
-    [next]?.focus();
+  let next = index
+  if (event.key === 'ArrowRight') next = (index + 1) % props.items.length
+  else if (event.key === 'ArrowLeft') next = (index - 1 + props.items.length) % props.items.length
+  else if (event.key === 'Home') next = 0
+  else if (event.key === 'End') next = props.items.length - 1
+  else return
+  event.preventDefault()
+  active.value = next
+  ;(event.currentTarget as HTMLElement).parentElement
+    ?.querySelectorAll<HTMLButtonElement>('button')
+    [next]?.focus()
 }
 </script>
 
@@ -67,9 +66,7 @@ function navigate(event: KeyboardEvent, index: number): void {
         @keydown="navigate($event, index)"
       >
         {{
-          parseCodeMeta(item.info).title ||
-          parseCodeMeta(item.info).language ||
-          `代码 ${index + 1}`
+          parseCodeMeta(item.info).title || parseCodeMeta(item.info).language || `代码 ${index + 1}`
         }}
       </button>
     </div>

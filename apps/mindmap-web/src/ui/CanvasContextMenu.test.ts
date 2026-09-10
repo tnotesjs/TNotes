@@ -17,7 +17,7 @@ function mountMenu(multiple = false, handlers: Record<string, unknown> = {}) {
   const app = createApp(CanvasContextMenu, {
     position: { left: 100, top: 100 },
     multiple,
-    ...handlers,
+    ...handlers
   })
   app.mount(host)
   return app
@@ -38,7 +38,11 @@ describe('CanvasContextMenu', () => {
     expect(text).toContain('删除当前主题及下级主题')
     expect(text).toContain('展开/折叠同级主题')
     expect(text).toContain('进入此主题')
-    ;([...menu.querySelectorAll('button')].find((button) => button.textContent?.includes('仅删除当前主题')) as HTMLButtonElement).click()
+    ;(
+      [...menu.querySelectorAll('button')].find((button) =>
+        button.textContent?.includes('仅删除当前主题')
+      ) as HTMLButtonElement
+    ).click()
     expect(onDeleteOnly).toHaveBeenCalledOnce()
     app.unmount()
   })
@@ -63,11 +67,19 @@ describe('CanvasContextMenu', () => {
       canDuplicate: false,
       canDeleteOnly: false,
       canDeleteTree: false,
-      canToggleSiblings: false,
+      canToggleSiblings: false
     })
     await nextTick()
-    const buttons = [...document.querySelectorAll<HTMLButtonElement>('[aria-label="主题右键菜单"] button')]
-    for (const label of ['剪切', '创建副本', '仅删除当前主题', '删除当前主题及下级主题', '展开/折叠同级主题']) {
+    const buttons = [
+      ...document.querySelectorAll<HTMLButtonElement>('[aria-label="主题右键菜单"] button')
+    ]
+    for (const label of [
+      '剪切',
+      '创建副本',
+      '仅删除当前主题',
+      '删除当前主题及下级主题',
+      '展开/折叠同级主题'
+    ]) {
       expect(buttons.find((button) => button.textContent?.includes(label))?.disabled).toBe(true)
     }
     app.unmount()

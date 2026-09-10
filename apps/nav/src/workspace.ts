@@ -22,10 +22,7 @@ export function normalizeRootPath(input: string): string {
  * Effective scan root: `tnotesNav.rootPath` when set, otherwise the opened folder.
  */
 export function getNavRoot(): string | undefined {
-  const configured = vscode.workspace
-    .getConfiguration('tnotesNav')
-    .get<string>('rootPath')
-    ?.trim()
+  const configured = vscode.workspace.getConfiguration('tnotesNav').get<string>('rootPath')?.trim()
   if (configured) {
     return normalizeRootPath(configured)
   }
@@ -34,10 +31,7 @@ export function getNavRoot(): string | undefined {
 
 /** Value to show in the address bar (configured path, else opened folder). */
 export function getAddressBarPath(): string {
-  const configured = vscode.workspace
-    .getConfiguration('tnotesNav')
-    .get<string>('rootPath')
-    ?.trim()
+  const configured = vscode.workspace.getConfiguration('tnotesNav').get<string>('rootPath')?.trim()
   if (configured) return configured
   return getOpenedFolder() ?? ''
 }
@@ -46,10 +40,7 @@ export async function setNavRootPath(path: string): Promise<string | undefined> 
   const normalized = normalizeRootPath(path)
   const opened = getOpenedFolder()
   // Empty or same as opened folder → clear override (follow workspace).
-  const value =
-    !normalized || (opened && resolve(normalized) === resolve(opened))
-      ? ''
-      : normalized
+  const value = !normalized || (opened && resolve(normalized) === resolve(opened)) ? '' : normalized
 
   await vscode.workspace
     .getConfiguration('tnotesNav')
@@ -64,7 +55,6 @@ export function getWorkspaceRoot(): string | undefined {
 }
 
 export function getBlacklist(): Set<string> {
-  const list =
-    vscode.workspace.getConfiguration('tnotesNav').get<string[]>('blacklist') ?? []
+  const list = vscode.workspace.getConfiguration('tnotesNav').get<string[]>('blacklist') ?? []
   return new Set(list.map((name) => name.trim()).filter(Boolean))
 }

@@ -1,13 +1,5 @@
 <script setup lang="ts">
-import {
-  computed,
-  nextTick,
-  onBeforeUnmount,
-  onMounted,
-  ref,
-  useSlots,
-  watch
-} from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useSlots, watch } from 'vue'
 
 const props = withDefaults(
   defineProps<{
@@ -141,11 +133,7 @@ watch(
   <!-- tn-preview-ignore: opt out of Layout ImagePreview so only the in-component modal opens -->
   <div class="tn-footprints tn-preview-ignore">
     <div class="tn-footprints__text">
-      <div
-        ref="textEl"
-        class="tn-footprints__text-body"
-        :class="{ 'is-collapsed': isCollapsed }"
-      >
+      <div ref="textEl" class="tn-footprints__text-body" :class="{ 'is-collapsed': isCollapsed }">
         <slot name="text-area">
           <p v-for="(line, i) in paragraphs" :key="i">{{ line }}</p>
         </slot>

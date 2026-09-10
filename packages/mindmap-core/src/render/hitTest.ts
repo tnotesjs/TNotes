@@ -10,7 +10,7 @@ import {
   DEFAULT_IMAGE_WIDTH,
   NODE_PAD_X,
   NODE_PAD_Y,
-  TEXT_LINE_HEIGHT,
+  TEXT_LINE_HEIGHT
 } from '../layout/treeLayout'
 
 export type HitRole = 'body' | 'checkbox' | 'add' | 'collapse' | 'link' | 'image' | 'resize'
@@ -63,7 +63,7 @@ const RESIZE_R = 6
 export function resolveNodeControl(
   node: NodeBox['node'],
   selected: boolean,
-  hoveredId: string | null,
+  hoveredId: string | null
 ): NodeControlKind | null {
   if (selected) return 'add'
   if (node.children.length === 0) return null
@@ -74,7 +74,7 @@ export function resolveNodeControl(
 export function nodeGeometry(
   box: NodeBox,
   imageAspects: ReadonlyMap<string, number>,
-  selected: boolean,
+  selected: boolean
 ): NodeGeometry {
   const node = box.node
   const isRoot = box.depth === 0
@@ -100,13 +100,13 @@ export function nodeGeometry(
       x: (box.width - iw) / 2,
       y: NODE_PAD_Y + textBlockH + 3,
       w: iw,
-      h: ih,
+      h: ih
     }
     if (selected) {
       resizeHandle = {
         cx: box.x + imageRect.x + iw,
         cy: box.y + imageRect.y + ih,
-        r: RESIZE_R,
+        r: RESIZE_R
       }
     }
   }
@@ -125,14 +125,21 @@ export function nodeGeometry(
         ? { cx: box.x + box.width, cy: box.y + box.height / 2, r: COLLAPSE_R }
         : null,
     collapseDot:
-      node.children.length > 0 ? { cx: box.x + box.width, cy: box.y + box.height / 2, r: COLLAPSE_R } : null,
+      node.children.length > 0
+        ? { cx: box.x + box.width, cy: box.y + box.height / 2, r: COLLAPSE_R }
+        : null,
     linkIconRect: null,
-    resizeHandle,
+    resizeHandle
   }
 }
 
 function inRect(px: number, py: number, rect: Rect, base: { x: number; y: number }): boolean {
-  return px >= base.x + rect.x && px <= base.x + rect.x + rect.w && py >= base.y + rect.y && py <= base.y + rect.y + rect.h
+  return (
+    px >= base.x + rect.x &&
+    px <= base.x + rect.x + rect.w &&
+    py >= base.y + rect.y &&
+    py <= base.y + rect.y + rect.h
+  )
 }
 
 function inCircle(px: number, py: number, cx: number, cy: number, r: number): boolean {
@@ -156,16 +163,21 @@ export function hitTest(
   boxes: Iterable<NodeBox>,
   x: number,
   y: number,
-  opts: HitTestOptions,
+  opts: HitTestOptions
 ): HitResult | null {
   for (const box of boxes) {
-    if (x < box.x - 6 || x > box.x + box.width + 14 || y < box.y - 6 || y > box.y + box.height + 6) continue
+    if (x < box.x - 6 || x > box.x + box.width + 14 || y < box.y - 6 || y > box.y + box.height + 6)
+      continue
     const geo = nodeGeometry(box, opts.imageAspects, box.id === opts.selectedId)
 
-    if (geo.resizeHandle && inCircle(x, y, geo.resizeHandle.cx, geo.resizeHandle.cy, geo.resizeHandle.r + 4)) {
+    if (
+      geo.resizeHandle &&
+      inCircle(x, y, geo.resizeHandle.cx, geo.resizeHandle.cy, geo.resizeHandle.r + 4)
+    ) {
       return { id: box.id, role: 'resize' }
     }
-    const selected = box.id === opts.selectedId && (opts.selectionCount ?? (opts.selectedId ? 1 : 0)) === 1
+    const selected =
+      box.id === opts.selectedId && (opts.selectionCount ?? (opts.selectedId ? 1 : 0)) === 1
     const control = resolveNodeControl(box.node, selected, opts.hoveredId ?? null)
     if (
       control &&

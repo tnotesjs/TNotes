@@ -31,16 +31,21 @@ const toast = ref('')
 const diagnostics = ref<readonly MarkdownDiagnostic[]>(session.diagnostics)
 const sourceValid = computed(() => diagnostics.value.length === 0)
 const localProject = shallowRef<LocalProject | null>(null)
-const saveState = ref<'memory' | 'saving' | 'saved' | 'saved-invalid' | 'paused' | 'error'>('memory')
+const saveState = ref<'memory' | 'saving' | 'saved' | 'saved-invalid' | 'paused' | 'error'>(
+  'memory'
+)
 const imageObjectUrls = ref(new Map<string, string>())
-const saveStateLabel = computed(() => ({
-  memory: '内存草稿',
-  saving: '保存中…',
-  saved: '已保存到本地',
-  'saved-invalid': '非法源码已保存，自动保存暂停',
-  paused: '格式非法，尚未保存',
-  error: '保存失败',
-})[saveState.value])
+const saveStateLabel = computed(
+  () =>
+    ({
+      memory: '内存草稿',
+      saving: '保存中…',
+      saved: '已保存到本地',
+      'saved-invalid': '非法源码已保存，自动保存暂停',
+      paused: '格式非法，尚未保存',
+      error: '保存失败'
+    })[saveState.value]
+)
 
 const canvasEditorRef = shallowRef<CanvasEditor | null>(null)
 const outlineViewRef = ref<InstanceType<typeof OutlineView> | null>(null)
@@ -88,7 +93,7 @@ const sessionState = computed(() => {
     canUndo: session.canUndo,
     canRedo: session.canRedo,
     hasSelection: session.selectedNode != null,
-    scalePercent: Math.round((canvasEditorRef.value?.getScale() ?? 1) * 100),
+    scalePercent: Math.round((canvasEditorRef.value?.getScale() ?? 1) * 100)
   }
 })
 
@@ -143,7 +148,9 @@ function onFileChange(e: Event) {
   input.value = ''
   if (!file) return
   if (!file.name.endsWith('.tn-mindmap.md')) {
-    const ok = window.confirm(`「${file.name}」不是 *.tn-mindmap.md 脑图格式。\n仍可按源码打开；若格式不合法，大纲和脑图视图会暂时禁用。是否继续？`)
+    const ok = window.confirm(
+      `「${file.name}」不是 *.tn-mindmap.md 脑图格式。\n仍可按源码打开；若格式不合法，大纲和脑图视图会暂时禁用。是否继续？`
+    )
     if (!ok) return
   }
   const reader = new FileReader()
@@ -189,7 +196,9 @@ function defaultProjectName(): string {
 async function ensureLocalProject(): Promise<LocalProject | null> {
   if (localProject.value) return localProject.value
   if (!sourceValid.value) {
-    const confirmed = window.confirm('当前 Markdown 格式不合法。继续会把未经转换的原始源码写入本地作品，是否继续？')
+    const confirmed = window.confirm(
+      '当前 Markdown 格式不合法。继续会把未经转换的原始源码写入本地作品，是否继续？'
+    )
     if (!confirmed) return null
   }
   const picker = getDirectoryPicker()
@@ -197,7 +206,10 @@ async function ensureLocalProject(): Promise<LocalProject | null> {
     pickerUnavailableMessage()
     return null
   }
-  const rawName = window.prompt('请输入作品名称。将在你选择的位置新建同名作品目录：', defaultProjectName())
+  const rawName = window.prompt(
+    '请输入作品名称。将在你选择的位置新建同名作品目录：',
+    defaultProjectName()
+  )
   if (rawName === null) return null
   try {
     const parent = await picker({ mode: 'readwrite', id: 'tnotes-mindmap-create' })
@@ -261,10 +273,12 @@ async function onOpenLocalProject() {
 
 async function writeCurrentSource(explicit: boolean): Promise<boolean> {
   const hadProject = localProject.value !== null
-  const project = localProject.value ?? await ensureLocalProject()
+  const project = localProject.value ?? (await ensureLocalProject())
   if (!project) return false
   if (!sourceValid.value && explicit && hadProject) {
-    const confirmed = window.confirm('当前 Markdown 格式不合法。确认后将直接写入未经转换的原始源码，是否继续？')
+    const confirmed = window.confirm(
+      '当前 Markdown 格式不合法。确认后将直接写入未经转换的原始源码，是否继续？'
+    )
     if (!confirmed) return false
   }
   if (!sourceValid.value && !explicit) {
@@ -385,7 +399,12 @@ function onGlobalKeydown(e: KeyboardEvent) {
       return
     }
   }
-  if (sourceValid.value && (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f' && !e.defaultPrevented) {
+  if (
+    sourceValid.value &&
+    (e.metaKey || e.ctrlKey) &&
+    e.key.toLowerCase() === 'f' &&
+    !e.defaultPrevented
+  ) {
     e.preventDefault()
     openSearch()
   }
@@ -409,7 +428,7 @@ onBeforeUnmount(() => {
 const viewTabs: Array<{ id: ViewId; label: string }> = [
   { id: 'outline', label: '大纲' },
   { id: 'map', label: '脑图' },
-  { id: 'source', label: '源码' },
+  { id: 'source', label: '源码' }
 ]
 
 function switchView(next: ViewId) {
@@ -424,13 +443,21 @@ function switchView(next: ViewId) {
     <header class="toolbar">
       <div class="toolbar-group toolbar-left">
         <details ref="documentMenuRef" class="document-menu">
-          <summary title="文档菜单" aria-label="文档菜单"><AppIcon name="menu" :size="20" /></summary>
+          <summary title="文档菜单" aria-label="文档菜单">
+            <AppIcon name="menu" :size="20" />
+          </summary>
           <div class="document-menu-popover" @click="closeDocumentMenu">
             <button type="button" @click="onNew"><AppIcon name="new" />新建</button>
             <button type="button" @click="onOpenClick"><AppIcon name="folder" />打开文件</button>
-            <button type="button" @click="onOpenLocalProject"><AppIcon name="openProject" />打开本地作品</button>
-            <button type="button" @click="onSave"><AppIcon name="save" />保存到本地作品 <kbd>⌘S</kbd></button>
-            <button type="button" @click="onExport"><AppIcon name="download" />导出 Markdown</button>
+            <button type="button" @click="onOpenLocalProject">
+              <AppIcon name="openProject" />打开本地作品
+            </button>
+            <button type="button" @click="onSave">
+              <AppIcon name="save" />保存到本地作品 <kbd>⌘S</kbd>
+            </button>
+            <button type="button" @click="onExport">
+              <AppIcon name="download" />导出 Markdown
+            </button>
             <span class="menu-divider" />
             <button type="button" @click="loadSample">载入默认测试示例</button>
             <button type="button" @click="loadStress">生成压力测试数据</button>
@@ -438,8 +465,19 @@ function switchView(next: ViewId) {
         </details>
         <span class="app-title">TNotes</span>
         <span class="file-name" :title="fileName">{{ fileName }}</span>
-        <span class="save-dot" :class="`is-${saveState}`" :title="saveStateLabel" :aria-label="saveStateLabel" />
-        <input ref="fileInput" type="file" accept=".md,.markdown,.tn-mindmap.md" hidden @change="onFileChange" />
+        <span
+          class="save-dot"
+          :class="`is-${saveState}`"
+          :title="saveStateLabel"
+          :aria-label="saveStateLabel"
+        />
+        <input
+          ref="fileInput"
+          type="file"
+          accept=".md,.markdown,.tn-mindmap.md"
+          hidden
+          @change="onFileChange"
+        />
       </div>
 
       <nav class="view-tabs">
@@ -449,17 +487,34 @@ function switchView(next: ViewId) {
           class="view-tab"
           :class="{ active: view === tab.id }"
           :disabled="!sourceValid && tab.id !== 'source'"
-          :title="!sourceValid && tab.id !== 'source' ? '请先在源码视图修复 Markdown 格式' : `${tab.label}视图`"
+          :title="
+            !sourceValid && tab.id !== 'source'
+              ? '请先在源码视图修复 Markdown 格式'
+              : `${tab.label}视图`
+          "
           :aria-label="`${tab.label}视图`"
           @click="switchView(tab.id)"
         >
-          <AppIcon :name="tab.id === 'outline' ? 'outline' : tab.id === 'map' ? 'mindmap' : 'source'" :size="16" />
+          <AppIcon
+            :name="tab.id === 'outline' ? 'outline' : tab.id === 'map' ? 'mindmap' : 'source'"
+            :size="16"
+          />
         </button>
       </nav>
 
       <div class="toolbar-group toolbar-right">
-        <IconButton icon="undo" :label="`撤销 (${primaryShortcut('Z')})`" :disabled="!sessionState.canUndo" @click="session.undo()" />
-        <IconButton icon="redo" :label="`重做 (${primaryShortcut('Z', { shift: true })})`" :disabled="!sessionState.canRedo" @click="session.redo()" />
+        <IconButton
+          icon="undo"
+          :label="`撤销 (${primaryShortcut('Z')})`"
+          :disabled="!sessionState.canUndo"
+          @click="session.undo()"
+        />
+        <IconButton
+          icon="redo"
+          :label="`重做 (${primaryShortcut('Z', { shift: true })})`"
+          :disabled="!sessionState.canRedo"
+          @click="session.redo()"
+        />
         <CollapseMenu
           v-if="view !== 'source'"
           @all="session.toggleCollapseAll()"
@@ -472,7 +527,13 @@ function switchView(next: ViewId) {
           :disabled="!sessionState.hasSelection"
           @click="session.focusSelected()"
         />
-        <IconButton icon="search" :label="`搜索当前文档 (${primaryShortcut('F')})`" :disabled="!sourceValid" :active="searchVisible" @click="toggleSearch" />
+        <IconButton
+          icon="search"
+          :label="`搜索当前文档 (${primaryShortcut('F')})`"
+          :disabled="!sourceValid"
+          :active="searchVisible"
+          @click="toggleSearch"
+        />
       </div>
     </header>
 
@@ -502,7 +563,12 @@ function switchView(next: ViewId) {
         @request-search="openSearch"
         @paste-image="onPasteImage"
       />
-      <MarkdownView v-else v-model="markdown" :diagnostics="diagnostics" @paste-image="onPasteImageInSource" />
+      <MarkdownView
+        v-else
+        v-model="markdown"
+        :diagnostics="diagnostics"
+        @paste-image="onPasteImageInSource"
+      />
 
       <div v-if="view === 'map'" class="map-controls" aria-label="脑图缩放工具">
         <IconButton icon="zoomOut" label="缩小" @click="canvasEditorRef?.zoomBy(1 / 1.2)" />
@@ -511,7 +577,14 @@ function switchView(next: ViewId) {
         <IconButton icon="fit" label="缩放适配" @click="canvasEditorRef?.zoomToFit()" />
       </div>
 
-      <SearchBar v-if="sourceValid" :session="session" :visible="searchVisible" :version="docVersion" :on-jump="onJumpToNode" @close="searchVisible = false" />
+      <SearchBar
+        v-if="sourceValid"
+        :session="session"
+        :visible="searchVisible"
+        :version="docVersion"
+        :on-jump="onJumpToNode"
+        @close="searchVisible = false"
+      />
     </main>
 
     <div v-if="toast" class="toast">{{ toast }}</div>
@@ -577,14 +650,27 @@ function switchView(next: ViewId) {
   flex: none;
   border-radius: 50%;
   background: var(--mm-text-dim);
-  opacity: .65;
+  opacity: 0.65;
 }
-.save-dot.is-saving { background: #d89428; animation: save-pulse 1s ease-in-out infinite; }
-.save-dot.is-saved { background: #36a269; opacity: 1; }
+.save-dot.is-saving {
+  background: #d89428;
+  animation: save-pulse 1s ease-in-out infinite;
+}
+.save-dot.is-saved {
+  background: #36a269;
+  opacity: 1;
+}
 .save-dot.is-paused,
 .save-dot.is-saved-invalid,
-.save-dot.is-error { background: #d14c4c; opacity: 1; }
-@keyframes save-pulse { 50% { opacity: .25; } }
+.save-dot.is-error {
+  background: #d14c4c;
+  opacity: 1;
+}
+@keyframes save-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
 
 .document-menu {
   position: relative;
@@ -601,9 +687,14 @@ function switchView(next: ViewId) {
   cursor: pointer;
   list-style: none;
 }
-.document-menu > summary::-webkit-details-marker { display: none; }
+.document-menu > summary::-webkit-details-marker {
+  display: none;
+}
 .document-menu > summary:hover,
-.document-menu[open] > summary { background: var(--mm-hover); color: var(--mm-text); }
+.document-menu[open] > summary {
+  background: var(--mm-hover);
+  color: var(--mm-text);
+}
 .document-menu-popover {
   position: absolute;
   top: calc(100% + 8px);
@@ -615,7 +706,7 @@ function switchView(next: ViewId) {
   border: 1px solid var(--mm-border);
   border-radius: 10px;
   background: var(--mm-panel-bg);
-  box-shadow: 0 12px 35px rgb(0 0 0 / .2);
+  box-shadow: 0 12px 35px rgb(0 0 0 / 0.2);
 }
 .document-menu-popover button {
   display: flex;
@@ -632,7 +723,9 @@ function switchView(next: ViewId) {
   text-align: left;
   cursor: pointer;
 }
-.document-menu-popover button:hover { background: var(--mm-hover); }
+.document-menu-popover button:hover {
+  background: var(--mm-hover);
+}
 .document-menu-popover kbd {
   margin-left: auto;
   color: var(--mm-text-dim);
@@ -703,17 +796,31 @@ function switchView(next: ViewId) {
   border: 1px solid var(--mm-border);
   border-radius: 9px;
   background: color-mix(in srgb, var(--mm-panel-bg) 96%, transparent);
-  box-shadow: 0 6px 20px rgb(0 0 0 / .14);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.14);
 }
 
 @media (max-width: 760px) {
-  .toolbar { grid-template-columns: minmax(0, 1fr) auto; }
-  .view-tabs { order: 3; }
-  .toolbar-right { display: none; }
-  .app-title { display: none; }
-  .file-name { max-width: 110px; }
-  .view-tab { padding-inline: 8px; }
-  .view-tab span { display: none; }
+  .toolbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .view-tabs {
+    order: 3;
+  }
+  .toolbar-right {
+    display: none;
+  }
+  .app-title {
+    display: none;
+  }
+  .file-name {
+    max-width: 110px;
+  }
+  .view-tab {
+    padding-inline: 8px;
+  }
+  .view-tab span {
+    display: none;
+  }
 }
 
 .toast {

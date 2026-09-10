@@ -24,10 +24,9 @@
   --tn-c-default-soft: #e8e8e9;
   --tn-shadow-2: 0 4px 12px rgba(0, 0, 0, 0.12);
   --tn-font-sans:
-    "Punctuation SC", Inter, ui-sans-serif, system-ui, sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  --tn-font-mono:
-    "SFMono-Regular", "Cascadia Code", "Roboto Mono", Consolas, monospace;
+    'Punctuation SC', Inter, ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+    'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  --tn-font-mono: 'SFMono-Regular', 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
   --tn-prose-size: 16px;
   --tn-prose-line-height: 28px;
   --tn-heading-weight: 600;
@@ -46,8 +45,8 @@
   color-scheme: light;
 }
 
-:root.dark:not([data-theme="light"]),
-:root[data-theme="dark"] {
+:root.dark:not([data-theme='light']),
+:root[data-theme='dark'] {
   --tn-c-brand-strong: #a8b1ff;
   --tn-c-text: #dfdfd6;
   --tn-c-text-2: #98989f;

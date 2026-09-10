@@ -7,7 +7,7 @@ import {
   PROTOCOL_VERSION,
   type DocumentSnapshot,
   type ExtensionToWebviewMessage,
-  type WebviewToExtensionMessage,
+  type WebviewToExtensionMessage
 } from './protocol'
 
 const VIEW_TYPE = 'tnotesMindmap.editor'
@@ -21,13 +21,16 @@ export function activate(context: vscode.ExtensionContext) {
     output,
     vscode.window.registerCustomEditorProvider(VIEW_TYPE, provider, {
       webviewOptions: { retainContextWhenHidden: true },
-      supportsMultipleEditorsPerDocument: true,
+      supportsMultipleEditorsPerDocument: true
     }),
-    vscode.commands.registerCommand('tnotesMindmap.openAsMindmap', async (resource?: vscode.Uri) => {
-      const uri = resource ?? vscode.window.activeTextEditor?.document.uri
-      if (!uri) return
-      await vscode.commands.executeCommand('vscode.openWith', uri, VIEW_TYPE)
-    }),
+    vscode.commands.registerCommand(
+      'tnotesMindmap.openAsMindmap',
+      async (resource?: vscode.Uri) => {
+        const uri = resource ?? vscode.window.activeTextEditor?.document.uri
+        if (!uri) return
+        await vscode.commands.executeCommand('vscode.openWith', uri, VIEW_TYPE)
+      }
+    )
   )
 }
 
@@ -36,16 +39,22 @@ export function deactivate() {}
 class MindmapEditorProvider implements vscode.CustomTextEditorProvider {
   constructor(
     private readonly context: vscode.ExtensionContext,
-    private readonly output: vscode.OutputChannel,
+    private readonly output: vscode.OutputChannel
   ) {}
 
-  async resolveCustomTextEditor(document: vscode.TextDocument, panel: vscode.WebviewPanel): Promise<void> {
+  async resolveCustomTextEditor(
+    document: vscode.TextDocument,
+    panel: vscode.WebviewPanel
+  ): Promise<void> {
     this.output.appendLine(`Opening custom editor: ${document.uri.toString(true)}`)
     const webview = panel.webview
     const documentDirectory = parentUri(document.uri)
     webview.options = {
       enableScripts: true,
-      localResourceRoots: [vscode.Uri.joinPath(this.context.extensionUri, 'dist'), documentDirectory],
+      localResourceRoots: [
+        vscode.Uri.joinPath(this.context.extensionUri, 'dist'),
+        documentDirectory
+      ]
     }
     webview.html = this.webviewHtml(webview, document.fileName)
 
@@ -60,7 +69,7 @@ class MindmapEditorProvider implements vscode.CustomTextEditorProvider {
       text: document.getText(),
       version: document.version,
       fileName: path.posix.basename(document.uri.path),
-      assetUris: assetUriMap(webview, document.uri, document.getText()),
+      assetUris: assetUriMap(webview, document.uri, document.getText())
     })
 
     const sendDocument = async (reason: 'init' | 'change') => {
@@ -74,7 +83,7 @@ class MindmapEditorProvider implements vscode.CustomTextEditorProvider {
           type: 'editApplied',
           protocol: PROTOCOL_VERSION,
           changeId: message.changeId,
-          version: document.version,
+          version: document.version
         })
         return
       }
@@ -84,7 +93,7 @@ class MindmapEditorProvider implements vscode.CustomTextEditorProvider {
           protocol: PROTOCOL_VERSION,
           changeId: message.changeId,
           snapshot: snapshot(),
-          message: '文件已在其它位置发生变化，已重新载入最新内容。',
+          message: '文件已在其它位置发生变化，已重新载入最新内容。'
         })
         return
       }
@@ -98,7 +107,7 @@ class MindmapEditorProvider implements vscode.CustomTextEditorProvider {
           protocol: PROTOCOL_VERSION,
           changeId: message.changeId,
           snapshot: snapshot(),
-          message: 'VSCode 未能应用文档修改。',
+          message: 'VSCode 未能应用文档修改。'
         })
         return
       }
@@ -107,17 +116,19 @@ class MindmapEditorProvider implements vscode.CustomTextEditorProvider {
         type: 'editApplied',
         protocol: PROTOCOL_VERSION,
         changeId: message.changeId,
-        version: document.version,
+        version: document.version
       })
     }
 
-    const handleAssetWrite = async (message: Extract<WebviewToExtensionMessage, { type: 'writeAsset' }>) => {
+    const handleAssetWrite = async (
+      message: Extract<WebviewToExtensionMessage, { type: 'writeAsset' }>
+    ) => {
       if (!vscode.workspace.isTrusted) {
         await post({
           type: 'assetWriteFailed',
           protocol: PROTOCOL_VERSION,
           requestId: message.requestId,
-          message: '当前工作区尚未受信任，无法写入图片资源。',
+          message: '当前工作区尚未受信任，无法写入图片资源。'
         })
         return
       }
@@ -138,14 +149,14 @@ class MindmapEditorProvider implements vscode.CustomTextEditorProvider {
           protocol: PROTOCOL_VERSION,
           requestId: message.requestId,
           relativePath,
-          webviewUri: webview.asWebviewUri(fileUri).toString(),
+          webviewUri: webview.asWebviewUri(fileUri).toString()
         })
       } catch (error) {
         await post({
           type: 'assetWriteFailed',
           protocol: PROTOCOL_VERSION,
           requestId: message.requestId,
-          message: error instanceof Error ? error.message : '图片写入失败',
+          message: error instanceof Error ? error.message : '图片写入失败'
         })
       }
     }
@@ -157,18 +168,30 @@ class MindmapEditorProvider implements vscode.CustomTextEditorProvider {
         this.output.appendLine(`WebView ready: ${document.uri.toString(true)}`)
         void sendDocument('init')
       } else if (message.type === 'edit') {
-        editQueue = editQueue.then(() => handleEdit(message)).catch((error) => {
-          void vscode.window.showErrorMessage(error instanceof Error ? error.message : '文档同步失败')
-        })
+        editQueue = editQueue
+          .then(() => handleEdit(message))
+          .catch((error) => {
+            void vscode.window.showErrorMessage(
+              error instanceof Error ? error.message : '文档同步失败'
+            )
+          })
       } else if (message.type === 'writeAsset') {
         void handleAssetWrite(message)
       } else if (message.type === 'save') {
-        editQueue = editQueue.then(async () => {
-          const saved = await document.save()
-          this.output.appendLine(saved ? `Saved document: ${document.uri.toString(true)}` : `Document save declined: ${document.uri.toString(true)}`)
-        }).catch((error) => {
-          void vscode.window.showErrorMessage(error instanceof Error ? error.message : '文档保存失败')
-        })
+        editQueue = editQueue
+          .then(async () => {
+            const saved = await document.save()
+            this.output.appendLine(
+              saved
+                ? `Saved document: ${document.uri.toString(true)}`
+                : `Document save declined: ${document.uri.toString(true)}`
+            )
+          })
+          .catch((error) => {
+            void vscode.window.showErrorMessage(
+              error instanceof Error ? error.message : '文档保存失败'
+            )
+          })
       } else if (message.type === 'openExternal') {
         const uri = safeExternalUri(message.href)
         if (uri) void vscode.env.openExternal(uri)
@@ -188,8 +211,12 @@ class MindmapEditorProvider implements vscode.CustomTextEditorProvider {
 
   private webviewHtml(webview: vscode.Webview, fileName: string): string {
     const nonce = randomBytes(16).toString('base64')
-    const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'dist', 'webview', 'webview.js'))
-    const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'dist', 'webview', 'webview.css'))
+    const scriptUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.context.extensionUri, 'dist', 'webview', 'webview.js')
+    )
+    const styleUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.context.extensionUri, 'dist', 'webview', 'webview.css')
+    )
     const title = escapeHtml(path.basename(fileName))
     return `<!doctype html>
 <html lang="zh-CN">
@@ -216,13 +243,17 @@ function fullDocumentRange(document: vscode.TextDocument): vscode.Range {
   return new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length))
 }
 
-function assetUriMap(webview: vscode.Webview, documentUri: vscode.Uri, markdown: string): Record<string, string> {
+function assetUriMap(
+  webview: vscode.Webview,
+  documentUri: vscode.Uri,
+  markdown: string
+): Record<string, string> {
   const directory = parentUri(documentUri)
   return Object.fromEntries(
     referencedAssetPaths(markdown).map((relativePath) => {
       const uri = vscode.Uri.joinPath(directory, ...relativePath.split('/'))
       return [relativePath, webview.asWebviewUri(uri).toString()]
-    }),
+    })
   )
 }
 

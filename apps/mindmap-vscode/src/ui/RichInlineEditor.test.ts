@@ -10,19 +10,20 @@ function mountEditor(raw: string) {
   document.body.append(host)
   const commits: string[] = []
   const app = createApp({
-    setup: () => () => h(RichInlineEditor, {
-      editorId: 'node-1',
-      raw,
-      active: true,
-      onCommit: (payload: { raw: string }) => commits.push(payload.raw),
-    }),
+    setup: () => () =>
+      h(RichInlineEditor, {
+        editorId: 'node-1',
+        raw,
+        active: true,
+        onCommit: (payload: { raw: string }) => commits.push(payload.raw)
+      })
   })
   app.mount(host)
   return {
     app,
     host,
     commits,
-    editor: host.querySelector('.rich-inline-editor') as RichInlineEditorElement,
+    editor: host.querySelector('.rich-inline-editor') as RichInlineEditorElement
   }
 }
 
@@ -32,12 +33,14 @@ async function settle() {
 }
 
 function beforeInput(editor: HTMLElement, inputType: string, data: string | null = null) {
-  editor.dispatchEvent(new InputEvent('beforeinput', {
-    bubbles: true,
-    cancelable: true,
-    inputType,
-    data,
-  }))
+  editor.dispatchEvent(
+    new InputEvent('beforeinput', {
+      bubbles: true,
+      cancelable: true,
+      inputType,
+      data
+    })
+  )
 }
 
 beforeEach(() => {
@@ -46,7 +49,9 @@ beforeEach(() => {
 
 describe('RichInlineEditor', () => {
   it('编辑态直接渲染全部行内样式', () => {
-    const { host, editor } = mountEditor('**粗体** *斜体* <u>下划线</u> ~~删除~~ ==高亮== `代码` [链接](https://example.com)')
+    const { host, editor } = mountEditor(
+      '**粗体** *斜体* <u>下划线</u> ~~删除~~ ==高亮== `代码` [链接](https://example.com)'
+    )
     expect(editor.isContentEditable).toBe(true)
     expect(host.querySelector('.bold')?.textContent).toBe('粗体')
     expect(host.querySelector('.italic')?.textContent).toBe('斜体')
@@ -112,8 +117,8 @@ describe('RichInlineEditor', () => {
     Object.defineProperty(event, 'clipboardData', {
       value: {
         items: [],
-        getData: (type: string) => type === 'text/plain' ? '<安全>' : '<img onerror=alert(1)>',
-      },
+        getData: (type: string) => (type === 'text/plain' ? '<安全>' : '<img onerror=alert(1)>')
+      }
     })
     editor.dispatchEvent(event)
     await settle()

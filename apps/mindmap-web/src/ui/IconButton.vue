@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import AppIcon from './AppIcon.vue'
 
-withDefaults(defineProps<{
-  icon: string
-  label: string
-  size?: number
-  active?: boolean
-  danger?: boolean
-  disabled?: boolean
-}>(), { size: 18, active: false, danger: false, disabled: false })
+withDefaults(
+  defineProps<{
+    icon: string
+    label: string
+    size?: number
+    active?: boolean
+    danger?: boolean
+    disabled?: boolean
+  }>(),
+  { size: 18, active: false, danger: false, disabled: false }
+)
 
 defineEmits<{ click: [event: MouseEvent] }>()
 </script>
@@ -41,8 +44,20 @@ defineEmits<{ click: [event: MouseEvent] }>()
   color: var(--mm-text-dim);
   cursor: pointer;
 }
-.icon-button:hover:not(:disabled), .icon-button.active { background: var(--mm-hover); color: var(--mm-text); }
-.icon-button.danger { color: #d84d57; }
-.icon-button:focus-visible { outline: 2px solid var(--mm-accent); outline-offset: 1px; }
-.icon-button:disabled { cursor: default; opacity: .38; }
+.icon-button:hover:not(:disabled),
+.icon-button.active {
+  background: var(--mm-hover);
+  color: var(--mm-text);
+}
+.icon-button.danger {
+  color: #d84d57;
+}
+.icon-button:focus-visible {
+  outline: 2px solid var(--mm-accent);
+  outline-offset: 1px;
+}
+.icon-button:disabled {
+  cursor: default;
+  opacity: 0.38;
+}
 </style>

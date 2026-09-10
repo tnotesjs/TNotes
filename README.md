@@ -4,16 +4,16 @@ TNotes 生态系统全部代码包的 monorepo（pnpm workspace）。
 
 ## 布局
 
-| 目录 | 包 | 说明 |
-| --- | --- | --- |
-| `packages/kb` | `@tnotesjs/kb` | 知识库读写 API + `tnotes-kb` CLI |
-| `packages/ssg` | `@tnotesjs/ssg` | 静态站点生成器（`tnotes-ssg`） |
-| `packages/ui` | `@tnotesjs/ui` | 共享 UI 组件 |
-| `packages/mindmap-core` | `@tnotesjs/mindmap-core` | 思维导图核心 |
-| `apps/desk` | `desk` | TNotes Desk（Electron 桌面端） |
-| `apps/nav` | `tnotes-nav` | VSCode 导航扩展 |
-| `apps/mindmap-vscode` | `tnotes-mindmap-vscode` | VSCode 思维导图扩展 |
-| `apps/mindmap-web` | `@tnotesjs/mindmap-web` | 思维导图 Web 版 |
+| 目录                    | 包                       | 说明                             |
+| ----------------------- | ------------------------ | -------------------------------- |
+| `packages/kb`           | `@tnotesjs/kb`           | 知识库读写 API + `tnotes-kb` CLI |
+| `packages/ssg`          | `@tnotesjs/ssg`          | 静态站点生成器（`tnotes-ssg`）   |
+| `packages/ui`           | `@tnotesjs/ui`           | 共享 UI 组件                     |
+| `packages/mindmap-core` | `@tnotesjs/mindmap-core` | 思维导图核心                     |
+| `apps/desk`             | `desk`                   | TNotes Desk（Electron 桌面端）   |
+| `apps/nav`              | `tnotes-nav`             | VSCode 导航扩展                  |
+| `apps/mindmap-vscode`   | `tnotes-mindmap-vscode`  | VSCode 思维导图扩展              |
+| `apps/mindmap-web`      | `@tnotesjs/mindmap-web`  | 思维导图 Web 版                  |
 
 ## 约定
 

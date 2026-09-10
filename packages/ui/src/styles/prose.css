@@ -198,7 +198,7 @@
   display: none;
 }
 :is(.tn-prose, .vp-doc) :where(details.tn-custom-block > summary::before) {
-  content: "";
+  content: '';
   flex: none;
   box-sizing: border-box;
   width: 0.42em;

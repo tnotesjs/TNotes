@@ -128,19 +128,19 @@ body {
 .tn-site-outline a:hover {
   color: var(--tn-c-brand);
 }
-.tn-site-outline li[data-level="2"] {
+.tn-site-outline li[data-level='2'] {
   --outline-level: 2;
 }
-.tn-site-outline li[data-level="3"] {
+.tn-site-outline li[data-level='3'] {
   --outline-level: 3;
 }
-.tn-site-outline li[data-level="4"] {
+.tn-site-outline li[data-level='4'] {
   --outline-level: 4;
 }
-.tn-site-outline li[data-level="5"] {
+.tn-site-outline li[data-level='5'] {
   --outline-level: 5;
 }
-.tn-site-outline li[data-level="6"] {
+.tn-site-outline li[data-level='6'] {
   --outline-level: 6;
 }
 .tn-site-hero {

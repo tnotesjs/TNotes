@@ -23,10 +23,11 @@ interface GraphemeSegmenter {
 
 type GraphemeSegmenterConstructor = new (
   locales?: string | string[],
-  options?: { granularity: 'grapheme' },
+  options?: { granularity: 'grapheme' }
 ) => GraphemeSegmenter
 
-const GraphemeSegmenter = (Intl as unknown as { Segmenter?: GraphemeSegmenterConstructor }).Segmenter
+const GraphemeSegmenter = (Intl as unknown as { Segmenter?: GraphemeSegmenterConstructor })
+  .Segmenter
 
 function nodeTextLength(node: Node): number {
   if (node.nodeType === Node.TEXT_NODE) return node.textContent?.length ?? 0
@@ -67,7 +68,7 @@ export function domPointToPlainOffset(root: HTMLElement, node: Node, nodeOffset:
 function plainOffsetToDomPoint(
   root: HTMLElement,
   offset: number,
-  affinity: 'backward' | 'forward' = 'backward',
+  affinity: 'backward' | 'forward' = 'backward'
 ): { node: Node; offset: number } {
   const target = Math.max(0, Math.min(root.textContent?.length ?? 0, offset))
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
@@ -91,11 +92,13 @@ function plainOffsetToDomPoint(
 
 export function richSelectionOffsets(root: HTMLElement): RichSelectionOffsets | null {
   const selection = window.getSelection()
-  if (!selection || selection.rangeCount === 0 || !selection.anchorNode || !selection.focusNode) return null
+  if (!selection || selection.rangeCount === 0 || !selection.anchorNode || !selection.focusNode)
+    return null
   if (
     (selection.anchorNode !== root && !root.contains(selection.anchorNode)) ||
     (selection.focusNode !== root && !root.contains(selection.focusNode))
-  ) return null
+  )
+    return null
   const anchor = domPointToPlainOffset(root, selection.anchorNode, selection.anchorOffset)
   const focus = domPointToPlainOffset(root, selection.focusNode, selection.focusOffset)
   return {
@@ -103,7 +106,7 @@ export function richSelectionOffsets(root: HTMLElement): RichSelectionOffsets | 
     end: Math.max(anchor, focus),
     anchor,
     focus,
-    direction: anchor <= focus ? 'forward' : 'backward',
+    direction: anchor <= focus ? 'forward' : 'backward'
   }
 }
 
@@ -111,7 +114,7 @@ export function setRichSelection(
   root: HTMLElement,
   start: number,
   end = start,
-  direction: 'forward' | 'backward' = 'forward',
+  direction: 'forward' | 'backward' = 'forward'
 ): void {
   const selection = window.getSelection()
   if (!selection) return
@@ -131,7 +134,10 @@ export function setRichSelection(
 export function richSelectionRect(root: HTMLElement): DOMRect {
   const selection = window.getSelection()
   const range = selection?.rangeCount ? selection.getRangeAt(0) : null
-  if (range && (range.commonAncestorContainer === root || root.contains(range.commonAncestorContainer))) {
+  if (
+    range &&
+    (range.commonAncestorContainer === root || root.contains(range.commonAncestorContainer))
+  ) {
     const rect = range.getBoundingClientRect?.()
     if (rect && (rect.width > 0 || rect.height > 0)) return rect
   }
@@ -171,7 +177,9 @@ export function nextGraphemeOffset(text: string, offset: number): number {
   const target = Math.max(0, Math.min(text.length, offset))
   if (target >= text.length) return text.length
   if (!GraphemeSegmenter) return target + 1
-  for (const segment of new GraphemeSegmenter(undefined, { granularity: 'grapheme' }).segment(text)) {
+  for (const segment of new GraphemeSegmenter(undefined, { granularity: 'grapheme' }).segment(
+    text
+  )) {
     if (segment.index > target) return segment.index
   }
   return text.length

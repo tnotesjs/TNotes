@@ -19,12 +19,7 @@
         :aria-pressed="centered ? 'true' : 'false'"
         @click="toggleCenter"
       >
-        <img
-          :src="centered ? iconCenterOn : iconCenterOff"
-          alt=""
-          width="16"
-          height="16"
-        />
+        <img :src="centered ? iconCenterOn : iconCenterOff" alt="" width="16" height="16" />
       </button>
       <button
         v-if="enableFullscreen"
@@ -65,7 +60,11 @@
         ref="diagramRef"
         class="tn-mermaid__diagram"
         :class="{ 'is-centered': centered, 'is-obscured': empty || !!error }"
-        :style="diagramTransform ? { transform: diagramTransform, transformOrigin: 'top left' } : undefined"
+        :style="
+          diagramTransform
+            ? { transform: diagramTransform, transformOrigin: 'top left' }
+            : undefined
+        "
         @wheel="handleWheel"
       />
       <div v-if="loading" class="tn-mermaid__loading tn-mermaid__status">
@@ -241,9 +240,7 @@ function detectDark() {
 
 const COPY_RESET_DELAY = 1000
 const copyState = ref('idle')
-const copyIcon = computed(() =>
-  copyState.value === 'copied' ? iconCheck : iconClipboard
-)
+const copyIcon = computed(() => (copyState.value === 'copied' ? iconCheck : iconClipboard))
 const copyTitle = computed(() => {
   if (copyState.value === 'copied') return '已复制'
   if (copyState.value === 'failed') return '复制失败'

@@ -9,7 +9,7 @@ beforeEach(() => resetNodeIdCounter())
 const measurer: TextMeasurer = {
   measure(text: string) {
     return { width: text.length * 10, height: 20 }
-  },
+  }
 }
 
 function makeDoc() {
@@ -26,7 +26,9 @@ describe('layoutTree', () => {
   it('叶子节点 y 顺序递增且不重叠', () => {
     const { doc } = makeDoc()
     const { boxes } = layoutTree(doc.root, { measurer })
-    const leaves = [...boxes.values()].filter((b) => b.node.children.length === 0 || b.node.collapsed)
+    const leaves = [...boxes.values()].filter(
+      (b) => b.node.children.length === 0 || b.node.collapsed
+    )
     const sorted = [...leaves].sort((p, q) => p.y - q.y)
     for (let i = 1; i < sorted.length; i++) {
       expect(sorted[i].y).toBeGreaterThanOrEqual(sorted[i - 1].y + sorted[i - 1].height)

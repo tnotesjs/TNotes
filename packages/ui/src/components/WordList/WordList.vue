@@ -3,10 +3,7 @@ import { marked } from 'marked'
 import { computed, ref, onMounted, onUnmounted, nextTick } from 'vue'
 
 import RightClickMenu from './RightClickMenu.vue'
-import {
-  WORD_LIST_FEATURES_FULL,
-  resolveWordListFeatures
-} from './wordListFeatures'
+import { WORD_LIST_FEATURES_FULL, resolveWordListFeatures } from './wordListFeatures'
 
 const DEFAULT_WORDS_BASE_URL = 'https://github.com/tnotesjs/en-words/blob/main/'
 const DEFAULT_WORDS_RAW_BASE_URL =
@@ -15,34 +12,32 @@ const DEFAULT_WORDS_RAW_BASE_URL =
 const props = defineProps({
   words: {
     type: Array,
-    default: () => [],
+    default: () => []
   },
   needSort: {
     type: Boolean,
-    default: false,
+    default: false
   },
   wordsBaseUrl: {
     type: String,
-    default: DEFAULT_WORDS_BASE_URL,
+    default: DEFAULT_WORDS_BASE_URL
   },
   wordsRawBaseUrl: {
     type: String,
-    default: DEFAULT_WORDS_RAW_BASE_URL,
+    default: DEFAULT_WORDS_RAW_BASE_URL
   },
   /** Capability overrides; omit for full web/core behavior. */
   features: {
     type: Object,
-    default: () => ({ ...WORD_LIST_FEATURES_FULL }),
-  },
+    default: () => ({ ...WORD_LIST_FEATURES_FULL })
+  }
 })
 
 const features = computed(() => resolveWordListFeatures(props.features))
 
 const isMobile = computed(() => {
   if (typeof navigator === 'undefined') return false
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-    navigator.userAgent
-  )
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
 })
 
 // checkbox ---------------------------------------------------
@@ -51,9 +46,7 @@ const pathname = typeof window !== 'undefined' ? window.location.pathname : ''
 const sortedWords = computed(() => {
   const unique = [...new Set(props.words ?? [])]
   if (!props.needSort) return unique
-  return unique.sort(
-    (a, b) => a.toLowerCase().charCodeAt(0) - b.toLowerCase().charCodeAt(0)
-  )
+  return unique.sort((a, b) => a.toLowerCase().charCodeAt(0) - b.toLowerCase().charCodeAt(0))
 })
 const checkedStates = ref({})
 
@@ -256,7 +249,7 @@ const pinCard = (word) => {
     content: cardContent.value,
     width: CARD_DEFAULT_WIDTH,
     height: CARD_DEFAULT_HEIGHT,
-    zIndex: topZIndex.value++,
+    zIndex: topZIndex.value++
   })
 }
 
@@ -266,7 +259,7 @@ const bringToFront = (card) => {
     pinnedCards.value = [
       ...pinnedCards.value.slice(0, index),
       ...pinnedCards.value.slice(index + 1),
-      { ...card, zIndex: topZIndex.value++ },
+      { ...card, zIndex: topZIndex.value++ }
     ]
   }
 }
@@ -315,10 +308,7 @@ const handleContextMenuPin = () => {
   if (currentWordForContextMenu) {
     const word = currentWordForContextMenu
     // 提前加载内容
-    showWordCard(
-      { clientX: contextMenuX.value, clientY: contextMenuY.value },
-      word
-    ).then(() => {
+    showWordCard({ clientX: contextMenuX.value, clientY: contextMenuY.value }, word).then(() => {
       pinCard(word)
       showCard.value = false
     })
@@ -390,10 +380,7 @@ const handlePronounceAll = (lang) => {
   isPronouncingAll.value = true
 
   const speakNext = async () => {
-    if (
-      !isPronouncingAll.value ||
-      currentPronounceAllIndex.value >= wordsToSpeak.length
-    ) {
+    if (!isPronouncingAll.value || currentPronounceAllIndex.value >= wordsToSpeak.length) {
       stopPronounceAll()
       return
     }
@@ -474,7 +461,7 @@ onUnmounted(() => {
         v-for="(word, index) in sortedWords"
         :key="word"
         :class="{
-          pronounced: isPronouncingAll && currentPronounceAllIndex === index + 1,
+          pronounced: isPronouncingAll && currentPronounceAllIndex === index + 1
         }"
       >
         <span class="index">{{ index + 1 }}.</span>
@@ -491,14 +478,9 @@ onUnmounted(() => {
             )}.md`"
             :class="{
               lineThrough: checkedStates[word],
-              textRed: failedWords[word],
+              textRed: failedWords[word]
             }"
-            @mouseenter="
-              (e) =>
-                features.enableCards &&
-                isAutoShowCard &&
-                showWordCard(e, word)
-            "
+            @mouseenter="(e) => features.enableCards && isAutoShowCard && showWordCard(e, word)"
             @mouseleave="handleMouseLeave"
             @contextmenu="(e) => showContextMenu(e, word)"
             @click.ctrl.exact="(e) => handlePronounce(word)"
@@ -528,7 +510,7 @@ onUnmounted(() => {
           top: card.y + 'px',
           width: card.width + 'px',
           height: card.height + 'px',
-          zIndex: card.zIndex,
+          zIndex: card.zIndex
         }"
         @mousedown="(e) => startDrag(card, e)"
         @click="bringToFront(card)"
@@ -536,13 +518,8 @@ onUnmounted(() => {
         <div class="wordCardContentWrapper">
           <div class="wordCardContent" v-html="card.content"></div>
         </div>
-        <button class="closeBtn" @click.stop="removeCard(card.id)">
-          ✖
-        </button>
-        <div
-          class="resizeHandle"
-          @mousedown.stop="startResize(card, $event)"
-        ></div>
+        <button class="closeBtn" @click.stop="removeCard(card.id)">✖</button>
+        <div class="resizeHandle" @mousedown.stop="startResize(card, $event)"></div>
       </div>
     </template>
   </div>

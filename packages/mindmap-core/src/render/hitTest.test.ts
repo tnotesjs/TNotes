@@ -8,7 +8,7 @@ beforeEach(() => resetNodeIdCounter())
 const measurer: TextMeasurer = {
   measure(text: string) {
     return { width: text.length * 10, height: 21 }
-  },
+  }
 }
 
 function makeDoc() {
@@ -68,7 +68,7 @@ describe('hitTest', () => {
     const box = boxes.get(task.id)!
     const hit = hitTest(boxes.values(), box.x + box.width - 5, box.y + box.height / 2, {
       selectedId: null,
-      imageAspects: aspects,
+      imageAspects: aspects
     })
     expect(hit).toEqual({ id: task.id, role: 'body' })
   })
@@ -80,22 +80,29 @@ describe('hitTest', () => {
 
     const taskBox = boxes.get(task.id)!
     const cb = nodeGeometry(taskBox, aspects, false).checkboxRect!
-    expect(
-      hitTest(boxes.values(), taskBox.x + cb.x + 2, taskBox.y + cb.y + 2, opts),
-    ).toEqual({ id: task.id, role: 'checkbox' })
+    expect(hitTest(boxes.values(), taskBox.x + cb.x + 2, taskBox.y + cb.y + 2, opts)).toEqual({
+      id: task.id,
+      role: 'checkbox'
+    })
 
     const parentBox = boxes.get(parent.id)!
     const dot = nodeGeometry(parentBox, aspects, false).collapseDot!
-    expect(hitTest(boxes.values(), dot.cx, dot.cy, opts)).toEqual({ id: parent.id, role: 'collapse' })
+    expect(hitTest(boxes.values(), dot.cx, dot.cy, opts)).toEqual({
+      id: parent.id,
+      role: 'collapse'
+    })
 
     const imgBox = boxes.get(img.id)!
     const ir = nodeGeometry(imgBox, aspects, true).imageRect!
     expect(
-      hitTest(boxes.values(), imgBox.x + ir.x + ir.w / 2, imgBox.y + ir.y + ir.h / 2, opts),
+      hitTest(boxes.values(), imgBox.x + ir.x + ir.w / 2, imgBox.y + ir.y + ir.h / 2, opts)
     ).toEqual({ id: img.id, role: 'image' })
 
     const handle = nodeGeometry(imgBox, aspects, true).resizeHandle!
-    expect(hitTest(boxes.values(), handle.cx, handle.cy, opts)).toEqual({ id: img.id, role: 'resize' })
+    expect(hitTest(boxes.values(), handle.cx, handle.cy, opts)).toEqual({
+      id: img.id,
+      role: 'resize'
+    })
   })
 
   it('展开控件仅 hover 后可命中，折叠计数控件始终可命中', () => {
@@ -105,23 +112,29 @@ describe('hitTest', () => {
     const dot = nodeGeometry(parentBox, aspects, false).collapseDot!
     const point = { x: dot.cx + 5, y: dot.cy }
 
-    expect(hitTest(boxes.values(), point.x, point.y, {
-      selectedId: null,
-      imageAspects: aspects,
-      hoveredId: null,
-    })).toBeNull()
-    expect(hitTest(boxes.values(), point.x, point.y, {
-      selectedId: null,
-      imageAspects: aspects,
-      hoveredId: parent.id,
-    })).toEqual({ id: parent.id, role: 'collapse' })
+    expect(
+      hitTest(boxes.values(), point.x, point.y, {
+        selectedId: null,
+        imageAspects: aspects,
+        hoveredId: null
+      })
+    ).toBeNull()
+    expect(
+      hitTest(boxes.values(), point.x, point.y, {
+        selectedId: null,
+        imageAspects: aspects,
+        hoveredId: parent.id
+      })
+    ).toEqual({ id: parent.id, role: 'collapse' })
 
     parent.collapsed = true
-    expect(hitTest(boxes.values(), point.x, point.y, {
-      selectedId: null,
-      imageAspects: aspects,
-      hoveredId: null,
-    })).toEqual({ id: parent.id, role: 'collapse' })
+    expect(
+      hitTest(boxes.values(), point.x, point.y, {
+        selectedId: null,
+        imageAspects: aspects,
+        hoveredId: null
+      })
+    ).toEqual({ id: parent.id, role: 'collapse' })
   })
 
   it('单选的新增按钮优先于 hover 收起与折叠数量，多选不展示新增按钮', () => {
@@ -135,21 +148,27 @@ describe('hitTest', () => {
 
     const leafBox = boxes.get(task.id)!
     const add = nodeGeometry(leafBox, aspects, true).controlDot!
-    expect(hitTest(boxes.values(), add.cx, add.cy, {
-      selectedId: task.id,
-      selectionCount: 1,
-      imageAspects: aspects,
-    })).toEqual({ id: task.id, role: 'add' })
-    expect(hitTest(boxes.values(), add.cx, add.cy, {
-      selectedId: task.id,
-      selectionCount: 2,
-      imageAspects: aspects,
-    })).toEqual({ id: task.id, role: 'body' })
+    expect(
+      hitTest(boxes.values(), add.cx, add.cy, {
+        selectedId: task.id,
+        selectionCount: 1,
+        imageAspects: aspects
+      })
+    ).toEqual({ id: task.id, role: 'add' })
+    expect(
+      hitTest(boxes.values(), add.cx, add.cy, {
+        selectedId: task.id,
+        selectionCount: 2,
+        imageAspects: aspects
+      })
+    ).toEqual({ id: task.id, role: 'body' })
   })
 
   it('空白处返回 null', () => {
     const { doc } = makeDoc()
     const { boxes } = layoutTree(doc.root, { measurer })
-    expect(hitTest(boxes.values(), -1000, -1000, { selectedId: null, imageAspects: aspects })).toBeNull()
+    expect(
+      hitTest(boxes.values(), -1000, -1000, { selectedId: null, imageAspects: aspects })
+    ).toBeNull()
   })
 })

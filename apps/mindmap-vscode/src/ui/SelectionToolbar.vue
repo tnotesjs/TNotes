@@ -25,7 +25,7 @@ const formats: Array<{ id: InlineFormat; text: string; label: string }> = [
   { id: 'italic', text: 'I', label: `斜体 (${primaryShortcut('I')})` },
   { id: 'underline', text: 'U', label: `下划线 (${primaryShortcut('U')})` },
   { id: 'strike', text: 'S', label: `删除线 (${primaryShortcut('Enter')})` },
-  { id: 'highlight', text: '▰', label: '高亮' },
+  { id: 'highlight', text: '▰', label: '高亮' }
 ]
 
 const toolbarRef = ref<HTMLElement | null>(null)
@@ -42,7 +42,10 @@ const toolbarStyle = computed(() => {
   const left = Math.min(maxLeft, Math.max(VIEWPORT_MARGIN, props.position.left - width / 2))
   const preferredTop = props.position.top - height - ANCHOR_GAP
   const belowTop = props.position.top + ANCHOR_GAP
-  const top = Math.min(maxTop, Math.max(VIEWPORT_MARGIN, preferredTop < VIEWPORT_MARGIN ? belowTop : preferredTop))
+  const top = Math.min(
+    maxTop,
+    Math.max(VIEWPORT_MARGIN, preferredTop < VIEWPORT_MARGIN ? belowTop : preferredTop)
+  )
   return { left: `${left}px`, top: `${top}px` }
 })
 
@@ -86,18 +89,73 @@ onBeforeUnmount(() => window.removeEventListener('resize', measureToolbar))
         <template v-else>{{ item.text }}</template>
       </button>
       <span class="toolbar-divider" />
-      <button type="button" class="tool-button" :data-tooltip="`添加/取消待办 (${primaryShortcut('L', { shift: true })})`" aria-label="添加或取消待办" @click="emit('task')">
+      <button
+        type="button"
+        class="tool-button"
+        :data-tooltip="`添加/取消待办 (${primaryShortcut('L', { shift: true })})`"
+        aria-label="添加或取消待办"
+        @click="emit('task')"
+      >
         <AppIcon name="check" :size="20" />
       </button>
       <template v-if="mode === 'text'">
-        <button type="button" class="tool-button" :data-tooltip="`添加图片 (${altShortcut('Enter')})`" aria-label="添加图片" @click="emit('image')"><AppIcon name="image" :size="20" /></button>
-        <button type="button" class="tool-button" :data-tooltip="`添加链接 (${primaryShortcut('K')})`" aria-label="添加链接" @click="emit('link')"><AppIcon name="link" :size="20" /></button>
-        <button type="button" class="tool-button code-button" :data-tooltip="`行内代码 (${primaryShortcut('E')})`" aria-label="行内代码" @click="emit('format', 'code')">&lt;/&gt;</button>
+        <button
+          type="button"
+          class="tool-button"
+          :data-tooltip="`添加图片 (${altShortcut('Enter')})`"
+          aria-label="添加图片"
+          @click="emit('image')"
+        >
+          <AppIcon name="image" :size="20" />
+        </button>
+        <button
+          type="button"
+          class="tool-button"
+          :data-tooltip="`添加链接 (${primaryShortcut('K')})`"
+          aria-label="添加链接"
+          @click="emit('link')"
+        >
+          <AppIcon name="link" :size="20" />
+        </button>
+        <button
+          type="button"
+          class="tool-button code-button"
+          :data-tooltip="`行内代码 (${primaryShortcut('E')})`"
+          aria-label="行内代码"
+          @click="emit('format', 'code')"
+        >
+          &lt;/&gt;
+        </button>
       </template>
-      <button v-else type="button" class="tool-button" :data-tooltip="`复制 (${primaryShortcut('C')})`" aria-label="复制所选主题" @click="emit('copy')"><AppIcon name="copy" :size="20" /></button>
+      <button
+        v-else
+        type="button"
+        class="tool-button"
+        :data-tooltip="`复制 (${primaryShortcut('C')})`"
+        aria-label="复制所选主题"
+        @click="emit('copy')"
+      >
+        <AppIcon name="copy" :size="20" />
+      </button>
       <span class="toolbar-divider" />
-      <button type="button" class="tool-button" :data-tooltip="`清除样式 (${primaryShortcut('\\')})`" aria-label="清除样式" @click="emit('clear')"><AppIcon name="clearFormat" :size="20" /></button>
-      <button type="button" class="tool-button danger" :data-tooltip="`删除 (${primaryShortcut('D', { shift: true })})`" aria-label="删除" @click="emit('delete')"><AppIcon name="trash" :size="20" /></button>
+      <button
+        type="button"
+        class="tool-button"
+        :data-tooltip="`清除样式 (${primaryShortcut('\\')})`"
+        aria-label="清除样式"
+        @click="emit('clear')"
+      >
+        <AppIcon name="clearFormat" :size="20" />
+      </button>
+      <button
+        type="button"
+        class="tool-button danger"
+        :data-tooltip="`删除 (${primaryShortcut('D', { shift: true })})`"
+        aria-label="删除"
+        @click="emit('delete')"
+      >
+        <AppIcon name="trash" :size="20" />
+      </button>
     </div>
   </Teleport>
 </template>
@@ -115,9 +173,10 @@ onBeforeUnmount(() => window.removeEventListener('resize', measureToolbar))
   border-radius: 11px;
   background: color-mix(in srgb, var(--mm-panel-bg) 94%, #545760 6%);
   color: var(--mm-text);
-  box-shadow: 0 10px 30px rgb(0 0 0 / .24);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.24);
 }
-.format-button, .tool-button {
+.format-button,
+.tool-button {
   position: relative;
   display: inline-flex;
   width: 34px;
@@ -131,7 +190,8 @@ onBeforeUnmount(() => window.removeEventListener('resize', measureToolbar))
   cursor: pointer;
   font-size: 21px;
 }
-.format-button::after, .tool-button::after {
+.format-button::after,
+.tool-button::after {
   position: absolute;
   z-index: 2;
   bottom: calc(100% + 9px);
@@ -142,7 +202,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', measureToolbar))
   border-radius: 7px;
   background: #f5f5f7;
   color: #25262b;
-  box-shadow: 0 5px 18px rgb(0 0 0 / .22);
+  box-shadow: 0 5px 18px rgb(0 0 0 / 0.22);
   content: attr(data-tooltip);
   font-family: system-ui, sans-serif;
   font-size: 13px;
@@ -154,15 +214,47 @@ onBeforeUnmount(() => window.removeEventListener('resize', measureToolbar))
   transform: translateX(-50%);
   white-space: nowrap;
 }
-.format-button:hover::after, .tool-button:hover::after,
-.format-button:focus-visible::after, .tool-button:focus-visible::after { opacity: 1; }
-.format-button:hover, .tool-button:hover, .format-button.active { background: var(--mm-hover); color: var(--mm-accent); }
-.format-button.is-bold { font-weight: 800; }
-.format-button.is-italic { font-family: Georgia, serif; font-style: italic; }
-.format-button.is-underline { text-decoration: underline; text-underline-offset: 4px; }
-.format-button.is-strike { text-decoration: line-through; }
-.format-button.is-highlight { color: #d3c900; }
-.tool-button.code-button { font-family: ui-monospace, monospace; font-size: 15px; font-weight: 700; }
-.tool-button.danger { color: #e14f5b; }
-.toolbar-divider { width: 1px; height: 25px; margin: 0 3px; background: var(--mm-border); }
+.format-button:hover::after,
+.tool-button:hover::after,
+.format-button:focus-visible::after,
+.tool-button:focus-visible::after {
+  opacity: 1;
+}
+.format-button:hover,
+.tool-button:hover,
+.format-button.active {
+  background: var(--mm-hover);
+  color: var(--mm-accent);
+}
+.format-button.is-bold {
+  font-weight: 800;
+}
+.format-button.is-italic {
+  font-family: Georgia, serif;
+  font-style: italic;
+}
+.format-button.is-underline {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.format-button.is-strike {
+  text-decoration: line-through;
+}
+.format-button.is-highlight {
+  color: #d3c900;
+}
+.tool-button.code-button {
+  font-family: ui-monospace, monospace;
+  font-size: 15px;
+  font-weight: 700;
+}
+.tool-button.danger {
+  color: #e14f5b;
+}
+.toolbar-divider {
+  width: 1px;
+  height: 25px;
+  margin: 0 3px;
+  background: var(--mm-border);
+}
 </style>

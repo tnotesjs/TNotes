@@ -12,11 +12,5 @@
     "types": ["node", "vscode", "vitest/globals"],
     "baseUrl": "."
   },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.d.ts",
-    "src/**/*.vue",
-    "vite.config.ts",
-    "scripts/**/*.mjs"
-  ]
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.vue", "vite.config.ts", "scripts/**/*.mjs"]
 }

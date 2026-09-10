@@ -11,7 +11,7 @@ const extensionOptions = {
   platform: 'node',
   target: 'node20',
   sourcemap: true,
-  logLevel: 'info',
+  logLevel: 'info'
 }
 
 if (watch) {

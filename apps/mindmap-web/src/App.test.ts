@@ -12,21 +12,29 @@ vi.mock('./ui/MindmapView.vue', () => ({
     setup(props, { emit }) {
       function focusDeepest() {
         const session = props.session as MindmapSession
-        const levels = Array.from({ length: 12 }, (_, index) => `${'  '.repeat(index)}- L${index + 1}`)
+        const levels = Array.from(
+          { length: 12 },
+          (_, index) => `${'  '.repeat(index)}- L${index + 1}`
+        )
         session.setMarkdown(`# T\n\n${levels.join('\n')}\n`)
         let target = session.document.root.children[0]
         while (target.children[0]) target = target.children[0]
         session.focusNode(target.id)
       }
-      return () => h('div', [
-        h('button', {
-          'data-view': 'map',
-          onClick: () => emit('requestSearch'),
-        }, '脑图内搜索'),
-        h('button', { 'data-focus-deepest': '', onClick: focusDeepest }, '进入深层主题'),
-      ])
-    },
-  }),
+      return () =>
+        h('div', [
+          h(
+            'button',
+            {
+              'data-view': 'map',
+              onClick: () => emit('requestSearch')
+            },
+            '脑图内搜索'
+          ),
+          h('button', { 'data-focus-deepest': '', onClick: focusDeepest }, '进入深层主题')
+        ])
+    }
+  })
 }))
 
 vi.mock('./ui/OutlineView.vue', () => ({
@@ -34,19 +42,24 @@ vi.mock('./ui/OutlineView.vue', () => ({
     name: 'OutlineViewStub',
     emits: ['requestSearch'],
     setup(_props, { emit }) {
-      return () => h('button', {
-        'data-view': 'outline',
-        onClick: () => emit('requestSearch'),
-      }, '大纲内搜索')
-    },
-  }),
+      return () =>
+        h(
+          'button',
+          {
+            'data-view': 'outline',
+            onClick: () => emit('requestSearch')
+          },
+          '大纲内搜索'
+        )
+    }
+  })
 }))
 
 vi.mock('./ui/MarkdownView.vue', () => ({
   default: defineComponent({
     name: 'MarkdownViewStub',
-    setup: () => () => h('div', { 'data-view': 'source' }),
-  }),
+    setup: () => () => h('div', { 'data-view': 'source' })
+  })
 }))
 
 vi.mock('./ui/SearchBar.vue', () => ({
@@ -54,9 +67,9 @@ vi.mock('./ui/SearchBar.vue', () => ({
     name: 'SearchBarStub',
     props: { visible: Boolean },
     setup(props) {
-      return () => props.visible ? h('div', { 'data-search-results': 'outline' }) : null
-    },
-  }),
+      return () => (props.visible ? h('div', { 'data-search-results': 'outline' }) : null)
+    }
+  })
 }))
 
 import App from './App.vue'
@@ -81,8 +94,14 @@ beforeEach(() => {
 describe('搜索视图路由', () => {
   it('首次打开显示 Web 层默认测试示例和对应文件名', () => {
     const { app, host } = mountApp()
-    expect(host.querySelector('.file-name')?.textContent).toBe('TNotes-Mindmap-使用指南.tn-mindmap.md')
-    expect([...host.querySelectorAll('button')].some((button) => button.textContent === '载入默认测试示例')).toBe(true)
+    expect(host.querySelector('.file-name')?.textContent).toBe(
+      'TNotes-Mindmap-使用指南.tn-mindmap.md'
+    )
+    expect(
+      [...host.querySelectorAll('button')].some(
+        (button) => button.textContent === '载入默认测试示例'
+      )
+    ).toBe(true)
     app.unmount()
   })
 
@@ -105,12 +124,14 @@ describe('搜索视图路由', () => {
 
   it('脑图中按 Cmd/Ctrl+F 同样进入大纲搜索结果', async () => {
     const { app, host } = mountApp()
-    window.dispatchEvent(new KeyboardEvent('keydown', {
-      key: 'f',
-      metaKey: true,
-      bubbles: true,
-      cancelable: true,
-    }))
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'f',
+        metaKey: true,
+        bubbles: true,
+        cancelable: true
+      })
+    )
     await settle()
 
     expect(host.querySelector('[data-view="outline"]')).not.toBeNull()
@@ -129,7 +150,7 @@ describe('聚焦主题导航', () => {
     const crumbs = [...host.querySelectorAll<HTMLElement>('.focus-crumb')]
     expect(crumbs.map((item) => item.textContent?.trim())).toEqual([
       '全部',
-      ...Array.from({ length: 12 }, (_, index) => `L${index + 1}`),
+      ...Array.from({ length: 12 }, (_, index) => `L${index + 1}`)
     ])
     expect(crumbs[crumbs.length - 1]?.getAttribute('aria-current')).toBe('page')
     app.unmount()

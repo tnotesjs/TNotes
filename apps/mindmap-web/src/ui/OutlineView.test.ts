@@ -24,11 +24,12 @@ function mountOutline(markdown = MD) {
   document.body.appendChild(host)
   const pastedImages: Array<{ anchorId: string; blob: Blob }> = []
   const app = createApp({
-    setup: () => () => h(OutlineView, {
-      session,
-      version: version.value,
-      onPasteImage: (anchorId: string, blob: Blob) => pastedImages.push({ anchorId, blob }),
-    }),
+    setup: () => () =>
+      h(OutlineView, {
+        session,
+        version: version.value,
+        onPasteImage: (anchorId: string, blob: Blob) => pastedImages.push({ anchorId, blob })
+      })
   })
   app.mount(host)
   return { session, host, app, pastedImages }
@@ -39,7 +40,9 @@ function inputOf(host: HTMLElement, id: string): RichInlineEditorElement | null 
 }
 
 function keydown(input: RichInlineEditorElement, key: string, opts: KeyboardEventInit = {}) {
-  input.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...opts }))
+  input.dispatchEvent(
+    new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...opts })
+  )
 }
 
 async function settle() {
@@ -82,8 +85,8 @@ describe('大纲图片粘贴', () => {
     Object.defineProperty(event, 'clipboardData', {
       value: {
         items: [{ kind: 'file', type: 'image/png', getAsFile: () => image }],
-        getData: () => 'should-not-be-inserted',
-      },
+        getData: () => 'should-not-be-inserted'
+      }
     })
 
     input.dispatchEvent(event)
@@ -317,7 +320,9 @@ describe('大纲图片节点', () => {
     input.blur()
     await settle()
 
-    expect(session.getMarkdown()).toContain('![新描述|120](https://avatars.githubusercontent.com/u/83686346?v=4)')
+    expect(session.getMarkdown()).toContain(
+      '![新描述|120](https://avatars.githubusercontent.com/u/83686346?v=4)'
+    )
   })
 
   it('进入图片节点后标题显示描述并保留图片预览', async () => {
@@ -344,7 +349,7 @@ describe('大纲粘贴 / 复制', () => {
     input.focus()
 
     const clipboardData = {
-      getData: () => '- x\n  - x1\n- y',
+      getData: () => '- x\n  - x1\n- y'
     } as unknown as ClipboardEvent['clipboardData']
     const event = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent
     Object.defineProperty(event, 'clipboardData', { value: clipboardData })
@@ -364,7 +369,7 @@ describe('大纲粘贴 / 复制', () => {
     let copied = ''
     const event = new Event('copy', { bubbles: true, cancelable: true }) as ClipboardEvent
     Object.defineProperty(event, 'clipboardData', {
-      value: { setData: (_t: string, data: string) => (copied = data) },
+      value: { setData: (_t: string, data: string) => (copied = data) }
     })
     input.dispatchEvent(event)
     await settle()
@@ -392,9 +397,15 @@ describe('大纲连续节点选择（幕布对齐）', () => {
     const a1 = session.document.root.children[0].children[0]
     const input = inputOf(host, a1.id)!
 
-    input.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerId: 1, clientY: 40 }))
-    document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 1, clientY: 110 }))
-    document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1, clientY: 110 }))
+    input.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerId: 1, clientY: 40 })
+    )
+    document.dispatchEvent(
+      new PointerEvent('pointermove', { bubbles: true, pointerId: 1, clientY: 110 })
+    )
+    document.dispatchEvent(
+      new PointerEvent('pointerup', { bubbles: true, pointerId: 1, clientY: 110 })
+    )
     await settle()
 
     expect(session.selectedNodes.map((n) => n.content.text)).toEqual(['a1', 'a2', 'b'])
@@ -406,9 +417,15 @@ describe('大纲连续节点选择（幕布对齐）', () => {
     const { session, host } = mountOutline()
     const a1 = session.document.root.children[0].children[0]
     const input = inputOf(host, a1.id)!
-    input.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerId: 1, clientY: 40 }))
-    document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 1, clientY: 110 }))
-    document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1, clientY: 110 }))
+    input.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerId: 1, clientY: 40 })
+    )
+    document.dispatchEvent(
+      new PointerEvent('pointermove', { bubbles: true, pointerId: 1, clientY: 110 })
+    )
+    document.dispatchEvent(
+      new PointerEvent('pointerup', { bubbles: true, pointerId: 1, clientY: 110 })
+    )
     await settle()
 
     const container = host.querySelector('.outline-view') as HTMLElement
@@ -431,7 +448,12 @@ describe('大纲连续节点选择（幕布对齐）', () => {
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
     const container = host.querySelector('.outline-view') as HTMLElement
     container.focus()
-    const event = new KeyboardEvent('keydown', { key: 'x', metaKey: true, bubbles: true, cancelable: true })
+    const event = new KeyboardEvent('keydown', {
+      key: 'x',
+      metaKey: true,
+      bubbles: true,
+      cancelable: true
+    })
 
     container.dispatchEvent(event)
     await Promise.resolve()
@@ -450,12 +472,14 @@ describe('大纲连续节点选择（幕布对齐）', () => {
     session.select(a.id)
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
-      value: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },
+      value: { writeText: vi.fn().mockRejectedValue(new Error('denied')) }
     })
     const container = host.querySelector('.outline-view') as HTMLElement
     container.focus()
 
-    container.dispatchEvent(new KeyboardEvent('keydown', { key: 'x', metaKey: true, bubbles: true, cancelable: true }))
+    container.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'x', metaKey: true, bubbles: true, cancelable: true })
+    )
     await Promise.resolve()
     await settle()
 
@@ -476,7 +500,14 @@ describe('大纲连续节点选择（幕布对齐）', () => {
     expect(session.selectedNode).toBe(a2)
 
     const container = host.querySelector('.outline-view') as HTMLElement
-    container.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', shiftKey: true, bubbles: true, cancelable: true }))
+    container.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'ArrowUp',
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true
+      })
+    )
     await settle()
     expect(session.selectedNodes.map((node) => node.content.text)).toEqual(['a1'])
     expect(session.selectionAnchor).toBe(a1)
@@ -489,13 +520,15 @@ describe('大纲连续节点选择（幕布对齐）', () => {
     session.select(a1.id)
     await settle()
 
-    inputOf(host, b.id)!.dispatchEvent(new PointerEvent('pointerdown', {
-      bubbles: true,
-      cancelable: true,
-      button: 0,
-      pointerId: 2,
-      shiftKey: true,
-    }))
+    inputOf(host, b.id)!.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        bubbles: true,
+        cancelable: true,
+        button: 0,
+        pointerId: 2,
+        shiftKey: true
+      })
+    )
     await settle()
 
     expect(session.selectedNodes.map((node) => node.content.text)).toEqual(['a1', 'a2', 'b'])
@@ -523,7 +556,7 @@ describe('大纲连续节点选择（幕布对齐）', () => {
 
   it('同深度切换聚焦主题时清理旧编辑态、文字选区和滚动位置', async () => {
     const { session, host } = mountOutline(
-      '# T\n\n- A\n  - A1 alpha\n    - A11\n  - A2 beta\n    - A21\n',
+      '# T\n\n- A\n  - A1 alpha\n    - A11\n  - A2 beta\n    - A21\n'
     )
     const a = session.document.root.children[0]
     const [a1, a2] = a.children
@@ -597,7 +630,12 @@ describe('大纲连续节点选择（幕布对齐）', () => {
     const moved = inputOf(host, b.id)!
     keydown(moved, 'd', { metaKey: true })
     await settle()
-    expect(session.document.root.children.map((node) => node.content.text)).toEqual(['b', 'b', 'a', 'c'])
+    expect(session.document.root.children.map((node) => node.content.text)).toEqual([
+      'b',
+      'b',
+      'a',
+      'c'
+    ])
     expect(session.selectedNode?.content.text).toBe('b')
   })
 
@@ -615,12 +653,14 @@ describe('大纲连续节点选择（幕布对齐）', () => {
     let copied = ''
     const copy = new Event('copy', { bubbles: true, cancelable: true }) as ClipboardEvent
     Object.defineProperty(copy, 'clipboardData', {
-      value: { setData: (_t: string, data: string) => (copied = data) },
+      value: { setData: (_t: string, data: string) => (copied = data) }
     })
     container.dispatchEvent(copy)
     expect(copied).toBe('- a\n  - a1\n  - a2\n- b')
 
-    container.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true, cancelable: true }))
+    container.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Delete', bubbles: true, cancelable: true })
+    )
     await settle()
     expect(session.document.root.children).toHaveLength(0)
     session.undo()
@@ -727,7 +767,7 @@ describe('大纲富文本、链接与浮动工具栏', () => {
 
   it.each([
     ['b', '**alpha**'],
-    ['e', '`alpha`'],
+    ['e', '`alpha`']
   ])('光标停在节点内且无选区时 Cmd+%s 格式化整个节点', async (key, expectedRaw) => {
     const { session, host } = mountOutline('# T\n\n- alpha\n')
     const node = session.document.root.children[0]
@@ -752,7 +792,12 @@ describe('大纲富文本、链接与浮动工具栏', () => {
     input.focus()
     await settle()
     input.setSelectionRange(0, input.value.length)
-    const event = new KeyboardEvent('keydown', { key: 'l', altKey: true, bubbles: true, cancelable: true })
+    const event = new KeyboardEvent('keydown', {
+      key: 'l',
+      altKey: true,
+      bubbles: true,
+      cancelable: true
+    })
 
     input.dispatchEvent(event)
 
@@ -796,7 +841,9 @@ describe('大纲富文本、链接与浮动工具栏', () => {
   })
 
   it('折叠计数包含全部后代，而不只是直接子节点', async () => {
-    const { session, host } = mountOutline('# T\n\n- 工作原则\n  - 创意择优\n    - 可信度加权\n    - 极度求真\n  - 桥水官网\n  - 原则豆瓣\n')
+    const { session, host } = mountOutline(
+      '# T\n\n- 工作原则\n  - 创意择优\n    - 可信度加权\n    - 极度求真\n  - 桥水官网\n  - 原则豆瓣\n'
+    )
     const node = session.document.root.children[0]
     session.toggleCollapse(node.id)
     await settle()

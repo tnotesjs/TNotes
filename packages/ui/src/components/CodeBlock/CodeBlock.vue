@@ -1,73 +1,70 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onServerPrefetch, ref, watch } from "vue";
-import { highlightCode, parseCodeMeta } from "../../code/highlight";
-import { copyText } from "../../browser/clipboard";
+import { computed, onBeforeUnmount, onServerPrefetch, ref, watch } from 'vue'
+import { highlightCode, parseCodeMeta } from '../../code/highlight'
+import { copyText } from '../../browser/clipboard'
 
 const props = withDefaults(
   defineProps<{
-    code: string;
-    info?: string;
-    highlightedHtml?: string;
-    lineNumbers?: boolean;
-    title?: string;
+    code: string
+    info?: string
+    highlightedHtml?: string
+    lineNumbers?: boolean
+    title?: string
   }>(),
-  { info: "", lineNumbers: true },
-);
-const meta = computed(() => parseCodeMeta(props.info, props.lineNumbers));
-const html = ref(props.highlightedHtml || "");
-const error = ref("");
-const copied = ref(false);
-const fullscreen = ref(false);
-const trigger = ref<HTMLButtonElement>();
-let generation = 0;
-let copyTimer: ReturnType<typeof setTimeout> | undefined;
+  { info: '', lineNumbers: true }
+)
+const meta = computed(() => parseCodeMeta(props.info, props.lineNumbers))
+const html = ref(props.highlightedHtml || '')
+const error = ref('')
+const copied = ref(false)
+const fullscreen = ref(false)
+const trigger = ref<HTMLButtonElement>()
+let generation = 0
+let copyTimer: ReturnType<typeof setTimeout> | undefined
 
 async function renderCode(): Promise<void> {
-  const version = ++generation;
-  error.value = "";
+  const version = ++generation
+  error.value = ''
   if (props.highlightedHtml !== undefined) {
-    html.value = props.highlightedHtml;
-    return;
+    html.value = props.highlightedHtml
+    return
   }
   try {
-    const output = await highlightCode(props.code, props.info);
-    if (version === generation) html.value = output;
+    const output = await highlightCode(props.code, props.info)
+    if (version === generation) html.value = output
   } catch (cause) {
     if (version === generation) {
-      html.value = "";
-      error.value = `高亮失败：${cause instanceof Error ? cause.message : String(cause)}`;
+      html.value = ''
+      error.value = `高亮失败：${cause instanceof Error ? cause.message : String(cause)}`
     }
   }
 }
 watch(() => [props.code, props.info, props.highlightedHtml], renderCode, {
-  immediate: true,
-});
-onServerPrefetch(renderCode);
+  immediate: true
+})
+onServerPrefetch(renderCode)
 async function copy(): Promise<void> {
   try {
-    await copyText(props.code.replace(/\n$/, ""));
-    copied.value = true;
-    clearTimeout(copyTimer);
-    copyTimer = setTimeout(() => (copied.value = false), 1500);
+    await copyText(props.code.replace(/\n$/, ''))
+    copied.value = true
+    clearTimeout(copyTimer)
+    copyTimer = setTimeout(() => (copied.value = false), 1500)
   } catch {
-    error.value = "复制失败，请检查剪贴板权限";
+    error.value = '复制失败，请检查剪贴板权限'
   }
 }
 function closeFullscreen(): void {
-  fullscreen.value = false;
-  trigger.value?.focus({ preventScroll: true });
+  fullscreen.value = false
+  trigger.value?.focus({ preventScroll: true })
 }
 onBeforeUnmount(() => {
-  generation++;
-  clearTimeout(copyTimer);
-});
+  generation++
+  clearTimeout(copyTimer)
+})
 </script>
 
 <template>
-  <section
-    class="tn-code-block"
-    :class="{ 'has-line-numbers': meta.lineNumbers }"
-  >
+  <section class="tn-code-block" :class="{ 'has-line-numbers': meta.lineNumbers }">
     <header class="tn-code-block__header">
       <span class="tn-code-block__title">{{ title || meta.title }}</span>
       <slot name="language" :language="meta.language"
@@ -108,9 +105,7 @@ onBeforeUnmount(() => {
           aria-hidden="true"
         >
           <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-          <path
-            d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
-          />
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
         </svg>
       </button>
       <button
@@ -155,14 +150,9 @@ onBeforeUnmount(() => {
       >
         <header>
           <span>{{ title || meta.title || meta.language }}</span
-          ><button type="button" autofocus @click="closeFullscreen">
-            关闭（Esc）
-          </button>
+          ><button type="button" autofocus @click="closeFullscreen">关闭（Esc）</button>
         </header>
-        <div
-          class="tn-code-block"
-          :class="{ 'has-line-numbers': meta.lineNumbers }"
-        >
+        <div class="tn-code-block" :class="{ 'has-line-numbers': meta.lineNumbers }">
           <div v-if="html" class="tn-code-block__content" v-html="html" />
           <pre v-else><code>{{ code }}</code></pre>
         </div>

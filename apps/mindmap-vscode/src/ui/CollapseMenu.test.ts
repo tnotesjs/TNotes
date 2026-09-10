@@ -24,18 +24,20 @@ describe('CollapseMenu', () => {
     ;(host!.querySelector('[aria-label="展开/折叠主题"]') as HTMLButtonElement).click()
     await nextTick()
     const items = [...host!.querySelectorAll<HTMLElement>('[role="menuitem"]')]
-    expect(items.map((item) => item.textContent?.replace(/\s/g, ''))).toEqual(expect.arrayContaining([
-      expect.stringContaining('全部主题'),
-      expect.stringContaining('1级主题'),
-      expect.stringContaining('2级主题'),
-      expect.stringContaining('3级主题'),
-    ]))
+    expect(items.map((item) => item.textContent?.replace(/\s/g, ''))).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('全部主题'),
+        expect.stringContaining('1级主题'),
+        expect.stringContaining('2级主题'),
+        expect.stringContaining('3级主题')
+      ])
+    )
     items[0].click()
     expect(onAll).toHaveBeenCalledOnce()
 
     ;(host!.querySelector('[aria-label="展开/折叠主题"]') as HTMLButtonElement).click()
     await nextTick()
-    ;([...host!.querySelectorAll<HTMLElement>('[role="menuitem"]')][2]).click()
+    ;[...host!.querySelectorAll<HTMLElement>('[role="menuitem"]')][2].click()
     expect(onLevel).toHaveBeenCalledWith(2)
     app.unmount()
   })

@@ -6,9 +6,15 @@ import {
   parseMarkdown,
   richSelectionRect,
   serializeSubtree,
-  wrapTextLines,
+  wrapTextLines
 } from '@tnotesjs/mindmap-core'
-import type { InlineFormat, InlineLink, MindmapNode, MindmapSession, RichInlineEditorElement } from '@tnotesjs/mindmap-core'
+import type {
+  InlineFormat,
+  InlineLink,
+  MindmapNode,
+  MindmapSession,
+  RichInlineEditorElement
+} from '@tnotesjs/mindmap-core'
 import LinkPopover from './LinkPopover.vue'
 import RichInlineEditor from './RichInlineEditor.vue'
 import SelectionToolbar from './SelectionToolbar.vue'
@@ -104,7 +110,7 @@ function measureTextBlockHeight(
   maxWidth: number,
   fontSize: number,
   lineHeight: number,
-  minHeight: number,
+  minHeight: number
 ): number {
   const lines = wrapTextLines(text || ' ', maxWidth, (s) => measureOutlineText(s, fontSize))
   return Math.max(minHeight, lines.length * lineHeight + 8)
@@ -161,8 +167,7 @@ const titleHeight = computed(() => {
   const root = props.session.focusRootNode
   const draft = draftTextHeights.value.get(root.id)
   const textH =
-    draft ??
-    measureTextBlockHeight(layoutDisplayText(root), contentAreaWidth(), 28, TITLE_LINE, 56)
+    draft ?? measureTextBlockHeight(layoutDisplayText(root), contentAreaWidth(), 28, TITLE_LINE, 56)
   return textH + imageBlockHeight(root)
 })
 
@@ -349,7 +354,7 @@ function selectionPosition(input: RichInlineEditorElement): { left: number; top:
   const rect = richSelectionRect(input)
   return {
     left: Math.max(190, Math.min(window.innerWidth - 190, rect.left + rect.width / 2)),
-    top: Math.max(58, rect.top - 8),
+    top: Math.max(58, rect.top - 8)
   }
 }
 
@@ -372,17 +377,21 @@ const selectedTextFormats = computed<Partial<Record<InlineFormat, boolean>>>(() 
   const selection = textSelection.value
   if (!selection) return {}
   const formats: InlineFormat[] = ['bold', 'italic', 'underline', 'strike', 'highlight', 'code']
-  return Object.fromEntries(formats.map((format) => [
-    format,
-    props.session.inlineFormatActive(selection.nodeId, selection.start, selection.end, format),
-  ]))
+  return Object.fromEntries(
+    formats.map((format) => [
+      format,
+      props.session.inlineFormatActive(selection.nodeId, selection.start, selection.end, format)
+    ])
+  )
 })
 
 const multiSelectionPosition = computed(() => {
   if (props.version < 0 || props.session.selectionIds.size <= 1 || textSelection.value) return null
   const id = props.session.selectedNode?.id
   if (!id) return null
-  const row = containerRef.value?.querySelector(`.outline-row[data-node-id="${id}"]`) as HTMLElement | null
+  const row = containerRef.value?.querySelector(
+    `.outline-row[data-node-id="${id}"]`
+  ) as HTMLElement | null
   if (!row) return null
   const rect = row.getBoundingClientRect()
   if (rect.width === 0 && rect.height === 0) {
@@ -391,7 +400,7 @@ const multiSelectionPosition = computed(() => {
   if (rect.bottom < 48 || rect.top > window.innerHeight) return null
   return {
     left: Math.max(180, Math.min(window.innerWidth - 180, rect.left + rect.width / 2)),
-    top: Math.max(58, rect.top - 8),
+    top: Math.max(58, rect.top - 8)
   }
 })
 
@@ -474,7 +483,7 @@ function openSelectionLinkEditor() {
     start: selection.start,
     end: selection.end,
     url: 'https://',
-    position: { left: selection.position.left, top: selection.position.top + 12 },
+    position: { left: selection.position.left, top: selection.position.top + 12 }
   }
   nextTick(() => linkPopoverRef.value?.focusInput())
 }
@@ -603,7 +612,7 @@ function syncDraftText(node: MindmapNode, depth: number | null, text: string) {
     maxW,
     isTitle ? 28 : 15,
     isTitle ? TITLE_LINE : TEXT_LINE,
-    isTitle ? 56 : ROW_HEIGHT,
+    isTitle ? 56 : ROW_HEIGHT
   )
   if (draftTextHeights.value.get(node.id) !== h) {
     const next = new Map(draftTextHeights.value)
@@ -651,10 +660,13 @@ function caretVisualBoundary(input: RichInlineEditorElement): { first: boolean; 
     'tabSize',
     'whiteSpace',
     'wordBreak',
-    'overflowWrap',
+    'overflowWrap'
   ] as const
   for (const property of copied) {
-    mirror.style.setProperty(property.replace(/[A-Z]/g, (ch) => `-${ch.toLowerCase()}`), style[property] as string)
+    mirror.style.setProperty(
+      property.replace(/[A-Z]/g, (ch) => `-${ch.toLowerCase()}`),
+      style[property] as string
+    )
   }
   mirror.style.position = 'fixed'
   mirror.style.left = '-10000px'
@@ -696,7 +708,11 @@ function inlineFormatShortcut(event: KeyboardEvent, hasSelection = true): Inline
   return null
 }
 
-function applyInputFormatShortcut(node: MindmapNode, input: RichInlineEditorElement, format: InlineFormat) {
+function applyInputFormatShortcut(
+  node: MindmapNode,
+  input: RichInlineEditorElement,
+  format: InlineFormat
+) {
   const caretStart = input.selectionStart ?? 0
   const caretEnd = input.selectionEnd ?? 0
   if (input.value.length === 0) return
@@ -713,7 +729,12 @@ function applyInputFormatShortcut(node: MindmapNode, input: RichInlineEditorElem
       editor?.setSelectionRange(caretStart, caretStart)
     })
   } else {
-    const selection: TextSelectionState = { nodeId: node.id, start, end, position: selectionPosition(input) }
+    const selection: TextSelectionState = {
+      nodeId: node.id,
+      start,
+      end,
+      position: selectionPosition(input)
+    }
     textSelection.value = selection
     restoreTextSelection(selection)
   }
@@ -736,7 +757,12 @@ function applyInputClearFormats(node: MindmapNode, input: RichInlineEditorElemen
       editor?.setSelectionRange(caretStart, caretStart)
     })
   } else {
-    const selection: TextSelectionState = { nodeId: node.id, start, end, position: selectionPosition(input) }
+    const selection: TextSelectionState = {
+      nodeId: node.id,
+      start,
+      end,
+      position: selectionPosition(input)
+    }
     textSelection.value = selection
     restoreTextSelection(selection)
   }
@@ -1011,7 +1037,8 @@ function onEditKeydown(node: MindmapNode, e: KeyboardEvent) {
         const prevLen = prevRow.node.content.text.length
         session.transact((doc) => {
           doc.updateDisplayText(prevRow.node, prevRow.node.content.text + value)
-          for (const c of [...node.children]) doc.move(c, prevRow.node, prevRow.node.children.length)
+          for (const c of [...node.children])
+            doc.move(c, prevRow.node, prevRow.node.children.length)
           doc.remove(node)
         })
         session.select(prevId)
@@ -1115,7 +1142,9 @@ function selectedRoots(): MindmapNode[] {
 }
 
 function serializeSelection(): string {
-  return selectedRoots().map((node) => serializeSubtree(node)).join('\n')
+  return selectedRoots()
+    .map((node) => serializeSubtree(node))
+    .join('\n')
 }
 
 function selectAllRows() {
@@ -1124,7 +1153,7 @@ function selectAllRows() {
   props.session.selectMany(
     list.map((row) => row.node.id),
     list[list.length - 1].node.id,
-    list[0].node.id,
+    list[0].node.id
   )
   containerRef.value?.focus()
 }
@@ -1133,7 +1162,8 @@ function extendSelectionTo(index: number) {
   const list = rows.value
   const target = list[index]
   if (!target) return
-  const anchorId = props.session.selectionAnchor?.id ?? props.session.selectedNode?.id ?? target.node.id
+  const anchorId =
+    props.session.selectionAnchor?.id ?? props.session.selectedNode?.id ?? target.node.id
   const anchorIndex = list.findIndex((row) => row.node.id === anchorId)
   const normalizedAnchor = anchorIndex >= 0 ? anchorIndex : index
   const from = Math.min(normalizedAnchor, index)
@@ -1141,7 +1171,7 @@ function extendSelectionTo(index: number) {
   props.session.selectMany(
     list.slice(from, to + 1).map((row) => row.node.id),
     target.node.id,
-    list[normalizedAnchor].node.id,
+    list[normalizedAnchor].node.id
   )
   scrollRowIntoView(index)
 }
@@ -1151,7 +1181,12 @@ function extendSelection(direction: -1 | 1) {
   if (list.length === 0) return
   const selected = props.session.selectedNode
   const current = selected ? list.findIndex((row) => row.node.id === selected.id) : -1
-  const next = current < 0 ? (direction > 0 ? 0 : list.length - 1) : Math.max(0, Math.min(list.length - 1, current + direction))
+  const next =
+    current < 0
+      ? direction > 0
+        ? 0
+        : list.length - 1
+      : Math.max(0, Math.min(list.length - 1, current + direction))
   extendSelectionTo(next)
 }
 
@@ -1219,9 +1254,10 @@ function onCopy(node: MindmapNode, e: ClipboardEvent) {
   const input = e.currentTarget as RichInlineEditorElement
   if (input.selectionStart !== input.selectionEnd) return
   e.preventDefault()
-  const text = props.session.selectionIds.size > 1 && props.session.selectionIds.has(node.id)
-    ? serializeSelection()
-    : serializeSubtree(node)
+  const text =
+    props.session.selectionIds.size > 1 && props.session.selectionIds.has(node.id)
+      ? serializeSelection()
+      : serializeSubtree(node)
   e.clipboardData?.setData('text/plain', text)
 }
 
@@ -1324,8 +1360,8 @@ function onInlineLinkEnter(node: MindmapNode, link: InlineLink, event: MouseEven
     url: link.url,
     position: {
       left: Math.max(220, Math.min(window.innerWidth - 220, rect.left + rect.width / 2)),
-      top: Math.min(window.innerHeight - 54, rect.bottom + 6),
-    },
+      top: Math.min(window.innerHeight - 54, rect.bottom + 6)
+    }
   }
 }
 
@@ -1388,7 +1424,7 @@ function onImageResizePointerDown(node: MindmapNode, e: PointerEvent) {
   imgResize = {
     id: node.id,
     startX: e.clientX,
-    startW: node.content.image.width ?? DEFAULT_OUTLINE_IMG_W,
+    startW: node.content.image.width ?? DEFAULT_OUTLINE_IMG_W
   }
   suppressRowClick = true
   window.addEventListener('pointermove', onImageResizeMove)
@@ -1397,7 +1433,10 @@ function onImageResizePointerDown(node: MindmapNode, e: PointerEvent) {
 
 function onImageResizeMove(e: PointerEvent) {
   if (!imgResize) return
-  const next = Math.max(MIN_IMG_W, Math.min(MAX_IMG_W, Math.round(imgResize.startW + (e.clientX - imgResize.startX))))
+  const next = Math.max(
+    MIN_IMG_W,
+    Math.min(MAX_IMG_W, Math.round(imgResize.startW + (e.clientX - imgResize.startX)))
+  )
   const map = new Map(liveImageWidth.value)
   map.set(imgResize.id, next)
   liveImageWidth.value = map
@@ -1581,7 +1620,8 @@ let stopRangeSelect: (() => void) | null = null
 function onRowPointerDown(row: Row, e: PointerEvent) {
   if (e.button !== 0) return
   const target = e.target as HTMLElement | null
-  if (target?.closest('.row-gutter, .row-checkbox, .row-badge, .row-image, .row-image-handle')) return
+  if (target?.closest('.row-gutter, .row-checkbox, .row-badge, .row-image, .row-image-handle'))
+    return
 
   if (e.shiftKey) {
     e.preventDefault()
@@ -1630,7 +1670,7 @@ function onRowPointerDown(row: Row, e: PointerEvent) {
     props.session.selectMany(
       selected.map((item) => item.node.id),
       rows.value[index]?.node.id ?? null,
-      rows.value[startIndex]?.node.id ?? null,
+      rows.value[startIndex]?.node.id ?? null
     )
   }
   const onUp = (ev: PointerEvent) => {
@@ -1709,7 +1749,7 @@ function onGripPointerDown(node: MindmapNode, e: PointerEvent) {
     dragging: false,
     pointerX: e.clientX,
     pointerY: e.clientY,
-    indicator: null,
+    indicator: null
   }
   let finished = false
   const startX = e.clientX
@@ -1781,7 +1821,9 @@ function calcDropIndicator(clientX: number, clientY: number, dragId: string): Dr
   const idx = rowIndexAt(clientY)
   if (idx < 0) return null
   const hit = list[idx]
-  const hitEl = el.querySelector(`.outline-row[data-node-id="${hit.node.id}"]`) as HTMLElement | null
+  const hitEl = el.querySelector(
+    `.outline-row[data-node-id="${hit.node.id}"]`
+  ) as HTMLElement | null
   if (!hitEl) return null
   const hitRect = hitEl.getBoundingClientRect()
   const midY = (hitRect.top + hitRect.bottom) / 2
@@ -1811,7 +1853,9 @@ function calcDropIndicator(clientX: number, clientY: number, dragId: string): Dr
   }
   const anchor = list[anchorIdx]
 
-  const anchorEl = el.querySelector(`.outline-row[data-node-id="${anchor.node.id}"]`) as HTMLElement | null
+  const anchorEl = el.querySelector(
+    `.outline-row[data-node-id="${anchor.node.id}"]`
+  ) as HTMLElement | null
   const anchorRect = (anchorEl ?? hitEl).getBoundingClientRect()
   const indentEdge = anchorRect.left + anchor.depth * INDENT
   const hasVisibleKids = anchor.node.children.some((c) => c.id !== dragId) && !anchor.node.collapsed
@@ -1828,7 +1872,7 @@ function calcDropIndicator(clientX: number, clientY: number, dragId: string): Dr
     clientX,
     indentEdge,
     anchor.depth,
-    INDENT,
+    INDENT
   )
   const place = resolved.node
   const depth = resolved.depth
@@ -1845,7 +1889,7 @@ function lineIndicator(
   type: 'before' | 'after' | 'child',
   row: Row,
   lineDepth: number,
-  spacer: HTMLElement,
+  spacer: HTMLElement
 ): DropIndicator {
   const top =
     type === 'before'
@@ -1861,7 +1905,7 @@ function lineIndicator(
     top,
     left: lineLeft,
     width,
-    guideDepth: type === 'child' ? row.depth : null,
+    guideDepth: type === 'child' ? row.depth : null
   }
 }
 
@@ -1897,7 +1941,15 @@ function onDragUp() {
     @copy="onContainerCopy"
     @cut="onContainerCut"
   >
-    <div v-if="focusRoot" class="outline-title" :class="{ 'is-selected': focusRoot.id === selectedId, 'has-image': !!focusRoot.content.image }" :style="{ minHeight: `${titleHeight}px` }">
+    <div
+      v-if="focusRoot"
+      class="outline-title"
+      :class="{
+        'is-selected': focusRoot.id === selectedId,
+        'has-image': !!focusRoot.content.image
+      }"
+      :style="{ minHeight: `${titleHeight}px` }"
+    >
       <RichInlineEditor
         class="title-input"
         :class="{ 'is-view-mode': focusedId !== focusRoot.id }"
@@ -1954,7 +2006,7 @@ function onDragUp() {
           'is-matched': matches.has(row.node.id),
           'is-hovered': hoveredId === row.node.id,
           'has-image': !!row.node.content.image,
-          'is-drag-source': drag?.dragging && drag.id === row.node.id,
+          'is-drag-source': drag?.dragging && drag.id === row.node.id
         }"
         :style="{ top: `${row.top}px`, height: `${row.height}px` }"
         @mouseenter="hoveredId = row.node.id"
@@ -1990,25 +2042,32 @@ function onDragUp() {
               class="row-collapse"
               :class="{
                 collapsed: row.node.collapsed,
-                visible: hoveredId === row.node.id || row.node.collapsed,
+                visible: hoveredId === row.node.id || row.node.collapsed
               }"
-              :style="{ left: `${row.depth > 0 ? (row.depth - 1) * INDENT + BULLET_CENTER - COLLAPSE_LEAD / 2 : 0}px` }"
+              :style="{
+                left: `${row.depth > 0 ? (row.depth - 1) * INDENT + BULLET_CENTER - COLLAPSE_LEAD / 2 : 0}px`
+              }"
               title="折叠/展开"
               @click="onArrowClick(row.node, $event)"
               @pointerdown.stop="onGripPointerDown(row.node, $event)"
             />
             <span
               class="row-bullet"
-              :class="{ 'has-children': row.node.children.length > 0, collapsed: row.node.collapsed }"
+              :class="{
+                'has-children': row.node.children.length > 0,
+                collapsed: row.node.collapsed
+              }"
               :style="{ left: `${COLLAPSE_LEAD + row.depth * INDENT}px` }"
               title="点击进入主题"
               @click="onBulletClick(row.node, $event)"
               @pointerdown.stop="onGripPointerDown(row.node, $event)"
             >
               <i class="bullet-dot" />
-              <span v-if="row.node.collapsed && row.node.children.length > 0" class="bullet-count">{{
-                descendantCount(row.node)
-              }}</span>
+              <span
+                v-if="row.node.collapsed && row.node.children.length > 0"
+                class="bullet-count"
+                >{{ descendantCount(row.node) }}</span
+              >
             </span>
           </span>
 
@@ -2022,14 +2081,16 @@ function onDragUp() {
             :title="row.node.content.checked ? '标记为未完成' : '标记为已完成'"
             @click="onCheckboxClick(row.node, $event)"
           >
-            <svg v-if="row.node.content.checked" viewBox="0 0 16 16" aria-hidden="true"><path d="m3.5 8 3 3 6-6" /></svg>
+            <svg v-if="row.node.content.checked" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="m3.5 8 3 3 6-6" />
+            </svg>
           </button>
 
           <RichInlineEditor
             class="row-input"
             :class="{
               'is-task-done': row.node.content.checked === true,
-              'is-view-mode': focusedId !== row.node.id,
+              'is-view-mode': focusedId !== row.node.id
             }"
             :editor-id="row.node.id"
             :raw="row.node.content.image ? row.node.content.text : row.node.content.raw"
@@ -2089,7 +2150,7 @@ function onDragUp() {
         :style="{
           top: `${drag.indicator.top}px`,
           left: `${drag.indicator.left}px`,
-          width: `${drag.indicator.width}px`,
+          width: `${drag.indicator.width}px`
         }"
       />
     </div>
@@ -2102,7 +2163,13 @@ function onDragUp() {
       <i class="bullet-dot" />
     </div>
 
-    <input ref="imagePickerRef" type="file" accept="image/*" hidden @change="onSelectionImagePicked" />
+    <input
+      ref="imagePickerRef"
+      type="file"
+      accept="image/*"
+      hidden
+      @change="onSelectionImagePicked"
+    />
 
     <SelectionToolbar
       v-if="textSelection && !linkEditor"
@@ -2191,7 +2258,9 @@ function onDragUp() {
   color: var(--mm-text-dim);
   font-weight: 500;
 }
-.title-input.is-view-mode { cursor: text; }
+.title-input.is-view-mode {
+  cursor: text;
+}
 .title-image {
   flex: none;
   padding: 0 0 8px;
@@ -2405,16 +2474,31 @@ function onDragUp() {
   background: transparent;
   cursor: pointer;
   color: var(--mm-text-dim);
-  transition: border-color .12s, background .12s, box-shadow .12s;
+  transition:
+    border-color 0.12s,
+    background 0.12s,
+    box-shadow 0.12s;
 }
 .row-checkbox.checked {
   border-color: var(--mm-accent);
   background: var(--mm-accent);
   color: white;
 }
-.row-checkbox:hover { border-color: var(--mm-accent); }
-.row-checkbox:focus-visible { box-shadow: 0 0 0 2px color-mix(in srgb, var(--mm-accent) 28%, transparent); }
-.row-checkbox svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.row-checkbox:hover {
+  border-color: var(--mm-accent);
+}
+.row-checkbox:focus-visible {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--mm-accent) 28%, transparent);
+}
+.row-checkbox svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 .row-input {
   flex: 1;
   min-width: 60px;
@@ -2437,7 +2521,9 @@ function onDragUp() {
   background: transparent;
   box-shadow: none;
 }
-.row-input.is-view-mode { cursor: text; }
+.row-input.is-view-mode {
+  cursor: text;
+}
 .row-input.is-task-done {
   text-decoration: line-through;
   color: var(--mm-text-dim);

@@ -1,52 +1,49 @@
-import "@tnotesjs/ui/styles/tokens.css";
-import "@tnotesjs/ui/styles/prose.css";
-import "@tnotesjs/ui/styles/code.css";
-import "@tnotesjs/ui/styles/swiper.css";
-import "./theme.css";
+import '@tnotesjs/ui/styles/tokens.css'
+import '@tnotesjs/ui/styles/prose.css'
+import '@tnotesjs/ui/styles/code.css'
+import '@tnotesjs/ui/styles/swiper.css'
+import './theme.css'
 
-import site from "virtual:tnotes-site";
+import site from 'virtual:tnotes-site'
 
-import { resolveNotePath, stripBase } from "./noteRoute";
-import { createSiteApp } from "./runtime";
-import { hydrateIslands } from "./hydrateIslands";
-import type { PageData } from "../types";
+import { resolveNotePath, stripBase } from './noteRoute'
+import { createSiteApp } from './runtime'
+import { hydrateIslands } from './hydrateIslands'
+import type { PageData } from '../types'
 
 function readPageData(route: string): PageData {
-  const script = document.querySelector("#tn-page-data");
+  const script = document.querySelector('#tn-page-data')
   if (script?.textContent) {
     try {
-      return JSON.parse(script.textContent) as PageData;
+      return JSON.parse(script.textContent) as PageData
     } catch {
       /* fall through */
     }
   }
   return {
     route,
-    relativePath: "",
-    title: "",
-    description: "",
+    relativePath: '',
+    title: '',
+    description: '',
     headings: [],
-    text: "",
-    frontmatter: {},
-  };
+    text: '',
+    frontmatter: {}
+  }
 }
 
-const canonical = resolveNotePath(location.pathname, site.notes, site.base);
+const canonical = resolveNotePath(location.pathname, site.notes, site.base)
 if (canonical && stripBase(location.pathname, site.base) !== canonical) {
-  location.replace(
-    `${site.base}${canonical.slice(1)}${location.search}${location.hash}`,
-  );
+  location.replace(`${site.base}${canonical.slice(1)}${location.search}${location.hash}`)
 } else {
-  const root = document.querySelector<HTMLElement>("#app");
+  const root = document.querySelector<HTMLElement>('#app')
   if (root) {
-    const route = root.dataset.route || "/";
-    const articleHtml =
-      root.querySelector(".tn-site-main")?.innerHTML ?? "";
-    const data = readPageData(route);
+    const route = root.dataset.route || '/'
+    const articleHtml = root.querySelector('.tn-site-main')?.innerHTML ?? ''
+    const data = readPageData(route)
     void createSiteApp(route, { data, articleHtml }).then(async ({ app }) => {
-      app.mount(root);
-      const main = root.querySelector(".tn-site-main");
-      if (main) await hydrateIslands(main);
-    });
+      app.mount(root)
+      const main = root.querySelector('.tn-site-main')
+      if (main) await hydrateIslands(main)
+    })
   }
 }

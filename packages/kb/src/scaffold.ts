@@ -2,26 +2,26 @@
  * Engineering-file drafts written at the end of a legacy-kb migration.
  */
 
-import fs from "node:fs/promises";
-import path from "node:path";
+import fs from 'node:fs/promises'
+import path from 'node:path'
 
 const KNOWN_OLD_SCRIPTS = new Set([
-  "tn:build",
-  "tn:create-notes",
-  "tn:dev",
-  "tn:help",
-  "tn:preview",
-  "tn:pull",
-  "tn:push",
-  "tn:update",
-  "tn:update-completed-count",
-]);
+  'tn:build',
+  'tn:create-notes',
+  'tn:dev',
+  'tn:help',
+  'tn:preview',
+  'tn:pull',
+  'tn:push',
+  'tn:update',
+  'tn:update-completed-count'
+])
 
 /** New-architecture KB gitignore. Replaces the old Core/VitePress dump. */
 export const CANONICAL_GITIGNORE = `node_modules/
 .tnotes/dist
 .DS_Store
-`;
+`
 
 /** Line-ending + binary hygiene for note-centric repos. */
 export const CANONICAL_GITATTRIBUTES = `# Normalize text; keep notes and config on LF
@@ -42,13 +42,13 @@ export const CANONICAL_GITATTRIBUTES = `# Normalize text; keep notes and config 
 *.ico binary
 *.pdf binary
 *.zip binary
-`;
+`
 
 export const LEFTOVER_ENGINEERING_FILES = [
-  ".prettierignore",
-  ".github/copilot-instructions.md",
-] as const;
-export const LEFTOVER_ENGINEERING_DIRS = [".vscode", "public"] as const;
+  '.prettierignore',
+  '.github/copilot-instructions.md'
+] as const
+export const LEFTOVER_ENGINEERING_DIRS = ['.vscode', 'public'] as const
 
 /** Fresh KBs need this so pnpm can install newly published @tnotesjs packages. */
 export const CANONICAL_PNPM_WORKSPACE = `allowBuilds:
@@ -58,15 +58,15 @@ minimumReleaseAgeExclude:
   - '@tnotesjs/ui'
   - '@tnotesjs/kb'
   - '@tnotesjs/ssg'
-`;
+`
 
 export const CANONICAL_NPMRC = `@tnotesjs:registry=https://registry.npmjs.org/
-`;
+`
 
 export const MIGRATE_PACKAGE_JSON = {
-  kb: "^0.2.1",
-  ssg: "^0.1.5",
-} as const;
+  kb: '^0.2.1',
+  ssg: '^0.1.5'
+} as const
 
 export const DEPLOY_WORKFLOW = `# 构建 TNotes SSG 站点并部署到 GitHub Pages
 name: Deploy TNotes site to Pages
@@ -146,112 +146,112 @@ jobs:
   #           -H "Authorization: token \${{ secrets.TNOTES_DISPATCH_TOKEN }}" \\
   #           https://api.github.com/repos/tnotesjs/TNotes/dispatches \\
   #           -d '{"event_type":"sub_repo_updated","client_payload":{"repo":"\${{ github.event.repository.name }}"}}'
-`;
+`
 
 function asRecord(value: unknown): Record<string, unknown> | null {
-  if (value && typeof value === "object" && !Array.isArray(value)) {
-    return value as Record<string, unknown>;
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>
   }
-  return null;
+  return null
 }
 
 /** Keep non-tnotes scripts from the old package.json. */
 export function extraPackageScripts(
-  oldPackage: Record<string, unknown> | null,
+  oldPackage: Record<string, unknown> | null
 ): Record<string, string> {
-  const scripts = asRecord(oldPackage?.scripts);
-  if (!scripts) return {};
-  const extra: Record<string, string> = {};
+  const scripts = asRecord(oldPackage?.scripts)
+  if (!scripts) return {}
+  const extra: Record<string, string> = {}
   for (const [name, command] of Object.entries(scripts)) {
-    if (KNOWN_OLD_SCRIPTS.has(name)) continue;
-    if (typeof command === "string" && command.trim()) extra[name] = command;
+    if (KNOWN_OLD_SCRIPTS.has(name)) continue
+    if (typeof command === 'string' && command.trim()) extra[name] = command
   }
-  return extra;
+  return extra
 }
 
 export function buildMigratedPackageJson(
-  oldPackage: Record<string, unknown> | null,
+  oldPackage: Record<string, unknown> | null
 ): Record<string, unknown> {
-  const extraScripts = extraPackageScripts(oldPackage);
+  const extraScripts = extraPackageScripts(oldPackage)
   const pkg: Record<string, unknown> = {
     private: true,
-    type: "module",
+    type: 'module',
     scripts: {
-      "tn:update": "tnotes-kb update",
-      "tn:build": "tnotes-ssg build",
-      "tn:dev": "tnotes-ssg dev",
-      "tn:preview": "tnotes-ssg preview",
-      ...extraScripts,
+      'tn:update': 'tnotes-kb update',
+      'tn:build': 'tnotes-ssg build',
+      'tn:dev': 'tnotes-ssg dev',
+      'tn:preview': 'tnotes-ssg preview',
+      ...extraScripts
     },
     devDependencies: {
-      "@tnotesjs/kb": MIGRATE_PACKAGE_JSON.kb,
-      "@tnotesjs/ssg": MIGRATE_PACKAGE_JSON.ssg,
+      '@tnotesjs/kb': MIGRATE_PACKAGE_JSON.kb,
+      '@tnotesjs/ssg': MIGRATE_PACKAGE_JSON.ssg
     },
-    packageManager: "pnpm@11.10.0",
-    engines: { node: ">=22" },
-  };
-  const name = typeof oldPackage?.name === "string" ? oldPackage.name.trim() : "";
-  if (name) pkg.name = name;
-  return pkg;
+    packageManager: 'pnpm@11.10.0',
+    engines: { node: '>=22' }
+  }
+  const name = typeof oldPackage?.name === 'string' ? oldPackage.name.trim() : ''
+  if (name) pkg.name = name
+  return pkg
 }
 
 export async function removeLeftoverEngineering(rootPath: string): Promise<void> {
   for (const name of LEFTOVER_ENGINEERING_FILES) {
-    await fs.rm(path.join(rootPath, name), { force: true });
+    await fs.rm(path.join(rootPath, name), { force: true })
   }
   for (const name of LEFTOVER_ENGINEERING_DIRS) {
-    await fs.rm(path.join(rootPath, name), { recursive: true, force: true });
+    await fs.rm(path.join(rootPath, name), { recursive: true, force: true })
   }
 }
 
 export function buildRootReadme(title: string, folderName: string): string {
-  const heading = title.trim() || folderName;
+  const heading = title.trim() || folderName
   return `# ${heading}
 
 - ${heading} 笔记。
-`;
+`
 }
 
 export async function writePackageJsonScaffold(
   rootPath: string,
-  oldPackage: Record<string, unknown> | null = null,
+  oldPackage: Record<string, unknown> | null = null
 ): Promise<string[]> {
-  const written: string[] = [];
+  const written: string[] = []
   await fs.writeFile(
-    path.join(rootPath, "package.json"),
-    `${JSON.stringify(buildMigratedPackageJson(oldPackage), null, 2)}\n`,
-  );
-  written.push("package.json");
-  await fs.writeFile(path.join(rootPath, "pnpm-workspace.yaml"), CANONICAL_PNPM_WORKSPACE);
-  written.push("pnpm-workspace.yaml");
-  await fs.writeFile(path.join(rootPath, ".npmrc"), CANONICAL_NPMRC);
-  written.push(".npmrc");
-  return written;
+    path.join(rootPath, 'package.json'),
+    `${JSON.stringify(buildMigratedPackageJson(oldPackage), null, 2)}\n`
+  )
+  written.push('package.json')
+  await fs.writeFile(path.join(rootPath, 'pnpm-workspace.yaml'), CANONICAL_PNPM_WORKSPACE)
+  written.push('pnpm-workspace.yaml')
+  await fs.writeFile(path.join(rootPath, '.npmrc'), CANONICAL_NPMRC)
+  written.push('.npmrc')
+  return written
 }
 
 export async function writeDeployWorkflowScaffold(rootPath: string): Promise<string[]> {
-  const workflowPath = path.join(rootPath, ".github", "workflows", "deploy.yml");
-  await fs.mkdir(path.dirname(workflowPath), { recursive: true });
-  await fs.writeFile(workflowPath, DEPLOY_WORKFLOW);
-  return [".github/workflows/deploy.yml"];
+  const workflowPath = path.join(rootPath, '.github', 'workflows', 'deploy.yml')
+  await fs.mkdir(path.dirname(workflowPath), { recursive: true })
+  await fs.writeFile(workflowPath, DEPLOY_WORKFLOW)
+  return ['.github/workflows/deploy.yml']
 }
 
 export async function writeMigratedScaffold(
   rootPath: string,
-  oldPackage: Record<string, unknown> | null,
+  oldPackage: Record<string, unknown> | null
 ): Promise<string[]> {
-  const written: string[] = [];
+  const written: string[] = []
 
-  written.push(...(await writePackageJsonScaffold(rootPath, oldPackage)));
-  written.push(...(await writeDeployWorkflowScaffold(rootPath)));
+  written.push(...(await writePackageJsonScaffold(rootPath, oldPackage)))
+  written.push(...(await writeDeployWorkflowScaffold(rootPath)))
 
-  await fs.writeFile(path.join(rootPath, ".gitignore"), CANONICAL_GITIGNORE);
-  written.push(".gitignore");
+  await fs.writeFile(path.join(rootPath, '.gitignore'), CANONICAL_GITIGNORE)
+  written.push('.gitignore')
 
-  await fs.writeFile(path.join(rootPath, ".gitattributes"), CANONICAL_GITATTRIBUTES);
-  written.push(".gitattributes");
+  await fs.writeFile(path.join(rootPath, '.gitattributes'), CANONICAL_GITATTRIBUTES)
+  written.push('.gitattributes')
 
-  await removeLeftoverEngineering(rootPath);
+  await removeLeftoverEngineering(rootPath)
 
-  return written;
+  return written
 }

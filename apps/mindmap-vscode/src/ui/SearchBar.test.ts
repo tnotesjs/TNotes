@@ -16,13 +16,14 @@ function mountSearch(markdown: string) {
   const jump = vi.fn()
   const close = vi.fn()
   const app = createApp({
-    setup: () => () => h(SearchBar, {
-      session,
-      visible: true,
-      version: version.value,
-      onJump: jump,
-      onClose: close,
-    }),
+    setup: () => () =>
+      h(SearchBar, {
+        session,
+        visible: true,
+        version: version.value,
+        onJump: jump,
+        onClose: close
+      })
   })
   app.mount(host)
   return { session, host, jump, close }
@@ -56,7 +57,9 @@ describe('当前文档搜索结果视图', () => {
     editor.blur()
     await settle()
 
-    const segment = parseInlineSegments(node.content.raw).find((item) => item.text === '更新后的链接')
+    const segment = parseInlineSegments(node.content.raw).find(
+      (item) => item.text === '更新后的链接'
+    )
     expect(segment?.marks.strike).toBe(true)
     expect(segment?.link?.url).toBe('https://old.example')
   })
@@ -77,7 +80,12 @@ describe('当前文档搜索结果视图', () => {
     }
     editor.focus()
     editor.setSelectionRange(2, 2)
-    const code = new KeyboardEvent('keydown', { key: 'e', metaKey: true, bubbles: true, cancelable: true })
+    const code = new KeyboardEvent('keydown', {
+      key: 'e',
+      metaKey: true,
+      bubbles: true,
+      cancelable: true
+    })
     editor.dispatchEvent(code)
     await settle()
     expect(code.defaultPrevented).toBe(true)
@@ -85,7 +93,12 @@ describe('当前文档搜索结果视图', () => {
     expect([editor.selectionStart, editor.selectionEnd]).toEqual([2, 2])
 
     editor.setSelectionRange(0, editor.value.length)
-    const altL = new KeyboardEvent('keydown', { key: 'l', altKey: true, bubbles: true, cancelable: true })
+    const altL = new KeyboardEvent('keydown', {
+      key: 'l',
+      altKey: true,
+      bubbles: true,
+      cancelable: true
+    })
     editor.dispatchEvent(altL)
     expect(altL.defaultPrevented).toBe(false)
     expect(node.content.raw).toBe('`alpha`')
@@ -93,7 +106,7 @@ describe('当前文档搜索结果视图', () => {
 
   it('搜索整份当前文档（含折叠/聚焦范围外节点），结果可直接编辑', async () => {
     const { session, host } = mountSearch(
-      '# T\n\n- 当前分支\n  - 子主题\n- 其它分支\n  - [目标链接](https://old.example)\n',
+      '# T\n\n- 当前分支\n  - 子主题\n- 其它分支\n  - [目标链接](https://old.example)\n'
     )
     const current = session.document.root.children[0]
     const other = session.document.root.children[1]
@@ -133,7 +146,9 @@ describe('当前文档搜索结果视图', () => {
   })
 
   it('替换当前结果保留未命中文案、格式和链接地址', async () => {
-    const { session, host } = mountSearch('# T\n\n- ~~[目标链接](https://old.example)~~\n- 另一个目标\n')
+    const { session, host } = mountSearch(
+      '# T\n\n- ~~[目标链接](https://old.example)~~\n- 另一个目标\n'
+    )
     const query = host.querySelector('[aria-label="查找"]') as HTMLInputElement
     const replacement = host.querySelector('[aria-label="替换为"]') as HTMLInputElement
     query.value = '目标'
@@ -142,13 +157,15 @@ describe('当前文档搜索结果视图', () => {
     replacement.dispatchEvent(new Event('input', { bubbles: true }))
     await settle()
 
-    const replaceButton = [...host.querySelectorAll<HTMLButtonElement>('.replace-button')]
-      .find((button) => button.textContent === '替换')!
+    const replaceButton = [...host.querySelectorAll<HTMLButtonElement>('.replace-button')].find(
+      (button) => button.textContent?.trim() === '替换'
+    )!
     replaceButton.click()
     await settle()
 
-    const segment = parseInlineSegments(session.document.root.children[0].content.raw)
-      .find((item) => item.text === '更新链接')
+    const segment = parseInlineSegments(session.document.root.children[0].content.raw).find(
+      (item) => item.text === '更新链接'
+    )
     expect(segment?.marks.strike).toBe(true)
     expect(segment?.link?.url).toBe('https://old.example')
     expect(session.document.root.children[1].content.text).toBe('另一个目标')
@@ -166,8 +183,9 @@ describe('当前文档搜索结果视图', () => {
     replacement.dispatchEvent(new Event('input', { bubbles: true }))
     await settle()
 
-    const replaceAllButton = [...host.querySelectorAll<HTMLButtonElement>('.replace-button')]
-      .find((button) => button.textContent === '全部替换')!
+    const replaceAllButton = [...host.querySelectorAll<HTMLButtonElement>('.replace-button')].find(
+      (button) => button.textContent?.trim() === '全部替换'
+    )!
     replaceAllButton.click()
     await settle()
 
@@ -191,6 +209,9 @@ describe('当前文档搜索结果视图', () => {
     replacement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
     await settle()
 
-    expect(session.document.root.children.map((node) => node.content.text)).toEqual(['first done', 'second target'])
+    expect(session.document.root.children.map((node) => node.content.text)).toEqual([
+      'first done',
+      'second target'
+    ])
   })
 })

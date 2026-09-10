@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { replaceInlineRange } from '@tnotesjs/mindmap-core'
-import type { InlineFormat, MindmapNode, MindmapSession, RichInlineEditorElement } from '@tnotesjs/mindmap-core'
+import type {
+  InlineFormat,
+  MindmapNode,
+  MindmapSession,
+  RichInlineEditorElement
+} from '@tnotesjs/mindmap-core'
 import AppIcon from './AppIcon.vue'
 import RichInlineEditor from './RichInlineEditor.vue'
 
@@ -47,7 +52,7 @@ watch(
       replaceNotice.value = ''
       props.session.setMatchHighlight(new Set())
     }
-  },
+  }
 )
 
 function pathFor(node: MindmapNode): string {
@@ -100,7 +105,9 @@ function onResultKeydown(node: MindmapNode, event: KeyboardEvent) {
     })
     return
   }
-  const format = node.content.image ? null : inlineFormatShortcut(event, editor.selectionStart !== editor.selectionEnd)
+  const format = node.content.image
+    ? null
+    : inlineFormatShortcut(event, editor.selectionStart !== editor.selectionEnd)
   if (format && editor.value.length > 0) {
     event.preventDefault()
     const caretStart = editor.selectionStart
@@ -157,7 +164,10 @@ function matchingRanges(text: string, needle: string): Array<{ start: number; en
   return ranges
 }
 
-function replacedNodeValue(node: MindmapNode, replaceEveryMatch: boolean): { raw: string; text: string; count: number } {
+function replacedNodeValue(
+  node: MindmapNode,
+  replaceEveryMatch: boolean
+): { raw: string; text: string; count: number } {
   const ranges = matchingRanges(node.content.text, query.value)
   const selectedRanges = replaceEveryMatch ? ranges : ranges.slice(0, 1)
   if (selectedRanges.length === 0) {
@@ -240,7 +250,13 @@ function reveal(node: MindmapNode) {
 </script>
 
 <template>
-  <aside v-if="visible" class="search-results-view" :class="{ 'has-query': hasQuery }" aria-label="搜索结果" @keydown.stop>
+  <aside
+    v-if="visible"
+    class="search-results-view"
+    :class="{ 'has-query': hasQuery }"
+    aria-label="搜索结果"
+    @keydown.stop
+  >
     <section class="search-panel">
       <header class="search-header">
         <div class="search-field" role="search">
@@ -253,7 +269,15 @@ function reveal(node: MindmapNode) {
             @keydown="onSearchKeydown"
           />
         </div>
-        <button type="button" class="search-close" title="关闭搜索 (Esc)" aria-label="关闭搜索" @click="emit('close')"><AppIcon name="close" :size="17" /></button>
+        <button
+          type="button"
+          class="search-close"
+          title="关闭搜索 (Esc)"
+          aria-label="关闭搜索"
+          @click="emit('close')"
+        >
+          <AppIcon name="close" :size="17" />
+        </button>
       </header>
 
       <div class="replace-row">
@@ -268,14 +292,46 @@ function reveal(node: MindmapNode) {
       </div>
 
       <div class="search-actions">
-        <span class="search-count">{{ hasQuery ? `${matches.length} 个结果` : '输入关键词开始搜索' }}</span>
+        <span class="search-count">{{
+          hasQuery ? `${matches.length} 个结果` : '输入关键词开始搜索'
+        }}</span>
         <span v-if="replaceNotice" class="replace-notice" role="status">{{ replaceNotice }}</span>
         <div class="search-nav">
-          <button type="button" title="上一个 (Shift+Enter)" :disabled="matches.length === 0" @click="jump(activeIndex - 1)">上一处</button>
-          <button type="button" title="下一个 (Enter)" :disabled="matches.length === 0" @click="jump(activeIndex + 1)">下一处</button>
-          <span v-if="matches.length" class="search-position">{{ activeIndex + 1 }} / {{ matches.length }}</span>
-          <button type="button" class="replace-button" :disabled="matches.length === 0" @click="replaceCurrent">替换</button>
-          <button type="button" class="replace-button" :disabled="matches.length === 0" @click="replaceAll">全部替换</button>
+          <button
+            type="button"
+            title="上一个 (Shift+Enter)"
+            :disabled="matches.length === 0"
+            @click="jump(activeIndex - 1)"
+          >
+            上一处
+          </button>
+          <button
+            type="button"
+            title="下一个 (Enter)"
+            :disabled="matches.length === 0"
+            @click="jump(activeIndex + 1)"
+          >
+            下一处
+          </button>
+          <span v-if="matches.length" class="search-position"
+            >{{ activeIndex + 1 }} / {{ matches.length }}</span
+          >
+          <button
+            type="button"
+            class="replace-button"
+            :disabled="matches.length === 0"
+            @click="replaceCurrent"
+          >
+            替换
+          </button>
+          <button
+            type="button"
+            class="replace-button"
+            :disabled="matches.length === 0"
+            @click="replaceAll"
+          >
+            全部替换
+          </button>
         </div>
       </div>
     </section>
@@ -283,40 +339,53 @@ function reveal(node: MindmapNode) {
     <div v-if="hasQuery" class="search-result-canvas">
       <div class="result-view-title">搜索结果</div>
       <div class="search-list">
-      <div
-        v-for="(node, index) in matches"
-        :key="node.id"
-        class="search-result"
-        :class="{ active: index === activeIndex }"
-        @click="activeIndex = index"
-      >
-        <span class="result-path">{{ pathFor(node) }}</span>
-        <span class="result-editor-row">
-          <button
-            v-if="node.content.checked !== null"
-            type="button"
-            class="result-checkbox"
-            :class="{ checked: node.content.checked }"
-            :aria-label="node.content.checked ? '标记为未完成' : '标记为已完成'"
-            @pointerdown.prevent
-            @click.stop="session.toggleChecked(node.id)"
-          ><svg v-if="node.content.checked" viewBox="0 0 16 16" aria-hidden="true"><path d="m3.5 8 3 3 6-6" /></svg></button>
-          <RichInlineEditor
-            class="result-editor"
-            :class="{ done: node.content.checked === true }"
-            :editor-id="`search-${node.id}`"
-            :raw="node.content.image ? node.content.text : node.content.raw"
-            :active="true"
-            :done="node.content.checked === true"
-            @click.stop
-            @focus="activeIndex = index"
-            @commit="commitResult(node, $event)"
-            @keydown="onResultKeydown(node, $event)"
-          />
-          <button type="button" class="reveal-button" title="在当前视图定位" aria-label="在当前视图定位" @pointerdown.prevent @click.stop="reveal(node)">↗</button>
-        </span>
-      </div>
-      <div v-if="matches.length === 0" class="search-empty">没有找到匹配主题</div>
+        <div
+          v-for="(node, index) in matches"
+          :key="node.id"
+          class="search-result"
+          :class="{ active: index === activeIndex }"
+          @click="activeIndex = index"
+        >
+          <span class="result-path">{{ pathFor(node) }}</span>
+          <span class="result-editor-row">
+            <button
+              v-if="node.content.checked !== null"
+              type="button"
+              class="result-checkbox"
+              :class="{ checked: node.content.checked }"
+              :aria-label="node.content.checked ? '标记为未完成' : '标记为已完成'"
+              @pointerdown.prevent
+              @click.stop="session.toggleChecked(node.id)"
+            >
+              <svg v-if="node.content.checked" viewBox="0 0 16 16" aria-hidden="true">
+                <path d="m3.5 8 3 3 6-6" />
+              </svg>
+            </button>
+            <RichInlineEditor
+              class="result-editor"
+              :class="{ done: node.content.checked === true }"
+              :editor-id="`search-${node.id}`"
+              :raw="node.content.image ? node.content.text : node.content.raw"
+              :active="true"
+              :done="node.content.checked === true"
+              @click.stop
+              @focus="activeIndex = index"
+              @commit="commitResult(node, $event)"
+              @keydown="onResultKeydown(node, $event)"
+            />
+            <button
+              type="button"
+              class="reveal-button"
+              title="在当前视图定位"
+              aria-label="在当前视图定位"
+              @pointerdown.prevent
+              @click.stop="reveal(node)"
+            >
+              ↗
+            </button>
+          </span>
+        </div>
+        <div v-if="matches.length === 0" class="search-empty">没有找到匹配主题</div>
       </div>
     </div>
   </aside>
@@ -344,48 +413,260 @@ function reveal(node: MindmapNode) {
   border: 1px solid var(--mm-border);
   border-radius: 12px;
   background: color-mix(in srgb, var(--mm-panel-bg) 97%, transparent);
-  box-shadow: 0 14px 40px rgb(0 0 0 / .2);
+  box-shadow: 0 14px 40px rgb(0 0 0 / 0.2);
   pointer-events: auto;
 }
-.search-header { display: flex; align-items: center; gap: 8px; padding: 12px; border-bottom: 1px solid var(--mm-border); }
-.search-field { display: flex; flex: 1; align-items: center; gap: 8px; height: 38px; padding: 0 11px; border: 1px solid var(--mm-border); border-radius: 8px; background: var(--mm-canvas-bg); color: var(--mm-text-dim); }
-.search-field:focus-within { border-color: var(--mm-accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--mm-accent) 16%, transparent); }
-.search-field input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: var(--mm-text); font: inherit; }
-.search-close { display: inline-flex; width: 32px; height: 32px; align-items: center; justify-content: center; border: 0; border-radius: 7px; background: transparent; color: var(--mm-text-dim); cursor: pointer; }
-.search-close:hover { background: var(--mm-hover); color: var(--mm-text); }
-.replace-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px 0; }
-.replace-label { width: 52px; flex: none; color: var(--mm-text-dim); font-size: 13px; }
-.replace-row input { min-width: 0; height: 36px; flex: 1; padding: 0 10px; border: 1px solid var(--mm-border); border-radius: 7px; outline: 0; background: var(--mm-canvas-bg); color: var(--mm-text); font: inherit; }
-.replace-row input:focus { border-color: var(--mm-accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--mm-accent) 16%, transparent); }
-.search-actions { display: flex; min-height: 50px; align-items: center; gap: 9px; padding: 7px 12px 10px; color: var(--mm-text-dim); font-size: 12px; }
-.search-count { white-space: nowrap; }
-.replace-notice { color: var(--mm-accent); white-space: nowrap; }
-.search-nav { display: flex; min-width: 0; align-items: center; gap: 6px; margin-left: auto; }
-.search-nav button { min-height: 31px; padding: 0 10px; border: 1px solid var(--mm-border); border-radius: 6px; background: transparent; color: var(--mm-text); cursor: pointer; white-space: nowrap; }
-.search-nav button:hover:not(:disabled) { border-color: var(--mm-text-dim); background: var(--mm-hover); }
-.search-nav button:disabled { cursor: default; opacity: .38; }
-.search-nav .replace-button { background: var(--mm-text); color: var(--mm-panel-bg); }
-.search-position { min-width: 38px; text-align: center; white-space: nowrap; }
-.search-result-canvas { position: absolute; inset: 0; overflow: auto; padding: 162px 24px 48px; }
-.result-view-title { width: min(820px, 100%); margin: 0 auto 20px; color: var(--mm-text); font-size: 25px; font-weight: 650; }
-.search-list { width: min(820px, 100%); margin: 0 auto; }
-.search-result { display: block; width: 100%; margin-bottom: 8px; padding: 11px 13px; border: 1px solid transparent; border-radius: 9px; background: transparent; color: var(--mm-text); text-align: left; cursor: default; }
-.search-result:hover, .search-result.active { border-color: var(--mm-border); background: var(--mm-hover); }
-.result-path { display: block; overflow: hidden; margin-bottom: 6px; color: var(--mm-text-dim); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.result-editor-row { display: flex; align-items: center; gap: 7px; }
-.result-editor { min-width: 0; flex: 1; height: 34px; padding: 0 4px; border: 0; border-bottom: 1px solid transparent; outline: 0; background: transparent; color: var(--mm-text); font: inherit; font-size: 16px; }
-.result-editor:focus { border-bottom-color: var(--mm-accent); }
-.result-editor.done { color: var(--mm-text-dim); text-decoration: line-through; }
-.result-checkbox { display: inline-flex; width: 16px; height: 16px; flex: none; align-items: center; justify-content: center; padding: 0; border: 1.5px solid var(--mm-text-dim); border-radius: 3px; background: transparent; color: white; }
-.result-checkbox.checked { border-color: var(--mm-accent); background: var(--mm-accent); }
-.result-checkbox svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.reveal-button { width: 26px; height: 26px; border: 0; border-radius: 5px; background: transparent; color: var(--mm-text-dim); cursor: pointer; }
-.reveal-button:hover { background: var(--mm-panel-bg); color: var(--mm-accent); }
-.search-empty { padding: 34px 12px; color: var(--mm-text-dim); text-align: center; }
+.search-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border-bottom: 1px solid var(--mm-border);
+}
+.search-field {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 11px;
+  border: 1px solid var(--mm-border);
+  border-radius: 8px;
+  background: var(--mm-canvas-bg);
+  color: var(--mm-text-dim);
+}
+.search-field:focus-within {
+  border-color: var(--mm-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--mm-accent) 16%, transparent);
+}
+.search-field input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--mm-text);
+  font: inherit;
+}
+.search-close {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--mm-text-dim);
+  cursor: pointer;
+}
+.search-close:hover {
+  background: var(--mm-hover);
+  color: var(--mm-text);
+}
+.replace-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px 0;
+}
+.replace-label {
+  width: 52px;
+  flex: none;
+  color: var(--mm-text-dim);
+  font-size: 13px;
+}
+.replace-row input {
+  min-width: 0;
+  height: 36px;
+  flex: 1;
+  padding: 0 10px;
+  border: 1px solid var(--mm-border);
+  border-radius: 7px;
+  outline: 0;
+  background: var(--mm-canvas-bg);
+  color: var(--mm-text);
+  font: inherit;
+}
+.replace-row input:focus {
+  border-color: var(--mm-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--mm-accent) 16%, transparent);
+}
+.search-actions {
+  display: flex;
+  min-height: 50px;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 12px 10px;
+  color: var(--mm-text-dim);
+  font-size: 12px;
+}
+.search-count {
+  white-space: nowrap;
+}
+.replace-notice {
+  color: var(--mm-accent);
+  white-space: nowrap;
+}
+.search-nav {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.search-nav button {
+  min-height: 31px;
+  padding: 0 10px;
+  border: 1px solid var(--mm-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--mm-text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.search-nav button:hover:not(:disabled) {
+  border-color: var(--mm-text-dim);
+  background: var(--mm-hover);
+}
+.search-nav button:disabled {
+  cursor: default;
+  opacity: 0.38;
+}
+.search-nav .replace-button {
+  background: var(--mm-text);
+  color: var(--mm-panel-bg);
+}
+.search-position {
+  min-width: 38px;
+  text-align: center;
+  white-space: nowrap;
+}
+.search-result-canvas {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  padding: 162px 24px 48px;
+}
+.result-view-title {
+  width: min(820px, 100%);
+  margin: 0 auto 20px;
+  color: var(--mm-text);
+  font-size: 25px;
+  font-weight: 650;
+}
+.search-list {
+  width: min(820px, 100%);
+  margin: 0 auto;
+}
+.search-result {
+  display: block;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 11px 13px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--mm-text);
+  text-align: left;
+  cursor: default;
+}
+.search-result:hover,
+.search-result.active {
+  border-color: var(--mm-border);
+  background: var(--mm-hover);
+}
+.result-path {
+  display: block;
+  overflow: hidden;
+  margin-bottom: 6px;
+  color: var(--mm-text-dim);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.result-editor-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.result-editor {
+  min-width: 0;
+  flex: 1;
+  height: 34px;
+  padding: 0 4px;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  outline: 0;
+  background: transparent;
+  color: var(--mm-text);
+  font: inherit;
+  font-size: 16px;
+}
+.result-editor:focus {
+  border-bottom-color: var(--mm-accent);
+}
+.result-editor.done {
+  color: var(--mm-text-dim);
+  text-decoration: line-through;
+}
+.result-checkbox {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1.5px solid var(--mm-text-dim);
+  border-radius: 3px;
+  background: transparent;
+  color: white;
+}
+.result-checkbox.checked {
+  border-color: var(--mm-accent);
+  background: var(--mm-accent);
+}
+.result-checkbox svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.reveal-button {
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--mm-text-dim);
+  cursor: pointer;
+}
+.reveal-button:hover {
+  background: var(--mm-panel-bg);
+  color: var(--mm-accent);
+}
+.search-empty {
+  padding: 34px 12px;
+  color: var(--mm-text-dim);
+  text-align: center;
+}
 
 @media (max-width: 700px) {
-  .search-actions { align-items: flex-start; flex-wrap: wrap; }
-  .search-nav { width: 100%; margin-left: 0; overflow-x: auto; }
-  .search-result-canvas { padding-top: 202px; }
+  .search-actions {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .search-nav {
+    width: 100%;
+    margin-left: 0;
+    overflow-x: auto;
+  }
+  .search-result-canvas {
+    padding-top: 202px;
+  }
 }
 </style>

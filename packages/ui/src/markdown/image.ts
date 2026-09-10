@@ -76,13 +76,9 @@ export function normalizeImageWidth(raw: string): string {
 }
 
 /** Logical CSS px for a pasted bitmap, folding device pixel ratio (4K/retina). */
-export function pasteDisplayWidthPx(
-  naturalWidth: number,
-  devicePixelRatio = 1
-): string {
+export function pasteDisplayWidthPx(naturalWidth: number, devicePixelRatio = 1): string {
   if (!Number.isFinite(naturalWidth) || naturalWidth <= 0) return ''
-  const dpr =
-    Number.isFinite(devicePixelRatio) && devicePixelRatio > 0 ? devicePixelRatio : 1
+  const dpr = Number.isFinite(devicePixelRatio) && devicePixelRatio > 0 ? devicePixelRatio : 1
   return normalizeImageWidth(`${Math.round(naturalWidth / dpr)}px`)
 }
 
@@ -90,10 +86,7 @@ export function formatImageWidthAttr(width: string): string {
   return formatImageAttrs({ width, align: 'left' })
 }
 
-export function formatImageAttrs(attrs: {
-  width?: string
-  align?: ImageAlign | string
-}): string {
+export function formatImageAttrs(attrs: { width?: string; align?: ImageAlign | string }): string {
   const width = normalizeImageWidth(attrs.width ?? '')
   const align = normalizeImageAlign(attrs.align ?? '')
   const parts: string[] = []
@@ -104,9 +97,7 @@ export function formatImageAttrs(attrs: {
 
 export function serializeImageMarkdown(image: ImageMarkdown): string {
   const alt = image.alt.replaceAll('[', '').replaceAll(']', '')
-  const title = image.title?.trim()
-    ? ` "${image.title.replaceAll('"', '')}"`
-    : ''
+  const title = image.title?.trim() ? ` "${image.title.replaceAll('"', '')}"` : ''
   const suffix = formatImageAttrs({
     width: image.width ?? '',
     align: image.align ?? 'left'

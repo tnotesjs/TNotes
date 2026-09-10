@@ -5,7 +5,7 @@ import { resolveAfterDropLevel } from './outlineDrag'
 describe('大纲拖拽层级解析', () => {
   it('有后续兄弟的子节点也能向左拖回顶层', () => {
     const session = new MindmapSession({
-      markdown: '# T\n\n- 父主题\n  - 第二个节点\n  - 后续兄弟\n- 另一个顶层\n',
+      markdown: '# T\n\n- 父主题\n  - 第二个节点\n  - 后续兄弟\n- 另一个顶层\n'
     })
     const root = session.document.root
     const parent = root.children[0]

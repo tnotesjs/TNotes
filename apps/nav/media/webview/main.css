@@ -32,8 +32,7 @@ body {
   gap: 4px;
   flex: 0 0 auto;
   padding: 4px 6px;
-  border-bottom: 1px solid
-    var(--vscode-sideBarSectionHeader-border, var(--vscode-panel-border));
+  border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border, var(--vscode-panel-border));
   min-width: 0;
 }
 
@@ -379,8 +378,7 @@ body {
 
 .toc-changes-item {
   padding-left: 10px;
-  border-left: 2px solid
-    var(--vscode-gitDecoration-modifiedResourceForeground, #e2c08d);
+  border-left: 2px solid var(--vscode-gitDecoration-modifiedResourceForeground, #e2c08d);
 }
 
 .toc-git-mark {

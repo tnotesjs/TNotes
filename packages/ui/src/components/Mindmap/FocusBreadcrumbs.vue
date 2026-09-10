@@ -46,7 +46,7 @@ const openSiblings = computed(() => openNode.value?.parent?.children ?? [])
 const menuStyle = computed(() => ({
   left: `${menuPosition.value.left}px`,
   top: `${menuPosition.value.top}px`,
-  width: `${MENU_WIDTH}px`,
+  width: `${MENU_WIDTH}px`
 }))
 
 function hasSiblingMenu(node: MindmapNode): boolean {
@@ -68,12 +68,16 @@ function updateMenuPosition() {
   const rect = trigger.getBoundingClientRect()
   const viewportWidth = Math.max(document.documentElement.clientWidth, window.innerWidth || 0)
   const viewportHeight = Math.max(document.documentElement.clientHeight, window.innerHeight || 0)
-  const left = Math.max(VIEWPORT_GAP, Math.min(rect.left, viewportWidth - MENU_WIDTH - VIEWPORT_GAP))
+  const left = Math.max(
+    VIEWPORT_GAP,
+    Math.min(rect.left, viewportWidth - MENU_WIDTH - VIEWPORT_GAP)
+  )
   const estimatedHeight = Math.min(360, Math.max(44, openSiblings.value.length * 40 + 12))
   const below = rect.bottom + 6
-  const top = below + estimatedHeight <= viewportHeight - VIEWPORT_GAP
-    ? below
-    : Math.max(VIEWPORT_GAP, rect.top - estimatedHeight - 6)
+  const top =
+    below + estimatedHeight <= viewportHeight - VIEWPORT_GAP
+      ? below
+      : Math.max(VIEWPORT_GAP, rect.top - estimatedHeight - 6)
   menuPosition.value = { left, top }
 }
 
@@ -85,11 +89,8 @@ function focusMenuItem(where: 'first' | 'last' | 'current') {
   const items = menuItems()
   if (items.length === 0) return
   const currentIndex = items.findIndex((item) => item.getAttribute('aria-checked') === 'true')
-  const index = where === 'first'
-    ? 0
-    : where === 'last'
-      ? items.length - 1
-      : Math.max(0, currentIndex)
+  const index =
+    where === 'first' ? 0 : where === 'last' ? items.length - 1 : Math.max(0, currentIndex)
   items[index]?.focus()
 }
 
@@ -123,7 +124,7 @@ function requestKeyboardMenu(
   node: MindmapNode,
   depth: number,
   event: KeyboardEvent,
-  where: 'first' | 'last' | 'current',
+  where: 'first' | 'last' | 'current'
 ) {
   if (!hasSiblingMenu(node)) return
   event.preventDefault()
@@ -189,7 +190,8 @@ function onMenuKeydown(event: KeyboardEvent) {
   const current = items.indexOf(document.activeElement as HTMLButtonElement)
   let next: number
   if (event.key === 'ArrowDown') next = current < 0 ? 0 : (current + 1) % items.length
-  else if (event.key === 'ArrowUp') next = current < 0 ? items.length - 1 : (current - 1 + items.length) % items.length
+  else if (event.key === 'ArrowUp')
+    next = current < 0 ? items.length - 1 : (current - 1 + items.length) % items.length
   else if (event.key === 'Home') next = 0
   else if (event.key === 'End') next = items.length - 1
   else if (event.key === 'Escape') {
@@ -223,13 +225,17 @@ function onViewportChange() {
   if (openMenu.value) updateMenuPosition()
 }
 
-watch(focusPath, () => {
-  closeMenu()
-  nextTick(() => {
-    const current = scroller.value?.querySelector<HTMLElement>('[aria-current="page"]')
-    current?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
-  })
-}, { immediate: true, flush: 'post' })
+watch(
+  focusPath,
+  () => {
+    closeMenu()
+    nextTick(() => {
+      const current = scroller.value?.querySelector<HTMLElement>('[aria-current="page"]')
+      current?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+    })
+  },
+  { immediate: true, flush: 'post' }
+)
 
 onMounted(() => {
   document.addEventListener('pointerdown', onDocumentPointerDown)
@@ -249,12 +255,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <nav
-    v-if="focusPath.length > 0"
-    ref="root"
-    class="focus-breadcrumbs"
-    aria-label="主题导航"
-  >
+  <nav v-if="focusPath.length > 0" ref="root" class="focus-breadcrumbs" aria-label="主题导航">
     <div ref="scroller" class="focus-breadcrumbs-scroller">
       <div class="focus-breadcrumbs-track">
         <button
@@ -276,7 +277,9 @@ onBeforeUnmount(() => {
             :aria-current="depth === focusPath.length - 1 ? 'page' : undefined"
             :aria-haspopup="hasSiblingMenu(node) ? 'menu' : undefined"
             :aria-expanded="hasSiblingMenu(node) ? openMenu?.nodeId === node.id : undefined"
-            :aria-controls="hasSiblingMenu(node) && openMenu?.nodeId === node.id ? menuId : undefined"
+            :aria-controls="
+              hasSiblingMenu(node) && openMenu?.nodeId === node.id ? menuId : undefined
+            "
             :title="node.content.text"
             @click="navigateAncestor(node, depth)"
             @mouseenter="requestHoverMenu(node, depth, $event)"
@@ -364,7 +367,7 @@ onBeforeUnmount(() => {
 
 .focus-crumb:hover,
 .focus-crumb:focus-visible,
-.focus-crumb[aria-expanded="true"] {
+.focus-crumb[aria-expanded='true'] {
   background: var(--tn-c-default-soft);
   outline: none;
 }
@@ -390,7 +393,7 @@ onBeforeUnmount(() => {
   border: 1px solid var(--tn-c-divider);
   border-radius: 10px;
   background: var(--tn-c-bg-elv, var(--tn-c-bg));
-  box-shadow: var(--tn-shadow-2, 0 14px 38px rgb(0 0 0 / .24));
+  box-shadow: var(--tn-shadow-2, 0 14px 38px rgb(0 0 0 / 0.24));
   color: var(--tn-c-text);
 }
 

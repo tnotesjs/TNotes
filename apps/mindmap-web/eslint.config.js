@@ -6,7 +6,7 @@ import vueParser from 'vue-eslint-parser'
 
 export default tseslint.config(
   {
-    ignores: ['dist/', 'node_modules/', 'coverage/'],
+    ignores: ['dist/', 'node_modules/', 'coverage/']
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -18,16 +18,16 @@ export default tseslint.config(
       parserOptions: {
         parser: tseslint.parser,
         extraFileExtensions: ['.vue'],
-        sourceType: 'module',
-      },
-    },
+        sourceType: 'module'
+      }
+    }
   },
   {
     languageOptions: {
       globals: {
         ...globals.browser,
-        ...globals.node,
-      },
+        ...globals.node
+      }
     },
     rules: {
       'vue/multi-word-component-names': 'off',
@@ -39,7 +39,7 @@ export default tseslint.config(
       'vue/html-closing-bracket-newline': 'off',
       'vue/first-attribute-linebreak': 'off',
       'vue/html-closing-bracket-spacing': 'off',
-      '@typescript-eslint/no-explicit-any': 'warn',
-    },
-  },
+      '@typescript-eslint/no-explicit-any': 'warn'
+    }
+  }
 )

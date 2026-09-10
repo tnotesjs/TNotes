@@ -24,7 +24,13 @@ describe('insertImageIntoSource', () => {
   it('选中完整列表项内容时用图片替换该节点', () => {
     const source = '# T\n\n- replace me\n'
     const start = source.indexOf('replace me')
-    const result = insertImageIntoSource(source, start, start + 'replace me'.length, 'assets/a.png', '粘贴图片')
+    const result = insertImageIntoSource(
+      source,
+      start,
+      start + 'replace me'.length,
+      'assets/a.png',
+      '粘贴图片'
+    )
     expect(result).toBe('# T\n\n- ![粘贴图片](assets/a.png)\n')
   })
 })

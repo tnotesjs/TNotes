@@ -11,17 +11,13 @@ pnpm add @tnotesjs/mindmap-core
 ## Usage
 
 ```ts
-import {
-  MindmapSession,
-  parseMarkdown,
-  serializeMarkdown,
-} from '@tnotesjs/mindmap-core'
+import { MindmapSession, parseMarkdown, serializeMarkdown } from '@tnotesjs/mindmap-core'
 
 const result = parseMarkdown('# Notes\n\n- Topic')
 if (result.ok) {
   const session = new MindmapSession({
     markdown: '# Notes\n\n- Topic',
-    fileName: 'notes.tn-mindmap.md',
+    fileName: 'notes.tn-mindmap.md'
   })
   console.log(serializeMarkdown(session.document))
 }
@@ -34,7 +30,7 @@ import { CanvasViewer, MindmapSession } from '@tnotesjs/mindmap-core'
 
 const session = new MindmapSession({
   markdown: '# Notes\n\n- Topic',
-  fileName: 'notes.tn-mindmap.md',
+  fileName: 'notes.tn-mindmap.md'
 })
 const viewer = new CanvasViewer(element, session, { theme: 'dark' })
 

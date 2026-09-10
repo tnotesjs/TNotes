@@ -12,11 +12,17 @@ import MindmapView from '../ui/MindmapView.vue'
 import OutlineView from '../ui/OutlineView.vue'
 import SearchBar from '../ui/SearchBar.vue'
 import { primaryShortcut } from '../ui/platform'
-import { PROTOCOL_VERSION, type DocumentSnapshot, type ExtensionToWebviewMessage } from '../protocol'
+import {
+  PROTOCOL_VERSION,
+  type DocumentSnapshot,
+  type ExtensionToWebviewMessage
+} from '../protocol'
 import { blobToBase64, createBridge, protocolMessage } from './bridge'
 
 type ViewId = 'outline' | 'map' | 'source'
-interface PersistedState { view?: ViewId }
+interface PersistedState {
+  view?: ViewId
+}
 interface PendingAsset {
   resolve: (result: { relativePath: string; webviewUri: string }) => void
   reject: (error: Error) => void
@@ -102,12 +108,14 @@ function sendEdit(text: string) {
   if (text === syncedText) return
   const id = ++changeId
   inFlight = { id, text }
-  bridge.postMessage(protocolMessage({
-    type: 'edit',
-    changeId: id,
-    baseVersion: hostDocumentVersion.value,
-    text,
-  }))
+  bridge.postMessage(
+    protocolMessage({
+      type: 'edit',
+      changeId: id,
+      baseVersion: hostDocumentVersion.value,
+      text
+    })
+  )
 }
 
 function scheduleEdit(text: string) {
@@ -137,7 +145,11 @@ function onHostMessage(event: MessageEvent<ExtensionToWebviewMessage>) {
       syncedText = message.snapshot.text
     } else if (!inFlight && message.snapshot.text !== markdown.value) {
       applySnapshot(message.snapshot)
-    } else if (inFlight && message.snapshot.text !== inFlight.text && message.snapshot.text !== syncedText) {
+    } else if (
+      inFlight &&
+      message.snapshot.text !== inFlight.text &&
+      message.snapshot.text !== syncedText
+    ) {
       inFlight = null
       queuedText = null
       applySnapshot(message.snapshot, true)
@@ -183,12 +195,14 @@ async function writeAsset(blob: Blob): Promise<{ relativePath: string; webviewUr
   const result = new Promise<{ relativePath: string; webviewUri: string }>((resolve, reject) => {
     pendingAssets.set(requestId, { resolve, reject })
   })
-  bridge.postMessage(protocolMessage({
-    type: 'writeAsset',
-    requestId,
-    mime: blob.type || 'image/png',
-    base64: await blobToBase64(blob),
-  }))
+  bridge.postMessage(
+    protocolMessage({
+      type: 'writeAsset',
+      requestId,
+      mime: blob.type || 'image/png',
+      base64: await blobToBase64(blob)
+    })
+  )
   return result
 }
 
@@ -210,7 +224,12 @@ async function onPasteImageInSource(blob: Blob, selectionStart: number, selectio
   try {
     const asset = await writeAsset(blob)
     assetUris.value = { ...assetUris.value, [asset.relativePath]: asset.webviewUri }
-    markdown.value = insertImageIntoSource(markdown.value, selectionStart, selectionEnd, asset.relativePath)
+    markdown.value = insertImageIntoSource(
+      markdown.value,
+      selectionStart,
+      selectionEnd,
+      asset.relativePath
+    )
   } catch (error) {
     showToast(error instanceof Error ? error.message : '图片写入失败')
   }
@@ -246,25 +265,36 @@ const sessionState = computed(() => ({
   canUndo: session.value?.canUndo ?? false,
   canRedo: session.value?.canRedo ?? false,
   hasSelection: session.value?.selectedNode != null,
-  scalePercent: Math.round((canvasEditorRef.value?.getScale() ?? 1) * 100),
+  scalePercent: Math.round((canvasEditorRef.value?.getScale() ?? 1) * 100)
 }))
 
 function onGlobalKeydown(event: KeyboardEvent) {
   const mod = event.metaKey || event.ctrlKey
   if (mod && event.key.toLowerCase() === 's') {
     event.preventDefault()
-    if (!sourceValid.value && !window.confirm('当前 Markdown 格式不合法。确认后仍将原始源码保存到文件，是否继续？')) return
+    if (
+      !sourceValid.value &&
+      !window.confirm('当前 Markdown 格式不合法。确认后仍将原始源码保存到文件，是否继续？')
+    )
+      return
     const pendingSource = markdownViewRef.value?.flushDraft()
     if (pendingSource != null) scheduleEdit(pendingSource)
     bridge.postMessage(protocolMessage({ type: 'save' }))
-  } else if (sourceValid.value && mod && event.key.toLowerCase() === 'f' && !event.defaultPrevented) {
+  } else if (
+    sourceValid.value &&
+    mod &&
+    event.key.toLowerCase() === 'f' &&
+    !event.defaultPrevented
+  ) {
     event.preventDefault()
     openSearch()
   }
 }
 
 function onExternalLink(event: MouseEvent) {
-  const anchor = (event.target as HTMLElement | null)?.closest('a[href]') as HTMLAnchorElement | null
+  const anchor = (event.target as HTMLElement | null)?.closest(
+    'a[href]'
+  ) as HTMLAnchorElement | null
   if (!anchor) return
   const href = anchor.href
   if (!/^https?:/i.test(href)) return
@@ -291,7 +321,7 @@ onBeforeUnmount(() => {
 const viewTabs: Array<{ id: ViewId; label: string }> = [
   { id: 'outline', label: '大纲' },
   { id: 'map', label: '脑图' },
-  { id: 'source', label: '源码' },
+  { id: 'source', label: '源码' }
 ]
 </script>
 
@@ -312,18 +342,37 @@ const viewTabs: Array<{ id: ViewId; label: string }> = [
           class="view-tab"
           :class="{ active: view === tab.id }"
           :disabled="!sourceValid && tab.id !== 'source'"
-          :data-tooltip="!sourceValid && tab.id !== 'source' ? '请先修复 Markdown 格式' : `${tab.label}视图`"
+          :data-tooltip="
+            !sourceValid && tab.id !== 'source' ? '请先修复 Markdown 格式' : `${tab.label}视图`
+          "
           :aria-label="`${tab.label}视图`"
           @click="switchView(tab.id)"
         >
-          <AppIcon :name="tab.id === 'outline' ? 'outline' : tab.id === 'map' ? 'mindmap' : 'source'" :size="17" />
+          <AppIcon
+            :name="tab.id === 'outline' ? 'outline' : tab.id === 'map' ? 'mindmap' : 'source'"
+            :size="17"
+          />
         </button>
       </nav>
 
       <div class="toolbar-section action-section">
-        <IconButton icon="undo" :label="`撤销 (${primaryShortcut('Z')})`" :disabled="!sessionState.canUndo" @click="session.undo()" />
-        <IconButton icon="redo" :label="`重做 (${primaryShortcut('Z', { shift: true })})`" :disabled="!sessionState.canRedo" @click="session.redo()" />
-        <CollapseMenu v-if="view !== 'source'" @all="session.toggleCollapseAll()" @level="session.setCollapseLevel" />
+        <IconButton
+          icon="undo"
+          :label="`撤销 (${primaryShortcut('Z')})`"
+          :disabled="!sessionState.canUndo"
+          @click="session.undo()"
+        />
+        <IconButton
+          icon="redo"
+          :label="`重做 (${primaryShortcut('Z', { shift: true })})`"
+          :disabled="!sessionState.canRedo"
+          @click="session.redo()"
+        />
+        <CollapseMenu
+          v-if="view !== 'source'"
+          @all="session.toggleCollapseAll()"
+          @level="session.setCollapseLevel"
+        />
         <IconButton
           v-if="view !== 'source'"
           icon="focus"
@@ -331,11 +380,21 @@ const viewTabs: Array<{ id: ViewId; label: string }> = [
           :disabled="!sessionState.hasSelection"
           @click="session.focusSelected()"
         />
-        <IconButton icon="search" :label="`搜索 (${primaryShortcut('F')})`" :disabled="!sourceValid" :active="searchVisible" @click="toggleSearch" />
+        <IconButton
+          icon="search"
+          :label="`搜索 (${primaryShortcut('F')})`"
+          :disabled="!sourceValid"
+          :active="searchVisible"
+          @click="toggleSearch"
+        />
       </div>
     </header>
 
-    <FocusBreadcrumbs v-if="sourceValid && session.focusPath.length > 0" :session="session" :version="docVersion" />
+    <FocusBreadcrumbs
+      v-if="sourceValid && session.focusPath.length > 0"
+      :session="session"
+      :version="docVersion"
+    />
 
     <main class="vscode-main-area">
       <MindmapView
@@ -372,7 +431,13 @@ const viewTabs: Array<{ id: ViewId; label: string }> = [
         <IconButton icon="fit" label="缩放适配" @click="canvasEditorRef?.zoomToFit()" />
       </div>
 
-      <SearchBar :session="session" :visible="searchVisible" :version="docVersion" :on-jump="onJumpToNode" @close="searchVisible = false" />
+      <SearchBar
+        :session="session"
+        :visible="searchVisible"
+        :version="docVersion"
+        :on-jump="onJumpToNode"
+        @close="searchVisible = false"
+      />
     </main>
 
     <div v-if="toast" class="vscode-toast">{{ toast }}</div>

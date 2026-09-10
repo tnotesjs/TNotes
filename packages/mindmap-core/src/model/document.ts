@@ -12,7 +12,7 @@ import {
   setInlineFormat,
   setInlineLink,
   toggleInlineFormat,
-  updateInlineLink,
+  updateInlineLink
 } from './inline'
 import type { InlineFormat, NodeContent } from './inline'
 
@@ -72,7 +72,10 @@ export class MindmapDocument {
   }
 
   /** 先序遍历；visibleOnly 时跳过折叠节点的子树 */
-  traverse(cb: (node: MindmapNode) => void, opts: { visibleOnly?: boolean; from?: MindmapNode } = {}): void {
+  traverse(
+    cb: (node: MindmapNode) => void,
+    opts: { visibleOnly?: boolean; from?: MindmapNode } = {}
+  ): void {
     const walk = (n: MindmapNode) => {
       cb(n)
       const children = opts.visibleOnly ? visibleChildren(n) : n.children
@@ -177,7 +180,9 @@ export class MindmapDocument {
   /** 编辑器只提交用户看到的纯文案；已有行内格式和链接地址保持不变。 */
   updateDisplayText(node: MindmapNode, text: string): void {
     if (node === this.root) {
-      node.content = parseInline(replaceInlineDisplayText(node.content.raw, text.trim() || node.content.text))
+      node.content = parseInline(
+        replaceInlineDisplayText(node.content.raw, text.trim() || node.content.text)
+      )
       return
     }
     if (node.content.image) {
@@ -202,7 +207,9 @@ export class MindmapDocument {
   setInlineFormat(node: MindmapNode, format: InlineFormat, enabled: boolean): void {
     if (node.content.image || node.content.text.length === 0) return
     const checked = node.content.checked
-    const next = parseInline(setInlineFormat(node.content.raw, 0, node.content.text.length, format, enabled))
+    const next = parseInline(
+      setInlineFormat(node.content.raw, 0, node.content.text.length, format, enabled)
+    )
     next.checked = checked
     node.content = next
   }
@@ -278,7 +285,7 @@ export class MindmapDocument {
 export function cloneSubtree(node: MindmapNode): MindmapNode {
   const copy = createNode({
     ...node.content,
-    image: node.content.image ? { ...node.content.image } : null,
+    image: node.content.image ? { ...node.content.image } : null
   })
   copy.collapsed = node.collapsed
   copy.children = node.children.map((c) => {
@@ -294,7 +301,7 @@ export function snapshotDoc(doc: MindmapDocument): string {
     id: n.id,
     content: { ...n.content, image: n.content.image ? { ...n.content.image } : null },
     collapsed: n.collapsed,
-    children: n.children.map(toJSON),
+    children: n.children.map(toJSON)
   })
   return JSON.stringify(toJSON(doc.root))
 }
@@ -308,7 +315,7 @@ export function restoreDoc(json: string): MindmapDocument {
       content: { ...d.content, image: d.content.image ? { ...d.content.image } : null },
       collapsed: d.collapsed,
       children: [],
-      parent,
+      parent
     }
     node.children = d.children.map((c) => build(c, node))
     return node

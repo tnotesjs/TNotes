@@ -36,10 +36,20 @@ describe('parseMarkdown 标准形态', () => {
 
   it('无序列表解析为节点树，2 空格缩进为一级', () => {
     const { doc } = parseMarkdown(SAMPLE)
-    expect(doc.root.children.map((n) => n.content.text)).toEqual(['生活原则', '工作原则', '我的实践'])
+    expect(doc.root.children.map((n) => n.content.text)).toEqual([
+      '生活原则',
+      '工作原则',
+      '我的实践'
+    ])
     const life = doc.root.children[0]
-    expect(life.children.map((n) => n.content.text)).toEqual(['拥抱现实，应对现实', '五步流程实现人生目标'])
-    expect(life.children[1].children.map((n) => n.content.text)).toEqual(['明确目标', '识别问题，不容忍问题'])
+    expect(life.children.map((n) => n.content.text)).toEqual([
+      '拥抱现实，应对现实',
+      '五步流程实现人生目标'
+    ])
+    expect(life.children[1].children.map((n) => n.content.text)).toEqual([
+      '明确目标',
+      '识别问题，不容忍问题'
+    ])
     expect(life.children[1].children[0].parent).toBe(life.children[1])
   })
 
@@ -65,13 +75,13 @@ describe('parseMarkdown 标准形态', () => {
     expect(withWidth.content.image).toEqual({
       src: 'https://example.com/principles-map.png',
       alt: '原则思维导图',
-      width: 300,
+      width: 300
     })
     expect(withWidth.content.text).toBe('原则思维导图')
     expect(plain.content.image).toEqual({
       src: 'https://example.com/dalio.jpg',
       alt: '达里奥照片',
-      width: null,
+      width: null
     })
   })
 
@@ -106,12 +116,15 @@ describe('parseMarkdown 宽容缩进', () => {
 
 describe('parseMarkdown 边界情况', () => {
   it('无 H1 非法：返回明确诊断，且保留虚拟树仅供调用方兜底', () => {
-    const { doc, valid, diagnostics, hasExtraContent } = parseMarkdown('- a\n- b\n- c\n', '旅行计划')
+    const { doc, valid, diagnostics, hasExtraContent } = parseMarkdown(
+      '- a\n- b\n- c\n',
+      '旅行计划'
+    )
     expect(doc.root.content.text).toBe('旅行计划')
     expect(doc.root.children).toEqual([])
     expect(valid).toBe(false)
     expect(diagnostics).toEqual([
-      expect.objectContaining({ code: 'missing-h1', line: 1, column: 1 }),
+      expect.objectContaining({ code: 'missing-h1', line: 1, column: 1 })
     ])
     expect(hasExtraContent).toBe(true)
   })
@@ -138,7 +151,7 @@ describe('parseMarkdown 边界情况', () => {
       'extra-content',
       'extra-content',
       'extra-content',
-      'extra-content',
+      'extra-content'
     ])
     expect(hasExtraContent).toBe(true)
   })
@@ -149,7 +162,7 @@ describe('parseMarkdown 边界情况', () => {
     expect(doc.root.children.map((n) => n.content.text)).toEqual(['a', 'b'])
     expect(valid).toBe(false)
     expect(diagnostics).toEqual([
-      expect.objectContaining({ code: 'extra-content', line: 4, column: 3 }),
+      expect.objectContaining({ code: 'extra-content', line: 4, column: 3 })
     ])
     expect(hasExtraContent).toBe(true)
   })
@@ -166,7 +179,7 @@ describe('parseMarkdown 边界情况', () => {
     expect(doc.root.content.text).toBe('一')
     expect(valid).toBe(false)
     expect(diagnostics).toEqual([
-      expect.objectContaining({ code: 'multiple-h1', line: 5, column: 1 }),
+      expect.objectContaining({ code: 'multiple-h1', line: 5, column: 1 })
     ])
     expect(hasExtraContent).toBe(true)
   })
@@ -179,8 +192,8 @@ describe('parseMarkdown 边界情况', () => {
         code: 'extra-content',
         line: 5,
         column: 3,
-        message: '一级标题后只允许空行和无序列表项',
-      },
+        message: '一级标题后只允许空行和无序列表项'
+      }
     ])
   })
 

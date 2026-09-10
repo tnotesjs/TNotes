@@ -10,21 +10,24 @@ import { MindmapSession } from './session'
 
 function installCanvasStubs(): void {
   const gradient = { addColorStop: vi.fn() }
-  const context = new Proxy<Record<PropertyKey, unknown>>({}, {
-    get(target, property) {
-      if (property === 'measureText') return (text: string) => ({ width: text.length * 8 })
-      if (property === 'createLinearGradient') return () => gradient
-      if (!(property in target)) target[property] = vi.fn()
-      return target[property]
-    },
-    set(target, property, value) {
-      target[property] = value
-      return true
-    },
-  })
+  const context = new Proxy<Record<PropertyKey, unknown>>(
+    {},
+    {
+      get(target, property) {
+        if (property === 'measureText') return (text: string) => ({ width: text.length * 8 })
+        if (property === 'createLinearGradient') return () => gradient
+        if (!(property in target)) target[property] = vi.fn()
+        return target[property]
+      },
+      set(target, property, value) {
+        target[property] = value
+        return true
+      }
+    }
+  )
   Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
     configurable: true,
-    value: () => context,
+    value: () => context
   })
 }
 
@@ -34,11 +37,11 @@ function mountEditor(markdown = '# T\n\n- alpha\n', events: CanvasEditorEvents =
   const host = document.createElement('div')
   Object.defineProperties(host, {
     clientWidth: { configurable: true, value: 1000 },
-    clientHeight: { configurable: true, value: 700 },
+    clientHeight: { configurable: true, value: 700 }
   })
   document.body.append(host)
   const editor = new CanvasEditor(host, session, events, {
-    measure: (text) => ({ width: text.length * 8, height: 21 }),
+    measure: (text) => ({ width: text.length * 8, height: 21 })
   })
   const node = session.document.root.children[0]
   editor.startEdit(node.id)
@@ -61,19 +64,32 @@ function canvasInternals(editor: CanvasEditor) {
   }
 }
 
-function screenPoint(editor: CanvasEditor, id: string, edge: 'center' | 'topLeft' | 'bottomRight' = 'center') {
+function screenPoint(
+  editor: CanvasEditor,
+  id: string,
+  edge: 'center' | 'topLeft' | 'bottomRight' = 'center'
+) {
   const state = canvasInternals(editor)
   const box = state.layout.boxes.get(id)!
-  const x = edge === 'topLeft' ? box.x : edge === 'bottomRight' ? box.x + box.width : box.x + box.width / 2
-  const y = edge === 'topLeft' ? box.y : edge === 'bottomRight' ? box.y + box.height : box.y + box.height / 2
-  return { x: state.transform.x + x * state.transform.k, y: state.transform.y + y * state.transform.k }
+  const x =
+    edge === 'topLeft' ? box.x : edge === 'bottomRight' ? box.x + box.width : box.x + box.width / 2
+  const y =
+    edge === 'topLeft'
+      ? box.y
+      : edge === 'bottomRight'
+        ? box.y + box.height
+        : box.y + box.height / 2
+  return {
+    x: state.transform.x + x * state.transform.k,
+    y: state.transform.y + y * state.transform.k
+  }
 }
 
 function screenWorldPoint(editor: CanvasEditor, x: number, y: number) {
   const state = canvasInternals(editor)
   return {
     x: state.transform.x + x * state.transform.k,
-    y: state.transform.y + y * state.transform.k,
+    y: state.transform.y + y * state.transform.k
   }
 }
 
@@ -83,7 +99,7 @@ function shortcut(input: HTMLTextAreaElement, key: string, shiftKey = false): Ke
     metaKey: true,
     shiftKey,
     bubbles: true,
-    cancelable: true,
+    cancelable: true
   })
   input.dispatchEvent(event)
   return event
@@ -124,14 +140,19 @@ describe('脑图编辑态行内格式快捷键', () => {
     const { editor, host, input, node } = mountEditor('# T\n\n- alpha beta\n')
     const addButton = host.querySelector<HTMLButtonElement>('.mm-edit-add-button')!
     const beforeInput = { left: parseFloat(input.style.left), top: parseFloat(input.style.top) }
-    const beforeAdd = { left: parseFloat(addButton.style.left), top: parseFloat(addButton.style.top) }
+    const beforeAdd = {
+      left: parseFloat(addButton.style.left),
+      top: parseFloat(addButton.style.top)
+    }
 
-    host.dispatchEvent(new WheelEvent('wheel', {
-      deltaX: 80,
-      deltaY: -45,
-      bubbles: true,
-      cancelable: true,
-    }))
+    host.dispatchEvent(
+      new WheelEvent('wheel', {
+        deltaX: 80,
+        deltaY: -45,
+        bubbles: true,
+        cancelable: true
+      })
+    )
 
     const projected = screenPoint(editor, node.id, 'topLeft')
     expect(parseFloat(input.style.left)).toBeCloseTo(beforeInput.left - 80)
@@ -180,7 +201,7 @@ describe('脑图编辑态行内格式快捷键', () => {
     ['u', false, '<u>alpha</u>'],
     ['s', true, '~~alpha~~'],
     ['h', true, '==alpha=='],
-    ['e', false, '`alpha`'],
+    ['e', false, '`alpha`']
   ])('Cmd+%s 切换格式并保持选区', (key, shiftKey, expectedRaw) => {
     const { editor, input, node } = mountEditor()
     input.setSelectionRange(0, input.value.length)
@@ -203,7 +224,9 @@ describe('脑图编辑态行内格式快捷键', () => {
     shortcut(input, 'b')
     expect(node.content.raw).toBe('alpha **beta**')
 
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+    )
     session.undo()
     expect(session.document.find(node.id)?.content.raw).toBe('alpha beta')
     session.undo()
@@ -221,12 +244,22 @@ describe('脑图编辑态行内格式快捷键', () => {
 
     const second = mountEditor()
     second.input.setSelectionRange(0, second.input.value.length)
-    const codeEvent = new KeyboardEvent('keydown', { key: 'e', metaKey: true, bubbles: true, cancelable: true })
+    const codeEvent = new KeyboardEvent('keydown', {
+      key: 'e',
+      metaKey: true,
+      bubbles: true,
+      cancelable: true
+    })
     second.input.dispatchEvent(codeEvent)
     expect(codeEvent.defaultPrevented).toBe(true)
     expect(second.node.content.raw).toBe('`alpha`')
 
-    const altL = new KeyboardEvent('keydown', { key: 'l', altKey: true, bubbles: true, cancelable: true })
+    const altL = new KeyboardEvent('keydown', {
+      key: 'l',
+      altKey: true,
+      bubbles: true,
+      cancelable: true
+    })
     second.input.dispatchEvent(altL)
     expect(altL.defaultPrevented).toBe(false)
     expect(second.node.content.raw).toBe('`alpha`')
@@ -235,7 +268,7 @@ describe('脑图编辑态行内格式快捷键', () => {
 
   it.each([
     ['b', '**alpha**'],
-    ['e', '`alpha`'],
+    ['e', '`alpha`']
   ])('没有文本选区时 Cmd+%s 格式化整个编辑节点并保留光标', (key, expectedRaw) => {
     const { editor, input, node } = mountEditor()
     input.setSelectionRange(2, 2)
@@ -281,35 +314,43 @@ describe('脑图编辑态行内格式快捷键', () => {
 describe('脑图导航、框选与离散多选', () => {
   it('拖动期间只显示预览，松手后才提交树结构移动', () => {
     const { editor, host, input, session } = mountEditor('# T\n\n- a\n- b\n')
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    )
     const [a, b] = session.document.root.children
     const source = screenPoint(editor, b.id)
     const target = screenPoint(editor, a.id)
 
-    host.dispatchEvent(new PointerEvent('pointerdown', {
-      clientX: source.x,
-      clientY: source.y,
-      button: 0,
-      bubbles: true,
-    }))
-    window.dispatchEvent(new PointerEvent('pointermove', {
-      clientX: target.x,
-      clientY: target.y,
-      bubbles: true,
-    }))
+    host.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        clientX: source.x,
+        clientY: source.y,
+        button: 0,
+        bubbles: true
+      })
+    )
+    window.dispatchEvent(
+      new PointerEvent('pointermove', {
+        clientX: target.x,
+        clientY: target.y,
+        bubbles: true
+      })
+    )
 
     expect(b.parent).toBe(session.document.root)
     expect(canvasInternals(editor).renderer.dragPreview).toMatchObject({
       sourceId: b.id,
-      indicator: { type: 'child', targetId: a.id },
+      indicator: { type: 'child', targetId: a.id }
     })
     expect(host.classList.contains('is-node-dragging')).toBe(true)
 
-    window.dispatchEvent(new PointerEvent('pointerup', {
-      clientX: target.x,
-      clientY: target.y,
-      bubbles: true,
-    }))
+    window.dispatchEvent(
+      new PointerEvent('pointerup', {
+        clientX: target.x,
+        clientY: target.y,
+        bubbles: true
+      })
+    )
     expect(b.parent).toBe(a)
     expect(canvasInternals(editor).renderer.dragPreview).toBeNull()
     expect(host.classList.contains('is-node-dragging')).toBe(false)
@@ -317,32 +358,57 @@ describe('脑图导航、框选与离散多选', () => {
   })
 
   it('上下键优先切换同级节点，不落入中间高度的子节点', () => {
-    const { editor, host, input, session } = mountEditor('# T\n\n- 生活标准\n  - 很高的子节点\n- 工作原则\n')
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    const { editor, host, input, session } = mountEditor(
+      '# T\n\n- 生活标准\n  - 很高的子节点\n- 工作原则\n'
+    )
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    )
     const life = session.document.root.children[0]
     const work = session.document.root.children[1]
     session.select(life.id)
-    host.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }))
+    host.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })
+    )
     expect(session.selectedNode).toBe(work)
     editor.destroy()
   })
 
   it('空白拖动框选相交节点，按 Space 拖动才平移', () => {
     const { editor, host, input, session } = mountEditor('# T\n\n- a\n- b\n')
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    )
     const [a, b] = session.document.root.children
     const pa = screenPoint(editor, a.id, 'topLeft')
     const pb = screenPoint(editor, b.id, 'bottomRight')
-    host.dispatchEvent(new PointerEvent('pointerdown', { clientX: pa.x - 8, clientY: pa.y - 8, button: 0, bubbles: true }))
-    window.dispatchEvent(new PointerEvent('pointermove', { clientX: pb.x + 8, clientY: pb.y + 8, bubbles: true }))
-    window.dispatchEvent(new PointerEvent('pointerup', { clientX: pb.x + 8, clientY: pb.y + 8, bubbles: true }))
+    host.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        clientX: pa.x - 8,
+        clientY: pa.y - 8,
+        button: 0,
+        bubbles: true
+      })
+    )
+    window.dispatchEvent(
+      new PointerEvent('pointermove', { clientX: pb.x + 8, clientY: pb.y + 8, bubbles: true })
+    )
+    window.dispatchEvent(
+      new PointerEvent('pointerup', { clientX: pb.x + 8, clientY: pb.y + 8, bubbles: true })
+    )
     expect(session.selectionIds.has(a.id)).toBe(true)
     expect(session.selectionIds.has(b.id)).toBe(true)
 
     const before = { ...canvasInternals(editor).transform }
-    host.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true, cancelable: true }))
-    host.dispatchEvent(new PointerEvent('pointerdown', { clientX: 2, clientY: 2, button: 0, bubbles: true }))
-    window.dispatchEvent(new PointerEvent('pointermove', { clientX: 42, clientY: 32, bubbles: true }))
+    host.dispatchEvent(
+      new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true, cancelable: true })
+    )
+    host.dispatchEvent(
+      new PointerEvent('pointerdown', { clientX: 2, clientY: 2, button: 0, bubbles: true })
+    )
+    window.dispatchEvent(
+      new PointerEvent('pointermove', { clientX: 42, clientY: 32, bubbles: true })
+    )
     window.dispatchEvent(new PointerEvent('pointerup', { clientX: 42, clientY: 32, bubbles: true }))
     expect(canvasInternals(editor).transform.x).toBe(before.x + 40)
     expect(canvasInternals(editor).transform.y).toBe(before.y + 30)
@@ -351,17 +417,38 @@ describe('脑图导航、框选与离散多选', () => {
 
   it('Cmd 点击切换离散节点选择，并可批量应用格式', () => {
     const { editor, host, input, session } = mountEditor('# T\n\n- a\n- b\n')
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    )
     const [a, b] = session.document.root.children
     session.select(null)
     for (const node of [a, b]) {
       const point = screenPoint(editor, node.id)
-      host.dispatchEvent(new PointerEvent('pointerdown', { clientX: point.x, clientY: point.y, button: 0, metaKey: true, bubbles: true }))
-      window.dispatchEvent(new PointerEvent('pointerup', { clientX: point.x, clientY: point.y, bubbles: true }))
-      host.dispatchEvent(new MouseEvent('click', { clientX: point.x, clientY: point.y, metaKey: true, bubbles: true }))
+      host.dispatchEvent(
+        new PointerEvent('pointerdown', {
+          clientX: point.x,
+          clientY: point.y,
+          button: 0,
+          metaKey: true,
+          bubbles: true
+        })
+      )
+      window.dispatchEvent(
+        new PointerEvent('pointerup', { clientX: point.x, clientY: point.y, bubbles: true })
+      )
+      host.dispatchEvent(
+        new MouseEvent('click', {
+          clientX: point.x,
+          clientY: point.y,
+          metaKey: true,
+          bubbles: true
+        })
+      )
     }
     expect(new Set(session.selectionIds)).toEqual(new Set([a.id, b.id]))
-    host.dispatchEvent(new KeyboardEvent('keydown', { key: 'b', metaKey: true, bubbles: true, cancelable: true }))
+    host.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'b', metaKey: true, bubbles: true, cancelable: true })
+    )
     expect(a.content.raw).toBe('**a**')
     expect(b.content.raw).toBe('**b**')
     editor.destroy()
@@ -369,27 +456,35 @@ describe('脑图导航、框选与离散多选', () => {
 
   it('Cmd+] 进入任意已选节点', () => {
     const { editor, host, input, session } = mountEditor('# T\n\n- a\n  - a1\n')
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    )
     const a = session.document.root.children[0]
     session.select(a.id)
-    host.dispatchEvent(new KeyboardEvent('keydown', { key: ']', metaKey: true, bubbles: true, cancelable: true }))
+    host.dispatchEvent(
+      new KeyboardEvent('keydown', { key: ']', metaKey: true, bubbles: true, cancelable: true })
+    )
     expect(session.focusRootNode).toBe(a)
     editor.destroy()
   })
 
   it('真实键值 “>” 也能触发 Cmd+Shift+. 的同级折叠', () => {
     const { editor, host, input, session } = mountEditor('# T\n\n- a\n  - a1\n- b\n  - b1\n')
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    )
     const [a, b] = session.document.root.children
     session.select(a.id)
 
-    host.dispatchEvent(new KeyboardEvent('keydown', {
-      key: '>',
-      metaKey: true,
-      shiftKey: true,
-      bubbles: true,
-      cancelable: true,
-    }))
+    host.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: '>',
+        metaKey: true,
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true
+      })
+    )
 
     expect(a.collapsed).toBe(true)
     expect(b.collapsed).toBe(true)
@@ -401,30 +496,51 @@ describe('脑图链接 hover', () => {
   it('仅悬停精确链接文字约 380ms 后发出链接编辑浮层位置', () => {
     vi.useFakeTimers()
     const onLinkHover = vi.fn()
-    const { editor, input, node } = mountEditor('# T\n\n- before [桥水官网](https://bridgewater.com) after\n', { onLinkHover })
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    const { editor, input, node } = mountEditor(
+      '# T\n\n- before [桥水官网](https://bridgewater.com) after\n',
+      { onLinkHover }
+    )
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    )
     const state = canvasInternals(editor)
     state.renderer.draw()
     const box = state.layout.boxes.get(node.id)!
     const geo = nodeGeometry(box, new Map(), false)
 
     const plainPoint = screenWorldPoint(editor, box.x + geo.textX + 2, box.y + geo.textY)
-    window.dispatchEvent(new PointerEvent('pointermove', { clientX: plainPoint.x, clientY: plainPoint.y, bubbles: true }))
+    window.dispatchEvent(
+      new PointerEvent('pointermove', {
+        clientX: plainPoint.x,
+        clientY: plainPoint.y,
+        bubbles: true
+      })
+    )
     vi.advanceTimersByTime(400)
     expect(onLinkHover).not.toHaveBeenCalledWith(expect.objectContaining({ nodeId: node.id }))
 
-    const linkPoint = screenWorldPoint(editor, box.x + geo.textX + 'before '.length * 8 + 2, box.y + geo.textY)
-    window.dispatchEvent(new PointerEvent('pointermove', { clientX: linkPoint.x, clientY: linkPoint.y, bubbles: true }))
+    const linkPoint = screenWorldPoint(
+      editor,
+      box.x + geo.textX + 'before '.length * 8 + 2,
+      box.y + geo.textY
+    )
+    window.dispatchEvent(
+      new PointerEvent('pointermove', { clientX: linkPoint.x, clientY: linkPoint.y, bubbles: true })
+    )
     vi.advanceTimersByTime(400)
-    expect(onLinkHover).toHaveBeenCalledWith(expect.objectContaining({
-      nodeId: node.id,
-      url: 'https://bridgewater.com',
-    }))
+    expect(onLinkHover).toHaveBeenCalledWith(
+      expect.objectContaining({
+        nodeId: node.id,
+        url: 'https://bridgewater.com'
+      })
+    )
 
     const popover = document.createElement('div')
     popover.className = 'link-popover'
     document.body.append(popover)
-    popover.dispatchEvent(new PointerEvent('pointermove', { clientX: 0, clientY: 0, bubbles: true }))
+    popover.dispatchEvent(
+      new PointerEvent('pointermove', { clientX: 0, clientY: 0, bubbles: true })
+    )
     expect(onLinkHover).not.toHaveBeenLastCalledWith(null)
     editor.destroy()
     vi.useRealTimers()
@@ -432,19 +548,31 @@ describe('脑图链接 hover', () => {
 
   it('单击链接文字在新标签页打开，单击同一节点普通文案不会跳转', () => {
     const open = vi.spyOn(window, 'open').mockImplementation(() => null)
-    const { editor, host, input, node } = mountEditor('# T\n\n- before [桥水官网](https://bridgewater.com) after\n')
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    const { editor, host, input, node } = mountEditor(
+      '# T\n\n- before [桥水官网](https://bridgewater.com) after\n'
+    )
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    )
     const state = canvasInternals(editor)
     state.renderer.draw()
     const box = state.layout.boxes.get(node.id)!
     const geo = nodeGeometry(box, new Map(), false)
 
     const plainPoint = screenWorldPoint(editor, box.x + geo.textX + 2, box.y + geo.textY)
-    host.dispatchEvent(new MouseEvent('click', { clientX: plainPoint.x, clientY: plainPoint.y, bubbles: true }))
+    host.dispatchEvent(
+      new MouseEvent('click', { clientX: plainPoint.x, clientY: plainPoint.y, bubbles: true })
+    )
     expect(open).not.toHaveBeenCalled()
 
-    const linkPoint = screenWorldPoint(editor, box.x + geo.textX + 'before '.length * 8 + 2, box.y + geo.textY)
-    host.dispatchEvent(new MouseEvent('click', { clientX: linkPoint.x, clientY: linkPoint.y, bubbles: true }))
+    const linkPoint = screenWorldPoint(
+      editor,
+      box.x + geo.textX + 'before '.length * 8 + 2,
+      box.y + geo.textY
+    )
+    host.dispatchEvent(
+      new MouseEvent('click', { clientX: linkPoint.x, clientY: linkPoint.y, bubbles: true })
+    )
     expect(open).toHaveBeenCalledWith('https://bridgewater.com', '_blank', 'noopener,noreferrer')
     editor.destroy()
   })
@@ -452,15 +580,21 @@ describe('脑图链接 hover', () => {
 
 describe('脑图折叠控件 hover', () => {
   it('展开节点的圆环只在 hover 后可点击，并折叠全部子树', () => {
-    const { editor, host, input, session } = mountEditor('# T\n\n- parent\n  - child\n    - grandchild\n')
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    const { editor, host, input, session } = mountEditor(
+      '# T\n\n- parent\n  - child\n    - grandchild\n'
+    )
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    )
     const parent = session.document.root.children[0]
     // 单选节点优先显示新增按钮；取消选中后再验证普通 hover 的收起按钮。
     session.select(null)
     const state = canvasInternals(editor)
     const box = state.layout.boxes.get(parent.id)!
     const body = screenWorldPoint(editor, box.x + 3, box.y + box.height / 2)
-    window.dispatchEvent(new PointerEvent('pointermove', { clientX: body.x, clientY: body.y, bubbles: true }))
+    window.dispatchEvent(
+      new PointerEvent('pointermove', { clientX: body.x, clientY: body.y, bubbles: true })
+    )
 
     const dot = nodeGeometry(box, new Map(), false).collapseDot!
     const ring = screenWorldPoint(editor, dot.cx + 5, dot.cy)
@@ -489,13 +623,17 @@ describe('脑图折叠控件 hover', () => {
 
   it('单选节点的 Canvas 加号新增子主题并立即进入编辑', () => {
     const { editor, host, input, node } = mountEditor()
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    )
     const state = canvasInternals(editor)
     const box = state.layout.boxes.get(node.id)!
     const add = nodeGeometry(box, new Map(), true).controlDot!
     const point = screenWorldPoint(editor, add.cx, add.cy)
 
-    host.dispatchEvent(new MouseEvent('click', { clientX: point.x, clientY: point.y, bubbles: true }))
+    host.dispatchEvent(
+      new MouseEvent('click', { clientX: point.x, clientY: point.y, bubbles: true })
+    )
 
     expect(node.children).toHaveLength(1)
     expect(document.activeElement).toBe(host.querySelector('.mm-edit-input'))
@@ -518,7 +656,7 @@ describe('脑图节点底部菜单定位', () => {
     onSelectionPositionChange.mockClear()
 
     vi.spyOn(host, 'getBoundingClientRect').mockReturnValue(
-      DOMRect.fromRect({ x: 0, y: -120, width: 1000, height: 700 }),
+      DOMRect.fromRect({ x: 0, y: -120, width: 1000, height: 700 })
     )
 
     document.dispatchEvent(new Event('scroll', { bubbles: true }))
@@ -532,7 +670,7 @@ describe('脑图节点底部菜单定位', () => {
     onSelectionPositionChange.mockClear()
 
     vi.spyOn(host, 'getBoundingClientRect').mockReturnValue(
-      DOMRect.fromRect({ x: 0, y: -900, width: 1000, height: 700 }),
+      DOMRect.fromRect({ x: 0, y: -900, width: 1000, height: 700 })
     )
 
     document.dispatchEvent(new Event('scroll', { bubbles: true }))
@@ -545,16 +683,23 @@ describe('脑图节点剪贴板快捷键', () => {
   it.each([
     ['c', 'onCopySelection'],
     ['x', 'onCutSelection'],
-    ['v', 'onPasteSelection'],
+    ['v', 'onPasteSelection']
   ] as const)('节点选择态 Cmd+%s 发出对应剪贴板请求', (key, eventName) => {
     const events = {
       onCopySelection: vi.fn(),
       onCutSelection: vi.fn(),
-      onPasteSelection: vi.fn(),
+      onPasteSelection: vi.fn()
     }
     const { editor, host, input } = mountEditor('# T\n\n- alpha\n', events)
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
-    const event = new KeyboardEvent('keydown', { key, metaKey: true, bubbles: true, cancelable: true })
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    )
+    const event = new KeyboardEvent('keydown', {
+      key,
+      metaKey: true,
+      bubbles: true,
+      cancelable: true
+    })
 
     host.dispatchEvent(event)
 
@@ -566,7 +711,12 @@ describe('脑图节点剪贴板快捷键', () => {
   it('编辑态 Cmd+V 不触发节点粘贴（留给输入框）', () => {
     const onPasteSelection = vi.fn()
     const { editor, host, input } = mountEditor('# T\n\n- alpha\n', { onPasteSelection })
-    const event = new KeyboardEvent('keydown', { key: 'v', metaKey: true, bubbles: true, cancelable: true })
+    const event = new KeyboardEvent('keydown', {
+      key: 'v',
+      metaKey: true,
+      bubbles: true,
+      cancelable: true
+    })
     host.dispatchEvent(event)
     expect(onPasteSelection).not.toHaveBeenCalled()
     expect(document.activeElement).toBe(input)
@@ -577,8 +727,12 @@ describe('脑图节点剪贴板快捷键', () => {
 describe('脑图节点右键菜单', () => {
   it('右键未选节点改为单选并发出单主题菜单能力', () => {
     const onContextMenu = vi.fn()
-    const { editor, host, input, node, session } = mountEditor('# T\n\n- alpha\n- beta\n', { onContextMenu })
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    const { editor, host, input, node, session } = mountEditor('# T\n\n- alpha\n- beta\n', {
+      onContextMenu
+    })
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    )
     const beta = session.document.root.children[1]
     const point = screenPoint(editor, beta.id)
 
@@ -587,69 +741,85 @@ describe('脑图节点右键菜单', () => {
       clientX: point.x,
       clientY: point.y,
       bubbles: true,
-      cancelable: true,
+      cancelable: true
     })
     host.dispatchEvent(event)
 
     expect(event.defaultPrevented).toBe(true)
     expect(session.selectedNode).toBe(beta)
-    expect(onContextMenu).toHaveBeenLastCalledWith(expect.objectContaining({
-      nodeId: beta.id,
-      position: { left: point.x, top: point.y },
-      multiple: false,
-      canInsertSibling: true,
-      canDeleteOnly: true,
-      canFocus: true,
-    }))
+    expect(onContextMenu).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        nodeId: beta.id,
+        position: { left: point.x, top: point.y },
+        multiple: false,
+        canInsertSibling: true,
+        canDeleteOnly: true,
+        canFocus: true
+      })
+    )
     expect(node).not.toBe(session.selectedNode)
     editor.destroy()
   })
 
   it('右键已选节点保留离散多选并发出多主题菜单', () => {
     const onContextMenu = vi.fn()
-    const { editor, host, input, session } = mountEditor('# T\n\n- alpha\n- beta\n', { onContextMenu })
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    const { editor, host, input, session } = mountEditor('# T\n\n- alpha\n- beta\n', {
+      onContextMenu
+    })
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    )
     const [alpha, beta] = session.document.root.children
     session.selectMany([alpha.id, beta.id], beta.id, alpha.id)
     const point = screenPoint(editor, alpha.id)
 
-    host.dispatchEvent(new MouseEvent('contextmenu', {
-      button: 2,
-      clientX: point.x,
-      clientY: point.y,
-      bubbles: true,
-      cancelable: true,
-    }))
+    host.dispatchEvent(
+      new MouseEvent('contextmenu', {
+        button: 2,
+        clientX: point.x,
+        clientY: point.y,
+        bubbles: true,
+        cancelable: true
+      })
+    )
 
     expect([...session.selectionIds]).toEqual([alpha.id, beta.id])
-    expect(onContextMenu).toHaveBeenLastCalledWith(expect.objectContaining({ nodeId: alpha.id, multiple: true }))
+    expect(onContextMenu).toHaveBeenLastCalledWith(
+      expect.objectContaining({ nodeId: alpha.id, multiple: true })
+    )
     editor.destroy()
   })
 
   it('右键当前根主题时禁用无效的剪切、副本、删除和同级折叠', () => {
     const onContextMenu = vi.fn()
     const { editor, host, input, session } = mountEditor('# T\n\n- alpha\n', { onContextMenu })
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    )
     const root = session.document.root
     const point = screenPoint(editor, root.id)
 
-    host.dispatchEvent(new MouseEvent('contextmenu', {
-      button: 2,
-      clientX: point.x,
-      clientY: point.y,
-      bubbles: true,
-      cancelable: true,
-    }))
+    host.dispatchEvent(
+      new MouseEvent('contextmenu', {
+        button: 2,
+        clientX: point.x,
+        clientY: point.y,
+        bubbles: true,
+        cancelable: true
+      })
+    )
 
-    expect(onContextMenu).toHaveBeenLastCalledWith(expect.objectContaining({
-      nodeId: root.id,
-      canCut: false,
-      canDuplicate: false,
-      canDeleteOnly: false,
-      canDeleteTree: false,
-      canToggleSiblings: false,
-      canFocus: false,
-    }))
+    expect(onContextMenu).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        nodeId: root.id,
+        canCut: false,
+        canDuplicate: false,
+        canDeleteOnly: false,
+        canDeleteTree: false,
+        canToggleSiblings: false,
+        canFocus: false
+      })
+    )
     editor.destroy()
   })
 })
@@ -660,7 +830,9 @@ describe('脑图编辑态链接与待办快捷键', () => {
     expect(input.value).toBe('label')
 
     input.value = 'renamed'
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+    )
 
     expect(node.content.raw).toBe('[renamed](https://old.example)')
     editor.destroy()
@@ -668,9 +840,7 @@ describe('脑图编辑态链接与待办快捷键', () => {
 
   it('Cmd+K 为选中文字添加链接，留空时移除链接', () => {
     const { editor, input, node } = mountEditor()
-    const prompt = vi.fn()
-      .mockReturnValueOnce('https://new.example')
-      .mockReturnValueOnce('')
+    const prompt = vi.fn().mockReturnValueOnce('https://new.example').mockReturnValueOnce('')
     Object.defineProperty(window, 'prompt', { configurable: true, value: prompt })
     input.setSelectionRange(0, input.value.length)
 

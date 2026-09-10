@@ -339,8 +339,7 @@
 
     const collapsed = !!state.tocChangesCollapsed
     const section = document.createElement('div')
-    section.className =
-      'toc-section toc-changes-section' + (collapsed ? ' is-collapsed' : '')
+    section.className = 'toc-section toc-changes-section' + (collapsed ? ' is-collapsed' : '')
 
     const heading = document.createElement('button')
     heading.type = 'button'
@@ -522,9 +521,7 @@
       const tip = gitTooltip(status)
       const li = document.createElement('li')
       li.className =
-        'kb-item' +
-        (kb.repo === state.selectedRepo ? ' selected' : '') +
-        (pinned ? ' pinned' : '')
+        'kb-item' + (kb.repo === state.selectedRepo ? ' selected' : '') + (pinned ? ' pinned' : '')
       li.title = tip ? kb.repo + ' · ' + tip : kb.repo
       li.setAttribute('aria-label', kb.repo)
       li.dataset.repo = kb.repo
@@ -608,8 +605,7 @@
     const isGroup = node.type === 'group'
     const isCollapsed = collapsed.has(node.nodeId)
     const pinned = pinnedIds.has(node.nodeId)
-    const gitLetter =
-      !isGroup && node.noteDir ? currentFileMarks()[node.noteDir] || '' : ''
+    const gitLetter = !isGroup && node.noteDir ? currentFileMarks()[node.noteDir] || '' : ''
 
     row.className =
       'toc-item' +
@@ -704,9 +700,7 @@
         row.style.setProperty('--drop-indent', row.style.paddingLeft)
       }
       row.classList.remove('drop-before', 'drop-after', 'drop-inside')
-      row.classList.add(
-        ratio < 0.3 ? 'drop-before' : ratio > 0.7 ? 'drop-after' : 'drop-inside'
-      )
+      row.classList.add(ratio < 0.3 ? 'drop-before' : ratio > 0.7 ? 'drop-after' : 'drop-inside')
     })
     row.addEventListener('dragleave', () => {
       row.classList.remove('drop-before', 'drop-after', 'drop-inside')
@@ -808,8 +802,7 @@
 
     const collapsed = !!state.tocPinnedCollapsed
     const section = document.createElement('div')
-    section.className =
-      'toc-section toc-pinned-section' + (collapsed ? ' is-collapsed' : '')
+    section.className = 'toc-section toc-pinned-section' + (collapsed ? ' is-collapsed' : '')
 
     const heading = document.createElement('button')
     heading.type = 'button'
@@ -864,8 +857,7 @@
         label.className = 'toc-label'
         label.textContent = isGroup ? node.title : displayNoteTitle(node.title)
 
-        const gitLetter =
-          !isGroup && node.noteDir ? currentFileMarks()[node.noteDir] || '' : ''
+        const gitLetter = !isGroup && node.noteDir ? currentFileMarks()[node.noteDir] || '' : ''
         const pinBtn = createPinButton(true, () => toggleTocPin(node.nodeId))
 
         row.appendChild(icon)
@@ -1056,8 +1048,7 @@
         leftWidth: typeof msg.leftWidth === 'number' ? msg.leftWidth : state.leftWidth,
         fallbackIconUri: msg.fallbackIconUri || state.fallbackIconUri,
         workspaceRoot: msg.workspaceRoot ?? null,
-        addressPath:
-          typeof msg.addressPath === 'string' ? msg.addressPath : state.addressPath
+        addressPath: typeof msg.addressPath === 'string' ? msg.addressPath : state.addressPath
       }
       syncPathInput(true)
       render()

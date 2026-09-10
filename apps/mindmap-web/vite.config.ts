@@ -8,7 +8,7 @@ import { defineConfig } from 'vite'
 const require = createRequire(import.meta.url)
 const uiFocusBreadcrumbs = join(
   dirname(require.resolve('@tnotesjs/ui')),
-  'components/Mindmap/FocusBreadcrumbs.vue',
+  'components/Mindmap/FocusBreadcrumbs.vue'
 )
 
 export default defineConfig({
@@ -17,11 +17,11 @@ export default defineConfig({
   resolve: {
     // Avoid the package barrel — it re-exports WordList (needs sass) and Mermaid.
     alias: {
-      '@tnotesjs/ui/FocusBreadcrumbs.vue': uiFocusBreadcrumbs,
-    },
+      '@tnotesjs/ui/FocusBreadcrumbs.vue': uiFocusBreadcrumbs
+    }
   },
   test: {
     environment: 'node',
-    include: ['src/**/*.test.ts'],
-  },
+    include: ['src/**/*.test.ts']
+  }
 })

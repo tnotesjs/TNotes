@@ -10,7 +10,9 @@ export function createBridge<State>(): BridgeApi<State> {
   return acquireVsCodeApi<State>()
 }
 
-export function protocolMessage<T extends Omit<WebviewToExtensionMessage, 'protocol'>>(message: T): T & { protocol: typeof PROTOCOL_VERSION } {
+export function protocolMessage<T extends Omit<WebviewToExtensionMessage, 'protocol'>>(
+  message: T
+): T & { protocol: typeof PROTOCOL_VERSION } {
   return { ...message, protocol: PROTOCOL_VERSION }
 }
 

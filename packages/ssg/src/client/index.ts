@@ -1,1 +1,1 @@
-export { registerTNotesComponents } from "./register";
+export { registerTNotesComponents } from './register'

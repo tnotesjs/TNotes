@@ -15,10 +15,7 @@ const LIST_RE = /^(\s*)[-*+]\s+(.*)$/
 const CHECK_RE = /^\[( |x|X)\](?:\s+(.*))?$/
 
 export type MarkdownDiagnosticCode =
-  | 'missing-h1'
-  | 'content-before-h1'
-  | 'multiple-h1'
-  | 'extra-content'
+  'missing-h1' | 'content-before-h1' | 'multiple-h1' | 'extra-content'
 
 export interface MarkdownDiagnostic {
   code: MarkdownDiagnosticCode
@@ -68,7 +65,7 @@ export function parseMarkdown(md: string, fileName = '未命名'): ParseResult {
       code: 'missing-h1',
       line: firstContent >= 0 ? firstContent + 1 : 1,
       column: firstContent >= 0 ? firstContentColumn(lines[firstContent]) : 1,
-      message: '文档必须包含且仅包含一个一级标题（H1）作为根节点',
+      message: '文档必须包含且仅包含一个一级标题（H1）作为根节点'
     })
   }
 
@@ -79,7 +76,7 @@ export function parseMarkdown(md: string, fileName = '未命名'): ParseResult {
         code: 'content-before-h1',
         line: i + 1,
         column: firstContentColumn(lines[i]),
-        message: '一级标题前只能有空行',
+        message: '一级标题前只能有空行'
       })
     }
 
@@ -88,7 +85,7 @@ export function parseMarkdown(md: string, fileName = '未命名'): ParseResult {
         code: 'multiple-h1',
         line: index + 1,
         column: 1,
-        message: '文档只能包含一个一级标题（H1）',
+        message: '文档只能包含一个一级标题（H1）'
       })
     }
 
@@ -101,7 +98,7 @@ export function parseMarkdown(md: string, fileName = '未命名'): ParseResult {
         code: 'extra-content',
         line: i + 1,
         column: firstContentColumn(line),
-        message: '一级标题后只允许空行和无序列表项',
+        message: '一级标题后只允许空行和无序列表项'
       })
     }
   }
@@ -161,6 +158,6 @@ export function parseMarkdown(md: string, fileName = '未命名'): ParseResult {
     doc,
     valid: diagnostics.length === 0,
     diagnostics,
-    hasExtraContent: diagnostics.length > 0,
+    hasExtraContent: diagnostics.length > 0
   }
 }

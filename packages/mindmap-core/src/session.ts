@@ -8,7 +8,13 @@ import { History } from './commands/history'
 import { parseMarkdown } from './markdown/parser'
 import type { MarkdownDiagnostic } from './markdown/parser'
 import { serializeMarkdown } from './markdown/serializer'
-import { cloneSubtree, isAncestor, MindmapDocument, restoreDoc, snapshotDoc } from './model/document'
+import {
+  cloneSubtree,
+  isAncestor,
+  MindmapDocument,
+  restoreDoc,
+  snapshotDoc
+} from './model/document'
 import { parseInline } from './model/inline'
 import type { InlineFormat } from './model/inline'
 import type { MindmapNode } from './model/document'
@@ -209,7 +215,11 @@ export class MindmapSession {
   }
 
   /** 替换节点选择集合；primaryId 作为后续键盘操作的锚点。 */
-  selectMany(ids: Iterable<string>, primaryId: string | null = null, anchorId: string | null = null): void {
+  selectMany(
+    ids: Iterable<string>,
+    primaryId: string | null = null,
+    anchorId: string | null = null
+  ): void {
     const next = new Set<string>()
     for (const id of ids) {
       if (this.doc.find(id)) next.add(id)
@@ -222,7 +232,8 @@ export class MindmapSession {
       this.selectedId === primary &&
       this.selectionAnchorId === anchor &&
       setsEqual(this.selectionIdsState, next)
-    ) return
+    )
+      return
     this.selectionIdsState = next
     this.selectedId = primary
     this.selectionAnchorId = anchor
@@ -254,11 +265,17 @@ export class MindmapSession {
   }
 
   formatSelectedNodes(format: InlineFormat): void {
-    const nodes = this.selectedNodes.filter((node) =>
-      node !== this.doc.root && node !== this.focusRootNode && !node.content.image && node.content.text.length > 0,
+    const nodes = this.selectedNodes.filter(
+      (node) =>
+        node !== this.doc.root &&
+        node !== this.focusRootNode &&
+        !node.content.image &&
+        node.content.text.length > 0
     )
     if (nodes.length === 0) return
-    const enabled = !nodes.every((node) => this.doc.inlineFormatActive(node, 0, node.content.text.length, format))
+    const enabled = !nodes.every((node) =>
+      this.doc.inlineFormatActive(node, 0, node.content.text.length, format)
+    )
     this.mutate(() => nodes.forEach((node) => this.doc.setInlineFormat(node, format, enabled)))
   }
 
@@ -269,8 +286,12 @@ export class MindmapSession {
   }
 
   clearSelectedNodeFormats(): void {
-    const nodes = this.selectedNodes.filter((node) =>
-      node !== this.doc.root && node !== this.focusRootNode && !node.content.image && node.content.text.length > 0,
+    const nodes = this.selectedNodes.filter(
+      (node) =>
+        node !== this.doc.root &&
+        node !== this.focusRootNode &&
+        !node.content.image &&
+        node.content.text.length > 0
     )
     if (nodes.length === 0) return
     this.mutate(() => nodes.forEach((node) => this.doc.clearInlineFormats(node)))
@@ -301,9 +322,14 @@ export class MindmapSession {
   }
 
   toggleTaskSelectedNodes(): void {
-    const nodes = this.selectedNodes.filter((node) => node !== this.doc.root && node !== this.focusRootNode)
+    const nodes = this.selectedNodes.filter(
+      (node) => node !== this.doc.root && node !== this.focusRootNode
+    )
     if (nodes.length === 0) return
-    const primary = this.selectedNode && nodes.includes(this.selectedNode) ? this.selectedNode : nodes[nodes.length - 1]
+    const primary =
+      this.selectedNode && nodes.includes(this.selectedNode)
+        ? this.selectedNode
+        : nodes[nodes.length - 1]
     const next: boolean | null = primary.content.checked === null ? false : null
     this.mutate(() => nodes.forEach((node) => (node.content.checked = next)))
   }
@@ -312,7 +338,8 @@ export class MindmapSession {
     const nodes = this.selectedNodes.filter((node) => node.content.checked !== null)
     if (nodes.length === 0) return
     const selected = this.selectedNode
-    const primary = selected && selected.content.checked !== null ? selected : nodes[nodes.length - 1]
+    const primary =
+      selected && selected.content.checked !== null ? selected : nodes[nodes.length - 1]
     const next = primary.content.checked !== true
     this.mutate(() => nodes.forEach((node) => (node.content.checked = next)))
   }
@@ -357,9 +384,12 @@ export class MindmapSession {
       changed = true
     }
     const nodes: MindmapNode[] = []
-    this.doc.traverse((node) => {
-      if (node !== root && node.children.length > 0) nodes.push(node)
-    }, { from: root })
+    this.doc.traverse(
+      (node) => {
+        if (node !== root && node.children.length > 0) nodes.push(node)
+      },
+      { from: root }
+    )
     if (nodes.length === 0) {
       if (changed) this.emit('collapseChange', null)
       return
@@ -425,7 +455,11 @@ export class MindmapSession {
    * 为异步图片落盘准备一次文档变更，但不立即改 UI。
    * 调用方先写图片和 markdown，全部成功后再 commit，避免出现半完成节点。
    */
-  prepareImageInsertion(anchorId: string, src: string, alt = '截图'): PreparedDocumentChange | null {
+  prepareImageInsertion(
+    anchorId: string,
+    src: string,
+    alt = '截图'
+  ): PreparedDocumentChange | null {
     const baseSnapshot = snapshotDoc(this.doc)
     const preparedDoc = restoreDoc(baseSnapshot)
     const anchor = preparedDoc.find(anchorId)
@@ -451,7 +485,8 @@ export class MindmapSession {
       markdown,
       commit: () => {
         if (committed) throw new Error('该图片插入事务已经提交')
-        if (snapshotDoc(this.doc) !== baseSnapshot) throw new Error('文档已变化，无法提交过期的图片插入事务')
+        if (snapshotDoc(this.doc) !== baseSnapshot)
+          throw new Error('文档已变化，无法提交过期的图片插入事务')
         committed = true
         this.history.record(baseSnapshot)
         this.doc = restoreDoc(preparedSnapshot)
@@ -465,7 +500,7 @@ export class MindmapSession {
         this.select(result.id)
         this.emit('change', this.getMarkdown())
         return result
-      },
+      }
     }
   }
 
@@ -530,7 +565,8 @@ export class MindmapSession {
       const pos = this.doc.remove(node)!
       const siblings = pos.parent.children
       const next = siblings[pos.index] ?? siblings[pos.index - 1] ?? pos.parent
-      nextSelect = next === this.doc.root && siblings.length > 0 ? (siblings[0]?.id ?? null) : next.id
+      nextSelect =
+        next === this.doc.root && siblings.length > 0 ? (siblings[0]?.id ?? null) : next.id
     })
     this.select(nextSelect)
   }
@@ -550,7 +586,8 @@ export class MindmapSession {
       node.children = []
       node.parent = null
     })
-    const next = promotedIds[0] ?? parent.children[index]?.id ?? parent.children[index - 1]?.id ?? parent.id
+    const next =
+      promotedIds[0] ?? parent.children[index]?.id ?? parent.children[index - 1]?.id ?? parent.id
     this.select(next === this.doc.root.id ? null : next)
   }
 
@@ -578,7 +615,9 @@ export class MindmapSession {
     const selected = new Set(roots.map((n) => n.id))
     const firstIndex = visible.findIndex((n) => selected.has(n.id))
     const fallback =
-      [...visible.slice(0, Math.max(0, firstIndex))].reverse().find((n) => !this.isWithinSelectedRoots(n, roots)) ??
+      [...visible.slice(0, Math.max(0, firstIndex))]
+        .reverse()
+        .find((n) => !this.isWithinSelectedRoots(n, roots)) ??
       visible.slice(Math.max(0, firstIndex)).find((n) => !this.isWithinSelectedRoots(n, roots)) ??
       this.focusRootNode
 
@@ -618,7 +657,8 @@ export class MindmapSession {
     }
     const parent = roots[0].parent
     const grand = parent?.parent
-    if (!parent || !grand || parent === this.doc.root || roots.some((n) => n.parent !== parent)) return
+    if (!parent || !grand || parent === this.doc.root || roots.some((n) => n.parent !== parent))
+      return
     const indices = roots.map((n) => parent.children.indexOf(n)).sort((a, b) => a - b)
     if (indices.some((value, i) => i > 0 && value !== indices[i - 1] + 1)) return
     this.mutate(() => {
@@ -637,7 +677,8 @@ export class MindmapSession {
     if (indices.some((value, i) => i > 0 && value !== indices[i - 1] + 1)) return
     const first = indices[0]
     const last = indices[indices.length - 1]
-    if ((direction < 0 && first === 0) || (direction > 0 && last === parent.children.length - 1)) return
+    if ((direction < 0 && first === 0) || (direction > 0 && last === parent.children.length - 1))
+      return
     this.mutate(() => {
       const group = parent.children.splice(first, roots.length)
       const insertAt = direction < 0 ? first - 1 : first + 1
@@ -659,7 +700,11 @@ export class MindmapSession {
       copies.forEach((copy) => (copy.parent = parent))
       parent.children.splice(insertAt, 0, ...copies)
     })
-    this.selectMany(copies.map((node) => node.id), copies[copies.length - 1]?.id ?? null, copies[0]?.id ?? null)
+    this.selectMany(
+      copies.map((node) => node.id),
+      copies[copies.length - 1]?.id ?? null,
+      copies[0]?.id ?? null
+    )
   }
 
   moveNode(id: string, newParentId: string, index: number): boolean {
@@ -681,8 +726,9 @@ export class MindmapSession {
     const node = this.doc.find(id)
     if (!node) return
     const nextPath = node === this.doc.root ? [] : this.focusPathTo(node)
-    const pathChanged = nextPath.length !== this.focusStack.length
-      || nextPath.some((item, index) => item.id !== this.focusStack[index]?.id)
+    const pathChanged =
+      nextPath.length !== this.focusStack.length ||
+      nextPath.some((item, index) => item.id !== this.focusStack[index]?.id)
     if (node.collapsed) {
       node.collapsed = false
       this.emit('collapseChange', null)

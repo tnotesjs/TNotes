@@ -9,7 +9,10 @@ export interface MindmapReference {
 }
 
 function cleanHeadingText(value: string): string {
-  return value.trim().replace(/\s+#+\s*$/, '').trim()
+  return value
+    .trim()
+    .replace(/\s+#+\s*$/, '')
+    .trim()
 }
 
 /** Parse the canonical `mindmap [title] 2` fence metadata. */
@@ -23,7 +26,8 @@ export function parseMindmapFence(openLine: string): MindmapFenceOptions | null 
   const titleMatch = rest.match(/\[([^\]]+)\]/)
   if (titleMatch) {
     options.title = cleanHeadingText(titleMatch[1]) || undefined
-    rest = `${rest.slice(0, titleMatch.index)} ${rest.slice((titleMatch.index ?? 0) + titleMatch[0].length)}`.trim()
+    rest =
+      `${rest.slice(0, titleMatch.index)} ${rest.slice((titleMatch.index ?? 0) + titleMatch[0].length)}`.trim()
   }
 
   if (rest && !/^\d+$/.test(rest)) return null
@@ -58,7 +62,7 @@ export interface NormalizeMindmapOptions {
 /** Ensure canonical mindmap Markdown has exactly one H1 root title. */
 export function normalizeMindmapMarkdown(
   source: string,
-  options: NormalizeMindmapOptions = {},
+  options: NormalizeMindmapOptions = {}
 ): string {
   const lines = source.replace(/\r\n?/g, '\n').split('\n')
   let existingTitle = ''
@@ -72,12 +76,11 @@ export function normalizeMindmapMarkdown(
     break
   }
 
-  const rootTitle = cleanHeadingText(options.title || existingTitle || options.defaultTitle || 'root') || 'root'
+  const rootTitle =
+    cleanHeadingText(options.title || existingTitle || options.defaultTitle || 'root') || 'root'
   const body = lines.filter((_, index) => index !== rootIndex)
   while (body[0]?.trim() === '') body.shift()
   while (body[body.length - 1]?.trim() === '') body.pop()
 
-  return body.length > 0
-    ? `# ${rootTitle}\n\n${body.join('\n')}\n`
-    : `# ${rootTitle}\n`
+  return body.length > 0 ? `# ${rootTitle}\n\n${body.join('\n')}\n` : `# ${rootTitle}\n`
 }

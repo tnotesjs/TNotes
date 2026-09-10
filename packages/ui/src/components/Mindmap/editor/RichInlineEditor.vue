@@ -8,22 +8,25 @@ import {
   replaceInlineRange,
   richSelectionOffsets,
   setRichSelection,
-  stripInline,
+  stripInline
 } from '@tnotesjs/mindmap-core'
 import type { InlineLink, RichInlineEditorElement } from '@tnotesjs/mindmap-core'
 
-const props = withDefaults(defineProps<{
-  editorId: string
-  raw: string
-  active: boolean
-  done?: boolean
-  placeholder?: string
-  pasteMode?: 'single-line' | 'outline'
-}>(), {
-  done: false,
-  placeholder: '',
-  pasteMode: 'single-line',
-})
+const props = withDefaults(
+  defineProps<{
+    editorId: string
+    raw: string
+    active: boolean
+    done?: boolean
+    placeholder?: string
+    pasteMode?: 'single-line' | 'outline'
+  }>(),
+  {
+    done: false,
+    placeholder: '',
+    pasteMode: 'single-line'
+  }
+)
 
 interface DraftPayload {
   raw: string
@@ -89,7 +92,10 @@ function payload(): DraftPayload {
   return { raw: draftRaw.value, text: stripInline(draftRaw.value) }
 }
 
-function renderDraft(nextRaw: string, selection?: { start: number; end?: number; direction?: 'forward' | 'backward' }) {
+function renderDraft(
+  nextRaw: string,
+  selection?: { start: number; end?: number; direction?: 'forward' | 'backward' }
+) {
   draftRaw.value = nextRaw
   dirty = nextRaw !== sourceRaw
   renderInlineDom()
@@ -112,7 +118,7 @@ function replaceSelection(textToInsert: string) {
     end: text.value.length,
     anchor: text.value.length,
     focus: text.value.length,
-    direction: 'forward' as const,
+    direction: 'forward' as const
   }
   const nextRaw = replaceInlineRange(draftRaw.value, selection.start, selection.end, textToInsert)
   const caret = selection.start + textToInsert.length
@@ -136,7 +142,7 @@ function onBeforeInput(event: InputEvent) {
     end: text.value.length,
     anchor: text.value.length,
     focus: text.value.length,
-    direction: 'forward' as const,
+    direction: 'forward' as const
   }
 
   if (event.inputType === 'insertText' || event.inputType === 'insertReplacementText') {
@@ -149,25 +155,31 @@ function onBeforeInput(event: InputEvent) {
 
   if (event.inputType === 'deleteContentBackward') {
     event.preventDefault()
-    const start = selection.start === selection.end
-      ? previousGraphemeOffset(text.value, selection.start)
-      : selection.start
+    const start =
+      selection.start === selection.end
+        ? previousGraphemeOffset(text.value, selection.start)
+        : selection.start
     renderDraft(replaceInlineRange(draftRaw.value, start, selection.end, ''), { start })
     return
   }
 
   if (event.inputType === 'deleteContentForward') {
     event.preventDefault()
-    const end = selection.start === selection.end
-      ? nextGraphemeOffset(text.value, selection.end)
-      : selection.end
-    renderDraft(replaceInlineRange(draftRaw.value, selection.start, end, ''), { start: selection.start })
+    const end =
+      selection.start === selection.end
+        ? nextGraphemeOffset(text.value, selection.end)
+        : selection.end
+    renderDraft(replaceInlineRange(draftRaw.value, selection.start, end, ''), {
+      start: selection.start
+    })
     return
   }
 
   if (event.inputType === 'deleteByCut') {
     event.preventDefault()
-    renderDraft(replaceInlineRange(draftRaw.value, selection.start, selection.end, ''), { start: selection.start })
+    renderDraft(replaceInlineRange(draftRaw.value, selection.start, selection.end, ''), {
+      start: selection.start
+    })
     return
   }
 
@@ -240,8 +252,11 @@ function onLinkClick(link: InlineLink, event: Event) {
   emit('linkClick', link, event)
 }
 
-function linkFromTarget(target: EventTarget | null): { element: HTMLElement; link: InlineLink } | null {
-  const element = target instanceof HTMLElement ? target.closest<HTMLElement>('.inline-run.link') : null
+function linkFromTarget(
+  target: EventTarget | null
+): { element: HTMLElement; link: InlineLink } | null {
+  const element =
+    target instanceof HTMLElement ? target.closest<HTMLElement>('.inline-run.link') : null
   const root = rootRef.value
   if (!element || !root?.contains(element) || !element.dataset.linkUrl) return null
   return {
@@ -249,22 +264,30 @@ function linkFromTarget(target: EventTarget | null): { element: HTMLElement; lin
     link: {
       url: element.dataset.linkUrl,
       rawStart: Number(element.dataset.linkRawStart ?? 0),
-      rawEnd: Number(element.dataset.linkRawEnd ?? 0),
-    },
+      rawEnd: Number(element.dataset.linkRawEnd ?? 0)
+    }
   }
 }
 
 function onMouseOver(event: MouseEvent) {
   if (props.active) return
   const found = linkFromTarget(event.target)
-  if (!found || (event.relatedTarget instanceof Node && found.element.contains(event.relatedTarget))) return
+  if (
+    !found ||
+    (event.relatedTarget instanceof Node && found.element.contains(event.relatedTarget))
+  )
+    return
   emit('linkEnter', found.link, event)
 }
 
 function onMouseOut(event: MouseEvent) {
   if (props.active) return
   const found = linkFromTarget(event.target)
-  if (!found || (event.relatedTarget instanceof Node && found.element.contains(event.relatedTarget))) return
+  if (
+    !found ||
+    (event.relatedTarget instanceof Node && found.element.contains(event.relatedTarget))
+  )
+    return
   emit('linkLeave')
 }
 
@@ -288,13 +311,13 @@ function installCompatibilityApi(root: RichInlineEditorElement) {
       get: () => stripInline(draftRaw.value),
       set: (next: string) => {
         renderDraft(replaceInlineDisplayText(draftRaw.value, String(next)))
-      },
+      }
     },
     rawValue: { configurable: true, get: () => draftRaw.value },
     selectionStart: { configurable: true, get: () => richSelectionOffsets(root)?.start ?? 0 },
     selectionEnd: { configurable: true, get: () => richSelectionOffsets(root)?.end ?? 0 },
     isDirty: { configurable: true, get: () => dirty },
-    isComposing: { configurable: true, get: () => composing },
+    isComposing: { configurable: true, get: () => composing }
   })
   root.setSelectionRange = (start: number, end: number) => setRichSelection(root, start, end)
   root.markCommitted = () => {
@@ -320,7 +343,7 @@ watch(
       draftRaw.value = raw
       renderInlineDom()
     }
-  },
+  }
 )
 
 watch(
@@ -328,7 +351,7 @@ watch(
   (active) => {
     if (!active) emitCommit()
     if (!composing && !dirty) renderInlineDom()
-  },
+  }
 )
 
 onBeforeUnmount(emitCommit)
@@ -371,23 +394,49 @@ onBeforeUnmount(emitCommit)
   color: var(--mm-text-dim);
   pointer-events: none;
 }
-.rich-inline-editor.active { cursor: text; }
-.rich-inline-editor :deep(.inline-run.bold) { font-weight: 700; }
-.rich-inline-editor :deep(.inline-run.italic) { font-style: italic; }
-.rich-inline-editor :deep(.inline-run.underline) { text-decoration-line: underline; text-underline-offset: 3px; }
-.rich-inline-editor :deep(.inline-run.strike) { text-decoration-line: line-through; }
-.rich-inline-editor :deep(.inline-run.underline.strike) { text-decoration-line: underline line-through; }
-.rich-inline-editor :deep(.inline-run.highlight:not(.code)) { padding: 0 1px; border-radius: 2px; background: #fff36a; color: #242424; }
+.rich-inline-editor.active {
+  cursor: text;
+}
+.rich-inline-editor :deep(.inline-run.bold) {
+  font-weight: 700;
+}
+.rich-inline-editor :deep(.inline-run.italic) {
+  font-style: italic;
+}
+.rich-inline-editor :deep(.inline-run.underline) {
+  text-decoration-line: underline;
+  text-underline-offset: 3px;
+}
+.rich-inline-editor :deep(.inline-run.strike) {
+  text-decoration-line: line-through;
+}
+.rich-inline-editor :deep(.inline-run.underline.strike) {
+  text-decoration-line: underline line-through;
+}
+.rich-inline-editor :deep(.inline-run.highlight:not(.code)) {
+  padding: 0 1px;
+  border-radius: 2px;
+  background: #fff36a;
+  color: #242424;
+}
 .rich-inline-editor :deep(.inline-run.code) {
   padding: 2px 6px;
   border-radius: 5px;
   background: color-mix(in srgb, var(--mm-text) 18%, transparent);
   color: #f08a6e;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: .92em;
+  font-size: 0.92em;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
 }
-.rich-inline-editor :deep(.inline-run.link) { color: var(--mm-accent); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
-.rich-inline-editor.done { color: var(--mm-text-dim); text-decoration: line-through; }
+.rich-inline-editor :deep(.inline-run.link) {
+  color: var(--mm-accent);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.rich-inline-editor.done {
+  color: var(--mm-text-dim);
+  text-decoration: line-through;
+}
 </style>

@@ -21,11 +21,7 @@ import {
 } from '../toc'
 import { getWorkspace } from '../toc/kbWorkspace'
 import type { Placement, TocEntryRef } from '@tnotesjs/kb'
-import {
-  getAddressBarPath,
-  getNavRoot,
-  setNavRootPath
-} from '../workspace'
+import { getAddressBarPath, getNavRoot, setNavRootPath } from '../workspace'
 import { detectWorkspaceMode, type DetectedWorkspace } from '../workspaceMode'
 
 const SPLIT_KEY = 'tnotesNav.splitLeftPx'
@@ -143,9 +139,7 @@ export class NavPanelProvider implements vscode.WebviewViewProvider {
             typeof msg.repo === 'string' &&
             typeof msg.sourceNodeId === 'string' &&
             typeof msg.targetNodeId === 'string' &&
-            (msg.placement === 'before' ||
-              msg.placement === 'after' ||
-              msg.placement === 'inside')
+            (msg.placement === 'before' || msg.placement === 'after' || msg.placement === 'inside')
           ) {
             await this.tocMove(msg.repo, msg.sourceNodeId, msg.targetNodeId, msg.placement)
           }
@@ -159,9 +153,7 @@ export class NavPanelProvider implements vscode.WebviewViewProvider {
           if (
             typeof msg.repo === 'string' &&
             typeof msg.targetNodeId === 'string' &&
-            (msg.placement === 'before' ||
-              msg.placement === 'after' ||
-              msg.placement === 'inside')
+            (msg.placement === 'before' || msg.placement === 'after' || msg.placement === 'inside')
           ) {
             await this.tocCreateNote(msg.repo, msg.targetNodeId, msg.placement)
           }
@@ -373,12 +365,7 @@ export class NavPanelProvider implements vscode.WebviewViewProvider {
       return [{ repo: detected.repoName, root: detected.root }]
     }
     if (detected.mode === 'multi') {
-      const manifestPath = join(
-        this.context.extensionPath,
-        'media',
-        'kb-icons',
-        'manifest.json'
-      )
+      const manifestPath = join(this.context.extensionPath, 'media', 'kb-icons', 'manifest.json')
       const listed = listKnowledgeBases(detected.root, loadIconManifest(manifestPath))
       return listed.map((kb) => ({
         repo: kb.repo,
@@ -515,10 +502,7 @@ export class NavPanelProvider implements vscode.WebviewViewProvider {
   }
 
   private getTocPinnedCollapsedMap(): TocPinnedCollapsedMap {
-    const raw = this.context.globalState.get<TocPinnedCollapsedMap>(
-      TOC_PINNED_COLLAPSED_KEY,
-      {}
-    )
+    const raw = this.context.globalState.get<TocPinnedCollapsedMap>(TOC_PINNED_COLLAPSED_KEY, {})
     return raw && typeof raw === 'object' ? raw : {}
   }
 
@@ -534,10 +518,7 @@ export class NavPanelProvider implements vscode.WebviewViewProvider {
   }
 
   private getTocChangesCollapsedMap(): TocChangesCollapsedMap {
-    const raw = this.context.globalState.get<TocChangesCollapsedMap>(
-      TOC_CHANGES_COLLAPSED_KEY,
-      {}
-    )
+    const raw = this.context.globalState.get<TocChangesCollapsedMap>(TOC_CHANGES_COLLAPSED_KEY, {})
     return raw && typeof raw === 'object' ? raw : {}
   }
 
@@ -553,9 +534,7 @@ export class NavPanelProvider implements vscode.WebviewViewProvider {
   }
 
   /** Expand changes section when a repo goes from clean → dirty. */
-  private async expandChangesIfNewlyDirty(
-    next: Record<string, RepoGitStatus>
-  ): Promise<void> {
+  private async expandChangesIfNewlyDirty(next: Record<string, RepoGitStatus>): Promise<void> {
     let map: TocChangesCollapsedMap | null = null
     for (const [repo, status] of Object.entries(next)) {
       const nextCount = Object.keys(status.fileMarks || {}).length
@@ -570,11 +549,7 @@ export class NavPanelProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  private async setTocCollapsed(
-    repo: string,
-    nodeId: string,
-    collapsed: boolean
-  ): Promise<void> {
+  private async setTocCollapsed(repo: string, nodeId: string, collapsed: boolean): Promise<void> {
     const map = { ...this.getTocCollapsedMap() }
     const current = new Set(this.getCollapsedIds(repo))
     if (collapsed) current.add(nodeId)
@@ -806,9 +781,7 @@ export class NavPanelProvider implements vscode.WebviewViewProvider {
       '删除'
     )
     if (choice !== '删除') return
-    const ok = await this.mutationGuard(() =>
-      getWorkspace(root).toc.removeEntry(entry)
-    )
+    const ok = await this.mutationGuard(() => getWorkspace(root).toc.removeEntry(entry))
     if (ok) this.pushState()
   }
 
@@ -943,10 +916,7 @@ export class NavPanelProvider implements vscode.WebviewViewProvider {
         }
       })
 
-      if (
-        this.selectedRepo &&
-        !knowledgeBases.some((kb) => kb.repo === this.selectedRepo)
-      ) {
+      if (this.selectedRepo && !knowledgeBases.some((kb) => kb.repo === this.selectedRepo)) {
         this.selectedRepo = null
       }
     } else {

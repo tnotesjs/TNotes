@@ -1,1 +1,1 @@
-export { default } from "../components/BilibiliVideo/BilibiliVideo.vue";
+export { default } from '../components/BilibiliVideo/BilibiliVideo.vue'

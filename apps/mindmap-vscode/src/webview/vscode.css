@@ -18,7 +18,7 @@
   --tn-c-bg-elv: var(--mm-panel-bg);
   --tn-c-divider: var(--mm-border);
   --tn-c-default-soft: var(--mm-hover);
-  --tn-shadow-2: 0 14px 38px rgb(0 0 0 / .24);
+  --tn-shadow-2: 0 14px 38px rgb(0 0 0 / 0.24);
 }
 
 html,
@@ -125,7 +125,7 @@ textarea {
 
 .view-tab:disabled {
   cursor: not-allowed;
-  opacity: .4;
+  opacity: 0.4;
 }
 
 .vscode-main-area {
@@ -147,7 +147,7 @@ textarea {
   border: 1px solid var(--mm-border);
   border-radius: 9px;
   background: color-mix(in srgb, var(--mm-panel-bg) 92%, transparent);
-  box-shadow: 0 6px 20px rgb(0 0 0 / .16);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.16);
 }
 
 .scale-label {
@@ -167,7 +167,7 @@ textarea {
   border: 1px solid var(--mm-border);
   border-radius: 8px;
   background: var(--mm-panel-bg);
-  box-shadow: 0 8px 28px rgb(0 0 0 / .25);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 0.25);
   font-size: 12px;
   transform: translateX(-50%);
 }
@@ -180,7 +180,7 @@ textarea {
   align-items: center;
   justify-content: center;
   padding: 36px;
-  background: rgb(0 0 0 / .72);
+  background: rgb(0 0 0 / 0.72);
 }
 
 .image-preview {
@@ -196,7 +196,9 @@ textarea {
   height: 100%;
   place-items: center;
   color: var(--mm-text-dim);
-  font: 13px system-ui, sans-serif;
+  font:
+    13px system-ui,
+    sans-serif;
 }
 
 @media (max-width: 760px) {

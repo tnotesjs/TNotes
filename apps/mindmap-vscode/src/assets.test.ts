@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { assetRelativePath, createAssetFileName, extensionForMime, referencedAssetPaths } from './assets'
+import {
+  assetRelativePath,
+  createAssetFileName,
+  extensionForMime,
+  referencedAssetPaths
+} from './assets'
 
 describe('VSCode 图片资源', () => {
   it('根据 MIME 生成稳定且安全的 assets 路径', () => {
@@ -10,7 +15,8 @@ describe('VSCode 图片资源', () => {
   })
 
   it('只提取受支持的相对 assets 图片引用并去重', () => {
-    const md = '# demo\n- ![a](assets/a.png)\n- ![b](https://example.com/b.png)\n- ![a](assets/a.png)\n'
+    const md =
+      '# demo\n- ![a](assets/a.png)\n- ![b](https://example.com/b.png)\n- ![a](assets/a.png)\n'
     expect(referencedAssetPaths(md)).toEqual(['assets/a.png'])
   })
 })

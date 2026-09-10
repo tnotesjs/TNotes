@@ -1,185 +1,162 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 
 const props = withDefaults(defineProps<{ selector?: string }>(), {
-  selector: ".tn-prose img, .vp-doc img",
-});
-const visible = ref(false);
-const images = ref<string[]>([]);
-const index = ref(0);
-const scale = ref(1);
-const x = ref(0);
-const y = ref(0);
-const dragging = ref(false);
-const overlay = ref<HTMLElement>();
-let pointerStart = { x: 0, y: 0, baseX: 0, baseY: 0 };
-let swiperDownX = 0;
-let previousOverflow = "";
-let previousFocus: HTMLElement | null = null;
+  selector: '.tn-prose img, .vp-doc img'
+})
+const visible = ref(false)
+const images = ref<string[]>([])
+const index = ref(0)
+const scale = ref(1)
+const x = ref(0)
+const y = ref(0)
+const dragging = ref(false)
+const overlay = ref<HTMLElement>()
+let pointerStart = { x: 0, y: 0, baseX: 0, baseY: 0 }
+let swiperDownX = 0
+let previousOverflow = ''
+let previousFocus: HTMLElement | null = null
 
-const source = computed(() => images.value[index.value] || "");
-const transform = computed(
-  () => `translate(${x.value}px, ${y.value}px) scale(${scale.value})`,
-);
+const source = computed(() => images.value[index.value] || '')
+const transform = computed(() => `translate(${x.value}px, ${y.value}px) scale(${scale.value})`)
 
 function eligible(image: HTMLImageElement): boolean {
-  if (
-    image.dataset.preview === "false" ||
-    image.closest(".tn-preview-ignore, button")
-  )
-    return false;
-  return !(
-    image.naturalWidth > 0 &&
-    image.naturalWidth < 50 &&
-    image.naturalHeight < 50
-  );
+  if (image.dataset.preview === 'false' || image.closest('.tn-preview-ignore, button')) return false
+  return !(image.naturalWidth > 0 && image.naturalWidth < 50 && image.naturalHeight < 50)
 }
 
 function reset(): void {
-  scale.value = 1;
-  x.value = 0;
-  y.value = 0;
+  scale.value = 1
+  x.value = 0
+  y.value = 0
 }
 
 function open(image: HTMLImageElement): void {
-  const candidates = [
-    ...document.querySelectorAll<HTMLImageElement>(props.selector),
-  ].filter(eligible);
-  images.value = candidates
-    .map((item) => item.currentSrc || item.src)
-    .filter(Boolean);
-  const selected = image.currentSrc || image.src;
-  const selectedIndex = images.value.indexOf(selected);
-  index.value = selectedIndex < 0 ? 0 : selectedIndex;
-  if (selectedIndex < 0 && selected) images.value = [selected];
-  if (images.value.length === 0) return;
-  reset();
-  previousFocus =
-    document.activeElement instanceof HTMLElement
-      ? document.activeElement
-      : null;
-  previousOverflow = document.documentElement.style.overflow;
-  document.documentElement.style.overflow = "hidden";
-  visible.value = true;
-  void nextTick(() => overlay.value?.focus({ preventScroll: true }));
+  const candidates = [...document.querySelectorAll<HTMLImageElement>(props.selector)].filter(
+    eligible
+  )
+  images.value = candidates.map((item) => item.currentSrc || item.src).filter(Boolean)
+  const selected = image.currentSrc || image.src
+  const selectedIndex = images.value.indexOf(selected)
+  index.value = selectedIndex < 0 ? 0 : selectedIndex
+  if (selectedIndex < 0 && selected) images.value = [selected]
+  if (images.value.length === 0) return
+  reset()
+  previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+  previousOverflow = document.documentElement.style.overflow
+  document.documentElement.style.overflow = 'hidden'
+  visible.value = true
+  void nextTick(() => overlay.value?.focus({ preventScroll: true }))
 }
 
 function close(): void {
-  visible.value = false;
-  document.documentElement.style.overflow = previousOverflow;
-  previousFocus?.focus({ preventScroll: true });
+  visible.value = false
+  document.documentElement.style.overflow = previousOverflow
+  previousFocus?.focus({ preventScroll: true })
 }
 
 function move(step: number): void {
-  if (images.value.length < 2) return;
-  index.value =
-    (index.value + step + images.value.length) % images.value.length;
-  reset();
+  if (images.value.length < 2) return
+  index.value = (index.value + step + images.value.length) % images.value.length
+  reset()
 }
 
 function zoom(factor: number): void {
-  scale.value = Math.min(6, Math.max(0.2, scale.value * factor));
+  scale.value = Math.min(6, Math.max(0.2, scale.value * factor))
 }
 
 function resolvePreviewImage(target: EventTarget | null): HTMLImageElement | null {
-  if (target instanceof HTMLImageElement) return target;
+  if (target instanceof HTMLImageElement) return target
   if (target instanceof Element) {
-    return target.closest<HTMLImageElement>("img");
+    return target.closest<HTMLImageElement>('img')
   }
-  return null;
+  return null
 }
 
 function onDocumentClick(event: MouseEvent): void {
-  if (visible.value) return;
-  const image = resolvePreviewImage(event.target);
-  if (!image || !image.matches(props.selector) || !eligible(image)) return;
-  if (
-    image.closest(".swiper-container") &&
-    Math.abs(event.clientX - swiperDownX) > 5
-  )
-    return;
-  if (image.closest("a")) {
-    event.preventDefault();
-    event.stopPropagation();
+  if (visible.value) return
+  const image = resolvePreviewImage(event.target)
+  if (!image || !image.matches(props.selector) || !eligible(image)) return
+  if (image.closest('.swiper-container') && Math.abs(event.clientX - swiperDownX) > 5) return
+  if (image.closest('a')) {
+    event.preventDefault()
+    event.stopPropagation()
   }
-  open(image);
+  open(image)
 }
 
 function onPreviewRequest(event: Event): void {
-  const detail = (event as CustomEvent<HTMLImageElement | { src?: string }>).detail;
+  const detail = (event as CustomEvent<HTMLImageElement | { src?: string }>).detail
   if (detail instanceof HTMLImageElement) {
-    open(detail);
-    return;
+    open(detail)
+    return
   }
-  const src = detail && typeof detail.src === "string" ? detail.src : "";
-  if (!src) return;
-  images.value = [src];
-  index.value = 0;
-  reset();
-  previousFocus =
-    document.activeElement instanceof HTMLElement
-      ? document.activeElement
-      : null;
-  previousOverflow = document.documentElement.style.overflow;
-  document.documentElement.style.overflow = "hidden";
-  visible.value = true;
-  void nextTick(() => overlay.value?.focus({ preventScroll: true }));
+  const src = detail && typeof detail.src === 'string' ? detail.src : ''
+  if (!src) return
+  images.value = [src]
+  index.value = 0
+  reset()
+  previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+  previousOverflow = document.documentElement.style.overflow
+  document.documentElement.style.overflow = 'hidden'
+  visible.value = true
+  void nextTick(() => overlay.value?.focus({ preventScroll: true }))
 }
 
 function onKeydown(event: KeyboardEvent): void {
-  if (!visible.value) return;
-  if (event.key === "Escape") close();
-  else if (event.key === "ArrowLeft") move(-1);
-  else if (event.key === "ArrowRight") move(1);
-  else if (event.key === "ArrowUp" || event.key === "+") zoom(1.1);
-  else if (event.key === "ArrowDown" || event.key === "-") zoom(1 / 1.1);
-  else return;
-  event.preventDefault();
+  if (!visible.value) return
+  if (event.key === 'Escape') close()
+  else if (event.key === 'ArrowLeft') move(-1)
+  else if (event.key === 'ArrowRight') move(1)
+  else if (event.key === 'ArrowUp' || event.key === '+') zoom(1.1)
+  else if (event.key === 'ArrowDown' || event.key === '-') zoom(1 / 1.1)
+  else return
+  event.preventDefault()
 }
 
 function onPointerDown(event: PointerEvent): void {
-  dragging.value = true;
+  dragging.value = true
   pointerStart = {
     x: event.clientX,
     y: event.clientY,
     baseX: x.value,
-    baseY: y.value,
-  };
-  window.addEventListener("pointermove", onPointerMove);
-  window.addEventListener("pointerup", onPointerUp, { once: true });
+    baseY: y.value
+  }
+  window.addEventListener('pointermove', onPointerMove)
+  window.addEventListener('pointerup', onPointerUp, { once: true })
 }
 
 function onPointerMove(event: PointerEvent): void {
-  if (!dragging.value) return;
-  x.value = pointerStart.baseX + event.clientX - pointerStart.x;
-  y.value = pointerStart.baseY + event.clientY - pointerStart.y;
+  if (!dragging.value) return
+  x.value = pointerStart.baseX + event.clientX - pointerStart.x
+  y.value = pointerStart.baseY + event.clientY - pointerStart.y
 }
 
 function onPointerUp(): void {
-  dragging.value = false;
-  window.removeEventListener("pointermove", onPointerMove);
+  dragging.value = false
+  window.removeEventListener('pointermove', onPointerMove)
 }
 
 function onGlobalPointerDown(event: PointerEvent): void {
-  swiperDownX = event.clientX;
+  swiperDownX = event.clientX
 }
 
 onMounted(() => {
-  document.addEventListener("click", onDocumentClick, true);
-  document.addEventListener("tn:preview-image", onPreviewRequest);
-  document.addEventListener("keydown", onKeydown);
-  document.addEventListener("pointerdown", onGlobalPointerDown, true);
-});
+  document.addEventListener('click', onDocumentClick, true)
+  document.addEventListener('tn:preview-image', onPreviewRequest)
+  document.addEventListener('keydown', onKeydown)
+  document.addEventListener('pointerdown', onGlobalPointerDown, true)
+})
 
 onBeforeUnmount(() => {
-  document.removeEventListener("click", onDocumentClick, true);
-  document.removeEventListener("tn:preview-image", onPreviewRequest);
-  document.removeEventListener("keydown", onKeydown);
-  document.removeEventListener("pointerdown", onGlobalPointerDown, true);
-  window.removeEventListener("pointermove", onPointerMove);
-  window.removeEventListener("pointerup", onPointerUp);
-  if (visible.value) document.documentElement.style.overflow = previousOverflow;
-});
+  document.removeEventListener('click', onDocumentClick, true)
+  document.removeEventListener('tn:preview-image', onPreviewRequest)
+  document.removeEventListener('keydown', onKeydown)
+  document.removeEventListener('pointerdown', onGlobalPointerDown, true)
+  window.removeEventListener('pointermove', onPointerMove)
+  window.removeEventListener('pointerup', onPointerUp)
+  if (visible.value) document.documentElement.style.overflow = previousOverflow
+})
 </script>
 
 <template>
@@ -214,9 +191,7 @@ onBeforeUnmount(() => {
         ›
       </button>
       <div class="tn-image-preview__tools">
-        <button type="button" aria-label="缩小" @click="zoom(1 / 1.1)">
-          −
-        </button>
+        <button type="button" aria-label="缩小" @click="zoom(1 / 1.1)">−</button>
         <button type="button" aria-label="还原" @click="reset">↺</button>
         <button type="button" aria-label="放大" @click="zoom(1.1)">＋</button>
         <button type="button" aria-label="关闭" @click="close">×</button>

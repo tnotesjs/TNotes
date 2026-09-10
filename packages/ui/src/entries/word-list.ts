@@ -1,1 +1,1 @@
-export { default } from "../components/WordList/WordList.vue";
+export { default } from '../components/WordList/WordList.vue'

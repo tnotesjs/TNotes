@@ -1,5 +1,7 @@
 const port = Number(process.argv[2] ?? 9555)
-const targets = await fetch(`http://127.0.0.1:${port}/json/list`).then((response) => response.json())
+const targets = await fetch(`http://127.0.0.1:${port}/json/list`).then((response) =>
+  response.json()
+)
 const target = targets.find((item) => item.type === 'iframe')
 if (!target) throw new Error('找不到 VSCode WebView iframe target')
 
@@ -16,9 +18,18 @@ const contexts = []
 socket.addEventListener('message', (event) => {
   const message = JSON.parse(String(event.data))
   if (message.method === 'Runtime.executionContextCreated') {
-    contexts.push({ id: message.params.context.id, name: message.params.context.name, origin: message.params.context.origin, auxData: message.params.context.auxData })
+    contexts.push({
+      id: message.params.context.id,
+      name: message.params.context.name,
+      origin: message.params.context.origin,
+      auxData: message.params.context.auxData
+    })
   }
-  if (message.method === 'Runtime.exceptionThrown' || message.method === 'Runtime.consoleAPICalled' || message.method === 'Log.entryAdded') {
+  if (
+    message.method === 'Runtime.exceptionThrown' ||
+    message.method === 'Runtime.consoleAPICalled' ||
+    message.method === 'Log.entryAdded'
+  ) {
     events.push({ method: message.method, params: message.params })
   }
   if (message.id && pending.has(message.id)) {
@@ -37,9 +48,9 @@ function send(method, params = {}) {
 
 await send('Runtime.enable')
 await send('Log.enable')
-  await send('Runtime.evaluate', {
-    expression: "document.getElementById('active-frame')?.contentWindow?.location.reload()",
-  })
+await send('Runtime.evaluate', {
+  expression: "document.getElementById('active-frame')?.contentWindow?.location.reload()"
+})
 await new Promise((resolve) => setTimeout(resolve, 2500))
 
 console.log(JSON.stringify({ contexts, events }, null, 2))

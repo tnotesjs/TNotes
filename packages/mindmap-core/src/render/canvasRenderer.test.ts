@@ -8,32 +8,35 @@ import {
   CanvasRenderer,
   canvasNodeTier,
   descendantCount,
-  shouldShowCollapseControl,
+  shouldShowCollapseControl
 } from './canvasRenderer'
 
 const measurer: TextMeasurer = {
   measure(text: string) {
     return { width: text.length * 8, height: 21 }
-  },
+  }
 }
 
 let context: Record<PropertyKey, unknown>
 
 function installCanvasStub(): void {
-  context = new Proxy<Record<PropertyKey, unknown>>({}, {
-    get(target, property) {
-      if (property === 'measureText') return (text: string) => ({ width: text.length * 8 })
-      if (!(property in target)) target[property] = vi.fn()
-      return target[property]
-    },
-    set(target, property, value) {
-      target[property] = value
-      return true
-    },
-  })
+  context = new Proxy<Record<PropertyKey, unknown>>(
+    {},
+    {
+      get(target, property) {
+        if (property === 'measureText') return (text: string) => ({ width: text.length * 8 })
+        if (!(property in target)) target[property] = vi.fn()
+        return target[property]
+      },
+      set(target, property, value) {
+        target[property] = value
+        return true
+      }
+    }
+  )
   Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
     configurable: true,
-    value: () => context,
+    value: () => context
   })
 }
 
@@ -41,7 +44,7 @@ function createRenderer() {
   const host = document.createElement('div')
   Object.defineProperties(host, {
     clientWidth: { configurable: true, value: 900 },
-    clientHeight: { configurable: true, value: 600 },
+    clientHeight: { configurable: true, value: 600 }
   })
   document.body.append(host)
   return { host, renderer: new CanvasRenderer(host) }
@@ -67,7 +70,7 @@ describe('Canvas 节点视觉层级与折叠控件', () => {
       'primary',
       'secondary',
       'tertiary',
-      'tertiary',
+      'tertiary'
     ])
   })
 
@@ -99,20 +102,20 @@ describe('Canvas 行内链接命中区域', () => {
       root: doc.root,
       selection: new Set(),
       matches: new Set(),
-      imageAspects: new Map(),
+      imageAspects: new Map()
     })
 
     ;(renderer as unknown as { draw(): void }).draw()
     const hit = renderer.hitInlineLink(
       box.x + geo.textX + 'before '.length * 8 + 2,
-      box.y + geo.textY,
+      box.y + geo.textY
     )
 
     expect(hit).toMatchObject({
       id: node.id,
       url: 'https://example.com',
       rawStart: 7,
-      rawEnd: 36,
+      rawEnd: 36
     })
     expect(hit?.rect.width).toBeGreaterThan(0)
     expect(renderer.hitInlineLink(box.x - 20, box.y - 20)).toBeNull()
@@ -136,13 +139,13 @@ describe('Canvas 节点拖动预览', () => {
       root: doc.root,
       selection: new Set([source.id]),
       matches: new Set(),
-      imageAspects: new Map(),
+      imageAspects: new Map()
     })
     renderer.setDragPreview({
       sourceId: source.id,
       pointer: { x: ghostX + 8, y: ghostY + 6 },
       offset: { x: 8, y: 6 },
-      indicator: { type: 'child', targetId: target.id },
+      indicator: { type: 'child', targetId: target.id }
     })
 
     ;(renderer as unknown as { draw(): void }).draw()
@@ -155,14 +158,14 @@ describe('Canvas 节点拖动预览', () => {
       sourceBox.y - 3,
       sourceBox.width + 6,
       sourceBox.height + 6,
-      7,
+      7
     )
     expect(roundRect).toHaveBeenCalledWith(
       layout.boxes.get(child.id)!.x - 3,
       layout.boxes.get(child.id)!.y - 3,
       layout.boxes.get(child.id)!.width + 6,
       layout.boxes.get(child.id)!.height + 6,
-      7,
+      7
     )
     expect(fillText.mock.calls.filter(([text]) => text === 'source')).toHaveLength(2)
     expect(lineTo).toHaveBeenCalledWith(ghostX, ghostY + sourceBox.height / 2)

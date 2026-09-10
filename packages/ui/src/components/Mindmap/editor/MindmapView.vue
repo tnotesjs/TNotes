@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { CanvasEditor, serializeSubtree } from '@tnotesjs/mindmap-core'
-import type { CanvasContextRequest, CanvasLinkHover, InlineFormat, MindmapNode, MindmapSession } from '@tnotesjs/mindmap-core'
+import type {
+  CanvasContextRequest,
+  CanvasLinkHover,
+  InlineFormat,
+  MindmapNode,
+  MindmapSession
+} from '@tnotesjs/mindmap-core'
 import CanvasContextMenu from './CanvasContextMenu.vue'
 import LinkPopover from './LinkPopover.vue'
 import SelectionToolbar from './SelectionToolbar.vue'
@@ -74,7 +80,9 @@ function applyNodeFormat(format: InlineFormat) {
 }
 
 function selectedMarkdown() {
-  return selectedRoots().map((node) => serializeSubtree(node)).join('\n')
+  return selectedRoots()
+    .map((node) => serializeSubtree(node))
+    .join('\n')
 }
 
 async function copySelected(event?: ClipboardEvent | null) {
@@ -166,7 +174,7 @@ onMounted(() => {
     onPasteSelection: (event) => {
       void pasteAtSelection(undefined, event)
     },
-    onPasteText: pasteTextAt,
+    onPasteText: pasteTextAt
   })
   emit('ready', editor)
   // 切回脑图视图：居中当前选中节点（无选中则保持 zoomToFit）

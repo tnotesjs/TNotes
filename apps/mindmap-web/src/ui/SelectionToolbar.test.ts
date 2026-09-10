@@ -7,12 +7,15 @@ async function mountToolbar(position: { left: number; top: number }) {
   const host = document.createElement('div')
   document.body.append(host)
   const app = createApp({
-    setup: () => () => h(SelectionToolbar, { mode: 'text', position }),
+    setup: () => () => h(SelectionToolbar, { mode: 'text', position })
   })
   app.mount(host)
   await nextTick()
   await nextTick()
-  return { app, toolbar: document.body.querySelector('[aria-label="文字格式工具栏"]') as HTMLElement }
+  return {
+    app,
+    toolbar: document.body.querySelector('[aria-label="文字格式工具栏"]') as HTMLElement
+  }
 }
 
 beforeEach(() => {
@@ -37,7 +40,9 @@ describe('文字格式工具栏', () => {
     const { app, toolbar } = await mountToolbar({ left: 250, top: 150 })
     const buttons = [...toolbar.querySelectorAll('button')]
     expect(buttons.every((button) => !button.hasAttribute('title'))).toBe(true)
-    expect(toolbar.querySelector('[aria-label="行内代码"]')?.getAttribute('data-tooltip')).toMatch(/行内代码 \(.+E\)/)
+    expect(toolbar.querySelector('[aria-label="行内代码"]')?.getAttribute('data-tooltip')).toMatch(
+      /行内代码 \(.+E\)/
+    )
     app.unmount()
   })
 })

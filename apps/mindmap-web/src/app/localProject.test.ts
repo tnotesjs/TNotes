@@ -4,7 +4,7 @@ import {
   LocalProject,
   ProjectExistsError,
   createAssetFileName,
-  normalizeProjectName,
+  normalizeProjectName
 } from './localProject'
 import type { DirectoryHandleLike, FileHandleLike, WritableFileLike } from './localProject'
 
@@ -25,7 +25,7 @@ class MemoryFile implements FileHandleLike {
         if (this.failWrite) throw new Error('disk full')
         this.data = typeof data === 'string' ? new Blob([data], { type: 'text/markdown' }) : data
       },
-      close: async () => {},
+      close: async () => {}
     }
   }
 }
@@ -72,13 +72,17 @@ describe('LocalProject', () => {
     expect(project.fileName).toBe('project-1.tn-mindmap.md')
     const directory = parent.children.get('project-1') as MemoryDirectory
     expect([...directory.children.keys()].sort()).toEqual(['assets', 'project-1.tn-mindmap.md'])
-    expect(await ((directory.children.get(project.fileName) as MemoryFile).data).text()).toBe('# Project 1\n')
+    expect(await (directory.children.get(project.fileName) as MemoryFile).data.text()).toBe(
+      '# Project 1\n'
+    )
   })
 
   it('目标作品目录已存在时拒绝覆盖', async () => {
     const parent = new MemoryDirectory('workspace')
     await parent.getDirectoryHandle('existing', { create: true })
-    await expect(LocalProject.create(parent, 'existing', '# T\n')).rejects.toBeInstanceOf(ProjectExistsError)
+    await expect(LocalProject.create(parent, 'existing', '# T\n')).rejects.toBeInstanceOf(
+      ProjectExistsError
+    )
   })
 
   it('图片写入 assets 并只返回可持久化的相对路径', async () => {
@@ -111,7 +115,10 @@ describe('LocalProject', () => {
   })
 
   it('资源名使用图片 MIME 对应的扩展名', () => {
-    const name = createAssetFileName(new Blob([], { type: 'image/jpeg' }), new Date(2026, 7, 18, 3, 4, 5))
+    const name = createAssetFileName(
+      new Blob([], { type: 'image/jpeg' }),
+      new Date(2026, 7, 18, 3, 4, 5)
+    )
     expect(name).toMatch(/^image-20260818-030405-[a-z0-9-]{8}\.jpg$/)
   })
 })

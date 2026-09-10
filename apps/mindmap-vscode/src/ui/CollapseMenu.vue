@@ -10,8 +10,8 @@ const emit = defineEmits<{
 
 const root = ref<HTMLElement>()
 const open = ref(false)
-const modifier = computed(() => isApplePlatform() ? '⌘⌥' : 'Ctrl+Alt+')
-const allShortcut = computed(() => isApplePlatform() ? '⌘⌥⇧.' : 'Ctrl+Alt+Shift+.')
+const modifier = computed(() => (isApplePlatform() ? '⌘⌥' : 'Ctrl+Alt+'))
+const allShortcut = computed(() => (isApplePlatform() ? '⌘⌥⇧.' : 'Ctrl+Alt+Shift+.'))
 
 function chooseAll() {
   emit('all')
@@ -44,18 +44,19 @@ onBeforeUnmount(() => {
 
 <template>
   <div ref="root" class="collapse-menu">
-    <IconButton
-      icon="collapse"
-      label="展开/折叠主题"
-      :active="open"
-      @click="open = !open"
-    />
+    <IconButton icon="collapse" label="展开/折叠主题" :active="open" @click="open = !open" />
     <div v-if="open" class="collapse-menu-popover" role="menu" aria-label="展开/折叠主题">
       <div class="collapse-menu-title">展开/折叠主题</div>
       <button type="button" role="menuitem" @click="chooseAll">
         <span>全部主题</span><kbd>{{ allShortcut }}</kbd>
       </button>
-      <button v-for="level in ([1, 2, 3] as const)" :key="level" type="button" role="menuitem" @click="chooseLevel(level)">
+      <button
+        v-for="level in [1, 2, 3] as const"
+        :key="level"
+        type="button"
+        role="menuitem"
+        @click="chooseLevel(level)"
+      >
         <span>{{ level }} 级主题</span><kbd>{{ modifier }}{{ level }}</kbd>
       </button>
     </div>
@@ -63,7 +64,9 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.collapse-menu { position: relative; }
+.collapse-menu {
+  position: relative;
+}
 .collapse-menu-popover {
   position: absolute;
   z-index: 85;
@@ -75,7 +78,7 @@ onBeforeUnmount(() => {
   border-radius: 12px;
   background: var(--mm-panel-bg);
   color: var(--mm-text);
-  box-shadow: 0 14px 38px rgb(0 0 0 / .24);
+  box-shadow: 0 14px 38px rgb(0 0 0 / 0.24);
 }
 .collapse-menu-title {
   padding: 7px 11px 9px;
@@ -98,6 +101,13 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 .collapse-menu-popover button:hover,
-.collapse-menu-popover button:focus-visible { background: var(--mm-hover); outline: none; }
-.collapse-menu-popover kbd { color: var(--mm-text-dim); font: inherit; font-size: 12px; }
+.collapse-menu-popover button:focus-visible {
+  background: var(--mm-hover);
+  outline: none;
+}
+.collapse-menu-popover kbd {
+  color: var(--mm-text-dim);
+  font: inherit;
+  font-size: 12px;
+}
 </style>

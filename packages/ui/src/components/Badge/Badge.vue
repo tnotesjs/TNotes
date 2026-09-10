@@ -1,11 +1,11 @@
 <script setup lang="ts">
 withDefaults(
   defineProps<{
-    text?: string;
-    type?: "info" | "tip" | "warning" | "danger";
+    text?: string
+    type?: 'info' | 'tip' | 'warning' | 'danger'
   }>(),
-  { text: "", type: "info" },
-);
+  { text: '', type: 'info' }
+)
 </script>
 
 <template>

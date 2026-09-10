@@ -1,6 +1,8 @@
 const port = Number(process.argv[2] ?? 9555)
 const fileName = process.argv[3] ?? 'e2e.tn-mindmap.md'
-const targets = await fetch(`http://127.0.0.1:${port}/json/list`).then((response) => response.json())
+const targets = await fetch(`http://127.0.0.1:${port}/json/list`).then((response) =>
+  response.json()
+)
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds))
 
 async function connect(target) {
@@ -32,7 +34,7 @@ for (const target of targets.filter((item) => item.type === 'iframe')) {
   const { socket, send } = await connect(target)
   const probe = await send('Runtime.evaluate', {
     expression: `document.getElementById('active-frame')?.contentDocument?.querySelector('.file-name')?.textContent || ''`,
-    returnByValue: true,
+    returnByValue: true
   })
   if (probe.result?.value !== fileName) {
     socket.close()
@@ -40,7 +42,7 @@ for (const target of targets.filter((item) => item.type === 'iframe')) {
   }
 
   await send('Runtime.evaluate', {
-    expression: `document.getElementById('active-frame')?.contentDocument?.querySelector('[aria-label="源码视图"]')?.click()`,
+    expression: `document.getElementById('active-frame')?.contentDocument?.querySelector('[aria-label="源码视图"]')?.click()`
   })
   await delay(100)
   const paste = await send('Runtime.evaluate', {
@@ -57,7 +59,7 @@ for (const target of targets.filter((item) => item.type === 'iframe')) {
       textarea.dispatchEvent(new win.ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: transfer }))
       return { ok: true }
     })()`,
-    returnByValue: true,
+    returnByValue: true
   })
   await delay(1800)
   const state = await send('Runtime.evaluate', {
@@ -66,7 +68,7 @@ for (const target of targets.filter((item) => item.type === 'iframe')) {
       const value = doc?.querySelector('.md-textarea')?.value || ''
       return { valueTail: value.slice(-180), containsAsset: /!\\[截图\\]\\(assets\\/image-[^)]+\\)/.test(value) }
     })()`,
-    returnByValue: true,
+    returnByValue: true
   })
   socket.close()
   console.log(JSON.stringify({ paste: paste.result?.value, state: state.result?.value }, null, 2))

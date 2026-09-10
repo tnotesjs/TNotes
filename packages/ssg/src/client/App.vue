@@ -3,12 +3,8 @@
     <header class="tn-site-header">
       <a class="tn-site-brand" :href="site.base">{{ site.title }}</a>
       <div class="tn-site-actions">
-        <button type="button" aria-label="搜索" @click="searchOpen = true">
-          ⌕
-        </button>
-        <button type="button" aria-label="切换主题" @click="toggleTheme">
-          ◐
-        </button>
+        <button type="button" aria-label="搜索" @click="searchOpen = true">⌕</button>
+        <button type="button" aria-label="切换主题" @click="toggleTheme">◐</button>
       </div>
     </header>
 
@@ -20,22 +16,14 @@
       <aside v-if="outlineHeadings.length" class="tn-site-outline">
         <strong>本页目录</strong>
         <ul>
-          <li
-            v-for="heading in outlineHeadings"
-            :key="heading.id"
-            :data-level="heading.level"
-          >
+          <li v-for="heading in outlineHeadings" :key="heading.id" :data-level="heading.level">
             <a :href="`#${heading.id}`">{{ heading.text }}</a>
           </li>
         </ul>
       </aside>
     </div>
 
-    <div
-      v-if="searchOpen"
-      class="tn-search-mask"
-      @click.self="searchOpen = false"
-    >
+    <div v-if="searchOpen" class="tn-search-mask" @click.self="searchOpen = false">
       <section class="tn-search-dialog" role="dialog" aria-modal="true">
         <input
           ref="searchInput"
@@ -61,90 +49,89 @@
 </template>
 
 <script setup lang="ts">
-import GithubSlugger from "github-slugger";
-import MiniSearch from "minisearch";
-import { computed, nextTick, onMounted, ref, watch } from "vue";
-import ImagePreview from "@tnotesjs/ui/image-preview";
-import site from "virtual:tnotes-site";
+import GithubSlugger from 'github-slugger'
+import MiniSearch from 'minisearch'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import ImagePreview from '@tnotesjs/ui/image-preview'
+import site from 'virtual:tnotes-site'
 
-import SidebarTree from "./components/SidebarTree.vue";
-import { normalizeSearchTerm, tokenizeSearch } from "./search";
-import type { PageData, PageHeading } from "../types";
+import SidebarTree from './components/SidebarTree.vue'
+import { normalizeSearchTerm, tokenizeSearch } from './search'
+import type { PageData, PageHeading } from '../types'
 
 const props = defineProps<{
-  route: string;
-  data: PageData;
-  articleHtml: string;
-}>();
+  route: string
+  data: PageData
+  articleHtml: string
+}>()
 
-type SearchResult = Pick<PageData, "route" | "title" | "text">;
+type SearchResult = Pick<PageData, 'route' | 'title' | 'text'>
 
 /** Accept structured headings, or legacy string[] from an older ssg build. */
 const outlineHeadings = computed<PageHeading[]>(() => {
-  const slugger = new GithubSlugger();
+  const slugger = new GithubSlugger()
   return props.data.headings.map((item, index) => {
-    if (typeof item === "string") {
-      return { text: item, level: 2, id: slugger.slug(item) || `heading-${index + 1}` };
+    if (typeof item === 'string') {
+      return { text: item, level: 2, id: slugger.slug(item) || `heading-${index + 1}` }
     }
-    return item;
-  });
-});
+    return item
+  })
+})
 
-const searchOpen = ref(false);
-const searching = ref(false);
-const query = ref("");
-const searchInput = ref<HTMLInputElement>();
-const index = ref<MiniSearch<SearchResult>>();
+const searchOpen = ref(false)
+const searching = ref(false)
+const query = ref('')
+const searchInput = ref<HTMLInputElement>()
+const index = ref<MiniSearch<SearchResult>>()
 const results = computed<SearchResult[]>(() => {
-  if (!query.value.trim() || !index.value) return [];
+  if (!query.value.trim() || !index.value) return []
   return index.value
     .search(query.value, { prefix: true, fuzzy: 0.2 })
     .slice(0, 20)
-    .map((result) => result as unknown as SearchResult);
-});
+    .map((result) => result as unknown as SearchResult)
+})
 
 const navHref = (link: string) => {
-  if (/^(https?:)?\/\//.test(link)) return link;
-  return `${site.base}${link.replace(/^\//, "")}`;
-};
+  if (/^(https?:)?\/\//.test(link)) return link
+  return `${site.base}${link.replace(/^\//, '')}`
+}
 
 const toggleTheme = () => {
-  const root = document.documentElement;
-  const next = root.classList.contains("dark") ? "light" : "dark";
-  root.classList.toggle("dark", next === "dark");
-  localStorage.setItem("tnotes-theme", next);
-};
+  const root = document.documentElement
+  const next = root.classList.contains('dark') ? 'light' : 'dark'
+  root.classList.toggle('dark', next === 'dark')
+  localStorage.setItem('tnotes-theme', next)
+}
 
 watch(searchOpen, async (open) => {
-  if (!open) return;
-  await nextTick();
-  searchInput.value?.focus();
-  if (index.value) return;
-  searching.value = true;
+  if (!open) return
+  await nextTick()
+  searchInput.value?.focus()
+  if (index.value) return
+  searching.value = true
   try {
-    const serialized = await fetch(`${site.base}search-index.json`).then(
-      (response) => response.text(),
-    );
+    const serialized = await fetch(`${site.base}search-index.json`).then((response) =>
+      response.text()
+    )
     index.value = MiniSearch.loadJSON<SearchResult>(serialized, {
-      fields: ["title", "headings", "text"],
-      storeFields: ["route", "title", "text"],
+      fields: ['title', 'headings', 'text'],
+      storeFields: ['route', 'title', 'text'],
       tokenize: tokenizeSearch,
       processTerm: normalizeSearchTerm,
-      searchOptions: { boost: { title: 10, headings: 5, text: 3 } },
-    });
+      searchOptions: { boost: { title: 10, headings: 5, text: 3 } }
+    })
   } finally {
-    searching.value = false;
+    searching.value = false
   }
-});
+})
 
 // Teleport content is client-only; rendering it during SSR breaks hydration
 // (server emits anchors, client expects a v-if comment and the walk drifts).
-const mounted = ref(false);
+const mounted = ref(false)
 
 onMounted(() => {
-  mounted.value = true;
-  const theme = localStorage.getItem("tnotes-theme");
-  if (theme)
-    document.documentElement.classList.toggle("dark", theme === "dark");
-});
+  mounted.value = true
+  const theme = localStorage.getItem('tnotes-theme')
+  if (theme) document.documentElement.classList.toggle('dark', theme === 'dark')
+})
 </script>

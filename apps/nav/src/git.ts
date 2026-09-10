@@ -45,9 +45,7 @@ async function runGit(
   }
 }
 
-async function countAheadBehind(
-  repoDir: string
-): Promise<{ ahead: number; behind: number }> {
+async function countAheadBehind(repoDir: string): Promise<{ ahead: number; behind: number }> {
   try {
     const { stdout } = await runGit(repoDir, [
       'rev-list',
@@ -142,10 +140,7 @@ function letterFromXy(xy: string): GitFileMark {
   return best
 }
 
-function pickBetterMark(
-  a: GitFileMark | undefined,
-  b: GitFileMark
-): GitFileMark {
+function pickBetterMark(a: GitFileMark | undefined, b: GitFileMark): GitFileMark {
   if (!a) return b
   return MARK_PRIORITY[b] > MARK_PRIORITY[a] ? b : a
 }
@@ -208,12 +203,7 @@ async function readPorcelainStatus(repoDir: string): Promise<{
   fileMarks: Record<string, GitFileMark>
 }> {
   // Prefer UTF-8 paths; still decode quoted octal escapes if git quotes anyway.
-  const { stdout } = await runGit(repoDir, [
-    '-c',
-    'core.quotepath=false',
-    'status',
-    '--porcelain'
-  ])
+  const { stdout } = await runGit(repoDir, ['-c', 'core.quotepath=false', 'status', '--porcelain'])
   return parsePorcelainStatus(stdout)
 }
 

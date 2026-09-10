@@ -74,7 +74,7 @@ export const TEXT_LINE_HEIGHT = 21
 export function wrapTextLines(
   text: string,
   maxWidth: number,
-  measureWidth: (s: string) => number,
+  measureWidth: (s: string) => number
 ): string[] {
   const src = text.length > 0 ? text : ' '
   if (maxWidth <= 0 || measureWidth(src) <= maxWidth) return [src]
@@ -144,7 +144,7 @@ export function layoutTree(docRoot: MindmapNode, opts: LayoutOptions): LayoutRes
     n: MindmapNode,
     depth: number,
     branch: MindmapNode,
-    x: number,
+    x: number
   ): { top: number; bottom: number } => {
     const size = sizes.get(n.id)!
     const kids = visibleChildren(n)
@@ -184,7 +184,7 @@ export function layoutTree(docRoot: MindmapNode, opts: LayoutOptions): LayoutRes
       height: size.h,
       depth,
       branch,
-      textLines: size.lines,
+      textLines: size.lines
     })
     return { top, bottom }
   }

@@ -49,7 +49,7 @@ function mountBreadcrumbs(session: MindmapSession) {
   const Host = defineComponent({
     setup() {
       return () => h(FocusBreadcrumbs, { session, version: version.value })
-    },
+    }
   })
   const host = document.createElement('div')
   document.body.append(host)
@@ -105,17 +105,17 @@ describe('FocusBreadcrumbs', () => {
     expect(crumbs).toHaveLength(13)
     expect(crumbs.map((item) => item.textContent?.trim())).toEqual([
       '全部',
-      ...current.map((node) => node.content.text),
+      ...current.map((node) => node.content.text)
     ])
     expect(crumbs.map((item) => item.dataset.nodeId)).toEqual([
       session.document.root.id,
-      ...current.map((node) => node.id),
+      ...current.map((node) => node.id)
     ])
     expect(crumbs[crumbs.length - 1]?.getAttribute('aria-current')).toBe('page')
     expect(crumbs.slice(0, -1).every((item) => !item.hasAttribute('aria-current'))).toBe(true)
     expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalledWith({
       block: 'nearest',
-      inline: 'nearest',
+      inline: 'nearest'
     })
   })
 
@@ -132,10 +132,11 @@ describe('FocusBreadcrumbs', () => {
       const items = [...menu!.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]')]
       expect(items.map((item) => item.dataset.nodeId)).toEqual(expected.map((node) => node.id))
       expect(items.map((item) => item.textContent?.replace('✓', '').trim())).toEqual(
-        expected.map((node) => node.content.text),
+        expected.map((node) => node.content.text)
       )
-      expect(items.find((item) => item.getAttribute('aria-checked') === 'true')?.dataset.nodeId)
-        .toBe(current[depth].id)
+      expect(
+        items.find((item) => item.getAttribute('aria-checked') === 'true')?.dataset.nodeId
+      ).toBe(current[depth].id)
       document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
       await settle()
       expect(document.body.querySelector('.focus-sibling-menu')).toBeNull()
@@ -149,8 +150,9 @@ describe('FocusBreadcrumbs', () => {
     await settle()
     const secondLevel = [...host.querySelectorAll<HTMLButtonElement>('.focus-crumb')][2]
     const menu = await hoverOpen(secondLevel)
-    const duplicateItems = [...menu!.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]')]
-      .filter((item) => item.textContent?.replace('✓', '').trim() === current[1].content.text)
+    const duplicateItems = [
+      ...menu!.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]')
+    ].filter((item) => item.textContent?.replace('✓', '').trim() === current[1].content.text)
 
     expect(duplicateItems).toHaveLength(2)
     menu!.querySelector<HTMLButtonElement>(`[data-node-id="${other[1].id}"]`)!.click()
@@ -164,7 +166,7 @@ describe('FocusBreadcrumbs', () => {
     expect(updated.map((item) => item.dataset.nodeId)).toEqual([
       session.document.root.id,
       current[0].id,
-      other[1].id,
+      other[1].id
     ])
   })
 
@@ -227,11 +229,13 @@ describe('FocusBreadcrumbs', () => {
     await settle()
     const trigger = [...host.querySelectorAll<HTMLButtonElement>('.focus-crumb')][1]
     trigger.focus()
-    trigger.dispatchEvent(new KeyboardEvent('keydown', {
-      key: 'ArrowDown',
-      bubbles: true,
-      cancelable: true,
-    }))
+    trigger.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'ArrowDown',
+        bubbles: true,
+        cancelable: true
+      })
+    )
     await settle()
 
     const menu = document.body.querySelector<HTMLElement>('[role="menu"]')!
@@ -240,24 +244,30 @@ describe('FocusBreadcrumbs', () => {
     expect(trigger.getAttribute('aria-expanded')).toBe('true')
     expect(document.activeElement).toBe(items[0])
 
-    items[0].dispatchEvent(new KeyboardEvent('keydown', {
-      key: 'End',
-      bubbles: true,
-      cancelable: true,
-    }))
+    items[0].dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'End',
+        bubbles: true,
+        cancelable: true
+      })
+    )
     expect(document.activeElement).toBe(items[items.length - 1])
-    items[items.length - 1]!.dispatchEvent(new KeyboardEvent('keydown', {
-      key: 'ArrowDown',
-      bubbles: true,
-      cancelable: true,
-    }))
+    items[items.length - 1]!.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'ArrowDown',
+        bubbles: true,
+        cancelable: true
+      })
+    )
     expect(document.activeElement).toBe(items[0])
 
-    items[0].dispatchEvent(new KeyboardEvent('keydown', {
-      key: 'Escape',
-      bubbles: true,
-      cancelable: true,
-    }))
+    items[0].dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Escape',
+        bubbles: true,
+        cancelable: true
+      })
+    )
     await settle()
     expect(document.body.querySelector('.focus-sibling-menu')).toBeNull()
     expect(document.activeElement).toBe(trigger)

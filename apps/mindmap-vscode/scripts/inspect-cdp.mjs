@@ -1,5 +1,7 @@
 const port = Number(process.argv[2] ?? 9444)
-const targets = await fetch(`http://127.0.0.1:${port}/json/list`).then((response) => response.json())
+const targets = await fetch(`http://127.0.0.1:${port}/json/list`).then((response) =>
+  response.json()
+)
 
 async function inspectTarget(target) {
   const socket = new WebSocket(target.webSocketDebuggerUrl)
@@ -61,14 +63,14 @@ async function inspectTarget(target) {
       errors: Array.from(document.querySelectorAll('.source-diagnostics')).map((node) => node.textContent),
       fileName: document.querySelector('.file-name')?.textContent || null,
     })`,
-    returnByValue: true,
+    returnByValue: true
   })
   socket.close()
   return {
     targetId: target.id,
     targetType: target.type,
     targetUrl: target.url,
-    ...(result.result?.value ? JSON.parse(result.result.value) : {}),
+    ...(result.result?.value ? JSON.parse(result.result.value) : {})
   }
 }
 
@@ -77,7 +79,11 @@ for (const target of targets.filter((item) => item.type === 'page' || item.type 
   try {
     inspected.push(await inspectTarget(target))
   } catch (error) {
-    inspected.push({ targetId: target.id, targetType: target.type, inspectError: error instanceof Error ? error.message : String(error) })
+    inspected.push({
+      targetId: target.id,
+      targetType: target.type,
+      inspectError: error instanceof Error ? error.message : String(error)
+    })
   }
 }
 console.log(JSON.stringify({ inspected }, null, 2))

@@ -8,7 +8,9 @@ describe('WebView bridge', () => {
   })
 
   it('只在消息传输时将 Blob 转成 base64', async () => {
-    const value = await blobToBase64(new Blob([new Uint8Array([0, 1, 2, 253, 254, 255])], { type: 'image/png' }))
+    const value = await blobToBase64(
+      new Blob([new Uint8Array([0, 1, 2, 253, 254, 255])], { type: 'image/png' })
+    )
     expect(value).toBe('AAEC/f7/')
   })
 })

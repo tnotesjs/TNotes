@@ -1,139 +1,121 @@
 // @vitest-environment happy-dom
 
-import { createApp, defineComponent, h, nextTick, type Component } from "vue";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { createApp, defineComponent, h, nextTick, type Component } from 'vue'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import CodeBlock from "./CodeBlock/CodeBlock.vue";
-import CodeGroup from "./CodeGroup/CodeGroup.vue";
-import ImagePreview from "./ImagePreview/ImagePreview.vue";
+import CodeBlock from './CodeBlock/CodeBlock.vue'
+import CodeGroup from './CodeGroup/CodeGroup.vue'
+import ImagePreview from './ImagePreview/ImagePreview.vue'
 
-const cleanups: Array<() => void> = [];
+const cleanups: Array<() => void> = []
 
-function mount(
-  component: Component,
-  props: Record<string, unknown> = {},
-): HTMLElement {
-  const host = document.createElement("div");
-  document.body.append(host);
-  const app = createApp(defineComponent({ render: () => h(component, props) }));
-  app.mount(host);
+function mount(component: Component, props: Record<string, unknown> = {}): HTMLElement {
+  const host = document.createElement('div')
+  document.body.append(host)
+  const app = createApp(defineComponent({ render: () => h(component, props) }))
+  app.mount(host)
   cleanups.push(() => {
-    app.unmount();
-    host.remove();
-  });
-  return host;
+    app.unmount()
+    host.remove()
+  })
+  return host
 }
 
 afterEach(() => {
   cleanups
     .splice(0)
     .reverse()
-    .forEach((cleanup) => cleanup());
-  document.body.innerHTML = "";
-  document.documentElement.style.overflow = "";
-  vi.restoreAllMocks();
-});
+    .forEach((cleanup) => cleanup())
+  document.body.innerHTML = ''
+  document.documentElement.style.overflow = ''
+  vi.restoreAllMocks()
+})
 
-describe("shared code and media components", () => {
-  it("copies raw code and closes its fullscreen dialog with Escape", async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, "clipboard", {
+describe('shared code and media components', () => {
+  it('copies raw code and closes its fullscreen dialog with Escape', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
-      value: { writeText },
-    });
+      value: { writeText }
+    })
     const host = mount(CodeBlock, {
-      code: "const value = 1\n",
-      info: "ts [demo.ts]",
-      highlightedHtml: '<pre class="tn-code-highlight"><code>ok</code></pre>',
-    });
+      code: 'const value = 1\n',
+      info: 'ts [demo.ts]',
+      highlightedHtml: '<pre class="tn-code-highlight"><code>ok</code></pre>'
+    })
 
-    const buttons = host.querySelectorAll<HTMLButtonElement>("button");
-    buttons[0].click();
-    await nextTick();
-    expect(writeText).toHaveBeenCalledWith("const value = 1");
+    const buttons = host.querySelectorAll<HTMLButtonElement>('button')
+    buttons[0].click()
+    await nextTick()
+    expect(writeText).toHaveBeenCalledWith('const value = 1')
 
-    buttons[1].click();
-    await nextTick();
-    expect(document.body.querySelector('[role="dialog"]')).not.toBeNull();
+    buttons[1].click()
+    await nextTick()
+    expect(document.body.querySelector('[role="dialog"]')).not.toBeNull()
     document.body
       .querySelector<HTMLElement>('[role="dialog"]')!
-      .dispatchEvent(
-        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
-      );
-    await nextTick();
-    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
-  });
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    await nextTick()
+    expect(document.body.querySelector('[role="dialog"]')).toBeNull()
+  })
 
-  it("switches code-group tabs with click and arrow keys", async () => {
+  it('switches code-group tabs with click and arrow keys', async () => {
     const host = mount(CodeGroup, {
       items: [
-        { code: "one", info: "text [one.txt]" },
-        { code: "two", info: "text [two.txt]" },
-      ],
-    });
-    const tabs = host.querySelectorAll<HTMLButtonElement>('[role="tab"]');
-    tabs[0].dispatchEvent(
-      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
-    );
-    await nextTick();
-    await nextTick();
-    expect(tabs[1].getAttribute("aria-selected")).toBe("true");
-    expect(
-      host.querySelectorAll<HTMLElement>('[role="tabpanel"]')[1].hidden,
-    ).toBe(false);
-  });
+        { code: 'one', info: 'text [one.txt]' },
+        { code: 'two', info: 'text [two.txt]' }
+      ]
+    })
+    const tabs = host.querySelectorAll<HTMLButtonElement>('[role="tab"]')
+    tabs[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }))
+    await nextTick()
+    await nextTick()
+    expect(tabs[1].getAttribute('aria-selected')).toBe('true')
+    expect(host.querySelectorAll<HTMLElement>('[role="tabpanel"]')[1].hidden).toBe(false)
+  })
 
-  it("previews prose images, navigates, and restores document overflow", async () => {
-    const prose = document.createElement("div");
-    prose.className = "tn-prose";
-    prose.innerHTML = '<img src="/one.png"><img src="/two.png">';
-    document.body.append(prose);
-    cleanups.push(() => prose.remove());
-    mount(ImagePreview);
+  it('previews prose images, navigates, and restores document overflow', async () => {
+    const prose = document.createElement('div')
+    prose.className = 'tn-prose'
+    prose.innerHTML = '<img src="/one.png"><img src="/two.png">'
+    document.body.append(prose)
+    cleanups.push(() => prose.remove())
+    mount(ImagePreview)
 
-    prose.querySelector<HTMLImageElement>("img")!.click();
-    await nextTick();
-    expect(document.documentElement.style.overflow).toBe("hidden");
-    expect(
-      document.body.querySelector<HTMLImageElement>(".tn-image-preview > img")
-        ?.src,
-    ).toContain("/one.png");
-    document.body
-      .querySelector<HTMLButtonElement>('[aria-label="下一张"]')!
-      .click();
-    await nextTick();
-    expect(
-      document.body.querySelector<HTMLImageElement>(".tn-image-preview > img")
-        ?.src,
-    ).toContain("/two.png");
-    document.body
-      .querySelector<HTMLButtonElement>('[aria-label="关闭"]')!
-      .click();
-    await nextTick();
-    expect(document.documentElement.style.overflow).toBe("");
-  });
+    prose.querySelector<HTMLImageElement>('img')!.click()
+    await nextTick()
+    expect(document.documentElement.style.overflow).toBe('hidden')
+    expect(document.body.querySelector<HTMLImageElement>('.tn-image-preview > img')?.src).toContain(
+      '/one.png'
+    )
+    document.body.querySelector<HTMLButtonElement>('[aria-label="下一张"]')!.click()
+    await nextTick()
+    expect(document.body.querySelector<HTMLImageElement>('.tn-image-preview > img')?.src).toContain(
+      '/two.png'
+    )
+    document.body.querySelector<HTMLButtonElement>('[aria-label="关闭"]')!.click()
+    await nextTick()
+    expect(document.documentElement.style.overflow).toBe('')
+  })
 
-  it("opens from a programmatic preview request", async () => {
-    const prose = document.createElement("div");
-    prose.className = "tn-prose tn-preview-ignore";
-    prose.innerHTML = '<img src="/requested.png">';
-    document.body.append(prose);
-    cleanups.push(() => prose.remove());
-    mount(ImagePreview);
+  it('opens from a programmatic preview request', async () => {
+    const prose = document.createElement('div')
+    prose.className = 'tn-prose tn-preview-ignore'
+    prose.innerHTML = '<img src="/requested.png">'
+    document.body.append(prose)
+    cleanups.push(() => prose.remove())
+    mount(ImagePreview)
 
     document.dispatchEvent(
-      new CustomEvent("tn:preview-image", {
-        detail: prose.querySelector("img"),
-      }),
-    );
-    await nextTick();
-    expect(
-      document.body.querySelector<HTMLImageElement>(".tn-image-preview > img")
-        ?.src,
-    ).toContain("/requested.png");
-    document.body
-      .querySelector<HTMLButtonElement>('[aria-label="关闭"]')!
-      .click();
-    await nextTick();
-  });
-});
+      new CustomEvent('tn:preview-image', {
+        detail: prose.querySelector('img')
+      })
+    )
+    await nextTick()
+    expect(document.body.querySelector<HTMLImageElement>('.tn-image-preview > img')?.src).toContain(
+      '/requested.png'
+    )
+    document.body.querySelector<HTMLButtonElement>('[aria-label="关闭"]')!.click()
+    await nextTick()
+  })
+})

@@ -9,32 +9,27 @@
         {{ item.text }}
       </a>
       <span v-else class="tn-site-sidebar-heading">{{ item.text }}</span>
-      <SidebarTree
-        v-if="item.items?.length"
-        :items="item.items"
-        :route="route"
-        :base="base"
-      />
+      <SidebarTree v-if="item.items?.length" :items="item.items" :route="route" :base="base" />
     </li>
   </ul>
 </template>
 
 <script setup lang="ts">
-import type { SidebarItem } from "../../types";
+import type { SidebarItem } from '../../types'
 
 const props = defineProps<{
-  items: SidebarItem[];
-  route: string;
-  base: string;
-}>();
+  items: SidebarItem[]
+  route: string
+  base: string
+}>()
 
 const normalize = (value: string) =>
   decodeURIComponent(value)
-    .replace(/\.(md|html)$/i, "")
-    .replace(/\/$/, "") || "/";
+    .replace(/\.(md|html)$/i, '')
+    .replace(/\/$/, '') || '/'
 
 const href = (link: string) => {
-  if (/^(https?:)?\/\//.test(link)) return link;
-  return `${props.base}${link.replace(/^\//, "")}`;
-};
+  if (/^(https?:)?\/\//.test(link)) return link
+  return `${props.base}${link.replace(/^\//, '')}`
+}
 </script>

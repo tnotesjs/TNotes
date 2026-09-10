@@ -1,1 +1,1 @@
-export { default } from "../components/Mindmap/Mindmap.vue";
+export { default } from '../components/Mindmap/Mindmap.vue'

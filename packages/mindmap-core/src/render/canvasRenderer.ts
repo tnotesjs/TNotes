@@ -121,7 +121,7 @@ const LIGHT: CanvasTheme = {
   accent: '#4f8ef7',
   selectionBg: 'rgba(79, 142, 247, 0.10)',
   matchBg: 'rgba(255, 213, 79, 0.35)',
-  dim: '#8a919e',
+  dim: '#8a919e'
 }
 
 const DARK: CanvasTheme = {
@@ -138,7 +138,7 @@ const DARK: CanvasTheme = {
   accent: '#6b9eff',
   selectionBg: 'rgba(107, 158, 255, 0.12)',
   matchBg: 'rgba(255, 213, 79, 0.3)',
-  dim: '#7a828f',
+  dim: '#7a828f'
 }
 
 const CULL_MARGIN = 240
@@ -175,16 +175,17 @@ export class CanvasRenderer {
   constructor(
     private container: HTMLElement,
     private readonly resolveImageSrc: (src: string) => string = (src) => src,
-    theme: CanvasThemeMode = 'auto',
+    theme: CanvasThemeMode = 'auto'
   ) {
     this.canvas = document.createElement('canvas')
     this.canvas.className = 'mm-canvas'
     this.ctx = this.canvas.getContext('2d')!
     container.append(this.canvas)
 
-    this.darkMedia = typeof window.matchMedia === 'function'
-      ? window.matchMedia('(prefers-color-scheme: dark)')
-      : null
+    this.darkMedia =
+      typeof window.matchMedia === 'function'
+        ? window.matchMedia('(prefers-color-scheme: dark)')
+        : null
     this.themeMode = theme
     this.theme = this.resolveTheme(theme)
     if (theme === 'auto') this.darkMedia?.addEventListener('change', this.onDarkChange)
@@ -267,7 +268,8 @@ export class CanvasRenderer {
     for (let i = this.inlineLinkHits.length - 1; i >= 0; i--) {
       const hit = this.inlineLinkHits[i]
       const rect = hit.rect
-      if (x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height) return hit
+      if (x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height)
+        return hit
     }
     return null
   }
@@ -282,7 +284,8 @@ export class CanvasRenderer {
       img.onload = () => {
         this.images.set(src, img)
         this.failedImages.delete(src)
-        const aspect = img.naturalWidth > 0 && img.naturalHeight > 0 ? img.naturalWidth / img.naturalHeight : 0
+        const aspect =
+          img.naturalWidth > 0 && img.naturalHeight > 0 ? img.naturalWidth / img.naturalHeight : 0
         this.onImageLoad?.(src, aspect)
       }
       img.onerror = () => {
@@ -313,7 +316,7 @@ export class CanvasRenderer {
       x: -x / k - CULL_MARGIN,
       y: -y / k - CULL_MARGIN,
       w: cw / k + CULL_MARGIN * 2,
-      h: ch / k + CULL_MARGIN * 2,
+      h: ch / k + CULL_MARGIN * 2
     }
   }
 
@@ -332,7 +335,10 @@ export class CanvasRenderer {
 
     const rect = this.visibleWorldRect()
     const hit = (b: NodeBox) =>
-      b.x < rect.x + rect.w && b.x + b.width > rect.x && b.y < rect.y + rect.h && b.y + b.height > rect.y
+      b.x < rect.x + rect.w &&
+      b.x + b.width > rect.x &&
+      b.y < rect.y + rect.h &&
+      b.y + b.height > rect.y
 
     const draggedIds = this.draggedSubtreeIds()
 
@@ -384,7 +390,7 @@ export class CanvasRenderer {
       selected?: boolean
       controls?: boolean
       recordLinkHits?: boolean
-    } = {},
+    } = {}
   ): void {
     const ctx = this.ctx
     const theme = this.theme
@@ -465,11 +471,20 @@ export class CanvasRenderer {
     // 文本（按 raw 行内片段绘制，布局仍以纯文案折行）
     const lines = box.textLines.length > 0 ? box.textLines : [node.content.text || ' ']
     const segments = node.content.image
-      ? [{
-          text: node.content.text,
-          marks: { bold: false, italic: false, underline: false, strike: false, highlight: false, code: false },
-          link: null,
-        }]
+      ? [
+          {
+            text: node.content.text,
+            marks: {
+              bold: false,
+              italic: false,
+              underline: false,
+              strike: false,
+              highlight: false,
+              code: false
+            },
+            link: null
+          }
+        ]
       : parseInlineSegments(node.content.raw)
     let segmentOffset = 0
     const positioned = segments.map((segment) => {
@@ -495,7 +510,7 @@ export class CanvasRenderer {
           segment.marks,
           !!segment.link,
           tier,
-          node.content.checked === true,
+          node.content.checked === true
         )
         if (segment.link && options.recordLinkHits !== false) {
           const fontSize = this.inlineFontSize(tier, segment.marks)
@@ -508,8 +523,8 @@ export class CanvasRenderer {
               x: box.x + offsetX + x - 2,
               y: box.y + offsetY + y - fontSize / 2 - 4,
               width: width + 4,
-              height: fontSize + 8,
-            },
+              height: fontSize + 8
+            }
           })
         }
         x += width
@@ -543,7 +558,13 @@ export class CanvasRenderer {
       // resize 手柄
       if (geo.resizeHandle) {
         ctx.beginPath()
-        ctx.arc(geo.resizeHandle.cx - box.x, geo.resizeHandle.cy - box.y, geo.resizeHandle.r, 0, Math.PI * 2)
+        ctx.arc(
+          geo.resizeHandle.cx - box.x,
+          geo.resizeHandle.cy - box.y,
+          geo.resizeHandle.r,
+          0,
+          Math.PI * 2
+        )
         ctx.fillStyle = theme.nodeBg
         ctx.fill()
         ctx.strokeStyle = theme.accent
@@ -552,9 +573,14 @@ export class CanvasRenderer {
       }
     }
 
-    const nodeControl = options.controls === false
-      ? null
-      : resolveNodeControl(node, state.selection.size === 1 && state.selection.has(node.id), this.hoveredId)
+    const nodeControl =
+      options.controls === false
+        ? null
+        : resolveNodeControl(
+            node,
+            state.selection.size === 1 && state.selection.has(node.id),
+            this.hoveredId
+          )
     // 右侧动作圆环：单选/编辑显示「+」；普通 hover 父主题显示「<」；折叠主题显示后代数量。
     if (geo.controlDot && nodeControl) {
       const { r } = geo.controlDot
@@ -564,7 +590,8 @@ export class CanvasRenderer {
       ctx.arc(cx, cy, r, 0, Math.PI * 2)
       ctx.fillStyle = nodeControl === 'add' ? theme.text : theme.canvasBg
       ctx.fill()
-      ctx.strokeStyle = nodeControl === 'add' ? theme.text : nodeControl === 'count' ? theme.text : theme.dim
+      ctx.strokeStyle =
+        nodeControl === 'add' ? theme.text : nodeControl === 'count' ? theme.text : theme.dim
       ctx.lineWidth = 1.5
       ctx.stroke()
       if (nodeControl === 'count') {
@@ -610,11 +637,19 @@ export class CanvasRenderer {
     marks: InlineMarks,
     isLink: boolean,
     tier: CanvasNodeTier,
-    isDone: boolean,
+    isDone: boolean
   ): number {
     const ctx = this.ctx
     const fontSize = this.inlineFontSize(tier, marks)
-    const weight = marks.bold ? 700 : tier === 'root' ? 700 : tier === 'primary' ? 600 : tier === 'secondary' ? 500 : 400
+    const weight = marks.bold
+      ? 700
+      : tier === 'root'
+        ? 700
+        : tier === 'primary'
+          ? 600
+          : tier === 'secondary'
+            ? 500
+            : 400
     const style = marks.italic ? 'italic ' : ''
     ctx.save()
     ctx.font = `${style}${weight} ${fontSize}px ${marks.code ? MONO_FONT_FAMILY : FONT_FAMILY}`
@@ -632,15 +667,15 @@ export class CanvasRenderer {
       ? '#f08a6e'
       : marks.highlight
         ? '#252525'
-      : isDone
-        ? this.theme.dim
-        : isLink
-          ? this.theme.accent
-          : tier === 'root'
-            ? this.theme.rootText
-            : tier === 'primary'
-              ? this.theme.primaryText
-            : this.theme.text
+        : isDone
+          ? this.theme.dim
+          : isLink
+            ? this.theme.accent
+            : tier === 'root'
+              ? this.theme.rootText
+              : tier === 'primary'
+                ? this.theme.primaryText
+                : this.theme.text
     ctx.fillText(text, x, y)
 
     const underline = marks.underline || isLink
@@ -692,9 +727,10 @@ export class CanvasRenderer {
 
   private draggedSubtreeIds(): Set<string> {
     const ids = new Set<string>()
-    const source = this.dragPreview && this.state?.root
-      ? this.findNode(this.state.root, this.dragPreview.sourceId)
-      : null
+    const source =
+      this.dragPreview && this.state?.root
+        ? this.findNode(this.state.root, this.dragPreview.sourceId)
+        : null
     if (!source) return ids
     const pending = [source]
     while (pending.length > 0) {
@@ -748,12 +784,14 @@ export class CanvasRenderer {
       const target = this.layout.boxes.get(preview.indicator.targetId)
       if (target) {
         this.drawDropIndicator(target)
-        const parent = preview.indicator.type === 'child'
-          ? target
-          : target.node.parent
-            ? this.layout.boxes.get(target.node.parent.id) ?? null
-            : null
-        if (parent) this.drawProvisionalConnector(parent, ghostX, ghostY, source.width, source.height)
+        const parent =
+          preview.indicator.type === 'child'
+            ? target
+            : target.node.parent
+              ? (this.layout.boxes.get(target.node.parent.id) ?? null)
+              : null
+        if (parent)
+          this.drawProvisionalConnector(parent, ghostX, ghostY, source.width, source.height)
       }
     }
 
@@ -774,7 +812,7 @@ export class CanvasRenderer {
       offsetY,
       selected: false,
       controls: false,
-      recordLinkHits: false,
+      recordLinkHits: false
     })
     ctx.restore()
 
@@ -792,7 +830,7 @@ export class CanvasRenderer {
     ghostX: number,
     ghostY: number,
     ghostWidth: number,
-    ghostHeight: number,
+    ghostHeight: number
   ): void {
     const ctx = this.ctx
     const x1 = parent.x + parent.width

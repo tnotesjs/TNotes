@@ -8,21 +8,24 @@ import { nodeGeometry } from './render/hitTest'
 import { MindmapSession } from './session'
 
 function installCanvasStubs(): void {
-  const context = new Proxy<Record<PropertyKey, unknown>>({}, {
-    get(target, property) {
-      if (property === 'measureText') return (text: string) => ({ width: text.length * 8 })
-      if (property === 'createLinearGradient') return () => ({ addColorStop: vi.fn() })
-      if (!(property in target)) target[property] = vi.fn()
-      return target[property]
-    },
-    set(target, property, value) {
-      target[property] = value
-      return true
-    },
-  })
+  const context = new Proxy<Record<PropertyKey, unknown>>(
+    {},
+    {
+      get(target, property) {
+        if (property === 'measureText') return (text: string) => ({ width: text.length * 8 })
+        if (property === 'createLinearGradient') return () => ({ addColorStop: vi.fn() })
+        if (!(property in target)) target[property] = vi.fn()
+        return target[property]
+      },
+      set(target, property, value) {
+        target[property] = value
+        return true
+      }
+    }
+  )
   Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
     configurable: true,
-    value: () => context,
+    value: () => context
   })
 }
 
@@ -32,12 +35,12 @@ function mountViewer(markdown = '# T\n\n- parent\n  - child\n') {
   const host = document.createElement('div')
   Object.defineProperties(host, {
     clientWidth: { configurable: true, value: 900 },
-    clientHeight: { configurable: true, value: 600 },
+    clientHeight: { configurable: true, value: 600 }
   })
   document.body.append(host)
   const viewer = new CanvasViewer(host, session, {
     theme: 'light',
-    measurer: { measure: (text) => ({ width: text.length * 8, height: 21 }) },
+    measurer: { measure: (text) => ({ width: text.length * 8, height: 21 }) }
   })
   return { host, session, viewer }
 }
@@ -57,7 +60,7 @@ function nodePoint(viewer: CanvasViewer, id: string) {
   const box = controller.layout.boxes.get(id)!
   return {
     x: controller.transform.x + (box.x + box.width / 2) * controller.transform.k,
-    y: controller.transform.y + (box.y + box.height / 2) * controller.transform.k,
+    y: controller.transform.y + (box.y + box.height / 2) * controller.transform.k
   }
 }
 
@@ -65,7 +68,7 @@ function worldPoint(viewer: CanvasViewer, x: number, y: number) {
   const { controller } = viewerInternals(viewer)
   return {
     x: controller.transform.x + x * controller.transform.k,
-    y: controller.transform.y + y * controller.transform.k,
+    y: controller.transform.y + y * controller.transform.k
   }
 }
 
@@ -83,7 +86,9 @@ describe('CanvasViewer', () => {
     const before = session.getMarkdown()
     const point = nodePoint(viewer, node.id)
 
-    host.dispatchEvent(new MouseEvent('dblclick', { clientX: point.x, clientY: point.y, bubbles: true }))
+    host.dispatchEvent(
+      new MouseEvent('dblclick', { clientX: point.x, clientY: point.y, bubbles: true })
+    )
 
     expect(session.focusRootNode.id).toBe(node.id)
     expect(host.querySelector('.mm-edit-input')).toBeNull()
@@ -97,13 +102,38 @@ describe('CanvasViewer', () => {
     const before = session.getMarkdown()
 
     session.select(node.id)
-    host.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true, cancelable: true }))
-    host.dispatchEvent(new KeyboardEvent('keydown', { key: 'b', metaKey: true, bubbles: true, cancelable: true }))
+    host.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Delete', bubbles: true, cancelable: true })
+    )
+    host.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'b', metaKey: true, bubbles: true, cancelable: true })
+    )
     const point = nodePoint(viewer, node.id)
-    host.dispatchEvent(new PointerEvent('pointerdown', { clientX: point.x, clientY: point.y, button: 0, bubbles: true }))
-    window.dispatchEvent(new PointerEvent('pointermove', { clientX: point.x + 180, clientY: point.y + 80, bubbles: true }))
-    window.dispatchEvent(new PointerEvent('pointerup', { clientX: point.x + 180, clientY: point.y + 80, bubbles: true }))
-    host.dispatchEvent(new MouseEvent('dblclick', { clientX: point.x, clientY: point.y, bubbles: true }))
+    host.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        clientX: point.x,
+        clientY: point.y,
+        button: 0,
+        bubbles: true
+      })
+    )
+    window.dispatchEvent(
+      new PointerEvent('pointermove', {
+        clientX: point.x + 180,
+        clientY: point.y + 80,
+        bubbles: true
+      })
+    )
+    window.dispatchEvent(
+      new PointerEvent('pointerup', {
+        clientX: point.x + 180,
+        clientY: point.y + 80,
+        bubbles: true
+      })
+    )
+    host.dispatchEvent(
+      new MouseEvent('dblclick', { clientX: point.x, clientY: point.y, bubbles: true })
+    )
 
     expect(session.getMarkdown()).toBe(before)
     expect(host.querySelector('.mm-edit-input')).toBeNull()
@@ -116,9 +146,15 @@ describe('CanvasViewer', () => {
     const state = viewerInternals(viewer)
     const box = state.controller.layout.boxes.get(node.id)!
     const checkbox = nodeGeometry(box, new Map(), false).checkboxRect!
-    const point = worldPoint(viewer, box.x + checkbox.x + checkbox.w / 2, box.y + checkbox.y + checkbox.h / 2)
+    const point = worldPoint(
+      viewer,
+      box.x + checkbox.x + checkbox.w / 2,
+      box.y + checkbox.y + checkbox.h / 2
+    )
 
-    host.dispatchEvent(new MouseEvent('click', { clientX: point.x, clientY: point.y, bubbles: true }))
+    host.dispatchEvent(
+      new MouseEvent('click', { clientX: point.x, clientY: point.y, bubbles: true })
+    )
 
     expect(node.content.checked).toBe(false)
     expect(session.getMarkdown()).toContain('- [ ] task')

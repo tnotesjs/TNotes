@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { CanvasEditor, serializeSubtree } from '@tnotesjs/mindmap-core'
-import type { CanvasContextRequest, CanvasLinkHover, InlineFormat, MindmapNode, MindmapSession } from '@tnotesjs/mindmap-core'
+import type {
+  CanvasContextRequest,
+  CanvasLinkHover,
+  InlineFormat,
+  MindmapNode,
+  MindmapSession
+} from '@tnotesjs/mindmap-core'
 import CanvasContextMenu from './CanvasContextMenu.vue'
 import LinkPopover from './LinkPopover.vue'
 import SelectionToolbar from './SelectionToolbar.vue'
@@ -74,7 +80,9 @@ function applyNodeFormat(format: InlineFormat) {
 }
 
 function selectedMarkdown() {
-  return selectedRoots().map((node) => serializeSubtree(node)).join('\n')
+  return selectedRoots()
+    .map((node) => serializeSubtree(node))
+    .join('\n')
 }
 
 async function copySelected(event?: ClipboardEvent | null) {
@@ -165,7 +173,7 @@ onMounted(() => {
     onPasteSelection: (event) => {
       void pasteAtSelection(undefined, event)
     },
-    onPasteText: pasteTextAt,
+    onPasteText: pasteTextAt
   })
   emit('ready', editor)
   // 切回脑图视图：居中当前选中节点（无选中则保持 zoomToFit）
@@ -196,40 +204,40 @@ onBeforeUnmount(() => {
       @clear="props.session.clearSelectedNodeFormats()"
       @delete="props.session.removeSelectedNodes()"
     />
-  <LinkPopover
-    v-if="linkEditor"
-    :url="linkEditor.url"
-    :position="linkEditor.position"
-    @save="saveLink"
-    @remove="removeLink"
-    @keep="keepLinkPopover"
-    @leave="closeLinkPopoverSoon"
-    @close="linkEditor = null"
-  />
-  <CanvasContextMenu
-    v-if="contextMenu"
-    :position="contextMenu.position"
-    :multiple="contextMenu.multiple"
-    :can-insert-sibling="contextMenu.canInsertSibling"
-    :can-insert-parent="contextMenu.canInsertParent"
-    :can-cut="contextMenu.canCut"
-    :can-duplicate="contextMenu.canDuplicate"
-    :can-delete-only="contextMenu.canDeleteOnly"
-    :can-delete-tree="contextMenu.canDeleteTree"
-    :can-toggle-siblings="contextMenu.canToggleSiblings"
-    :can-focus="contextMenu.canFocus"
-    @insert-sibling="insertSibling"
-    @insert-child="insertChild"
-    @insert-parent="insertParent"
-    @copy="copySelected"
-    @cut="cutSelected"
-    @paste="pasteAtContextNode"
-    @duplicate="props.session.duplicateSelectedNodes()"
-    @delete-only="deleteOnly"
-    @delete-tree="props.session.removeSelectedNodes()"
-    @toggle-siblings="toggleContextSiblings"
-    @focus="focusContextNode"
-    @close="contextMenu = null"
+    <LinkPopover
+      v-if="linkEditor"
+      :url="linkEditor.url"
+      :position="linkEditor.position"
+      @save="saveLink"
+      @remove="removeLink"
+      @keep="keepLinkPopover"
+      @leave="closeLinkPopoverSoon"
+      @close="linkEditor = null"
+    />
+    <CanvasContextMenu
+      v-if="contextMenu"
+      :position="contextMenu.position"
+      :multiple="contextMenu.multiple"
+      :can-insert-sibling="contextMenu.canInsertSibling"
+      :can-insert-parent="contextMenu.canInsertParent"
+      :can-cut="contextMenu.canCut"
+      :can-duplicate="contextMenu.canDuplicate"
+      :can-delete-only="contextMenu.canDeleteOnly"
+      :can-delete-tree="contextMenu.canDeleteTree"
+      :can-toggle-siblings="contextMenu.canToggleSiblings"
+      :can-focus="contextMenu.canFocus"
+      @insert-sibling="insertSibling"
+      @insert-child="insertChild"
+      @insert-parent="insertParent"
+      @copy="copySelected"
+      @cut="cutSelected"
+      @paste="pasteAtContextNode"
+      @duplicate="props.session.duplicateSelectedNodes()"
+      @delete-only="deleteOnly"
+      @delete-tree="props.session.removeSelectedNodes()"
+      @toggle-siblings="toggleContextSiblings"
+      @focus="focusContextNode"
+      @close="contextMenu = null"
     />
   </div>
 </template>

@@ -73,37 +73,40 @@ function forceExitPeerFullscreen(activeRoot: HTMLElement | null): void {
   syncBodyFullscreenAttr(activeRoot)
 }
 
-const props = withDefaults(defineProps<{
-  content?: string
-  /** Plain mindmap markdown (preferred over URI-encoded content). */
-  source?: string
-  initialExpandLevel?: number
-  /** When true, canvas uses CanvasEditor and edits emit `change`. */
-  editable?: boolean
-  /** Show expand-level control on the chrome (Desk). */
-  expandLevelControl?: boolean
-  /** Explicit dark mode; omit to auto-detect html.dark / data-theme=dark. */
-  isDark?: boolean
-  /**
-   * Resolve markdown image paths for canvas display (Desk: tnotes-asset protocol).
-   * Defaults to identity.
-   */
-  resolveImageSrc?: (src: string) => string
-  /**
-   * Persist a pasted/dropped image blob and return the markdown-relative path
-   * (e.g. `./assets/foo.png`). Required for editable paste-to-assets.
-   */
-  writeAsset?: (blob: Blob) => Promise<{ relativePath: string; alt?: string }>
-}>(), {
-  content: '',
-  source: '',
-  initialExpandLevel: 3,
-  editable: false,
-  expandLevelControl: false,
-  isDark: undefined,
-  resolveImageSrc: undefined,
-  writeAsset: undefined,
-})
+const props = withDefaults(
+  defineProps<{
+    content?: string
+    /** Plain mindmap markdown (preferred over URI-encoded content). */
+    source?: string
+    initialExpandLevel?: number
+    /** When true, canvas uses CanvasEditor and edits emit `change`. */
+    editable?: boolean
+    /** Show expand-level control on the chrome (Desk). */
+    expandLevelControl?: boolean
+    /** Explicit dark mode; omit to auto-detect html.dark / data-theme=dark. */
+    isDark?: boolean
+    /**
+     * Resolve markdown image paths for canvas display (Desk: tnotes-asset protocol).
+     * Defaults to identity.
+     */
+    resolveImageSrc?: (src: string) => string
+    /**
+     * Persist a pasted/dropped image blob and return the markdown-relative path
+     * (e.g. `./assets/foo.png`). Required for editable paste-to-assets.
+     */
+    writeAsset?: (blob: Blob) => Promise<{ relativePath: string; alt?: string }>
+  }>(),
+  {
+    content: '',
+    source: '',
+    initialExpandLevel: 3,
+    editable: false,
+    expandLevelControl: false,
+    isDark: undefined,
+    resolveImageSrc: undefined,
+    writeAsset: undefined
+  }
+)
 
 const emit = defineEmits<{
   change: [markdown: string]
@@ -148,7 +151,7 @@ const sessionEpoch = ref(0)
 const viewOptions = [
   { value: 'mindmap', label: '脑图' },
   { value: 'outline', label: '大纲' },
-  { value: 'source', label: '源码' },
+  { value: 'source', label: '源码' }
 ] as const
 
 function decodeContent(value: string): string {
@@ -190,7 +193,7 @@ function createViewer(): void {
   const theme = dark.value ? 'dark' : 'light'
   viewer = new CanvasViewer(canvasHost.value, session.value, {
     theme,
-    resolveImageSrc: (src) => props.resolveImageSrc?.(src) ?? src,
+    resolveImageSrc: (src) => props.resolveImageSrc?.(src) ?? src
   })
 }
 
@@ -212,10 +215,12 @@ function rebuildSession(): void {
   suppressChangeEmit = true
   const next = new MindmapSession({
     markdown: normalizedContent.value,
-    fileName: 'mindmap-preview.tn-mindmap.md',
+    fileName: 'mindmap-preview.tn-mindmap.md'
   })
   applyInitialExpandLevel(next, expandLevel.value)
-  const invalidate = () => { renderVersion.value += 1 }
+  const invalidate = () => {
+    renderVersion.value += 1
+  }
   next.on('collapseChange', invalidate)
   next.on('focusChange', invalidate)
   next.on('selectionChange', invalidate)
@@ -242,7 +247,7 @@ function onSourceMarkdown(value: string): void {
 async function onSourcePasteImage(
   blob: Blob,
   selectionStart: number,
-  selectionEnd: number,
+  selectionEnd: number
 ): Promise<void> {
   if (!props.editable || !session.value || !props.writeAsset) return
   try {
@@ -252,7 +257,7 @@ async function onSourcePasteImage(
       selectionStart,
       selectionEnd,
       asset.relativePath,
-      asset.alt ?? '截图',
+      asset.alt ?? '截图'
     )
     onSourceMarkdown(next)
   } catch {
@@ -354,7 +359,7 @@ async function toggleFullscreen(): Promise<void> {
       root.requestFullscreen(),
       new Promise<never>((_, reject) => {
         window.setTimeout(() => reject(new Error('fullscreen-timeout')), 500)
-      }),
+      })
     ])
     if (document.fullscreenElement === root) fullscreenMode = 'native'
   } catch {
@@ -398,7 +403,7 @@ function handleCanvasWheelCapture(event: WheelEvent): void {
 function handlePreviewPasteBubble(event: ClipboardEvent): void {
   if (!props.editable) return
   const hasImage = [...(event.clipboardData?.items ?? [])].some(
-    (item) => item.kind === 'file' && item.type.startsWith('image/'),
+    (item) => item.kind === 'file' && item.type.startsWith('image/')
   )
   if (!hasImage) return
   event.stopPropagation()
@@ -468,7 +473,7 @@ function handleDocumentKeydown(event: KeyboardEvent): void {
         const inTextEdit =
           target instanceof Element
             ? target.closest(
-                '.mm-edit-input, .rich-inline-editor, [contenteditable="true"], textarea, input',
+                '.mm-edit-input, .rich-inline-editor, [contenteditable="true"], textarea, input'
               )
             : null
         if (inTextEdit && root?.contains(inTextEdit)) return
@@ -524,15 +529,12 @@ function handleDocumentKeydown(event: KeyboardEvent): void {
 watch(
   normalizedContent,
   (value) => {
-    if (
-      session.value &&
-      normalizeMindmapMarkdown(session.value.getMarkdown()) === value
-    ) {
+    if (session.value && normalizeMindmapMarkdown(session.value.getMarkdown()) === value) {
       return
     }
     rebuildSession()
   },
-  { immediate: true },
+  { immediate: true }
 )
 watch(
   () => props.initialExpandLevel,
@@ -544,7 +546,7 @@ watch(
       applyInitialExpandLevel(session.value, level)
       renderVersion.value += 1
     }
-  },
+  }
 )
 watch(
   () => props.editable,
@@ -552,7 +554,7 @@ watch(
     destroyViewer()
     editorRef = null
     void nextTick(createViewer)
-  },
+  }
 )
 watch(dark, (value) => {
   const theme = value ? 'dark' : 'light'
@@ -565,7 +567,10 @@ function observeTheme() {
     const next = detectDark()
     if (next !== dark.value) dark.value = next
   })
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] })
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class', 'data-theme']
+  })
   return observer
 }
 let themeObserver: MutationObserver | null = null
@@ -575,7 +580,7 @@ onMounted(() => {
   themeObserver = observeTheme()
   unregisterFullscreenOwner = registerMindmapFullscreenOwner(
     fullscreenOwnerId,
-    exitFullscreenOverlay,
+    exitFullscreenOverlay
   )
   document.addEventListener('fullscreenchange', handleFullscreenChange)
   document.addEventListener('pointerdown', handleDocumentPointerDown, true)
@@ -608,7 +613,7 @@ onBeforeUnmount(() => {
       'is-dark': dark,
       'is-fullscreen': isFullscreen,
       'is-editable': editable,
-      'is-interaction-active': isCanvasActive,
+      'is-interaction-active': isCanvasActive
     }"
     :data-view="activeView"
     :data-version="renderVersion"
@@ -632,11 +637,7 @@ onBeforeUnmount(() => {
         </button>
       </nav>
       <span class="mindmap-preview-action-divider" aria-hidden="true" />
-      <label
-        v-if="expandLevelControl"
-        class="mindmap-preview-expand"
-        title="默认展开层级"
-      >
+      <label v-if="expandLevelControl" class="mindmap-preview-expand" title="默认展开层级">
         <span class="mindmap-preview-expand-label">层</span>
         <input
           class="mindmap-preview-expand-input"
@@ -776,13 +777,13 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 4px;
   padding: 2px;
-  border: .1px solid var(--tn-c-divider);
+  border: 0.1px solid var(--tn-c-divider);
   border-radius: 7px;
   background-color: color-mix(in srgb, var(--tn-c-bg-elv) 92%, transparent);
   box-shadow: var(--tn-shadow-2);
   opacity: 0;
   pointer-events: none;
-  transition: opacity .2s;
+  transition: opacity 0.2s;
 }
 
 /* Editable Desk island: chrome must stay hittable. */
@@ -816,7 +817,9 @@ onBeforeUnmount(() => {
   background: transparent;
   color: var(--tn-c-brand);
   cursor: pointer;
-  transition: background-color .2s, transform .2s;
+  transition:
+    background-color 0.2s,
+    transform 0.2s;
 
   svg,
   img {
@@ -834,8 +837,12 @@ onBeforeUnmount(() => {
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tn-c-brand) 55%, transparent);
   }
 
-  &:hover { transform: scale(1.05); }
-  &:active { transform: scale(.95); }
+  &:hover {
+    transform: scale(1.05);
+  }
+  &:active {
+    transform: scale(0.95);
+  }
 }
 
 .mindmap-preview-action-divider {
@@ -981,13 +988,19 @@ onBeforeUnmount(() => {
   color: #f0f0f2;
 }
 
-.mindmap-canvas-host:deep(.mm-edit-input .inline-run.bold) { font-weight: 700; }
-.mindmap-canvas-host:deep(.mm-edit-input .inline-run.italic) { font-style: italic; }
+.mindmap-canvas-host:deep(.mm-edit-input .inline-run.bold) {
+  font-weight: 700;
+}
+.mindmap-canvas-host:deep(.mm-edit-input .inline-run.italic) {
+  font-style: italic;
+}
 .mindmap-canvas-host:deep(.mm-edit-input .inline-run.underline) {
   text-decoration-line: underline;
   text-underline-offset: 3px;
 }
-.mindmap-canvas-host:deep(.mm-edit-input .inline-run.strike) { text-decoration-line: line-through; }
+.mindmap-canvas-host:deep(.mm-edit-input .inline-run.strike) {
+  text-decoration-line: line-through;
+}
 .mindmap-canvas-host:deep(.mm-edit-input .inline-run.underline.strike) {
   text-decoration-line: underline line-through;
 }
@@ -1097,19 +1110,62 @@ onBeforeUnmount(() => {
   text-align: center;
 }
 
-.mindmap-outline :deep(.mindmap-outline-toggle:hover) { color: var(--tn-c-brand); }
-.mindmap-outline :deep(.mindmap-outline-checkbox) { margin-top: 5px; }
-.mindmap-outline :deep(.mindmap-outline-label) { min-width: 0; overflow-wrap: anywhere; }
-.mindmap-outline :deep(.mindmap-outline-node.is-root > .mindmap-outline-row) { font-size: 18px; font-weight: 700; }
-.mindmap-outline :deep(.mindmap-outline-node.is-done > .mindmap-outline-row .mindmap-outline-label) { opacity: .58; text-decoration: line-through; }
-.mindmap-outline :deep(.mindmap-outline-image) { display: block; max-width: min(100%, 560px); max-height: 360px; margin: 5px 0 12px 25px; border-radius: 6px; }
-.mindmap-outline :deep(.is-bold) { font-weight: 700; }
-.mindmap-outline :deep(.is-italic) { font-style: italic; }
-.mindmap-outline :deep(.is-underline) { text-decoration: underline; }
-.mindmap-outline :deep(.is-strike) { text-decoration: line-through; }
-.mindmap-outline :deep(.is-highlight) { padding: 0 2px; border-radius: 2px; background: #ffe56b; color: #252525; }
-.mindmap-outline :deep(.is-code) { padding: 1px 5px; border-radius: 4px; background: var(--tn-c-bg-soft); color: var(--tn-c-danger); font-family: var(--tn-font-mono); }
-.mindmap-outline :deep(.is-link) { color: var(--tn-c-brand); text-decoration: underline; text-underline-offset: 3px; }
+.mindmap-outline :deep(.mindmap-outline-toggle:hover) {
+  color: var(--tn-c-brand);
+}
+.mindmap-outline :deep(.mindmap-outline-checkbox) {
+  margin-top: 5px;
+}
+.mindmap-outline :deep(.mindmap-outline-label) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.mindmap-outline :deep(.mindmap-outline-node.is-root > .mindmap-outline-row) {
+  font-size: 18px;
+  font-weight: 700;
+}
+.mindmap-outline
+  :deep(.mindmap-outline-node.is-done > .mindmap-outline-row .mindmap-outline-label) {
+  opacity: 0.58;
+  text-decoration: line-through;
+}
+.mindmap-outline :deep(.mindmap-outline-image) {
+  display: block;
+  max-width: min(100%, 560px);
+  max-height: 360px;
+  margin: 5px 0 12px 25px;
+  border-radius: 6px;
+}
+.mindmap-outline :deep(.is-bold) {
+  font-weight: 700;
+}
+.mindmap-outline :deep(.is-italic) {
+  font-style: italic;
+}
+.mindmap-outline :deep(.is-underline) {
+  text-decoration: underline;
+}
+.mindmap-outline :deep(.is-strike) {
+  text-decoration: line-through;
+}
+.mindmap-outline :deep(.is-highlight) {
+  padding: 0 2px;
+  border-radius: 2px;
+  background: #ffe56b;
+  color: #252525;
+}
+.mindmap-outline :deep(.is-code) {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--tn-c-bg-soft);
+  color: var(--tn-c-danger);
+  font-family: var(--tn-font-mono);
+}
+.mindmap-outline :deep(.is-link) {
+  color: var(--tn-c-brand);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 
 .mindmap-source {
   max-height: 560px;
@@ -1193,10 +1249,20 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 768px) {
-  .mindmap-canvas-host { height: 360px; }
-  .mindmap-preview-actions { top: 6px; right: 6px; }
-  .mindmap-preview-action { width: 28px; height: 28px; }
-  .mindmap-outline { padding-inline: 12px; }
+  .mindmap-canvas-host {
+    height: 360px;
+  }
+  .mindmap-preview-actions {
+    top: 6px;
+    right: 6px;
+  }
+  .mindmap-preview-action {
+    width: 28px;
+    height: 28px;
+  }
+  .mindmap-outline {
+    padding-inline: 12px;
+  }
 }
 </style>
 

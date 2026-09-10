@@ -93,7 +93,7 @@ describe('MindmapSession', () => {
 
   it('setCollapseLevel 按当前聚焦主题计算相对层级', () => {
     const s = new MindmapSession({
-      markdown: '# T\n\n- a\n  - a1\n    - a2\n      - a3\n- b\n  - b1\n',
+      markdown: '# T\n\n- a\n  - a1\n    - a2\n      - a3\n- b\n  - b1\n'
     })
     const [a, b] = s.document.root.children
     const a1 = a.children[0]
@@ -188,7 +188,7 @@ describe('MindmapSession', () => {
     s.focusNode(target.id)
 
     expect(s.focusPath.map((node) => node.content.text)).toEqual(
-      Array.from({ length: 12 }, (_, index) => `L${index + 1}`),
+      Array.from({ length: 12 }, (_, index) => `L${index + 1}`)
     )
     expect(s.focusRootNode).toBe(target)
     expect(pathEvents).toHaveLength(1)
@@ -196,7 +196,7 @@ describe('MindmapSession', () => {
 
   it('同层与祖先切换会替换旧后缀，不会把导航历史误当成祖先路径', () => {
     const s = new MindmapSession({
-      markdown: '# T\n\n- A\n  - A1\n    - A11\n  - A2\n- B\n',
+      markdown: '# T\n\n- A\n  - A1\n    - A11\n  - A2\n- B\n'
     })
     const [a, b] = s.document.root.children
     const [a1, a2] = a.children
@@ -349,7 +349,10 @@ describe('MindmapSession', () => {
   })
 
   it('多选缩进与提升保持连续节点顺序', () => {
-    const s = new MindmapSession({ markdown: '# T\n\n- a\n- b\n- c\n', fileName: 't.tn-mindmap.md' })
+    const s = new MindmapSession({
+      markdown: '# T\n\n- a\n- b\n- c\n',
+      fileName: 't.tn-mindmap.md'
+    })
     const [a, b, c] = s.document.root.children
     s.selectMany([b.id, c.id], c.id)
     s.indentSelectedNodes()
@@ -360,7 +363,10 @@ describe('MindmapSession', () => {
   })
 
   it('多选节点可整体上下移动，并作为一条历史撤销', () => {
-    const s = new MindmapSession({ markdown: '# T\n\n- a\n- b\n- c\n- d\n', fileName: 't.tn-mindmap.md' })
+    const s = new MindmapSession({
+      markdown: '# T\n\n- a\n- b\n- c\n- d\n',
+      fileName: 't.tn-mindmap.md'
+    })
     const [, b, c] = s.document.root.children
     s.selectMany([b.id, c.id], c.id, b.id)
 
@@ -388,7 +394,10 @@ describe('MindmapSession', () => {
   })
 
   it('批量任务快捷操作区分添加任务与切换完成状态', () => {
-    const s = new MindmapSession({ markdown: '# T\n\n- a\n- [x] b\n- c\n', fileName: 't.tn-mindmap.md' })
+    const s = new MindmapSession({
+      markdown: '# T\n\n- a\n- [x] b\n- c\n',
+      fileName: 't.tn-mindmap.md'
+    })
     const [a, b, c] = s.document.root.children
     s.selectMany([a.id, b.id, c.id], c.id, a.id)
 

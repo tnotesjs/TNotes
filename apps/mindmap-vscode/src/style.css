@@ -18,7 +18,7 @@
   --tn-c-bg-elv: var(--mm-panel-bg);
   --tn-c-divider: var(--mm-border);
   --tn-c-default-soft: var(--mm-hover);
-  --tn-shadow-2: 0 14px 38px rgb(0 0 0 / .24);
+  --tn-shadow-2: 0 14px 38px rgb(0 0 0 / 0.24);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -45,11 +45,7 @@ body,
   padding: 0;
   height: 100%;
   font-family:
-    -apple-system,
-    BlinkMacSystemFont,
-    'PingFang SC',
-    'Hiragino Sans GB',
-    'Microsoft YaHei',
+    -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
     sans-serif;
 }
 
@@ -63,11 +59,17 @@ body,
   outline: none;
   cursor: default;
 }
-.mm-editor.is-space-pan { cursor: grab; }
+.mm-editor.is-space-pan {
+  cursor: grab;
+}
 .mm-editor.is-panning,
-.mm-editor.is-node-dragging { cursor: grabbing; }
+.mm-editor.is-node-dragging {
+  cursor: grabbing;
+}
 .mm-editor.is-link-hover,
-.mm-editor.is-control-hover { cursor: pointer; }
+.mm-editor.is-control-hover {
+  cursor: pointer;
+}
 
 .mm-canvas {
   position: absolute;
@@ -141,21 +143,41 @@ body,
   }
 }
 
-.mm-edit-input .inline-run.bold { font-weight: 700; }
-.mm-edit-input .inline-run.italic { font-style: italic; }
-.mm-edit-input .inline-run.underline { text-decoration-line: underline; text-underline-offset: 3px; }
-.mm-edit-input .inline-run.strike { text-decoration-line: line-through; }
-.mm-edit-input .inline-run.underline.strike { text-decoration-line: underline line-through; }
-.mm-edit-input .inline-run.highlight:not(.code) { padding: 0 1px; border-radius: 2px; background: #fff36a; color: #242424; }
+.mm-edit-input .inline-run.bold {
+  font-weight: 700;
+}
+.mm-edit-input .inline-run.italic {
+  font-style: italic;
+}
+.mm-edit-input .inline-run.underline {
+  text-decoration-line: underline;
+  text-underline-offset: 3px;
+}
+.mm-edit-input .inline-run.strike {
+  text-decoration-line: line-through;
+}
+.mm-edit-input .inline-run.underline.strike {
+  text-decoration-line: underline line-through;
+}
+.mm-edit-input .inline-run.highlight:not(.code) {
+  padding: 0 1px;
+  border-radius: 2px;
+  background: #fff36a;
+  color: #242424;
+}
 .mm-edit-input .inline-run.code {
   padding: 2px 6px;
   border-radius: 5px;
   background: color-mix(in srgb, var(--mm-text) 18%, transparent);
   color: #f08a6e;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: .92em;
+  font-size: 0.92em;
 }
-.mm-edit-input .inline-run.link { color: var(--mm-accent); text-decoration: underline; text-underline-offset: 3px; }
+.mm-edit-input .inline-run.link {
+  color: var(--mm-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 
 .mm-edit-add-button {
   position: absolute;

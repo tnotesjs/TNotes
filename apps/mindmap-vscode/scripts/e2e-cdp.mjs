@@ -2,7 +2,9 @@ const port = Number(process.argv[2] ?? 9555)
 const fileName = process.argv[3] ?? 'e2e.tn-mindmap.md'
 const marker = process.argv[4] ?? 'CDP 自动编辑与保存通过'
 const saveDelay = Number(process.argv[5] ?? 700)
-const targets = await fetch(`http://127.0.0.1:${port}/json/list`).then((response) => response.json())
+const targets = await fetch(`http://127.0.0.1:${port}/json/list`).then((response) =>
+  response.json()
+)
 
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds))
 
@@ -38,7 +40,7 @@ for (const target of targets.filter((item) => item.type === 'iframe')) {
   const { socket, send } = await connect(target)
   const probe = await send('Runtime.evaluate', {
     expression: `document.getElementById('active-frame')?.contentDocument?.querySelector('.file-name')?.textContent || ''`,
-    returnByValue: true,
+    returnByValue: true
   })
   if (probe.result?.value !== fileName) {
     socket.close()
@@ -46,7 +48,7 @@ for (const target of targets.filter((item) => item.type === 'iframe')) {
   }
 
   await send('Runtime.evaluate', {
-    expression: `document.getElementById('active-frame')?.contentDocument?.querySelector('[aria-label="源码视图"]')?.click()`,
+    expression: `document.getElementById('active-frame')?.contentDocument?.querySelector('[aria-label="源码视图"]')?.click()`
   })
   await delay(100)
 
@@ -63,7 +65,7 @@ for (const target of targets.filter((item) => item.type === 'iframe')) {
       textarea.dispatchEvent(new win.Event('input', { bubbles: true }))
       return { ok: true, beforeLength: before.length, afterLength: textarea.value.length }
     })()`,
-    returnByValue: true,
+    returnByValue: true
   })
 
   await delay(saveDelay)
@@ -73,7 +75,7 @@ for (const target of targets.filter((item) => item.type === 'iframe')) {
       frame?.contentWindow?.dispatchEvent(new frame.contentWindow.KeyboardEvent('keydown', {
         key: 's', code: 'KeyS', metaKey: true, bubbles: true, cancelable: true,
       }))
-    })()`,
+    })()`
   })
   await delay(1200)
 
@@ -87,7 +89,7 @@ for (const target of targets.filter((item) => item.type === 'iframe')) {
         markerVisible: doc?.querySelector('.md-textarea')?.value.includes(${JSON.stringify(marker)}) || false,
       }
     })()`,
-    returnByValue: true,
+    returnByValue: true
   })
 
   socket.close()

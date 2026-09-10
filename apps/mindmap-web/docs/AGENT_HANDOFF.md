@@ -4,14 +4,14 @@
 
 ## 1. 产品与基准
 
-| 项 | 说明 |
-|---|---|
-| 路径 | `/Users/huyouda/tnotesjs/mindmap-web` |
-| 定位 | 极简思维导图 Web；**数据即 Markdown**（`*.tn-mindmap.md`） |
-| 交互基准 | **幕布（Mubu）** — 不一致的细节一律以幕布为准 |
-| 参考 | `https://mubu.com/app/edit/home/DLpHL4k66E`（需登录） |
-| 栈 | Vue 3 + Vite + TypeScript；纯 TS 引擎已发布为 `@tnotesjs/mindmap-core` |
-| Dev | `pnpm dev` → 常用 `http://127.0.0.1:5199/` |
+| 项       | 说明                                                                   |
+| -------- | ---------------------------------------------------------------------- |
+| 路径     | `/Users/huyouda/tnotesjs/mindmap-web`                                  |
+| 定位     | 极简思维导图 Web；**数据即 Markdown**（`*.tn-mindmap.md`）             |
+| 交互基准 | **幕布（Mubu）** — 不一致的细节一律以幕布为准                          |
+| 参考     | `https://mubu.com/app/edit/home/DLpHL4k66E`（需登录）                  |
+| 栈       | Vue 3 + Vite + TypeScript；纯 TS 引擎已发布为 `@tnotesjs/mindmap-core` |
+| Dev      | `pnpm dev` → 常用 `http://127.0.0.1:5199/`                             |
 
 三视图互斥切换、共享会话：`大纲` / `脑图` / `源码`。详见根目录 `README.md`。
 
@@ -199,18 +199,18 @@
 
 主文件：`src/ui/OutlineView.vue`
 
-| 能力 | 实现要点 |
-|---|---|
-| 去掉虚线框 | 不再使用 dashed child box |
-| 水平线 | `.drop-line`（在 `.outline-spacer` 内，按 `row.top` 定位） |
-| 子节点竖线 | `.indent-guide.is-drop-highlight` + 目标行 `is-drop-parent` |
-| 源行反馈 | `.is-drag-source` opacity ≈ 0.45 |
-| 跟随圆点 | `.outline-drag-widget`（fixed，跟指针） |
-| 落点计算 | `calcDropIndicator` / `lineIndicator` |
-| 命中 Y | `rowIndexAt`：用 **spacer.getBoundingClientRect()**，勿只用 `titleHeight`（会漏 padding/margin ≈ 20px） |
-| 列表 chrome | `listChromeHeight = VIEW_PADDING_TOP(12) + titleHeight + TITLE_MARGIN_BOTTOM(8)`；虚拟滚动 / `scrollRowIntoView` 共用 |
-| 拖拽启动 | **超过移动阈值后再写 `drag` ref**，避免 pointerdown 重渲染拆掉 capture/监听；`pointermove`/`pointerup` 挂在 `document` |
-| 落子 | child → `session.moveNode(id, target.id, 0)` |
+| 能力        | 实现要点                                                                                                               |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 去掉虚线框  | 不再使用 dashed child box                                                                                              |
+| 水平线      | `.drop-line`（在 `.outline-spacer` 内，按 `row.top` 定位）                                                             |
+| 子节点竖线  | `.indent-guide.is-drop-highlight` + 目标行 `is-drop-parent`                                                            |
+| 源行反馈    | `.is-drag-source` opacity ≈ 0.45                                                                                       |
+| 跟随圆点    | `.outline-drag-widget`（fixed，跟指针）                                                                                |
+| 落点计算    | `calcDropIndicator` / `lineIndicator`                                                                                  |
+| 命中 Y      | `rowIndexAt`：用 **spacer.getBoundingClientRect()**，勿只用 `titleHeight`（会漏 padding/margin ≈ 20px）                |
+| 列表 chrome | `listChromeHeight = VIEW_PADDING_TOP(12) + titleHeight + TITLE_MARGIN_BOTTOM(8)`；虚拟滚动 / `scrollRowIntoView` 共用  |
+| 拖拽启动    | **超过移动阈值后再写 `drag` ref**，避免 pointerdown 重渲染拆掉 capture/监听；`pointermove`/`pointerup` 挂在 `document` |
+| 落子        | child → `session.moveNode(id, target.id, 0)`                                                                           |
 
 向左提升的层级计算已抽到 `src/ui/outlineDrag.ts`：按指针越过的缩进线逐级提升，不再限制“只有末子可提升”，因此普通子节点也能拖回顶层。折叠数字统计全部后代；进入已折叠主题会先自动展开。
 

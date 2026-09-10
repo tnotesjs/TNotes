@@ -12,7 +12,7 @@ import {
   NODE_PAD_X,
   NODE_PAD_Y,
   TEXT_LINE_HEIGHT,
-  wrapTextLines,
+  wrapTextLines
 } from './layout/treeLayout'
 import type { LayoutResult, TextMeasurer } from './layout/treeLayout'
 import { isAncestor, snapshotDoc, visibleChildren } from './model/document'
@@ -21,18 +21,23 @@ import {
   parseInlineSegments,
   replaceInlineDisplayText,
   replaceInlineRange,
-  stripInline,
+  stripInline
 } from './model/inline'
 import type { InlineFormat } from './model/inline'
 import { CanvasRenderer, canvasNodeTier } from './render/canvasRenderer'
-import type { CanvasDragPreview, CanvasThemeMode, DropIndicator, ViewTransform } from './render/canvasRenderer'
+import type {
+  CanvasDragPreview,
+  CanvasThemeMode,
+  DropIndicator,
+  ViewTransform
+} from './render/canvasRenderer'
 import { hitTest } from './render/hitTest'
 import type { MindmapSession } from './session'
 import {
   nextGraphemeOffset,
   previousGraphemeOffset,
   richSelectionOffsets,
-  setRichSelection,
+  setRichSelection
 } from './dom/richInlineDom'
 
 interface CanvasRichEditorElement extends HTMLDivElement {
@@ -94,7 +99,10 @@ export interface CanvasEditorEvents {
   /** 将 Markdown 中的相对资源路径解析为浏览器可加载 URL。 */
   resolveImageSrc?: (src: string) => string
   /** 单选/多选节点工具栏的屏幕位置。 */
-  onSelectionPositionChange?: (position: { left: number; top: number } | null, count: number) => void
+  onSelectionPositionChange?: (
+    position: { left: number; top: number } | null,
+    count: number
+  ) => void
   /** Canvas 链接悬停编辑浮层。null 表示指针离开链接。 */
   onLinkHover?: (link: CanvasLinkHover | null) => void
   /** 节点右键菜单。null 表示关闭当前菜单。 */
@@ -116,14 +124,16 @@ export interface CanvasEditorOptions {
   theme?: CanvasThemeMode
 }
 
-export function createCanvasMeasurer(font = `14px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif`): TextMeasurer {
+export function createCanvasMeasurer(
+  font = `14px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif`
+): TextMeasurer {
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')!
   ctx.font = font
   return {
     measure(text: string) {
       return { width: ctx.measureText(text).width, height: 21 }
-    },
+    }
   }
 }
 
@@ -158,7 +168,13 @@ export class CanvasEditor {
   private panState: { startX: number; startY: number; baseX: number; baseY: number } | null = null
   private panMoved = false
   private spacePressed = false
-  private selectionBoxState: { startX: number; startY: number; currentX: number; currentY: number; moved: boolean } | null = null
+  private selectionBoxState: {
+    startX: number
+    startY: number
+    currentX: number
+    currentY: number
+    moved: boolean
+  } | null = null
   private selectionBoxEl: HTMLDivElement | null = null
   private resizeState: { id: string; snapshot: string; moved: boolean } | null = null
   private suppressClick = false
@@ -173,7 +189,7 @@ export class CanvasEditor {
     private session: MindmapSession,
     private events: CanvasEditorEvents = {},
     measurer?: TextMeasurer,
-    options: CanvasEditorOptions = {},
+    options: CanvasEditorOptions = {}
   ) {
     this.measurer = measurer ?? createCanvasMeasurer()
     this.readOnly = options.readOnly ?? false
@@ -187,7 +203,7 @@ export class CanvasEditor {
     this.renderer = new CanvasRenderer(
       container,
       (src) => this.events.resolveImageSrc?.(src) ?? src,
-      options.theme,
+      options.theme
     )
     this.renderer.onImageLoad = (src, aspect) => {
       this.imageAspects.set(src, aspect)
@@ -254,7 +270,7 @@ export class CanvasEditor {
     this.layout = layoutTree(this.session.document.root, {
       measurer: this.measurer,
       imageAspects: this.imageAspects,
-      root,
+      root
     })
     this.pushRenderState()
     this.syncEditingOverlayGeometry()
@@ -266,7 +282,7 @@ export class CanvasEditor {
       root: this.session.focusRootNode,
       selection: this.readOnly ? new Set() : new Set(this.session.selectionIds),
       matches: new Set(this.session.matches),
-      imageAspects: this.imageAspects,
+      imageAspects: this.imageAspects
     })
     this.emitSelectionPosition()
   }
@@ -292,21 +308,30 @@ export class CanvasEditor {
 
     const { k, x, y } = this.transform
     const tier = canvasNodeTier(box.depth)
-    const fontSize = tier === 'root' ? 16 : tier === 'primary' ? 15 : tier === 'secondary' ? 14.5 : 14
-    const fontWeight = tier === 'root' ? 700 : tier === 'primary' ? 600 : tier === 'secondary' ? 500 : 400
-    const checkboxPad = node.content.checked !== null && node !== this.session.focusRootNode ? CHECKBOX_WIDTH : 0
-    const widthLimit = node !== this.session.focusRootNode && node.children.length > 0
-      ? DEFAULT_COLUMN_WIDTH
-      : NODE_MAX_WIDTH
+    const fontSize =
+      tier === 'root' ? 16 : tier === 'primary' ? 15 : tier === 'secondary' ? 14.5 : 14
+    const fontWeight =
+      tier === 'root' ? 700 : tier === 'primary' ? 600 : tier === 'secondary' ? 500 : 400
+    const checkboxPad =
+      node.content.checked !== null && node !== this.session.focusRootNode ? CHECKBOX_WIDTH : 0
+    const widthLimit =
+      node !== this.session.focusRootNode && node.children.length > 0
+        ? DEFAULT_COLUMN_WIDTH
+        : NODE_MAX_WIDTH
     const textMax = widthLimit - NODE_PAD_X * 2 - checkboxPad
-    const textScale = tier === 'root' ? 1.2 : tier === 'primary' ? 1.12 : tier === 'secondary' ? 1.08 : 1.06
+    const textScale =
+      tier === 'root' ? 1.2 : tier === 'primary' ? 1.12 : tier === 'secondary' ? 1.08 : 1.06
     const measureWidth = (text: string) => this.measurer.measure(text).width * textScale
     const displayText = input.value || ' '
     const lines = wrapTextLines(displayText, textMax, measureWidth)
     const textW = Math.max(...lines.map(measureWidth))
-    const worldWidth = Math.min(widthLimit, Math.max(box.width, textW + NODE_PAD_X * 2 + checkboxPad))
+    const worldWidth = Math.min(
+      widthLimit,
+      Math.max(box.width, textW + NODE_PAD_X * 2 + checkboxPad)
+    )
     const worldHeight = Math.max(box.height, lines.length * TEXT_LINE_HEIGHT + NODE_PAD_Y * 2)
-    const caretReserve = displayText !== this.editingInitialDisplayText && worldWidth < widthLimit ? 4 : 0
+    const caretReserve =
+      displayText !== this.editingInitialDisplayText && worldWidth < widthLimit ? 4 : 0
 
     const left = box.x * k + x
     const top = box.y * k + y
@@ -356,19 +381,17 @@ export class CanvasEditor {
     const viewportWidth = typeof window === 'undefined' ? width : window.innerWidth
     // Off-screen canvas: drop the fixed toolbar so it cannot float over foreign content.
     // Prefer laid-out size (clientWidth/Height) when getBoundingClientRect is still empty.
-    if (
-      bottom < 8 ||
-      top > viewportHeight - 8 ||
-      right < 8 ||
-      left > viewportWidth - 8
-    ) {
+    if (bottom < 8 || top > viewportHeight - 8 || right < 8 || left > viewportWidth - 8) {
       this.events.onSelectionPositionChange?.(null, ids.size)
       return
     }
-    this.events.onSelectionPositionChange?.({
-      left: left + width / 2,
-      top: bottom - 18,
-    }, ids.size)
+    this.events.onSelectionPositionChange?.(
+      {
+        left: left + width / 2,
+        top: bottom - 18
+      },
+      ids.size
+    )
   }
 
   private onViewportResize = (): void => {
@@ -388,7 +411,7 @@ export class CanvasEditor {
     this.setTransform({
       x: (cw - this.layout.width * clamped) / 2,
       y: (ch - this.layout.height * clamped) / 2,
-      k: clamped,
+      k: clamped
     })
   }
 
@@ -417,7 +440,7 @@ export class CanvasEditor {
     this.setTransform({
       x: cw / 2 - cx * this.transform.k,
       y: ch / 2 - cy * this.transform.k,
-      k: this.transform.k,
+      k: this.transform.k
     })
   }
 
@@ -434,7 +457,7 @@ export class CanvasEditor {
           this.setTransform({
             ...this.transform,
             x: this.transform.x - dx * this.transform.k,
-            y: this.transform.y - dy * this.transform.k,
+            y: this.transform.y - dy * this.transform.k
           })
         }
       }
@@ -481,17 +504,17 @@ export class CanvasEditor {
     Object.defineProperties(input, {
       value: {
         configurable: true,
-        get: () => node.content.image ? this.editingDraftRaw : stripInline(this.editingDraftRaw),
+        get: () => (node.content.image ? this.editingDraftRaw : stripInline(this.editingDraftRaw)),
         set: (next: string) => {
           const value = String(next)
-          this.renderEditingDraft(node.content.image
-            ? value
-            : replaceInlineDisplayText(this.editingDraftRaw, value))
-        },
+          this.renderEditingDraft(
+            node.content.image ? value : replaceInlineDisplayText(this.editingDraftRaw, value)
+          )
+        }
       },
       rawValue: { configurable: true, get: () => this.editingDraftRaw },
       selectionStart: { configurable: true, get: () => richSelectionOffsets(input)?.start ?? 0 },
-      selectionEnd: { configurable: true, get: () => richSelectionOffsets(input)?.end ?? 0 },
+      selectionEnd: { configurable: true, get: () => richSelectionOffsets(input)?.end ?? 0 }
     })
     input.setSelectionRange = (start: number, end: number) => setRichSelection(input, start, end)
     renderCanvasInlineRuns(input, this.editingDraftRaw, !!node.content.image)
@@ -610,7 +633,8 @@ export class CanvasEditor {
         } else if (mod && e.key === '[') {
           e.preventDefault()
           this.commitEdit()
-          if (this.session.focusPath.length > 0) this.session.exitFocusTo(this.session.focusPath.length - 1)
+          if (this.session.focusPath.length > 0)
+            this.session.exitFocusTo(this.session.focusPath.length - 1)
           this.container.focus()
         } else if (mod && e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
           e.preventDefault()
@@ -641,7 +665,8 @@ export class CanvasEditor {
           // Nested under ProseMirror contenteditable: native Cmd+A selects the whole
           // document. Always preventDefault and select within this node first.
           e.preventDefault()
-          const fullySelected = input.selectionStart === 0 && input.selectionEnd === input.value.length
+          const fullySelected =
+            input.selectionStart === 0 && input.selectionEnd === input.value.length
           if (fullySelected) {
             this.commitEdit()
             this.selectAllVisible()
@@ -798,7 +823,8 @@ export class CanvasEditor {
   }
 
   private selectedLinkUrl(node: MindmapNode, start: number, end: number): string {
-    if (node.content.link && start === 0 && end === node.content.text.length) return node.content.link
+    if (node.content.link && start === 0 && end === node.content.text.length)
+      return node.content.link
     let plainOffset = 0
     const urls = new Set<string>()
     for (const segment of parseInlineSegments(node.content.raw)) {
@@ -865,7 +891,8 @@ export class CanvasEditor {
         e.stopPropagation()
         if (key === 'a') {
           const input = this.editingInput
-          const fullySelected = input.selectionStart === 0 && input.selectionEnd === input.value.length
+          const fullySelected =
+            input.selectionStart === 0 && input.selectionEnd === input.value.length
           if (fullySelected) {
             this.commitEdit()
             this.selectAllVisible()
@@ -1178,7 +1205,12 @@ export class CanvasEditor {
     if (sorted.length === 0) return
     const selectedId = this.session.selectedNode?.id ?? null
     const current = selectedId ? sorted.findIndex((box) => box.id === selectedId) : -1
-    const nextIndex = current < 0 ? (dir > 0 ? 0 : sorted.length - 1) : Math.max(0, Math.min(sorted.length - 1, current + dir))
+    const nextIndex =
+      current < 0
+        ? dir > 0
+          ? 0
+          : sorted.length - 1
+        : Math.max(0, Math.min(sorted.length - 1, current + dir))
     this.extendSelectionTo(sorted[nextIndex].id)
   }
 
@@ -1194,7 +1226,7 @@ export class CanvasEditor {
     this.session.selectMany(
       sorted.slice(from, to + 1).map((box) => box.id),
       id,
-      sorted[normalizedAnchor].id,
+      sorted[normalizedAnchor].id
     )
   }
 
@@ -1211,17 +1243,17 @@ export class CanvasEditor {
     const rect = this.container.getBoundingClientRect()
     return {
       x: (ev.clientX - rect.left - this.transform.x) / this.transform.k,
-      y: (ev.clientY - rect.top - this.transform.y) / this.transform.k,
+      y: (ev.clientY - rect.top - this.transform.y) / this.transform.k
     }
   }
 
   private hit(ev: PointerEvent | MouseEvent) {
     const world = this.eventWorld(ev)
     return hitTest(this.layout.boxes.values(), world.x, world.y, {
-      selectedId: this.readOnly ? null : this.session.selectedNode?.id ?? null,
+      selectedId: this.readOnly ? null : (this.session.selectedNode?.id ?? null),
       selectionCount: this.readOnly ? 0 : this.session.selectionIds.size,
       imageAspects: this.imageAspects,
-      hoveredId: this.hoveredNodeId,
+      hoveredId: this.hoveredNodeId
     })
   }
 
@@ -1236,7 +1268,10 @@ export class CanvasEditor {
 
     const linkHit = this.renderer.hitInlineLink(world.x, world.y)
     this.container.classList.toggle('is-link-hover', !!linkHit)
-    this.container.classList.toggle('is-control-hover', hit?.role === 'add' || hit?.role === 'collapse' || hit?.role === 'checkbox')
+    this.container.classList.toggle(
+      'is-control-hover',
+      hit?.role === 'add' || hit?.role === 'collapse' || hit?.role === 'checkbox'
+    )
     const nextKey = linkHit ? `${linkHit.id}:${linkHit.rawStart}:${linkHit.rawEnd}` : null
     if (nextKey === this.pendingLinkKey) return
     this.pendingLinkKey = nextKey
@@ -1249,8 +1284,10 @@ export class CanvasEditor {
     this.linkHoverTimer = setTimeout(() => {
       if (this.pendingLinkKey !== nextKey) return
       const rect = this.container.getBoundingClientRect()
-      const centerX = rect.left + this.transform.x + (linkHit.rect.x + linkHit.rect.width / 2) * this.transform.k
-      const bottomY = rect.top + this.transform.y + (linkHit.rect.y + linkHit.rect.height) * this.transform.k
+      const centerX =
+        rect.left + this.transform.x + (linkHit.rect.x + linkHit.rect.width / 2) * this.transform.k
+      const bottomY =
+        rect.top + this.transform.y + (linkHit.rect.y + linkHit.rect.height) * this.transform.k
       this.events.onLinkHover?.({
         nodeId: linkHit.id,
         url: linkHit.url,
@@ -1258,8 +1295,8 @@ export class CanvasEditor {
         rawEnd: linkHit.rawEnd,
         position: {
           left: Math.max(220, Math.min(window.innerWidth - 220, centerX)),
-          top: Math.min(window.innerHeight - 54, bottomY + 6),
-        },
+          top: Math.min(window.innerHeight - 54, bottomY + 6)
+        }
       })
     }, 380)
   }
@@ -1272,7 +1309,12 @@ export class CanvasEditor {
       if (this.spacePressed || !hit) {
         ev.preventDefault()
         this.container.focus()
-        this.panState = { startX: ev.clientX, startY: ev.clientY, baseX: this.transform.x, baseY: this.transform.y }
+        this.panState = {
+          startX: ev.clientX,
+          startY: ev.clientY,
+          baseX: this.transform.x,
+          baseY: this.transform.y
+        }
         this.panMoved = false
         this.container.classList.add('is-panning')
         return
@@ -1285,7 +1327,12 @@ export class CanvasEditor {
       ev.preventDefault()
       this.commitEdit()
       this.container.focus()
-      this.panState = { startX: ev.clientX, startY: ev.clientY, baseX: this.transform.x, baseY: this.transform.y }
+      this.panState = {
+        startX: ev.clientX,
+        startY: ev.clientY,
+        baseX: this.transform.x,
+        baseY: this.transform.y
+      }
       this.panMoved = false
       this.container.classList.add('is-panning')
       return
@@ -1323,13 +1370,14 @@ export class CanvasEditor {
       startY: ev.clientY,
       offsetX: box ? world.x - box.x : 0,
       offsetY: box ? world.y - box.y : 0,
-      dragging: false,
+      dragging: false
     }
   }
 
   private onClick = (ev: MouseEvent): void => {
     if (this.suppressClick) return
-    if (this.editingInput && ev.target instanceof Node && this.editingInput.contains(ev.target)) return
+    if (this.editingInput && ev.target instanceof Node && this.editingInput.contains(ev.target))
+      return
     const world = this.eventWorld(ev)
     const inlineLink = this.renderer.hitInlineLink(world.x, world.y)
     if (inlineLink) {
@@ -1346,7 +1394,9 @@ export class CanvasEditor {
     if (this.readOnly) {
       if (hit.role === 'collapse') this.toggleCollapseWithCompensation(hit.id)
       else if (hit.role === 'image' && node.content.image) {
-        this.events.onImagePreview?.(this.events.resolveImageSrc?.(node.content.image.src) ?? node.content.image.src)
+        this.events.onImagePreview?.(
+          this.events.resolveImageSrc?.(node.content.image.src) ?? node.content.image.src
+        )
       }
       this.container.focus()
       ev.preventDefault()
@@ -1374,7 +1424,10 @@ export class CanvasEditor {
         }
         return
       case 'image':
-        if (node.content.image) this.events.onImagePreview?.(this.events.resolveImageSrc?.(node.content.image.src) ?? node.content.image.src)
+        if (node.content.image)
+          this.events.onImagePreview?.(
+            this.events.resolveImageSrc?.(node.content.image.src) ?? node.content.image.src
+          )
         return
       default:
         if (ev.metaKey || ev.ctrlKey) this.toggleDiscreteSelection(hit.id)
@@ -1398,7 +1451,8 @@ export class CanvasEditor {
       const world = this.eventWorld(ev)
       if (this.renderer.hitInlineLink(world.x, world.y)) return
       const hit = this.hit(ev)
-      if (hit?.role === 'body' && hit.id !== this.session.focusRootNode.id) this.session.focusNode(hit.id)
+      if (hit?.role === 'body' && hit.id !== this.session.focusRootNode.id)
+        this.session.focusNode(hit.id)
       return
     }
     const hit = this.hit(ev)
@@ -1423,8 +1477,9 @@ export class CanvasEditor {
     // 右键已选节点保留离散多选；右键未选节点则改为该节点单选。
     if (!this.session.selectionIds.has(node.id)) this.session.select(node.id)
     const protectedRoot = node === this.session.document.root || node === this.session.focusRootNode
-    const selectionHasProtectedRoot = this.session.selectedNodes.some((item) =>
-      item === this.session.document.root || item === this.session.focusRootNode)
+    const selectionHasProtectedRoot = this.session.selectedNodes.some(
+      (item) => item === this.session.document.root || item === this.session.focusRootNode
+    )
     this.events.onLinkHover?.(null)
     this.events.onContextMenu?.({
       nodeId: node.id,
@@ -1437,7 +1492,7 @@ export class CanvasEditor {
       canDeleteOnly: !protectedRoot && !!node.parent,
       canDeleteTree: !selectionHasProtectedRoot,
       canToggleSiblings: !protectedRoot && !!node.parent,
-      canFocus: node !== this.session.focusRootNode,
+      canFocus: node !== this.session.focusRootNode
     })
   }
 
@@ -1465,7 +1520,7 @@ export class CanvasEditor {
       this.setTransform({
         ...this.transform,
         x: this.panState.baseX + (ev.clientX - this.panState.startX),
-        y: this.panState.baseY + (ev.clientY - this.panState.startY),
+        y: this.panState.baseY + (ev.clientY - this.panState.startY)
       })
       this.suppressClick = true
       return
@@ -1475,7 +1530,8 @@ export class CanvasEditor {
       const state = this.selectionBoxState
       state.currentX = ev.clientX
       state.currentY = ev.clientY
-      state.moved = state.moved || Math.hypot(ev.clientX - state.startX, ev.clientY - state.startY) >= 4
+      state.moved =
+        state.moved || Math.hypot(ev.clientX - state.startX, ev.clientY - state.startY) >= 4
       this.updateSelectionBox()
       if (state.moved) this.selectNodesInMarquee()
       this.suppressClick = state.moved
@@ -1502,7 +1558,7 @@ export class CanvasEditor {
       sourceId: drag.id,
       pointer: world,
       offset: { x: drag.offsetX, y: drag.offsetY },
-      indicator,
+      indicator
     }
     this.renderer.setDragPreview(preview)
   }
@@ -1562,7 +1618,13 @@ export class CanvasEditor {
   }
 
   private startSelectionBox(clientX: number, clientY: number): void {
-    this.selectionBoxState = { startX: clientX, startY: clientY, currentX: clientX, currentY: clientY, moved: false }
+    this.selectionBoxState = {
+      startX: clientX,
+      startY: clientY,
+      currentX: clientX,
+      currentY: clientY,
+      moved: false
+    }
     const box = document.createElement('div')
     box.className = 'mm-selection-box'
     this.overlay.append(box)
@@ -1589,7 +1651,7 @@ export class CanvasEditor {
     const rect = this.container.getBoundingClientRect()
     const toWorld = (clientX: number, clientY: number) => ({
       x: (clientX - rect.left - this.transform.x) / this.transform.k,
-      y: (clientY - rect.top - this.transform.y) / this.transform.k,
+      y: (clientY - rect.top - this.transform.y) / this.transform.k
     })
     const a = toWorld(state.startX, state.startY)
     const b = toWorld(state.currentX, state.currentY)
@@ -1598,7 +1660,13 @@ export class CanvasEditor {
     const top = Math.min(a.y, b.y)
     const bottom = Math.max(a.y, b.y)
     const ids = [...this.layout.boxes.values()]
-      .filter((box) => box.x <= right && box.x + box.width >= left && box.y <= bottom && box.y + box.height >= top)
+      .filter(
+        (box) =>
+          box.x <= right &&
+          box.x + box.width >= left &&
+          box.y <= bottom &&
+          box.y + box.height >= top
+      )
       .map((box) => box.id)
     this.session.selectMany(ids, ids[ids.length - 1] ?? null, ids[0] ?? null)
   }
@@ -1607,7 +1675,7 @@ export class CanvasEditor {
     const ids = new Set(this.session.selectionIds)
     if (ids.has(id)) ids.delete(id)
     else ids.add(id)
-    const primary = ids.has(id) ? id : [...ids][ids.size - 1] ?? null
+    const primary = ids.has(id) ? id : ([...ids][ids.size - 1] ?? null)
     this.session.selectMany(ids, primary, this.session.selectionAnchor?.id ?? primary)
   }
 
@@ -1622,17 +1690,15 @@ export class CanvasEditor {
       const target = box.node
       if (isAncestor(dragNode, target) || target === dragNode) continue
 
-      const insideExpanded = wx >= box.x - 10 && wx <= box.x + box.width + 10 &&
-        wy >= box.y - 10 && wy <= box.y + box.height + 10
+      const insideExpanded =
+        wx >= box.x - 10 &&
+        wx <= box.x + box.width + 10 &&
+        wy >= box.y - 10 &&
+        wy <= box.y + box.height + 10
       if (insideExpanded) {
         const ratio = (wy - box.y) / box.height
-        const type: DropIndicator['type'] = box.depth === 0
-          ? 'child'
-          : ratio < 0.3
-            ? 'before'
-            : ratio > 0.7
-              ? 'after'
-              : 'child'
+        const type: DropIndicator['type'] =
+          box.depth === 0 ? 'child' : ratio < 0.3 ? 'before' : ratio > 0.7 ? 'after' : 'child'
         best = { type, targetId: box.id }
         break
       }
@@ -1641,7 +1707,8 @@ export class CanvasEditor {
       // “成为子主题”的预览，而不要求指针必须压在父主题矩形上。
       const horizontalGap = wx - (box.x + box.width)
       const verticalGap = Math.abs(wy - (box.y + box.height / 2))
-      if (horizontalGap < 0 || horizontalGap > 360 || verticalGap > Math.max(42, box.height * 1.5)) continue
+      if (horizontalGap < 0 || horizontalGap > 360 || verticalGap > Math.max(42, box.height * 1.5))
+        continue
       const score = horizontalGap * 0.22 + verticalGap
       if (!corridorBest || score < corridorBest.score) {
         corridorBest = { indicator: { type: 'child', targetId: box.id }, score }
@@ -1661,7 +1728,7 @@ export class CanvasEditor {
       this.setTransform({
         ...this.transform,
         x: this.transform.x - e.deltaX,
-        y: this.transform.y - e.deltaY,
+        y: this.transform.y - e.deltaY
       })
     }
   }
@@ -1688,7 +1755,8 @@ export class CanvasEditor {
       .find((item) => item.kind === 'file' && item.type.startsWith('image/'))
       ?.getAsFile()
     if (image) {
-      const anchorId = this.editingNode?.id ?? this.session.selectedNode?.id ?? this.session.focusRootNode.id
+      const anchorId =
+        this.editingNode?.id ?? this.session.selectedNode?.id ?? this.session.focusRootNode.id
       e.preventDefault()
       this.commitEdit()
       this.events.onPasteImage?.(anchorId, image)
@@ -1714,7 +1782,7 @@ export class CanvasEditor {
     this.setTransform({
       x: px - (px - this.transform.x) * real,
       y: py - (py - this.transform.y) * real,
-      k,
+      k
     })
   }
 
@@ -1745,7 +1813,14 @@ export class CanvasEditor {
     this.renderer.destroy()
     if (this.linkHoverTimer) clearTimeout(this.linkHoverTimer)
     this.events.onContextMenu?.(null)
-    this.container.classList.remove('is-readonly', 'is-space-pan', 'is-panning', 'is-node-dragging', 'is-link-hover', 'is-control-hover')
+    this.container.classList.remove(
+      'is-readonly',
+      'is-space-pan',
+      'is-panning',
+      'is-node-dragging',
+      'is-link-hover',
+      'is-control-hover'
+    )
     this.selectionBoxEl?.remove()
     this.overlay.remove()
   }

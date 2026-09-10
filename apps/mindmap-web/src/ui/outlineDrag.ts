@@ -15,7 +15,7 @@ export function resolveAfterDropLevel(
   clientX: number,
   indentEdge: number,
   depth: number,
-  indent: number,
+  indent: number
 ): DropLevel {
   let node = anchor
   let nextDepth = depth

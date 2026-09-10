@@ -11,9 +11,7 @@ export interface FootprintsPayload {
 export function parseFootprintsDatetime(meta: string): number[] {
   const m = meta
     .trim()
-    .match(
-      /^(\d{4})-(\d{1,2})-(\d{1,2})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/
-    )
+    .match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/)
   if (!m) return []
   const parts = [Number(m[1]), Number(m[2]), Number(m[3])]
   if (m[4] !== undefined) {

@@ -51,9 +51,7 @@ describe('image markdown helpers', () => {
       rest: ''
     })
     expect(normalizeImageAlign('middle')).toBe('center')
-    expect(formatImageAttrs({ width: '400px', align: 'center' })).toBe(
-      '{w=400px align=center}'
-    )
+    expect(formatImageAttrs({ width: '400px', align: 'center' })).toBe('{w=400px align=center}')
     expect(formatImageAttrs({ align: 'left' })).toBe('')
   })
 

@@ -13,10 +13,7 @@
       "name": "Run Extension (multi-mode: tnotesjs root)",
       "type": "extensionHost",
       "request": "launch",
-      "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}",
-        "/Users/huyouda/tnotesjs"
-      ],
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}", "/Users/huyouda/tnotesjs"],
       "outFiles": ["${workspaceFolder}/dist/**/*.js"],
       "preLaunchTask": "npm: build"
     },

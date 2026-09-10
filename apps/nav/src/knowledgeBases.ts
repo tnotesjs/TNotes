@@ -32,9 +32,7 @@ export function loadIconManifest(manifestPath: string): Record<string, string> {
 /** Title from the repo's own tnotes.json, or null when absent. */
 function readKbConfigTitle(repoRoot: string): string | null {
   try {
-    const data = JSON.parse(
-      readFileSync(join(repoRoot, 'tnotes.json'), 'utf-8')
-    ) as KbConfigMeta
+    const data = JSON.parse(readFileSync(join(repoRoot, 'tnotes.json'), 'utf-8')) as KbConfigMeta
     return data.title?.trim() || null
   } catch {
     return null
@@ -64,9 +62,7 @@ export function listKnowledgeBases(
     .sort((a, b) => a.localeCompare(b))
 
   return names.map((repo) => {
-    const title =
-      readKbConfigTitle(join(workspaceRoot, repo)) ??
-      repo.replace(/^TNotes\./, '')
+    const title = readKbConfigTitle(join(workspaceRoot, repo)) ?? repo.replace(/^TNotes\./, '')
     const iconFile = iconManifest[repo] ?? null
     return { repo, title, iconFile }
   })

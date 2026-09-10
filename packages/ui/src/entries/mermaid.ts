@@ -1,1 +1,1 @@
-export { default } from "../components/Mermaid/Mermaid.vue";
+export { default } from '../components/Mermaid/Mermaid.vue'

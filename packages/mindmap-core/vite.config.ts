@@ -6,12 +6,12 @@ export default defineConfig({
     lib: {
       entry: 'src/index.ts',
       formats: ['es'],
-      fileName: 'index',
+      fileName: 'index'
     },
-    sourcemap: true,
+    sourcemap: true
   },
   test: {
     environment: 'node',
-    include: ['src/**/*.test.ts'],
-  },
+    include: ['src/**/*.test.ts']
+  }
 })

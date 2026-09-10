@@ -12,21 +12,22 @@ function mountPopover(startEditing = false) {
     remove: vi.fn(),
     keep: vi.fn(),
     leave: vi.fn(),
-    close: vi.fn(),
+    close: vi.fn()
   }
   const host = document.createElement('div')
   document.body.append(host)
   const app = createApp({
-    render: () => h(LinkPopover, {
-      url: 'https://old.example',
-      position: { left: 240, top: 160 },
-      startEditing,
-      onSave: events.save,
-      onRemove: events.remove,
-      onKeep: events.keep,
-      onLeave: events.leave,
-      onClose: events.close,
-    }),
+    render: () =>
+      h(LinkPopover, {
+        url: 'https://old.example',
+        position: { left: 240, top: 160 },
+        startEditing,
+        onSave: events.save,
+        onRemove: events.remove,
+        onKeep: events.keep,
+        onLeave: events.leave,
+        onClose: events.close
+      })
   })
   app.mount(host)
   mountedApps.push(app)
@@ -60,7 +61,9 @@ describe('脑图链接编辑浮层', () => {
 
     input.value = '  https://new.example/path  '
     input.dispatchEvent(new Event('input', { bubbles: true }))
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+    )
     expect(events.save).toHaveBeenCalledWith('https://new.example/path')
   })
 
@@ -72,7 +75,9 @@ describe('脑图链接编辑浮层', () => {
     popover.dispatchEvent(new MouseEvent('mouseenter'))
     popover.dispatchEvent(new MouseEvent('mouseleave'))
     popover.querySelector<HTMLButtonElement>('[aria-label="移除链接"]')!.click()
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    )
 
     expect(events.keep).toHaveBeenCalledTimes(1)
     expect(events.leave).toHaveBeenCalledTimes(1)

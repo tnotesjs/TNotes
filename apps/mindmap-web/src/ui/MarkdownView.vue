@@ -2,9 +2,12 @@
 import { onBeforeUnmount, ref, watch } from 'vue'
 import type { MarkdownDiagnostic } from '@tnotesjs/mindmap-core'
 
-const props = withDefaults(defineProps<{ modelValue: string; diagnostics?: readonly MarkdownDiagnostic[] }>(), {
-  diagnostics: () => [],
-})
+const props = withDefaults(
+  defineProps<{ modelValue: string; diagnostics?: readonly MarkdownDiagnostic[] }>(),
+  {
+    diagnostics: () => []
+  }
+)
 const emit = defineEmits<{
   'update:modelValue': [value: string]
   pasteImage: [blob: Blob, selectionStart: number, selectionEnd: number]
@@ -20,7 +23,7 @@ watch(
   (md) => {
     // 正在输入时不打断用户，输入停顿后由其它视图变更回流
     if (!typing) draft.value = md
-  },
+  }
 )
 
 function onInput(e: Event) {

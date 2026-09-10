@@ -22,7 +22,7 @@ export class CanvasViewer {
   constructor(
     private readonly container: HTMLElement,
     session: MindmapSession,
-    options: CanvasViewerOptions = {},
+    options: CanvasViewerOptions = {}
   ) {
     this.container.classList.add('mm-viewer')
     this.controller = new CanvasEditor(
@@ -31,10 +31,10 @@ export class CanvasViewer {
       {
         onRequestSearch: options.onRequestSearch,
         onImagePreview: options.onImagePreview,
-        resolveImageSrc: options.resolveImageSrc,
+        resolveImageSrc: options.resolveImageSrc
       },
       options.measurer,
-      { readOnly: true, theme: options.theme },
+      { readOnly: true, theme: options.theme }
     )
   }
 

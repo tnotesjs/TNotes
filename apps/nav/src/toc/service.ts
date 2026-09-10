@@ -1,10 +1,6 @@
 import { existsSync } from 'fs'
 import { join } from 'path'
-import type {
-  KbSnapshot,
-  TocEntryRef,
-  TocNode as KbTocNode
-} from '@tnotesjs/kb'
+import type { KbSnapshot, TocEntryRef, TocNode as KbTocNode } from '@tnotesjs/kb'
 import {
   collectSubtreeNoteIndexes,
   findGroupLineIndex,
