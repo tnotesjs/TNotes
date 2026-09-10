@@ -2,11 +2,11 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createWorkspace } from '@tnotesjs/kb'
 
-import { backfillMissingNoteIds, type WorkspaceScanState } from './scan'
+import { backfillMissingNoteIds, markInternalWrites, type WorkspaceScanState } from './scan'
 import type { KnowledgeBaseHandle } from './types'
 
 const cleanups: Array<() => Promise<void>> = []
@@ -52,5 +52,40 @@ describe('backfillMissingNoteIds', () => {
     expect(until).toBeGreaterThan(Date.now())
     expect(handle.snapshot.notes[0]?.frontmatter.id).toBeTruthy()
     expect(await fs.readFile(notePath, 'utf8')).toMatch(/^---\nid: /)
+  })
+})
+
+describe('内部写入标记的过期清理', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('下一次标记时清掉已过期的条目，避免漏事件时永久累积', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-09-11T00:00:00Z'))
+    const state = makeState()
+    markInternalWrites(state, '/kb', [{ path: 'notes/a.md' }])
+    expect(state.internalWriteUntil.size).toBe(1)
+
+    // 窗口 1500ms 过后再标记另一个文件：旧条目应被清掉
+    vi.setSystemTime(new Date('2026-09-11T00:00:10Z'))
+    markInternalWrites(state, '/kb', [{ path: 'notes/b.md' }])
+
+    expect(state.internalWriteUntil.size).toBe(1)
+    expect([...state.internalWriteUntil.keys()]).toEqual([
+      path.normalize(path.join('/kb', 'notes/b.md'))
+    ])
+  })
+
+  it('同名文件的旧时间戳会被新写入覆盖', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-09-11T00:00:00Z'))
+    const state = makeState()
+    markInternalWrites(state, '/kb', [{ path: 'notes/a.md' }])
+    const first = state.internalWriteUntil.get(path.normalize('/kb/notes/a.md')) ?? 0
+    vi.setSystemTime(new Date('2026-09-11T00:00:01Z'))
+    markInternalWrites(state, '/kb', [{ path: 'notes/a.md' }])
+    const second = state.internalWriteUntil.get(path.normalize('/kb/notes/a.md')) ?? 0
+    expect(second).toBeGreaterThan(first)
   })
 })

@@ -28,12 +28,21 @@ export interface WorkspaceScanState {
   userDataDir?: string
 }
 
+/** fs.watch 漏事件时条目会永久留在 Map 里；每次标记顺带清掉过期的。 */
+function pruneInternalWrites(state: WorkspaceScanState, now: number): void {
+  for (const [key, until] of state.internalWriteUntil) {
+    if (until < now) state.internalWriteUntil.delete(key)
+  }
+}
+
 export function markInternalWrites(
   state: WorkspaceScanState,
   rootPath: string,
   changedFiles: Array<{ path: string; previousPath?: string }>
 ): void {
-  const until = Date.now() + 1500
+  const now = Date.now()
+  pruneInternalWrites(state, now)
+  const until = now + 1500
   for (const changed of changedFiles) {
     // changedFiles are kb-root-relative; the watcher compares absolute paths.
     state.internalWriteUntil.set(path.normalize(path.join(rootPath, changed.path)), until)
