@@ -384,6 +384,19 @@ try {
     canvas?.state ?? '未渲染'
   )
 
+  // 主题跟随只影响显示：深色下共享渲染器重新出图，磁盘不动（hash 在 H2-17 比对）
+  const lightSrc = canvas?.src ?? ''
+  await page.evaluate(() => document.documentElement.classList.add('dark'))
+  const darkSrc = await waitFor(async () =>
+    page.evaluate((previous) => {
+      const image = document.querySelector('[data-history-body] [data-tn-history-canvas] img')
+      const src = image?.getAttribute('src') ?? ''
+      return src && src !== previous ? src : null
+    }, lightSrc)
+  )
+  record('H2-12b 历史画布跟随深浅主题（只影响显示）', Boolean(darkSrc))
+  await page.evaluate(() => document.documentElement.classList.remove('dark'))
+
   const mermaid = await waitFor(async () =>
     page.evaluate(() => document.querySelectorAll('[data-history-body] .tn-mermaid svg').length)
   )
