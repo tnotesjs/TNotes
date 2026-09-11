@@ -19,6 +19,8 @@ export type AssetSyntaxKind =
   | 'vue-href'
   | 'vue-import'
   | 'excalidraw-path'
+  /** 笔记里的 `<Excalidraw path="…" />` 组件调用 */
+  | 'excalidraw-component'
   | 'mindmap-image'
   | 'mindmap-link'
   | 'config-icon'
@@ -193,13 +195,7 @@ export interface AssetFileMove {
 }
 
 export type AssetJournalStage =
-  | 'pending'
-  | 'backed-up'
-  | 'applying'
-  | 'applied'
-  | 'restoring'
-  | 'restored'
-  | 'failed'
+  'pending' | 'backed-up' | 'applying' | 'applied' | 'restoring' | 'restored' | 'failed'
 
 /** Preview does not write the KB. Apply is a library prototype until Desk gates exist. */
 export interface AssetOperationPlan {

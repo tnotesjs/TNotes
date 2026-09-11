@@ -78,6 +78,49 @@ describe('extractAssetReferences', () => {
     expect(source.slice(image!.startOffset, image!.endOffset)).toBe('./assets/mindmap.png')
   })
 
+  it('把笔记里的 <Excalidraw path> 组件调用记成可改写引用（带精确偏移）', () => {
+    const source = [
+      '# t',
+      '',
+      '<Excalidraw path="../assets/0001-drawing.excalidraw" height="480" />',
+      ''
+    ].join('\n')
+    const { references } = extractAssetReferences(source, { sourceRelPath: 'notes/0001. a.md' })
+    const canvas = references.find((ref) => ref.syntax === 'excalidraw-component')
+    expect(canvas?.rawUrl).toBe('../assets/0001-drawing.excalidraw')
+    expect(canvas?.targetRelPath).toBe('assets/0001-drawing.excalidraw')
+    expect(canvas?.rewritable).toBe(true)
+    expect(source.slice(canvas!.startOffset, canvas!.endOffset)).toBe(
+      '../assets/0001-drawing.excalidraw'
+    )
+  })
+
+  it('支持单引号与多行属性，绑定写法算动态绑定', () => {
+    const single = "<Excalidraw\n  path='../assets/a.excalidraw'\n/>\n"
+    const singleRefs = extractAssetReferences(single, { sourceRelPath: 'notes/0001. a.md' })
+    expect(
+      singleRefs.references.find((ref) => ref.syntax === 'excalidraw-component')?.targetRelPath
+    ).toBe('assets/a.excalidraw')
+
+    const bound = '<Excalidraw :path="someVar" />\n'
+    const boundRefs = extractAssetReferences(bound, { sourceRelPath: 'notes/0001. a.md' })
+    expect(
+      boundRefs.references.filter((ref) => ref.syntax === 'excalidraw-component')
+    ).toHaveLength(0)
+    expect(boundRefs.sawDynamicBinding).toBe(true)
+  })
+
+  it('围栏里的组件示例不算引用；未知组件带 path 属性也不会被当成已知组件', () => {
+    const fenced = '```md\n<Excalidraw path="../assets/a.excalidraw" />\n```\n'
+    const fencedRefs = extractAssetReferences(fenced, { sourceRelPath: 'notes/0001. a.md' })
+    expect(fencedRefs.references.every((ref) => ref.syntax !== 'excalidraw-component')).toBe(true)
+
+    const unknown = '<UnknownThing path="../assets/a.png" />\n'
+    const unknownRefs = extractAssetReferences(unknown, { sourceRelPath: 'notes/0001. a.md' })
+    expect(unknownRefs.references.some((ref) => ref.syntax === 'excalidraw-component')).toBe(false)
+    expect(unknownRefs.references.some((ref) => ref.targetRelPath === 'assets/a.png')).toBe(false)
+  })
+
   it('does not treat ordinary fence examples as rewritable', () => {
     const source = '```js\n![x](../assets/fenced-only.png)\n```\n'
     const { references } = extractAssetReferences(source, { sourceRelPath: 'notes/0001. a.md' })
@@ -197,9 +240,11 @@ describe('scanAssets', () => {
       expect(drawing?.status).toBe('protected')
       expect(drawing?.protection).toContain('excalidraw-source')
       expect(drawing?.renameAllowed).toBe(false)
-      expect(report.assets.some((asset) => asset.relPath.endsWith('.excalidraw') && asset.status !== 'protected')).toBe(
-        false
-      )
+      expect(
+        report.assets.some(
+          (asset) => asset.relPath.endsWith('.excalidraw') && asset.status !== 'protected'
+        )
+      ).toBe(false)
     } finally {
       await fs.rm(simple, { recursive: true, force: true })
     }

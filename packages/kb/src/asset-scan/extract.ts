@@ -224,6 +224,9 @@ const ATTR_RE = /\b(src|href|srcset|poster|style)\s*=\s*(?:"([^"]*)"|'([^']*)'|(
 const NAMED_BINDING_RE = /(?:^|\s)(?::|v-bind:)([A-Za-z_:][\w:.-]*)\s*=/g
 const OBJECT_BIND_RE = /(?:^|\s)v-bind\s*=/g
 const COMPONENT_RE = /<([A-Z][\w.-]*)(?=[\s/>])/g
+const EXCALIDRAW_COMPONENT_RE = /<Excalidraw\b([^>]*)>/g
+const EXCALIDRAW_PATH_ATTR_RE = /(?<![\w:-])path\s*=\s*(?:"([^"]*)"|'([^']*)')/g
+const EXCALIDRAW_BOUND_PATH_RE = /(?::|v-bind:)path\s*=/
 
 function extractHtml(
   source: string,
@@ -237,6 +240,34 @@ function extractHtml(
   while ((component = COMPONENT_RE.exec(source))) {
     if (covered(skip, component.index)) continue
     flags.componentTags.push(component[1])
+  }
+
+  // `<Excalidraw path="…" />`：只有这个已知组件把 `path` 当资源引用。
+  // 不做成通用属性名，否则任何未知 Vue 组件带个 path 就会被当成「已识别」。
+  EXCALIDRAW_COMPONENT_RE.lastIndex = 0
+  let canvas: RegExpExecArray | null
+  while ((canvas = EXCALIDRAW_COMPONENT_RE.exec(source))) {
+    if (covered(skip, canvas.index)) continue
+    const attrs = canvas[1] ?? ''
+    const attrsStart = canvas.index + canvas[0].length - attrs.length - 1
+    EXCALIDRAW_PATH_ATTR_RE.lastIndex = 0
+    let pathAttr: RegExpExecArray | null
+    while ((pathAttr = EXCALIDRAW_PATH_ATTR_RE.exec(attrs))) {
+      const quoted = pathAttr[1] ?? pathAttr[2]
+      if (quoted == null) continue
+      const valueStart = attrsStart + pathAttr.index + pathAttr[0].length - quoted.length - 1
+      pushRef(
+        out,
+        ctx,
+        source,
+        valueStart,
+        valueStart + quoted.length,
+        quoted,
+        'excalidraw-component',
+        true
+      )
+    }
+    if (EXCALIDRAW_BOUND_PATH_RE.test(attrs)) flags.sawDynamicBinding = true
   }
 
   NAMED_BINDING_RE.lastIndex = 0
