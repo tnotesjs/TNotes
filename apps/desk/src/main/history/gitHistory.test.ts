@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import {
   GitHistoryError,
+  isShallowRepository,
   listHistoryCommits,
   listHistoryTree,
   readHistoryBlob,
@@ -138,6 +139,91 @@ describe('listHistoryCommits（只读分页）', () => {
     const merge = page.commits.find((item) => item.isMerge)
     expect(merge, '合并提交必须出现在历史里').toBeTruthy()
     expect(merge?.changedPaths).toContain('assets/0001-b.png')
+  })
+
+  it('带编号过滤时先过滤再分页：limit=1 也能拿到最新相关提交', async () => {
+    // 相关提交在最底部，前面压着若干不相关提交
+    await write('notes/0001. A.md', NOTE_V1)
+    commit('feat: 相关首次提交')
+    for (let index = 0; index < 5; index += 1) {
+      await write(
+        `notes/0009. 噪声${index}.md`,
+        `---\nid: 99999999-9999-4999-8999-99999999999${index}\n---\n\n# 噪声\n`
+      )
+      commit(`chore: 无关提交 ${index}`)
+    }
+    // 真实缺陷：过滤在切片之后做，limit=1 只看最新一条（无关）→ 返回空
+    const first = await listHistoryCommits(root, { noteIndex: '0001', limit: 1 })
+    expect(first.commits).toHaveLength(1)
+    expect(first.commits[0]?.subject).toBe('feat: 相关首次提交')
+    expect(first.hasMore).toBe(false)
+
+    // 过滤后仍可分页：skip 作用在过滤后的序列上
+    await write('notes/0001. A.md', NOTE_V2)
+    commit('note: 更新正文')
+    const page1 = await listHistoryCommits(root, { noteIndex: '0001', limit: 1 })
+    const page2 = await listHistoryCommits(root, { noteIndex: '0001', skip: 1, limit: 1 })
+    const page3 = await listHistoryCommits(root, { noteIndex: '0001', skip: 2, limit: 1 })
+    expect([page1.commits[0]?.subject, page2.commits[0]?.subject]).toEqual([
+      'note: 更新正文',
+      'feat: 相关首次提交'
+    ])
+    expect(page1.hasMore).toBe(true)
+    expect(page2.hasMore).toBe(false)
+    expect(page3.commits).toHaveLength(0)
+  })
+
+  it('命中扫描上限时标记 truncated，不静默漏掉更早的相关提交', async () => {
+    await write('notes/0001. A.md', NOTE_V1)
+    commit('feat: 相关首次提交')
+    for (let index = 0; index < 6; index += 1) {
+      await write(
+        `notes/0009. 噪声${index}.md`,
+        `---\nid: 99999999-9999-4999-8999-99999999999${index}\n---\n\n# 噪声\n`
+      )
+      commit(`chore: 无关提交 ${index}`)
+    }
+    const page = await listHistoryCommits(root, {
+      noteIndex: '0001',
+      limit: 1,
+      maxScanCommits: 3
+    })
+    expect(page.commits).toHaveLength(0)
+    expect(page.truncated).toBe(true)
+    expect(page.hasMore).toBe(true)
+
+    const full = await listHistoryCommits(root, { noteIndex: '0001', limit: 1 })
+    expect(full.truncated).toBe(false)
+    expect(full.commits[0]?.subject).toBe('feat: 相关首次提交')
+  })
+
+  it('浅克隆会被标记，并暴露本地历史深度不足', async () => {
+    await write('notes/0001. A.md', NOTE_V1)
+    commit('feat: 首次提交')
+    await write('notes/0001. A.md', NOTE_V2)
+    commit('note: 更新正文')
+    const source = root
+    const shallow = await fs.mkdtemp(path.join(os.tmpdir(), 'desk-history-shallow-'))
+    await fs.rm(shallow, { recursive: true, force: true })
+
+    // 真实浅克隆：只带 1 个提交
+    execFileSync('git', ['clone', '-q', '--depth', '1', `file://${source}`, shallow], {
+      encoding: 'utf8',
+      env: { ...process.env, LC_ALL: 'C' }
+    })
+    expect(await isShallowRepository(shallow)).toBe(true)
+
+    const page = await listHistoryCommits(shallow, {})
+    expect(page.shallow).toBe(true)
+    expect(page.commits).toHaveLength(1)
+    expect(page.hasMore).toBe(false)
+
+    // 完整仓库不能误报
+    const full = await listHistoryCommits(source, {})
+    expect(full.shallow).toBe(false)
+    expect(full.commits).toHaveLength(2)
+
+    await fs.rm(shallow, { recursive: true, force: true })
   })
 
   it('拒绝非 OID 的 revision 表达式', async () => {

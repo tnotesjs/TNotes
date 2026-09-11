@@ -1,4 +1,6 @@
 import { spawn } from 'node:child_process'
+import { stat } from 'node:fs/promises'
+import path from 'node:path'
 
 /**
  * 笔记/资源历史：**纯读取** Git 快照（计划 H1）。
@@ -125,12 +127,18 @@ export interface HistoryListOptions extends GitHistoryOptions {
   limit?: number
   /** 只保留与该编号相关的提交（笔记文件 + 同编号资源） */
   noteIndex?: string
+  /** 按编号过滤时最多扫描多少个提交（测试与超长历史用） */
+  maxScanCommits?: number
 }
 
 export interface HistoryListPage {
   head: string
   commits: HistoryCommitSummary[]
   hasMore: boolean
+  /** 浅克隆：本地历史只到克隆深度，更早的提交不可见 */
+  shallow: boolean
+  /** 命中扫描上限：更早的相关提交没有全部读完 */
+  truncated: boolean
 }
 
 function isIndexRelated(relPath: string, noteIndex: string): boolean {
@@ -183,9 +191,94 @@ async function changedPathsOf(
 }
 
 /**
+ * 是否浅克隆（`git clone --depth`）。
+ *
+ * 新 Git 用 `rev-parse --is-shallow-repository`；老版本不认这个参数时回退到
+ * 检查 `.git/shallow`（worktree/子模块里 git-dir 可能不是 `<root>/.git`）。
+ */
+export async function isShallowRepository(
+  rootPath: string,
+  options: GitHistoryOptions = {}
+): Promise<boolean> {
+  try {
+    const value = (await runGitText(rootPath, ['rev-parse', '--is-shallow-repository'], options))
+      .trim()
+      .toLowerCase()
+    return value === 'true'
+  } catch {
+    try {
+      const gitDir = (await runGitText(rootPath, ['rev-parse', '--git-dir'], options)).trim()
+      const shallowFile = path.isAbsolute(gitDir)
+        ? path.join(gitDir, 'shallow')
+        : path.join(rootPath, gitDir, 'shallow')
+      await stat(shallowFile)
+      return true
+    } catch {
+      return false
+    }
+  }
+}
+
+/**
  * 按固定 HEAD 分页列出提交；`noteIndex` 给定时只保留与该编号相关的提交
  * （同编号的旧文件名、改名、资源单独改动、合并带来的改动都算）。
+ *
+ * 分页语义：
+ * - 不带 `noteIndex`：`skip/limit` 直接作用在 `git log` 窗口上（H1 行为不变）
+ * - 带 `noteIndex`：先扫描、过滤，再对**过滤后的序列**分页。否则 `limit=1` 这种
+ *   「只要最新一条相关提交」的调用会被最新的无关提交挤空（真实缺陷：打开历史
+ *   标签页时总是报「还没有历史提交」）
+ *
+ * 扫描有上限（`maxScanCommits`）：知识库历史很长时宁可给 `truncated` 也不把
+ * 整个历史读进内存。
  */
+async function readCommitWindow(
+  rootPath: string,
+  head: string,
+  skip: number,
+  count: number,
+  options: GitHistoryOptions
+): Promise<string[]> {
+  const format = '%H%x1f%h%x1f%ct%x1f%an%x1f%P%x1f%s'
+  const raw = await runGitText(
+    rootPath,
+    ['log', head, `--format=${format}`, '-z', `--max-count=${count}`, `--skip=${skip}`],
+    options
+  )
+  return raw
+    .split('\0')
+    .map((row) => row.replace(/^\n+/, ''))
+    .filter((row) => row.trim().length > 0)
+}
+
+async function summarizeCommit(
+  rootPath: string,
+  row: string,
+  noteIndex: string | undefined,
+  options: GitHistoryOptions
+): Promise<HistoryCommitSummary | null> {
+  const [oid, shortOid, committedAt, authorName, parents, subject] = row.split('\x1f')
+  if (!oid) return null
+  const changedPaths = await changedPathsOf(rootPath, oid, options)
+  const isMerge = (parents ?? '').split(' ').filter(Boolean).length > 1
+  return {
+    oid,
+    shortOid: shortOid ?? oid.slice(0, 7),
+    committedAt: Number.parseInt(committedAt ?? '0', 10),
+    authorName: authorName ?? '',
+    subject: subject ?? '',
+    parents: (parents ?? '').split(' ').filter(Boolean),
+    changedPaths,
+    isMerge,
+    touchesIndex: noteIndex
+      ? changedPaths.some((changed) => isIndexRelated(changed, noteIndex))
+      : false
+  }
+}
+
+export const HISTORY_SCAN_WINDOW = 100
+export const HISTORY_MAX_SCAN_COMMITS = 2000
+
 export async function listHistoryCommits(
   rootPath: string,
   options: HistoryListOptions = {}
@@ -197,43 +290,48 @@ export async function listHistoryCommits(
   }
   const skip = Math.max(0, options.skip ?? 0)
   const limit = options.limit ?? 30
-  const format = '%H%x1f%h%x1f%ct%x1f%an%x1f%P%x1f%s'
-  const raw = await runGitText(
-    rootPath,
-    ['log', head, `--format=${format}`, '-z', `--max-count=${limit + 1}`, `--skip=${skip}`],
-    options
-  )
-  const rows = raw
-    .split('\0')
-    .map((row) => row.replace(/^\n+/, ''))
-    .filter((row) => row.trim().length > 0)
-  const hasMore = rows.length > limit
-  const page = rows.slice(0, limit)
-  const commits: HistoryCommitSummary[] = []
-  for (const row of page) {
-    const [oid, shortOid, committedAt, authorName, parents, subject] = row.split('\x1f')
-    if (!oid) continue
-    const changedPaths = await changedPathsOf(rootPath, oid, options)
-    const isMerge = (parents ?? '').split(' ').filter(Boolean).length > 1
-    commits.push({
-      oid,
-      shortOid: shortOid ?? oid.slice(0, 7),
-      committedAt: Number.parseInt(committedAt ?? '0', 10),
-      authorName: authorName ?? '',
-      subject: subject ?? '',
-      parents: (parents ?? '').split(' ').filter(Boolean),
-      changedPaths,
-      isMerge,
-      touchesIndex: options.noteIndex
-        ? changedPaths.some((changed) => isIndexRelated(changed, options.noteIndex!))
-        : false
-    })
+  const shallow = await isShallowRepository(rootPath, options)
+
+  if (!options.noteIndex) {
+    const rows = await readCommitWindow(rootPath, head, skip, limit + 1, options)
+    const commits: HistoryCommitSummary[] = []
+    for (const row of rows.slice(0, limit)) {
+      const commit = await summarizeCommit(rootPath, row, undefined, options)
+      if (commit) commits.push(commit)
+    }
+    return { head, commits, hasMore: rows.length > limit, shallow, truncated: false }
   }
+
+  const noteIndex = options.noteIndex
+  const maxScan = Math.max(1, options.maxScanCommits ?? HISTORY_MAX_SCAN_COMMITS)
+  const wanted = skip + limit + 1
+  const related: HistoryCommitSummary[] = []
+  let scanned = 0
+  let exhausted = false
+  while (related.length < wanted && scanned < maxScan) {
+    const count = Math.min(HISTORY_SCAN_WINDOW, maxScan - scanned)
+    const rows = await readCommitWindow(rootPath, head, scanned, count, options)
+    if (rows.length === 0) {
+      exhausted = true
+      break
+    }
+    for (const row of rows) {
+      const commit = await summarizeCommit(rootPath, row, noteIndex, options)
+      if (commit?.touchesIndex) related.push(commit)
+    }
+    scanned += rows.length
+    if (rows.length < count) {
+      exhausted = true
+      break
+    }
+  }
+  const truncated = !exhausted && related.length < wanted
   return {
     head,
-    commits: options.noteIndex ? commits.filter((commit) => commit.touchesIndex) : commits,
-    // 过滤后可能整页都被滤掉：让调用方继续翻页直到 hasMore=false
-    hasMore
+    commits: related.slice(skip, skip + limit),
+    hasMore: related.length > skip + limit || truncated,
+    shallow,
+    truncated
   }
 }
 

@@ -22,6 +22,10 @@ export interface HistoryListResult {
   head: string
   commits: HistoryCommitSummary[]
   hasMore: boolean
+  /** 浅克隆：更早的历史不在本地，界面要明确提示 */
+  shallow: boolean
+  /** 命中扫描上限：更早的相关提交没读完，界面要说明 */
+  truncated: boolean
 }
 
 export interface HistoryBlobResult {

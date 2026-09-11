@@ -60,11 +60,54 @@ const kbAssetsTabSchema = z.object({
   dirty: z.boolean().optional()
 })
 
+/** 画布源文件：relPath 只允许 assets/ 下的 .excalidraw；内容有上限。 */
+const excalidrawRelPathSchema = z
+  .string()
+  .min(1)
+  .max(300)
+  .refine((value) => value.startsWith('assets/'), '画布必须位于 assets/ 下')
+  .refine((value) => value.toLowerCase().endsWith('.excalidraw'), '只允许 .excalidraw 源文件')
+
+const excalidrawTabSchema = z.object({
+  id: z.string().min(1),
+  type: z.literal('excalidraw'),
+  knowledgeBaseId: z.string().min(1),
+  knowledgeBaseName: z.string(),
+  relPath: excalidrawRelPathSchema,
+  ownerNoteIndex: z
+    .string()
+    .regex(/^\d{4}$/)
+    .nullable(),
+  title: z.string(),
+  icon: iconSchema,
+  pinned: z.boolean().optional(),
+  openedAt: z.number().finite().optional(),
+  dirty: z.boolean().optional(),
+  invalid: z.boolean().optional()
+})
+
+const noteHistoryTabSchema = z.object({
+  id: z.string().min(1),
+  type: z.literal('note-history'),
+  knowledgeBaseId: z.string().min(1),
+  knowledgeBaseName: z.string(),
+  noteIndex: z.string().regex(/^\d{4}$/),
+  noteUuid: z.string().min(1).optional(),
+  /** 只接受完整 40 位 OID 或空串（恢复时会重新定位最新提交） */
+  commit: z.union([z.literal(''), z.string().regex(/^[0-9a-f]{40}$/)]),
+  title: z.string(),
+  icon: iconSchema,
+  pinned: z.boolean().optional(),
+  openedAt: z.number().finite().optional()
+})
+
 const editorTabSchema = z.discriminatedUnion('type', [
   noteTabSchema,
   webTabSchema,
   kbSettingsTabSchema,
-  kbAssetsTabSchema
+  kbAssetsTabSchema,
+  excalidrawTabSchema,
+  noteHistoryTabSchema
 ])
 
 const editorLayoutSchema: z.ZodType<WorkspaceSession['layout']> = z.lazy(() =>
@@ -301,14 +344,6 @@ export const tocDeleteSchema = z.object({
   entry: entryRefSchema,
   expectedSnapshotRevision: z.string().min(1)
 })
-
-/** 画布源文件：relPath 只允许 assets/ 下的 .excalidraw；内容有上限。 */
-const excalidrawRelPathSchema = z
-  .string()
-  .min(1)
-  .max(300)
-  .refine((value) => value.startsWith('assets/'), '画布必须位于 assets/ 下')
-  .refine((value) => value.toLowerCase().endsWith('.excalidraw'), '只允许 .excalidraw 源文件')
 
 export const excalidrawCreateSchema = z.object({
   knowledgeBaseId: z.string().min(1),

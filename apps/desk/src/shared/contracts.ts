@@ -763,6 +763,10 @@ export interface HistoryListResultDto {
   head: string
   commits: HistoryCommitSummaryDto[]
   hasMore: boolean
+  /** 浅克隆：历史只到克隆深度，更早版本不在本地 */
+  shallow: boolean
+  /** 命中扫描上限：更早的相关提交没有被全部读出 */
+  truncated: boolean
 }
 
 export interface HistorySnapshotRequest {

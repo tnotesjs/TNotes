@@ -9,6 +9,13 @@
 import { computed, onMounted, ref } from 'vue'
 
 import HistoryNotePreview from '../history/HistoryNotePreview.vue'
+import {
+  describeCommit,
+  resolveSelection,
+  restoreDisabledReason,
+  shallowNotice,
+  truncatedNotice
+} from '../history/historyPaneModel'
 import { useEditorStore } from '../stores/editor'
 
 import type {
@@ -25,10 +32,27 @@ const error = ref('')
 const commits = ref<HistoryCommitSummaryDto[]>([])
 const head = ref('')
 const hasMore = ref(false)
+const shallow = ref(false)
+const truncated = ref(false)
 const skipped = ref(0)
+/** 选中版本的正文类型：非文本时不宣称「可恢复」 */
+const bodyKind = ref<'unknown' | 'text' | 'binary'>('unknown')
 const PAGE_SIZE = 50
 
 const selectedCommit = computed(() => props.tab.commit)
+const shallowHint = computed(() => shallowNotice({ shallow: shallow.value }))
+const truncatedHint = computed(() => truncatedNotice({ truncated: truncated.value }))
+const restoreReason = computed(() =>
+  restoreDisabledReason({
+    hasSelection: Boolean(selectedCommit.value),
+    // H4/H5 未验收前不开放恢复；正文类型由预览回调上来
+    gate: { open: false, body: bodyKind.value }
+  })
+)
+
+function noteBodyKind(kind: 'unknown' | 'text' | 'binary'): void {
+  bodyKind.value = kind
+}
 
 function formatTime(seconds: number): string {
   const date = new Date(seconds * 1000)
@@ -58,13 +82,16 @@ async function loadPage(reset: boolean): Promise<void> {
     }
     const value: HistoryListResultDto = result.value
     head.value = value.head
-    commits.value = reset ? value.commits : [...commits.value, ...value.commits]
+    shallow.value = value.shallow
+    truncated.value = value.truncated
+    const merged = reset ? value.commits : [...commits.value, ...value.commits]
+    commits.value = merged
     hasMore.value = value.hasMore
-    skipped.value = commits.value.length
-    // 打开时定位到最新相关提交；切换 commit 只更新本页选中版本
-    if (reset && !selectedCommit.value && value.commits[0]) {
-      editor.selectHistoryCommit(props.tab.id, value.commits[0].oid)
-    }
+    skipped.value = merged.length
+    // 刷新/重开后：选中的版本还在就保留，否则回到最新一条
+    const next = resolveSelection(merged, selectedCommit.value)
+    if (next !== selectedCommit.value) editor.selectHistoryCommit(props.tab.id, next)
+    if (reset && !next) bodyKind.value = 'unknown'
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : String(cause)
   } finally {
@@ -73,7 +100,13 @@ async function loadPage(reset: boolean): Promise<void> {
 }
 
 function select(commit: HistoryCommitSummaryDto): void {
+  bodyKind.value = 'unknown'
   editor.selectHistoryCommit(props.tab.id, commit.oid)
+}
+
+function refresh(): void {
+  if (loading.value) return
+  void loadPage(true)
 }
 
 onMounted(() => void loadPage(true))
@@ -84,8 +117,26 @@ onMounted(() => void loadPage(true))
     <aside class="history-pane__list">
       <header class="history-pane__list-header">
         <strong>历史版本 · {{ tab.noteIndex }}</strong>
-        <span v-if="head" class="history-pane__head" data-history-head>{{ head.slice(0, 7) }}</span>
+        <span class="history-pane__list-actions">
+          <span v-if="head" class="history-pane__head" data-history-head>{{
+            head.slice(0, 7)
+          }}</span>
+          <button
+            type="button"
+            class="history-pane__refresh"
+            data-history-refresh
+            :disabled="loading"
+            title="重新读取历史"
+            @click="refresh"
+          >
+            ↻
+          </button>
+        </span>
       </header>
+      <p v-if="shallowHint" class="history-pane__notice" data-history-shallow>{{ shallowHint }}</p>
+      <p v-if="truncatedHint" class="history-pane__notice" data-history-truncated>
+        {{ truncatedHint }}
+      </p>
       <p v-if="loading && commits.length === 0" class="history-pane__status">正在读取历史…</p>
       <p v-else-if="error" class="history-pane__status is-error" data-history-list-error>
         {{ error }}
@@ -103,11 +154,7 @@ onMounted(() => void loadPage(true))
             @click="select(commit)"
           >
             <span class="history-pane__commit-subject">{{ commit.subject }}</span>
-            <span class="history-pane__commit-meta">
-              {{ commit.shortOid }} · {{ formatTime(commit.committedAt) }}
-              <template v-if="commit.touchesIndex"> · 含本体/资源</template>
-              <template v-if="commit.isMerge"> · 合并</template>
-            </span>
+            <span class="history-pane__commit-meta">{{ describeCommit(commit, formatTime) }}</span>
           </button>
         </li>
       </ul>
@@ -131,16 +178,23 @@ onMounted(() => void loadPage(true))
         :note-index="tab.noteIndex"
         :note-uuid="tab.noteUuid"
         :commit="selectedCommit"
+        @body-kind="noteBodyKind"
       />
       <div v-else class="history-pane__placeholder" data-history-no-selection>
         <strong>选择一个历史版本</strong>
         <span>左侧列表按时间列出与编号 {{ tab.noteIndex }} 相关的提交。</span>
       </div>
       <footer class="history-pane__actions">
-        <button type="button" class="history-pane__restore" disabled title="恢复功能尚未开放">
+        <button
+          type="button"
+          class="history-pane__restore"
+          data-history-restore
+          :disabled="Boolean(restoreReason)"
+          :title="restoreReason"
+        >
           恢复到该版本
         </button>
-        <span class="history-pane__hint">恢复需要备份与事务日志（计划 H4/H5），当前只能浏览。</span>
+        <span class="history-pane__hint" data-history-restore-reason>{{ restoreReason }}</span>
       </footer>
     </div>
   </div>
@@ -172,7 +226,37 @@ onMounted(() => void loadPage(true))
   font-size: 13px;
 }
 
+.history-pane__list-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .history-pane__head {
+  color: var(--tn-text-muted, #6b7280);
+  font-size: 11px;
+}
+
+.history-pane__refresh {
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--tn-text-muted, #6b7280);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 2px 4px;
+}
+
+.history-pane__refresh:hover {
+  background: var(--tn-surface-muted, #f3f4f6);
+}
+
+.history-pane__notice {
+  margin: 0;
+  border-radius: 6px;
+  background: var(--tn-surface-muted, #f3f4f6);
+  padding: 6px 8px;
   color: var(--tn-text-muted, #6b7280);
   font-size: 11px;
 }

@@ -21,6 +21,8 @@ const props = defineProps<{
   noteUuid?: string
 }>()
 
+const emit = defineEmits<{ 'body-kind': [kind: 'unknown' | 'text' | 'binary'] }>()
+
 const loading = ref(false)
 const error = ref('')
 const noteRelPath = ref('')
@@ -125,6 +127,7 @@ async function load(): Promise<void> {
   html.value = ''
   diagnostics.value = []
   mounts.value = []
+  emit('body-kind', 'unknown')
   try {
     const loaded = await session.loadNote({
       knowledgeBaseId: props.knowledgeBaseId,
@@ -136,12 +139,15 @@ async function load(): Promise<void> {
     if (loaded.kind === 'stale') return
     if (loaded.kind === 'error') {
       error.value = loaded.message
+      emit('body-kind', 'unknown')
       return
     }
     if (!loaded.note.text) {
       error.value = '该版本正文不是文本文件，无法预览'
+      emit('body-kind', 'binary')
       return
     }
+    emit('body-kind', 'text')
     const rendered = renderHistoryMarkdown(loaded.note.text, loaded.context)
     if (generation !== renderGeneration) return
     noteRelPath.value = loaded.note.relPath

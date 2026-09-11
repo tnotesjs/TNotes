@@ -26,6 +26,7 @@ mkdirSync(profile, { recursive: true })
 mkdirSync(shots, { recursive: true })
 
 const NOTE_UUID = '2f1c5f0e-9a3c-4c6f-9d2a-51f4b0a4c9d1'
+const BROTHER_UUID = NOTE_UUID.replace(/1$/, '2')
 const OLD_IMAGE = 'assets/0042-old.png'
 const GONE_IMAGE = 'assets/0042-gone.png'
 const DRAWING = 'assets/0042-drawing.excalidraw'
@@ -434,6 +435,31 @@ try {
     `script=${blocked.scripts} 占位=${blocked.unsupported} 注入=${blocked.pwned}`
   )
 
+  // H3：条目变更概览、刷新、恢复门禁文案
+  const overview = await page.locator('[data-history-commits] button').first().innerText()
+  record(
+    'H3-1 提交条目显示正文/资源变更概览',
+    /正文 \d+/.test(overview) && /资源 \d+/.test(overview),
+    overview.split('\n').at(-1) ?? ''
+  )
+
+  const restoreReason = await page.locator('[data-history-restore-reason]').innerText()
+  const restoreDisabled = await page
+    .locator('[data-history-restore]')
+    .evaluate((button) => button.disabled)
+  record(
+    'H3-2 恢复按钮禁用并说明原因（H4/H5 门禁）',
+    restoreDisabled && restoreReason.includes('H4/H5'),
+    restoreReason
+  )
+
+  await page.locator('[data-history-refresh]').click()
+  const refreshed = await waitFor(async () => {
+    const text = await page.locator('[data-history-body]').innerText()
+    return text.includes('OLD-VERSION-MARKER')
+  })
+  record('H3-3 刷新后仍保留选中的历史版本', Boolean(refreshed))
+
   await page.screenshot({ path: join(shots, '01-old-commit.png'), fullPage: false })
 
   // 同一个引用在新 commit 里指向已删除文件：必须报缺失，不回退当前磁盘
@@ -468,6 +494,61 @@ try {
   record('H2-16 连续切版本只保留最后一次结果', Boolean(settled))
 
   await page.screenshot({ path: join(shots, '02-after-switch.png'), fullPage: false })
+
+  // H3：多标签隔离 —— 0043 的历史页有自己的选中版本，互不影响
+  const otherNode = page.locator(`.toc-row[data-note-uuid="${BROTHER_UUID}"]`)
+  if ((await otherNode.count()) > 0) {
+    await otherNode.click({ button: 'right' })
+    const panes = page.locator('[data-note-history-pane]')
+    const bothLoaded = await waitFor(async () => {
+      const counts = await panes.evaluateAll((items) =>
+        items.map((pane) => pane.querySelectorAll('[data-history-commits] button').length)
+      )
+      return counts.length === 2 && counts.every((count) => count >= 1)
+    }, 15000)
+    const headers = await panes.evaluateAll((items) =>
+      items.map((pane) =>
+        (pane.querySelector('.history-pane__list-header')?.textContent ?? '').trim()
+      )
+    )
+    const indexes = new Set(
+      headers.map((header) => header.replace(/\D+/g, '').slice(0, 4)).filter(Boolean)
+    )
+    record(
+      'H3-4 两篇笔记各开一个历史标签页，切版本互不影响',
+      Boolean(bothLoaded) && indexes.size === 2,
+      headers.join(' | ')
+    )
+    await page.screenshot({ path: join(shots, '03-two-history-tabs.png'), fullPage: false })
+  } else {
+    record('H3-4 两篇笔记各开一个历史标签页，切版本互不影响', false, '兄弟笔记行不存在')
+  }
+
+  // 关闭只读历史标签：没有未保存内容，不弹确认
+  await app.evaluate(({ dialog }) => {
+    const globalScope = globalThis
+    globalScope.__deskDialogs = []
+    dialog.showMessageBox = async (_window, options) => {
+      globalScope.__deskDialogs.push(String(options?.message ?? options ?? ''))
+      return { response: 1, checkboxChecked: false }
+    }
+  })
+  const dialogsBefore = await app.evaluate(() => (globalThis.__deskDialogs ?? []).length)
+  const beforeClose = await page.locator('[data-note-history-pane]').count()
+  await page.locator('[data-note-history-pane]').first().locator('..').locator('..')
+  await page.locator('.tab', { hasText: '历史' }).first().locator('.tab-close').click()
+  const closed = await waitFor(
+    async () => (await page.locator('[data-note-history-pane]').count()) < beforeClose,
+    6000
+  )
+  const dialogs = await app.evaluate(() => globalThis.__deskDialogs ?? [])
+  record(
+    'H3-5 关闭只读历史标签不弹脏确认',
+    Boolean(closed) && dialogs.length === dialogsBefore,
+    `关闭前 ${beforeClose} 个历史页，关闭后 ${await page
+      .locator('[data-note-history-pane]')
+      .count()} 个，对话框=${JSON.stringify(dialogs)}`
+  )
 
   const after = repoState()
   record(
