@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { classifyAssetWriteBlocks, classifyAssetWriteMessage } from './kbAssetsReasons'
+import {
+  classifyAssetWriteBlocks,
+  classifyAssetWriteMessage,
+  renameBlockCode,
+  renameBlockReason
+} from './kbAssetsReasons'
 
 describe('classifyAssetWriteMessage', () => {
   it('labels coverage, dirty, stale plan and incomplete journals', () => {
@@ -16,6 +21,28 @@ describe('classifyAssetWriteMessage', () => {
     expect(classifyAssetWriteMessage('该知识库有未完成的资源事务，请先恢复后再继续')).toBe(
       'incomplete'
     )
+  })
+})
+
+describe('资源重命名门禁', () => {
+  it('画布（真相源）明确不可重命名，并给出可读原因', () => {
+    const code = renameBlockCode({ renameAllowed: false, protection: ['excalidraw-source'] })
+    expect(code).toBe('excalidraw-source')
+    expect(renameBlockReason(code)).toContain('归属编号')
+  })
+
+  it('允许改名时不产生任何提示', () => {
+    expect(renameBlockCode({ renameAllowed: true, protection: [] })).toBe('none')
+    expect(renameBlockReason('none')).toBe('')
+  })
+
+  it('区分图标/符号链接/覆盖未完成', () => {
+    expect(renameBlockCode({ renameAllowed: false, protection: ['kb-icon'] })).toBe('kb-icon')
+    expect(renameBlockCode({ renameAllowed: false, protection: ['symlink-escape'] })).toBe(
+      'symlink-escape'
+    )
+    expect(renameBlockCode({ renameAllowed: false, protection: [] })).toBe('coverage')
+    expect(renameBlockReason('coverage')).toContain('未知引用')
   })
 })
 

@@ -18,7 +18,12 @@ import type {
 import { focusDialogInput } from '../dialogInputFocus'
 import { useEditorStore } from '../stores/editor'
 import { useWorkspaceStore } from '../stores/workspace'
-import { classifyAssetWriteBlocks, type ClassifiedAssetWriteBlock } from './kbAssetsReasons'
+import {
+  classifyAssetWriteBlocks,
+  renameBlockCode,
+  renameBlockReason,
+  type ClassifiedAssetWriteBlock
+} from './kbAssetsReasons'
 
 const props = defineProps<{ tab: KbAssetsEditorTab; active: boolean }>()
 
@@ -324,8 +329,16 @@ function setWriteError(deskError: DeskError): void {
   writeError.value = classifyAssetWriteBlocks({ error: deskError })
 }
 
+const renameBlock = computed(() => {
+  const asset = selected.value
+  if (!asset) return ''
+  return renameBlockReason(renameBlockCode(asset))
+})
+
 function openRename(): void {
   if (!selected.value || writeBusy.value) return
+  // 真相源/图标等受保护资源不给改名入口（下面按钮同样禁用，这里是第二道）
+  if (renameBlockCode(selected.value) !== 'none') return
   renameDest.value = selected.value.relPath
   previewPlan.value = null
   writeError.value = []
@@ -764,16 +777,22 @@ onUnmounted(() => {
           <p v-if="selected.protection.length" class="hint">
             保护原因：{{ selected.protection.map(protectionLabel).join('、') }}
           </p>
-          <p class="hint">
-            重命名：{{
-              selected.renameAllowed ? '可生成重命名计划' : '已阻止（未知引用或覆盖未完成）'
-            }}
+          <p class="hint" data-asset-rename-state>
+            <template v-if="selected.renameAllowed">重命名：可生成重命名计划</template>
+            <template v-else>重命名：已阻止（{{ renameBlock }}）</template>
           </p>
           <p v-if="selectedMergeGroup" class="hint">
             同笔记内容重复 {{ selectedMergeGroup.relPaths.length }} 个，可合并到当前文件。
           </p>
           <div class="detail-actions">
-            <button type="button" class="save-button" :disabled="writeBusy" @click="openRename">
+            <button
+              type="button"
+              class="save-button"
+              data-asset-rename
+              :disabled="writeBusy || !selected.renameAllowed"
+              :title="renameBlock"
+              @click="openRename"
+            >
               重命名
             </button>
             <button

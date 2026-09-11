@@ -91,3 +91,35 @@ export function classifyAssetWriteBlocks(input: {
   push(error.message, error.code)
   return items
 }
+
+/**
+ * 为什么这个资源不能重命名。
+ *
+ * 面板必须把入口真的禁掉并说清原因：`.excalidraw` 是绘图真相源（文件名由归属编号
+ * 决定），资源面板不提供改名；让用户填完表单再被拒绝是很差的体验。
+ */
+export function renameBlockCode(asset: {
+  renameAllowed: boolean
+  protection: string[]
+}): 'none' | 'excalidraw-source' | 'kb-icon' | 'symlink-escape' | 'coverage' {
+  if (asset.renameAllowed) return 'none'
+  if (asset.protection.includes('excalidraw-source')) return 'excalidraw-source'
+  if (asset.protection.includes('kb-icon')) return 'kb-icon'
+  if (asset.protection.includes('symlink-escape')) return 'symlink-escape'
+  return 'coverage'
+}
+
+export function renameBlockReason(code: ReturnType<typeof renameBlockCode>): string {
+  switch (code) {
+    case 'excalidraw-source':
+      return '画布文件名由归属编号决定（改名会让引用与归属失配），资源面板不提供重命名'
+    case 'kb-icon':
+      return '知识库图标文件名固定，不能重命名'
+    case 'symlink-escape':
+      return '该文件是指向库外的符号链接，不能重命名'
+    case 'coverage':
+      return '存在未知引用或扫描覆盖未完成，无法证明改名不会破坏引用'
+    default:
+      return ''
+  }
+}

@@ -225,6 +225,21 @@ try {
       `.excalidraw 应受保护，实际: ${protectedText}`
     )
 
+    // 画布是绘图真相源：重命名入口必须是禁用的，并且说清原因（不能填完表单才被拒）
+    await page
+      .locator('.file-list button, .file-list li')
+      .filter({ hasText: '0004-drawing.excalidraw' })
+      .first()
+      .click()
+    await page.waitForTimeout(200)
+    const renameState = await page.locator('[data-asset-rename-state]').innerText()
+    const renameDisabled = await page.locator('[data-asset-rename]').isDisabled()
+    assert(renameDisabled, 'excalidraw 的重命名按钮应处于禁用状态')
+    assert(
+      renameState.includes('归属编号'),
+      `重命名禁用原因应说明画布文件名由归属编号决定，实际: ${renameState}`
+    )
+
     await filter.selectOption('uncertain-affected')
     await page.waitForTimeout(300)
     const uncertain = (await page.locator('.file-list').innerText()).replace(/\s+/g, ' ')
