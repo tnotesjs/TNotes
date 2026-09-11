@@ -21,7 +21,12 @@ export type {
   AssetUrlKind,
   ScanAssetsOptions
 } from './types'
-export { classifyAssetUrl, offsetToLineColumn, rewriteLocalAssetUrl, resolveLocalKbPath } from './paths'
+export {
+  classifyAssetUrl,
+  offsetToLineColumn,
+  rewriteLocalAssetUrl,
+  resolveLocalKbPath
+} from './paths'
 export { extractAssetReferences } from './extract'
 export { scanAssets } from './scan'
 export { planMerge, planOptimize, planRecycle, planRename } from './plan'

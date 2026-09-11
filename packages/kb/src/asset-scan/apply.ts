@@ -88,7 +88,8 @@ export async function fillPlanHashes(
   const moves = await Promise.all(
     plan.moves.map(async (move) => ({
       ...move,
-      sha256: inputHashes[move.fromRelPath] ?? (await hashFile(path.join(rootPath, move.fromRelPath)))
+      sha256:
+        inputHashes[move.fromRelPath] ?? (await hashFile(path.join(rootPath, move.fromRelPath)))
     }))
   )
   return { ...plan, inputHashes, backups, moves }
@@ -262,7 +263,10 @@ async function verifyPlanFresh(rootPath: string, plan: AssetOperationPlan): Prom
   }
 }
 
-async function allBackupsPresent(store: AssetStorePaths, plan: AssetOperationPlan): Promise<boolean> {
+async function allBackupsPresent(
+  store: AssetStorePaths,
+  plan: AssetOperationPlan
+): Promise<boolean> {
   if (plan.backups.length === 0) return false
   for (const item of plan.backups) {
     if (!(await pathExists(backupFile(store, plan.id, item.relPath)))) return false
@@ -283,7 +287,11 @@ async function backupPlanFiles(
       throw new KbError('REVISION_CONFLICT', `备份时文件已改变: ${item.relPath}`)
     }
   }
-  if (plan.kind === 'recycle' || plan.kind === 'merge' || plan.moves.some((move) => !move.toRelPath)) {
+  if (
+    plan.kind === 'recycle' ||
+    plan.kind === 'merge' ||
+    plan.moves.some((move) => !move.toRelPath)
+  ) {
     for (const move of plan.moves) {
       const from = path.join(rootPath, move.fromRelPath)
       const to = recycleFile(store, plan.id, move.fromRelPath)
@@ -502,10 +510,7 @@ async function restoreAssetPlanUnlocked(
         })
       }
     }
-    const dest =
-      plan.kind === 'rename'
-        ? plan.moves[0]?.toRelPath
-        : undefined
+    const dest = plan.kind === 'rename' ? plan.moves[0]?.toRelPath : undefined
     const destAbs = dest ? path.join(rootPath, dest) : null
     const destHash = destAbs ? await pathHash(destAbs) : null
     if (dest && destHash && destHash !== plan.moves[0].sha256) {
@@ -608,7 +613,9 @@ export async function listAssetJournals(store: AssetStorePaths): Promise<AssetJo
   return records
 }
 
-export async function listIncompleteJournals(store: AssetStorePaths): Promise<AssetJournalRecord[]> {
+export async function listIncompleteJournals(
+  store: AssetStorePaths
+): Promise<AssetJournalRecord[]> {
   return (await listAssetJournals(store)).filter(
     (record) => record.stage !== 'applied' && record.stage !== 'restored'
   )

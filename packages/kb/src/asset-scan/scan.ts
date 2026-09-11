@@ -182,11 +182,7 @@ function sourceRoleForExt(ext: string): AssetScanSource['role'] | null {
   return null
 }
 
-function extractFollowable(
-  ext: string,
-  text: string,
-  ctx: ExtractContext
-): ExtractResult {
+function extractFollowable(ext: string, text: string, ctx: ExtractContext): ExtractResult {
   if (ext === '.vue') return extractVueSfc(text, ctx)
   if (ext === '.excalidraw') return extractExcalidraw(text, ctx)
   if (ext === '.css') {
@@ -225,10 +221,7 @@ export async function scanAssets(
 
   const assets = await walkAssetFiles(path.join(root, ASSETS_DIR), '', rootReal, signal)
   const followable = await walkFollowableFiles(root, '', rootReal, signal)
-  const existingFiles = new Set([
-    ...assets.map((asset) => asset.relPath),
-    ...followable
-  ])
+  const existingFiles = new Set([...assets.map((asset) => asset.relPath), ...followable])
 
   const sources: AssetScanSource[] = []
   const references: AssetReference[] = []
@@ -423,7 +416,8 @@ export async function scanAssets(
   if (sawDynamic) {
     diagnostics.push({
       code: 'dynamic-expression',
-      message: '发现动态资源绑定（:src / v-bind:src / v-bind 对象 / 动态 import），无法静态确定目标',
+      message:
+        '发现动态资源绑定（:src / v-bind:src / v-bind 对象 / 动态 import），无法静态确定目标',
       scope: 'knowledge-base'
     })
   }
@@ -497,7 +491,12 @@ export async function scanAssets(
   }
 
   const scopeUnknown =
-    sawDynamic || sawUnknownSrcset || sawUnknownCss || sawUnknownExcalidraw || sawUnknownVue || unparsedScript
+    sawDynamic ||
+    sawUnknownSrcset ||
+    sawUnknownCss ||
+    sawUnknownExcalidraw ||
+    sawUnknownVue ||
+    unparsedScript
   const coverageComplete = !scopeUnknown
   const batchCleanupAllowed = coverageComplete
 

@@ -10,7 +10,10 @@ import { parseSrcsetCandidates } from '../src/asset-scan/srcset'
 import { planRename } from '../src/asset-scan/plan'
 import { scanAssets } from '../src/asset-scan/scan'
 import { extractVueSfc } from '../src/asset-scan/vue'
-import { writeExtendedAssetFixture, writeIncompleteCoverageFixture } from './helpers/assetScanFixture'
+import {
+  writeExtendedAssetFixture,
+  writeIncompleteCoverageFixture
+} from './helpers/assetScanFixture'
 
 let root = ''
 
@@ -72,11 +75,13 @@ describe('P1-1b CSS / Vue / Excalidraw / reachability', () => {
       true
     )
     expect(report.references.some((ref) => ref.syntax === 'css-url' && ref.rewritable)).toBe(true)
-    expect(report.references.some((ref) => ref.syntax === 'css-import' && ref.rewritable)).toBe(true)
-    expect(report.references.some((ref) => ref.syntax === 'vue-import')).toBe(true)
-    expect(report.references.some((ref) => ref.syntax === 'excalidraw-path' && ref.rewritable)).toBe(
+    expect(report.references.some((ref) => ref.syntax === 'css-import' && ref.rewritable)).toBe(
       true
     )
+    expect(report.references.some((ref) => ref.syntax === 'vue-import')).toBe(true)
+    expect(
+      report.references.some((ref) => ref.syntax === 'excalidraw-path' && ref.rewritable)
+    ).toBe(true)
     expect(report.references.some((ref) => /^data:/i.test(ref.rawUrl))).toBe(false)
 
     expect(report.coverageComplete).toBe(true)

@@ -263,11 +263,7 @@ export function planMerge(
 
   if (blocked.length > 0) return emptyPlan('merge', report, [...new Set(blocked)])
 
-  const sources = new Set([
-    keep.relPath,
-    ...drops,
-    ...patches.map((patch) => patch.sourceRelPath)
-  ])
+  const sources = new Set([keep.relPath, ...drops, ...patches.map((patch) => patch.sourceRelPath)])
   return {
     id: randomUUID(),
     knowledgeBaseId: '',

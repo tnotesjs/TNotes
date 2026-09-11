@@ -20,7 +20,10 @@ export function parseSrcsetCandidates(value: string): SrcsetCandidate[] {
   const out: SrcsetCandidate[] = []
   let i = 0
   while (i < value.length) {
-    while (i < value.length && (value[i] === ',' || value[i] === ' ' || value[i] === '\t' || value[i] === '\n')) {
+    while (
+      i < value.length &&
+      (value[i] === ',' || value[i] === ' ' || value[i] === '\t' || value[i] === '\n')
+    ) {
       i += 1
     }
     if (i >= value.length) break

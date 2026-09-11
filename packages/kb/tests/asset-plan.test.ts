@@ -7,12 +7,21 @@ import { fileURLToPath } from 'node:url'
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { applyAssetPlan, applyPatchesToText, fillPlanHashes, recoverIncompleteJournals } from '../src/asset-scan/apply'
+import {
+  applyAssetPlan,
+  applyPatchesToText,
+  fillPlanHashes,
+  recoverIncompleteJournals
+} from '../src/asset-scan/apply'
 import { planRecycle, planRename } from '../src/asset-scan/plan'
 import { rewriteLocalAssetUrl } from '../src/asset-scan/paths'
 import { scanAssets } from '../src/asset-scan/scan'
 import { createWorkspace } from '../src/workspace'
-import { PNG_1X1, writeIncompleteCoverageFixture, writeWritableAssetFixture } from './helpers/assetScanFixture'
+import {
+  PNG_1X1,
+  writeIncompleteCoverageFixture,
+  writeWritableAssetFixture
+} from './helpers/assetScanFixture'
 
 const workerPath = fileURLToPath(new URL('./helpers/assetApplyWorker.ts', import.meta.url))
 
@@ -67,12 +76,17 @@ describe('plan preview', () => {
 
   it('blocks reserved names, dest clashes and unknown coverage', async () => {
     const report = await scanAssets(root)
-    expect(planRename(report, { fromRelPath: 'assets/used.png', toRelPath: 'assets/con.png' }).blockedReasons.length).toBeGreaterThan(0)
     expect(
-      planRename(report, { fromRelPath: 'assets/used.png', toRelPath: 'assets/idle.png' }).blockedReasons
+      planRename(report, { fromRelPath: 'assets/used.png', toRelPath: 'assets/con.png' })
+        .blockedReasons.length
+    ).toBeGreaterThan(0)
+    expect(
+      planRename(report, { fromRelPath: 'assets/used.png', toRelPath: 'assets/idle.png' })
+        .blockedReasons
     ).toContain('目标已存在: assets/idle.png')
     expect(
-      planRename(report, { fromRelPath: 'assets/used.png', toRelPath: 'notes/escape.png' }).blockedReasons
+      planRename(report, { fromRelPath: 'assets/used.png', toRelPath: 'notes/escape.png' })
+        .blockedReasons
     ).toContain('目标必须位于 assets/ 内')
 
     const incompleteRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'tnotes-asset-blocked-'))
@@ -86,9 +100,13 @@ describe('plan preview', () => {
       })
       expect(rename.blockedReasons.length).toBeGreaterThan(0)
       const recycle = planRecycle(incomplete, ['assets/idle.png'])
-      expect(recycle.blockedReasons.some((reason) => reason.includes('整库禁用批量清理'))).toBe(true)
+      expect(recycle.blockedReasons.some((reason) => reason.includes('整库禁用批量清理'))).toBe(
+        true
+      )
       const drawing = planRecycle(incomplete, ['assets/board.excalidraw'])
-      expect(drawing.blockedReasons.some((reason) => /Excalidraw|闲置|批量/.test(reason))).toBe(true)
+      expect(drawing.blockedReasons.some((reason) => /Excalidraw|闲置|批量/.test(reason))).toBe(
+        true
+      )
     } finally {
       await fs.rm(incompleteRoot, { recursive: true, force: true })
     }
@@ -251,10 +269,7 @@ async function restoreAssetPlanSafe(planId: string) {
 describe('subprocess crash journal', () => {
   it('recovers after a real process.exit between backup and mutation', async () => {
     const report = await scanAssets(root)
-    const plan = await fillPlanHashes(
-      root,
-      planRecycle(report, ['assets/idle.png'])
-    )
+    const plan = await fillPlanHashes(root, planRecycle(report, ['assets/idle.png']))
     const configPath = path.join(journalDir, 'worker-config.json')
     await fs.writeFile(
       configPath,

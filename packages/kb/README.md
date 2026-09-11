@@ -12,13 +12,13 @@
 
 资源状态：
 
-| 状态 | 含义 |
-| --- | --- |
-| `referenced` | 已被已解析根来源引用 |
-| `idle-candidate` | 覆盖完成且未被引用，可作为清理候选 |
-| `uncertain-idle` | 看起来闲置，但覆盖未完成，不能当可清理 |
-| `uncertain-affected` | 可能被未适配语法提到 |
-| `protected` | 知识库图标、越界符号链接、`.excalidraw` 真相源等 |
+| 状态                 | 含义                                             |
+| -------------------- | ------------------------------------------------ |
+| `referenced`         | 已被已解析根来源引用                             |
+| `idle-candidate`     | 覆盖完成且未被引用，可作为清理候选               |
+| `uncertain-idle`     | 看起来闲置，但覆盖未完成，不能当可清理           |
+| `uncertain-affected` | 可能被未适配语法提到                             |
+| `protected`          | 知识库图标、越界符号链接、`.excalidraw` 真相源等 |
 
 `coverageComplete` / `batchCleanupAllowed` 为 false 时关闭整库批量清理，并拒绝无法证明与未知来源无关的重命名。`renameAllowed` 是单文件门禁。
 

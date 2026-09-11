@@ -85,7 +85,10 @@ function covered(spans: Array<{ start: number; end: number }>, offset: number): 
   return spans.some((span) => offset >= span.start && offset < span.end)
 }
 
-function extractQuoted(source: string, quoteIndex: number): { value: string; start: number; end: number } | null {
+function extractQuoted(
+  source: string,
+  quoteIndex: number
+): { value: string; start: number; end: number } | null {
   const q = source[quoteIndex]
   if (q !== '"' && q !== "'") return null
   let i = quoteIndex + 1
@@ -94,17 +97,28 @@ function extractQuoted(source: string, quoteIndex: number): { value: string; sta
       i += 2
       continue
     }
-    if (source[i] === q) return { value: source.slice(quoteIndex + 1, i), start: quoteIndex + 1, end: i }
+    if (source[i] === q)
+      return { value: source.slice(quoteIndex + 1, i), start: quoteIndex + 1, end: i }
     i += 1
   }
   return null
 }
 
-function extractUnquotedUrl(source: string, from: number): { value: string; start: number; end: number } | null {
+function extractUnquotedUrl(
+  source: string,
+  from: number
+): { value: string; start: number; end: number } | null {
   let i = from
-  while (i < source.length && (source[i] === ' ' || source[i] === '\t' || source[i] === '\n')) i += 1
+  while (i < source.length && (source[i] === ' ' || source[i] === '\t' || source[i] === '\n'))
+    i += 1
   const start = i
-  while (i < source.length && source[i] !== ')' && source[i] !== ' ' && source[i] !== '\t' && source[i] !== '\n') {
+  while (
+    i < source.length &&
+    source[i] !== ')' &&
+    source[i] !== ' ' &&
+    source[i] !== '\t' &&
+    source[i] !== '\n'
+  ) {
     i += 1
   }
   if (i === start) return null

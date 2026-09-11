@@ -2,10 +2,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import {
-  restoreCanvasKeyboardFocus,
-  restoreCanvasKeyboardFocusWhenReady
-} from './focus'
+import { restoreCanvasKeyboardFocus, restoreCanvasKeyboardFocusWhenReady } from './focus'
 
 function fixture(height: number): { host: HTMLDivElement; canvas: HTMLCanvasElement } {
   const host = document.createElement('div')

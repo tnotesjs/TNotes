@@ -17,7 +17,9 @@ function looksLikeLocalPath(value: string): boolean {
   if (/^[a-z0-9][a-z0-9.+-]*\/[a-z0-9.+-]+$/i.test(value)) return false
   if (value.startsWith('#') || value.startsWith('{')) return false
   if (/^\.\.?(?:\/|$)/.test(value) || /^assets\//i.test(value) || /^file:/i.test(value)) return true
-  return /(?:^|\/)[^/\n]+\.(?:png|jpe?g|gif|svg|webp|avif|bmp|ico|excalidraw|html?|css)$/i.test(value)
+  return /(?:^|\/)[^/\n]+\.(?:png|jpe?g|gif|svg|webp|avif|bmp|ico|excalidraw|html?|css)$/i.test(
+    value
+  )
 }
 
 function collectStrings(value: unknown, out: string[]): void {
@@ -36,7 +38,10 @@ function collectStrings(value: unknown, out: string[]): void {
   }
 }
 
-function findJsonStringSpans(source: string, value: string): Array<{ start: number; end: number; encoded: string }> {
+function findJsonStringSpans(
+  source: string,
+  value: string
+): Array<{ start: number; end: number; encoded: string }> {
   const quoted = JSON.stringify(value)
   const encoded = quoted.slice(1, -1)
   const needle = `"${encoded}"`
@@ -97,7 +102,10 @@ export function extractExcalidraw(source: string, ctx: ExtractContext): ExtractR
         rawUrl: span.encoded,
         decodedPath: classified.decodedPath,
         targetRelPath: classified.targetRelPath,
-        syntax: classified.urlKind === 'other' && !classified.targetRelPath ? 'unsupported-excalidraw' : 'excalidraw-path',
+        syntax:
+          classified.urlKind === 'other' && !classified.targetRelPath
+            ? 'unsupported-excalidraw'
+            : 'excalidraw-path',
         urlKind: classified.urlKind,
         urlSuffix: classified.urlSuffix,
         rewritable:

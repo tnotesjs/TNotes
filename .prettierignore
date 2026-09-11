@@ -7,3 +7,5 @@ pnpm-lock.yaml
 **/*.min.css
 apps/desk/playground
 apps/desk/scripts/shots
+# E0 可行性验证的构建产物（已在 packages/ui/.gitignore 里忽略）
+**/.e0-dist

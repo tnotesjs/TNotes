@@ -56,9 +56,9 @@ describe('SSG after asset rename and recycle', () => {
     expect(fs.existsSync(path.join(dist, 'assets/mindmap.png'))).toBe(true)
 
     const distListing = fs.readdirSync(dist, { recursive: true }).map(String)
-    expect(distListing.some((item) => item.includes('asset-recycle') || item.includes('journal'))).toBe(
-      false
-    )
+    expect(
+      distListing.some((item) => item.includes('asset-recycle') || item.includes('journal'))
+    ).toBe(false)
     expect(recycleDir.startsWith(path.join(root, 'assets'))).toBe(false)
     expect(journalDir.startsWith(path.join(root, 'assets'))).toBe(false)
     expect(fs.existsSync(path.join(recycleDir, recycle.id, 'assets/idle.png'))).toBe(true)

@@ -65,10 +65,7 @@ function parseInitial(content: string): ExcalidrawInitialDataState {
   }
 }
 
-export {
-  restoreCanvasKeyboardFocus,
-  restoreCanvasKeyboardFocusWhenReady
-} from './focus'
+export { restoreCanvasKeyboardFocus, restoreCanvasKeyboardFocusWhenReady } from './focus'
 
 export function mountExcalidrawHost(options: MountExcalidrawHostOptions): ExcalidrawHostHandle {
   if (options.fontBase) setExcalidrawAssetPath(options.fontBase)
