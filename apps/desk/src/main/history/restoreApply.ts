@@ -192,7 +192,13 @@ async function applyHistoryRestoreLocked(
           relPath === plan.note.relPath
             ? plan.note
             : plan.resources.find((item) => item.relPath === relPath)
-        return { relPath, oid: entry?.oid ?? '', bytes: entry?.bytes ?? 0 }
+        return {
+          relPath,
+          // 改名后正文的 blob 在历史路径上
+          sourceRelPath: entry?.sourceRelPath ?? relPath,
+          oid: entry?.oid ?? '',
+          bytes: entry?.bytes ?? 0
+        }
       })
     },
     { now: deps.now }
@@ -234,7 +240,7 @@ async function applyHistoryRestoreLocked(
 
       const blob = await readBlob(plan.rootPath, {
         commit: plan.sourceCommit,
-        relPath: entry.relPath
+        relPath: entry.sourceRelPath ?? entry.relPath
       })
       await write(absolute, blob.bytes)
       entry.written = true

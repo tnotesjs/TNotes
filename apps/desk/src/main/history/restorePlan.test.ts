@@ -5,6 +5,7 @@ import path from 'node:path'
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
+import { readHistoryBlob, GitHistoryError } from './gitHistory'
 import {
   backupBeforeRestore,
   buildHistoryRestorePlan,
@@ -108,6 +109,34 @@ describe('buildHistoryRestorePlan', () => {
     expect(dto.totalBytes).toBeGreaterThan(0)
     expect(dto.backupRequired).toBe(true)
     expect(dto.preserved).toEqual([{ relPath: 'assets/0042-new.png', bytes: 3 }])
+  })
+
+  it('笔记改名后：正文写当前文件名，但 blob 来源是历史文件名', async () => {
+    await write('notes/0042. A.md', NOTE_V1)
+    await write('assets/0042-a.png', Buffer.from([1, 2, 3]))
+    const oldCommit = commit('feat: 初始版本')
+    git(['mv', 'notes/0042. A.md', 'notes/0042. A 改名.md'])
+    await write('notes/0042. A 改名.md', NOTE_V2)
+    const head = commit('rename: 笔记改名')
+
+    const plan = await buildHistoryRestorePlan(root, {
+      knowledgeBaseId: 'kb-1',
+      noteIndex: '0042',
+      commit: oldCommit,
+      expectedHead: head
+    })
+    expect(plan.note.relPath).toBe('notes/0042. A 改名.md')
+    expect(plan.note.sourceRelPath).toBe('notes/0042. A.md')
+    expect(plan.writePaths).toContain('notes/0042. A 改名.md')
+    // 当前版本名不会出现在历史提交里：必须用 sourceRelPath 读 blob
+    await expect(
+      readHistoryBlob(root, { commit: oldCommit, relPath: plan.note.relPath })
+    ).rejects.toBeInstanceOf(GitHistoryError)
+    const blob = await readHistoryBlob(root, {
+      commit: oldCommit,
+      relPath: plan.note.sourceRelPath!
+    })
+    expect(blob.text).toBe(NOTE_V1)
   })
 
   it('HEAD 外部漂移、非法 OID、缺提交都拒绝', async () => {

@@ -172,6 +172,147 @@ git('add', '-A')
 git('commit', '-q', '-m', 'docs: 新版正文，移除旧资源')
 const NEW_COMMIT = git('rev-parse', 'HEAD')
 
+// 进阶 fixture：多画布 + 笔记改名 + 废弃资源 + 图片
+const advanced = join(workspace, 'advanced-kb')
+const advancedNotes = join(advanced, 'notes')
+const advancedAssets = join(advanced, 'assets')
+mkdirSync(advancedNotes, { recursive: true })
+mkdirSync(advancedAssets, { recursive: true })
+const ADV_NOTE_UUID = '5a2b1c0d-3e4f-4a5b-8c9d-0e1f2a3b4c5d'
+const scene = (label) =>
+  `${JSON.stringify(
+    {
+      type: 'excalidraw',
+      version: 2,
+      source: 'desk-history-advanced',
+      elements: [
+        {
+          id: label,
+          type: 'rectangle',
+          x: 40,
+          y: 40,
+          width: 200,
+          height: 120,
+          angle: 0,
+          strokeColor: '#1e1e1e',
+          backgroundColor: '#ffd8a8',
+          fillStyle: 'solid',
+          strokeWidth: 2,
+          roughness: 1,
+          opacity: 100,
+          seed: 11,
+          version: 1,
+          versionNonce: 11,
+          isDeleted: false,
+          boundElements: null,
+          updated: 1,
+          link: null,
+          locked: false
+        }
+      ],
+      appState: { gridSize: null, viewBackgroundColor: '#ffffff' },
+      files: {}
+    },
+    null,
+    2
+  )}\n`
+const advancedImage = await sharp(gradient(240, 160, '#0ea5e9', '#22c55e'))
+  .png()
+  .toBuffer()
+const advancedAbandoned = await sharp(gradient(120, 90, '#a855f7', '#ec4899'))
+  .png()
+  .toBuffer()
+
+function gitAt(dir, ...args) {
+  return execFileSync('git', ['-C', dir, ...args], {
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      GIT_AUTHOR_NAME: 'Desk E2E',
+      GIT_AUTHOR_EMAIL: 'e2e@tnotes.local',
+      GIT_COMMITTER_NAME: 'Desk E2E',
+      GIT_COMMITTER_EMAIL: 'e2e@tnotes.local'
+    }
+  }).trim()
+}
+
+writeFileSync(
+  join(advanced, 'tnotes.json'),
+  JSON.stringify({ title: 'advanced-kb', name: 'advanced-kb' })
+)
+writeFileSync(join(advanced, 'TOC.md'), '- [ ] 0050. 进阶笔记\n')
+writeFileSync(
+  join(advancedNotes, '0050. 进阶.md'),
+  [
+    '---',
+    `id: ${ADV_NOTE_UUID}`,
+    '---',
+    '',
+    '# 进阶',
+    '',
+    'ADVANCED-A-MARKER',
+    '',
+    '![图](../assets/0050-img.png)',
+    '',
+    '<Excalidraw path="../assets/0050-a.excalidraw" height="240" />',
+    '',
+    '<Excalidraw path="../assets/0050-b.excalidraw" height="240" />',
+    ''
+  ].join('\n')
+)
+writeFileSync(join(advancedAssets, '0050-a.excalidraw'), scene('adv-a-v1'))
+writeFileSync(join(advancedAssets, '0050-b.excalidraw'), scene('adv-b-v1'))
+writeFileSync(join(advancedAssets, '0050-img.png'), advancedImage)
+writeFileSync(join(advancedAssets, '0050-abandoned.png'), advancedAbandoned)
+gitAt(advanced, 'init', '-q')
+gitAt(advanced, 'add', '-A')
+gitAt(advanced, 'commit', '-q', '-m', 'feat: 进阶初始版本（两块画布）')
+const ADV_COMMIT_A = gitAt(advanced, 'rev-parse', 'HEAD')
+
+// 改名：文件名变化、编号不变
+gitAt(advanced, 'mv', 'notes/0050. 进阶.md', 'notes/0050. 进阶笔记.md')
+writeFileSync(
+  join(advancedNotes, '0050. 进阶笔记.md'),
+  [
+    '---',
+    `id: ${ADV_NOTE_UUID}`,
+    '---',
+    '',
+    '# 进阶笔记',
+    '',
+    'ADVANCED-B-MARKER',
+    '',
+    '<Excalidraw path="../assets/0050-a.excalidraw" height="240" />',
+    ''
+  ].join('\n')
+)
+gitAt(advanced, 'add', '-A')
+gitAt(advanced, 'commit', '-q', '-m', 'rename: 笔记改名并去掉一块画布')
+const ADV_COMMIT_B = gitAt(advanced, 'rev-parse', 'HEAD')
+
+// 新版：删掉 b 画布、加一块 c 画布；废弃资源继续留着
+rmSync(join(advancedAssets, '0050-b.excalidraw'))
+writeFileSync(join(advancedAssets, '0050-c.excalidraw'), scene('adv-c-v1'))
+writeFileSync(
+  join(advancedNotes, '0050. 进阶笔记.md'),
+  [
+    '---',
+    `id: ${ADV_NOTE_UUID}`,
+    '---',
+    '',
+    '# 进阶笔记',
+    '',
+    'ADVANCED-C-MARKER',
+    '',
+    '<Excalidraw path="../assets/0050-a.excalidraw" height="240" />',
+    '',
+    '<Excalidraw path="../assets/0050-c.excalidraw" height="240" />',
+    ''
+  ].join('\n')
+)
+gitAt(advanced, 'add', '-A')
+gitAt(advanced, 'commit', '-q', '-m', 'asset: 换一块画布')
+
 writeFileSync(join(profile, 'workspace.v1.json'), JSON.stringify({ path: workspace }))
 writeFileSync(
   join(profile, '.tn-desk-config.json'),
@@ -748,6 +889,110 @@ try {
     statusAfterRestore === '',
     statusAfterRestore || '干净'
   )
+
+  // H6：代表性 fixture —— 改名 + 多画布 + 废弃资源 + 图片
+  await page.getByText('advanced-kb', { exact: true }).first().click()
+  const advancedRow = page.locator(`.toc-row[data-note-uuid="${ADV_NOTE_UUID}"]`)
+  const advancedReady = await waitFor(async () => (await advancedRow.count()) > 0, 20000)
+  record('H6-1 进阶 fixture 载入（改名后的当前文件名）', Boolean(advancedReady))
+  await advancedRow.click({ button: 'right' })
+  const advancedPane = notePane(page, '0050')
+  const advancedPaneReady = await waitFor(async () => (await advancedPane.count()) === 1, 20000)
+  const advancedCommits = await waitFor(async () => {
+    const oids = await advancedPane
+      .locator('[data-history-commits] button')
+      .evaluateAll((nodes) => nodes.map((node) => node.getAttribute('data-commit') ?? ''))
+    return oids.length >= 3 ? oids : null
+  }, 20000)
+  record(
+    'H6-2 改名前后历史连续（按编号关联到改名提交）',
+    Boolean(advancedPaneReady) &&
+      Array.isArray(advancedCommits) &&
+      advancedCommits.includes(ADV_COMMIT_B),
+    (advancedCommits ?? []).map((oid) => oid.slice(0, 7)).join('、')
+  )
+
+  await selectCommitIn(advancedPane, ADV_COMMIT_A)
+  await waitFor(async () =>
+    (await advancedPane.locator('[data-history-body]').innerText()).includes('ADVANCED-A-MARKER')
+  )
+  await advancedPane.locator('[data-history-restore]').click()
+  const advancedDialog = await waitFor(
+    async () => (await advancedPane.locator('[data-history-restore-confirm]').count()) > 0,
+    15000
+  )
+  const advancedFacts = advancedDialog
+    ? await advancedPane.locator('[data-history-restore-facts]').innerText()
+    : ''
+  record(
+    'H6-3 影响范围列出两块历史画布并保留较新画布',
+    Boolean(advancedDialog) &&
+      advancedFacts.includes('0050-a.excalidraw') &&
+      advancedFacts.includes('0050-b.excalidraw') &&
+      advancedFacts.includes('0050-c.excalidraw'),
+    advancedFacts.replace(/\s+/g, ' ').slice(0, 200)
+  )
+  await advancedPane.locator('[data-history-restore-confirm]').click()
+  const advancedApplied = await waitFor(
+    async () => (await advancedPane.locator('[data-history-restore-done]').count()) > 0,
+    30000
+  )
+  const advancedError = advancedApplied
+    ? ''
+    : await advancedPane
+        .locator('[data-history-restore-error]')
+        .innerText()
+        .catch(() => '无错误信息')
+  const advancedNotePath = join(advancedNotes, '0050. 进阶笔记.md')
+  const advancedNote = readFileSync(advancedNotePath, 'utf8')
+  const advancedHead = gitAt(advanced, 'rev-parse', 'HEAD')
+  record(
+    'H6-4 恢复写当前文件名（不创建旧名笔记），正文回到历史版本',
+    Boolean(advancedApplied) &&
+      advancedNote.includes('ADVANCED-A-MARKER') &&
+      !existsSync(join(advancedNotes, '0050. 进阶.md')),
+    `旧名文件存在=${existsSync(join(advancedNotes, '0050. 进阶.md'))}，错误=${advancedError}`
+  )
+  record(
+    'H6-5 多画布写回 + 较新/废弃资源保留',
+    existsSync(join(advancedAssets, '0050-a.excalidraw')) &&
+      existsSync(join(advancedAssets, '0050-b.excalidraw')) &&
+      existsSync(join(advancedAssets, '0050-c.excalidraw')) &&
+      existsSync(join(advancedAssets, '0050-abandoned.png')) &&
+      readFileSync(join(advancedAssets, '0050-b.excalidraw'), 'utf8').includes('adv-b-v1') &&
+      readFileSync(join(advancedAssets, '0050-c.excalidraw'), 'utf8').includes('adv-c-v1'),
+    `a/b/c/abandoned = ${[
+      '0050-a.excalidraw',
+      '0050-b.excalidraw',
+      '0050-c.excalidraw',
+      '0050-abandoned.png'
+    ]
+      .map((name) => (existsSync(join(advancedAssets, name)) ? '有' : '无'))
+      .join('/')}`
+  )
+  const advancedChanged = gitAt(advanced, 'show', '--name-only', '--format=', '-z', advancedHead)
+    .split('\0')
+    .map((value) => value.replace(/^\n+/, '').trim())
+    .filter(Boolean)
+  record(
+    'H6-6 恢复提交只含目标路径，TOC 与废弃资源不进提交',
+    advancedChanged.length > 0 &&
+      advancedChanged.every((relPath) =>
+        [
+          'notes/0050. 进阶笔记.md',
+          'assets/0050-a.excalidraw',
+          'assets/0050-b.excalidraw',
+          'assets/0050-img.png'
+        ].includes(relPath)
+      ),
+    advancedChanged.join('、')
+  )
+  record(
+    'H6-7 其它知识库不受影响（第一个 KB 的 HEAD 不变）',
+    git('rev-parse', 'HEAD') === git('log', '--format=%H').split('\n')[0] &&
+      gitAt(advanced, 'log', '--format=%H').split('\n')[0] === advancedHead
+  )
+  await page.screenshot({ path: join(shots, '06-advanced-restored.png'), fullPage: false })
 } catch (error) {
   record('H2 断言执行', false, error instanceof Error ? error.message : String(error))
 } finally {

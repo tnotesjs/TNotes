@@ -390,11 +390,34 @@ function throwIfBlocked(reasons: AssetWriteBlockReason[]): void {
   })
 }
 
-async function runGuardedWrite(
+export interface AssetWriteGuardOptions {
+  allowIncompleteJournal?: boolean
+  noteUuids?: string[]
+  /** 写事务的结果是否需要保留暂停（例如需要人工恢复） */
+  shouldKeepPaused?: (result: unknown) => boolean
+}
+
+/**
+ * 该知识库的唯一写事务闸门：资源整理与历史恢复**共用这一把锁**。
+ *
+ * - 暂停该库 Git、登记 transaction、等 Git 空闲
+ * - 已经有一个写事务在跑时直接拒绝（不排队、不并行）
+ * - 向渲染端广播 prepare/settled，让笔记与画布会话暂停/恢复自动写
+ */
+export async function withAssetWriteGuard<T>(
   knowledgeBaseId: string,
-  work: () => Promise<AssetOperationResult>,
-  options: { allowIncompleteJournal?: boolean; noteUuids?: string[] } = {}
-): Promise<AssetOperationResultDto> {
+  work: () => Promise<T>,
+  options: AssetWriteGuardOptions = {}
+): Promise<T> {
+  if (assetWriteGate.inTransaction(knowledgeBaseId)) {
+    throw new KbError(
+      'INVALID_OPERATION',
+      '该知识库正在执行另一项写事务（资源整理或历史恢复），请等待完成',
+      {
+        knowledgeBaseId
+      }
+    )
+  }
   gitManager.pauseForAssetWrite(knowledgeBaseId)
   assetWriteGate.beginTransaction(knowledgeBaseId)
   let keepPaused = false
@@ -410,8 +433,8 @@ async function runGuardedWrite(
       noteUuids: options.noteUuids ?? []
     } satisfies AssetPrepareApplyEvent)
     const result = await work()
-    keepPaused = result.status === 'needs-recovery' || result.status === 'failed'
-    return toResultDto(result)
+    keepPaused = options.shouldKeepPaused?.(result) ?? false
+    return result
   } catch (error) {
     keepPaused = Boolean(assetWriteGate.stickyReason(knowledgeBaseId))
     throw error
@@ -428,6 +451,35 @@ async function runGuardedWrite(
       gitManager.resumeAfterAssetWrite(knowledgeBaseId)
     }
   }
+}
+
+/** 广播「这次写事务改了哪些路径」：渲染端据此重新读盘。 */
+export function broadcastAssetApplied(
+  knowledgeBaseId: string,
+  noteUuids: string[],
+  changedRelPaths: string[]
+): void {
+  broadcast(IPC_CHANNELS.assetsApplied, {
+    knowledgeBaseId,
+    noteUuids,
+    changedRelPaths,
+    revision: Date.now()
+  } satisfies AssetAppliedEvent)
+}
+
+async function runGuardedWrite(
+  knowledgeBaseId: string,
+  work: () => Promise<AssetOperationResult>,
+  options: { allowIncompleteJournal?: boolean; noteUuids?: string[] } = {}
+): Promise<AssetOperationResultDto> {
+  const result = await withAssetWriteGuard(knowledgeBaseId, work, {
+    allowIncompleteJournal: options.allowIncompleteJournal,
+    noteUuids: options.noteUuids,
+    shouldKeepPaused: (value) =>
+      (value as AssetOperationResult).status === 'needs-recovery' ||
+      (value as AssetOperationResult).status === 'failed'
+  })
+  return toResultDto(result)
 }
 
 export async function applyAssetPlan(

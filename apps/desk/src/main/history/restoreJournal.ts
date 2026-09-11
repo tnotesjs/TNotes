@@ -34,6 +34,8 @@ export type RestorePhase =
 
 export interface RestoreJournalEntry {
   relPath: string
+  /** 读取 blob 的历史路径（改名后与 relPath 不同） */
+  sourceRelPath?: string
   /** 要写回的历史 blob OID */
   oid: string
   bytes: number

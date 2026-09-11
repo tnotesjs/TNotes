@@ -1,6 +1,7 @@
 import path from 'node:path'
 
 import type { AssetEditorSnapshotDto } from '../../shared/contracts'
+import { broadcastAssetApplied, withAssetWriteGuard } from '../assetOperations'
 import { workspaceManager } from '../workspaceManager'
 import {
   applyHistoryRestore,
@@ -131,11 +132,33 @@ export class HistoryService {
    */
   async applyPlan(planId: string, revision: number): Promise<ApplyHistoryRestoreResult> {
     const plan = historyRestorePlanStore.require(planId, revision)
-    const result = await applyHistoryRestore(plan, {
-      journalDir: this.journalDirOf(plan.rootPath)
-    })
+    // 与资源整理共用同一把写事务锁：不新增互不协调的锁
+    const result = await withAssetWriteGuard(
+      plan.knowledgeBaseId,
+      () =>
+        applyHistoryRestore(plan, {
+          journalDir: this.journalDirOf(plan.rootPath)
+        }),
+      {
+        noteUuids: this.noteUuidOf(plan.knowledgeBaseId, plan.noteIndex),
+        // 失败日志会让该库保持暂停（由 syncAssetWriteHolds 统一决策）
+        shouldKeepPaused: () => false
+      }
+    )
     historyRestorePlanStore.drop(planId)
+    // 让渲染端重新读盘：笔记按 uuid、画布在下次可见时 revalidate
+    broadcastAssetApplied(
+      plan.knowledgeBaseId,
+      this.noteUuidOf(plan.knowledgeBaseId, plan.noteIndex),
+      result.writtenPaths
+    )
     return result
+  }
+
+  private noteUuidOf(knowledgeBaseId: string, noteIndex: string): string[] {
+    const handle = workspaceManager.getHandle(knowledgeBaseId)
+    const note = handle.snapshot.notes.find((item) => item.index === noteIndex)
+    return note ? [note.frontmatter.id ?? note.index] : []
   }
 
   /** 打开知识库时恢复未完成的历史恢复事务（启动/重开都要跑）。 */

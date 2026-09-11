@@ -370,6 +370,29 @@ describe('写回与并发保护', () => {
   })
 })
 
+describe('改名后的恢复（真实缺陷回归）', () => {
+  it('写回把历史正文写到当前文件名上（不读错历史路径、不新建旧名文件）', async () => {
+    await write('notes/0042. A.md', NOTE_V1)
+    await write('assets/0042-a.png', PNG_V1)
+    const oldCommit = commit('feat: 历史版本')
+    git(['mv', 'notes/0042. A.md', 'notes/0042. A 改名.md'])
+    await write('notes/0042. A 改名.md', NOTE_V2)
+    const head = commit('rename: 笔记改名')
+    const plan = await buildHistoryRestorePlan(root, {
+      knowledgeBaseId: 'kb-1',
+      noteIndex: '0042',
+      commit: oldCommit,
+      expectedHead: head
+    })
+
+    const result = await applyHistoryRestore(plan, { journalDir: journalDir() })
+
+    expect((await read('notes/0042. A 改名.md')).toString()).toBe(NOTE_V1)
+    await expect(fs.stat(path.join(root, 'notes/0042. A.md'))).rejects.toThrow()
+    expect(result.writtenPaths.sort()).toEqual(['assets/0042-a.png', 'notes/0042. A 改名.md'])
+  })
+})
+
 describe('恢复互斥', () => {
   it('同一知识库同时只允许一个恢复，第二个直接拒绝', async () => {
     const { oldCommit } = await setup()

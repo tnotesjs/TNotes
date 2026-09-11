@@ -60,7 +60,15 @@ export class HistoryRestorePlanError extends Error {
 }
 
 export interface HistoryRestoreEntry {
+  /** 写回目标（当前版本里的路径） */
   relPath: string
+  /**
+   * 读取 blob 的路径（源 commit 里的路径）。
+   *
+   * 笔记改名后这两者不同：正文要写**当前**文件名，但字节必须从历史文件名读，
+   * 否则会报「该 commit 上不存在此文件」。
+   */
+  sourceRelPath?: string
   oid: string
   bytes: number
 }
@@ -303,6 +311,7 @@ export async function buildHistoryRestorePlan(
 
   const note: HistoryRestoreEntry = {
     relPath: currentNotePath,
+    sourceRelPath: snapshot.note.relPath,
     oid: noteBlob.oid,
     bytes: noteBlob.bytes.byteLength
   }
