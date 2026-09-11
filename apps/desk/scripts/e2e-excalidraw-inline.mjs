@@ -66,7 +66,23 @@ writeFileSync(
   join(kb, 'tnotes.json'),
   `${JSON.stringify({ name: 'canvas-inline', title: 'canvas-inline' }, null, 2)}\n`
 )
-writeFileSync(join(kb, 'TOC.md'), '- [ ] 0001. 画布组件\n- [ ] 0002. 坏组件\n')
+writeFileSync(
+  join(kb, 'TOC.md'),
+  '- [ ] 0001. 画布组件\n- [ ] 0002. 坏组件\n- [ ] 0003. 跨笔记引用\n'
+)
+writeFileSync(
+  join(notes, '0003. 跨笔记引用.md'),
+  [
+    '---',
+    'id: 44444444-4444-4444-8444-444444444444',
+    '---',
+    '',
+    '# 跨笔记引用',
+    '',
+    '<Excalidraw path="../assets/0001-drawing.excalidraw" />',
+    ''
+  ].join('\n')
+)
 const NOTE_BODY = [
   '---',
   'id: 11111111-1111-4111-8111-111111111111',
@@ -476,6 +492,33 @@ try {
   )
   await page.getByRole('button', { name: '可视化编辑', exact: true }).first().click()
   await page.waitForTimeout(600)
+
+  // 8b) 手写跨笔记引用：只诊断、不打开写编辑（归属规则 2.1 / E7）
+  await openNote('跨笔记引用')
+  await activePane().waitFor({ timeout: 30000 })
+  const crossCard = page.locator('.desk-excalidraw:visible').first()
+  await crossCard.waitFor({ timeout: 20000 })
+  // 前面的删除用例把画布清空了：这里只要求卡片是 ready（不是错误态）+ 归属诊断，
+  // 只读 SVG 的渲染本身在更早的用例里已经验过
+  const crossReady = await waitFor(
+    async () => (await crossCard.getAttribute('data-state')) === 'ready',
+    20000
+  )
+  const crossNotice = await crossCard.locator('.desk-excalidraw__placeholder').textContent()
+  // 注意：多个笔记标签同时挂载，必须限定在当前可见的卡片里取按钮
+  const crossEditHidden = await crossCard
+    .locator('[data-action="edit"]')
+    .evaluate((node) => node.hasAttribute('hidden') || getComputedStyle(node).display === 'none')
+    .catch(() => true)
+  record(
+    '手写跨笔记引用：只读卡片 + 归属诊断，不打开写编辑',
+    Boolean(crossReady) &&
+      crossEditHidden &&
+      (crossNotice ?? '').includes('0001') &&
+      (crossNotice ?? '').includes('0003'),
+    `notice=${JSON.stringify(crossNotice)}`
+  )
+  await page.screenshot({ path: join(shots, 'cross-note-reference.png') })
 
   // 9) 坏组件：给出可读错误，不崩
   await openNote('坏组件')

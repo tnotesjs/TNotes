@@ -22,6 +22,10 @@ import {
   parseExcalidrawSource,
   setExcalidrawHeight
 } from '../../editor/markdown/excalidrawComponent'
+import {
+  checkExcalidrawOwnership,
+  noteIndexFromRelPath
+} from '../../editor/markdown/excalidrawOwnership'
 import { useEditorStore } from '../../stores/editor'
 import { useWorkspaceStore } from '../../stores/workspace'
 import { documentKey } from '../../stores/workspace/helpers'
@@ -49,6 +53,12 @@ function isEmptyScene(content: string): boolean {
 function noteRelPathOf(knowledgeBaseId: string, noteUuid: string): string | null {
   const workspace = useWorkspaceStore()
   return workspace.documents[documentKey(knowledgeBaseId, noteUuid)]?.document.relPath ?? null
+}
+
+function noteIndexFor(knowledgeBaseId: string, noteUuid: string, noteRelPath: string): string {
+  const workspace = useWorkspaceStore()
+  const session = workspace.documents[documentKey(knowledgeBaseId, noteUuid)]
+  return session?.document.index ?? noteIndexFromRelPath(noteRelPath) ?? ''
 }
 
 interface CardElements {
@@ -167,6 +177,10 @@ export function mountRawExcalidraw(ctx: DeskRawBlockMountContext): void {
     return
   }
   const relPath: string = resolved
+  // 归属校验：内嵌组件必须指向当前笔记自己的画布。手写跨笔记引用只给诊断，
+  // 不打开写编辑（跨笔记的合法路径是粘贴时自动复制一份，见计划 2.1/E7）。
+  const noteIndex = noteIndexFor(knowledgeBaseId, noteUuid, noteRelPath ?? '')
+  const ownership = checkExcalidrawOwnership({ relPath, noteIndex, noteRelPath: noteRelPath ?? '' })
 
   let currentSource = block.source
   let currentHeight = parsed.height
@@ -182,7 +196,9 @@ export function mountRawExcalidraw(ctx: DeskRawBlockMountContext): void {
   let fullscreen = false
   let disposed = false
 
-  const editable = (): boolean => !deps.isEffectivelyReadOnly()
+  const editable = (): boolean => !deps.isEffectivelyReadOnly() && ownership.ok
+  /** 归属诊断常驻显示：只读卡片照常渲染，但不给写编辑入口 */
+  const ownershipNotice = ownership.ok ? null : ownership.message
   const setStatus = (text: string): void => {
     card.status.textContent = text
   }
@@ -237,14 +253,14 @@ export function mountRawExcalidraw(ctx: DeskRawBlockMountContext): void {
         svgApp = null
         card.svgHost.replaceChildren()
         card.root.dataset.state = 'ready'
-        setStatus('空画布')
-        setPlaceholder(editable() ? '空画布：点「编辑」开始绘制' : '空画布')
+        setStatus(ownership.ok ? '空画布' : '归属不符')
+        setPlaceholder(ownershipNotice ?? (editable() ? '空画布：点「编辑」开始绘制' : '空画布'))
         return
       }
       renderSvg(result.value.content)
       card.root.dataset.state = 'ready'
-      setStatus('')
-      setPlaceholder(null)
+      setStatus(ownership.ok ? '' : '归属不符')
+      setPlaceholder(ownershipNotice)
     })
   }
 
