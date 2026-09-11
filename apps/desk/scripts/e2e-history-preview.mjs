@@ -550,6 +550,35 @@ try {
       .count()} 个，对话框=${JSON.stringify(dialogs)}`
   )
 
+  // 快捷键关闭：Playwright 合成的 Meta+W 会被 Electron 菜单加速键吞掉（实测笔记标签
+  // 也一样），所以这里直接触发菜单项——它和加速键走的是同一套命令（applicationMenu 的
+  // 'close-active-tab-or-window' → 渲染端 requestCloseTab）。
+  const noteRow = page.locator(`.toc-row[data-note-uuid="${NOTE_UUID}"]`)
+  await noteRow.click({ button: 'right' })
+  const reopened = await waitFor(
+    async () => (await page.locator('[data-note-history-pane]').count()) === 2
+  )
+  const beforeKeyClose = await page.locator('[data-note-history-pane]').count()
+  const dialogsBeforeKey = await app.evaluate(() => (globalThis.__deskDialogs ?? []).length)
+  await app.evaluate(({ Menu }) => {
+    const item = Menu.getApplicationMenu()
+      ?.items.flatMap((entry) => entry.submenu?.items ?? [])
+      .find((entry) => entry.label === 'Close Tab')
+    item?.click()
+  })
+  const keyClosed = await waitFor(
+    async () => (await page.locator('[data-note-history-pane]').count()) < beforeKeyClose,
+    5000
+  )
+  const dialogsAfterKey = await app.evaluate(() => (globalThis.__deskDialogs ?? []).length)
+  record(
+    'H3-6 关闭标签命令关闭只读历史页且不弹脏确认',
+    Boolean(reopened) && Boolean(keyClosed) && dialogsAfterKey === dialogsBeforeKey,
+    `命令前 ${beforeKeyClose} 个历史页，命令后 ${await page
+      .locator('[data-note-history-pane]')
+      .count()} 个，对话框新增 ${dialogsAfterKey - dialogsBeforeKey}`
+  )
+
   const after = repoState()
   record(
     'H2-17 浏览历史不改 HEAD / 索引 / 工作区',
