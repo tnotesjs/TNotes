@@ -5,6 +5,7 @@ import { useEditorStore } from '../editor'
 
 import type {
   AppSettings,
+  AssetEditorSnapshotDto,
   DeskTocNode,
   GitRepositoryStateDto,
   KnowledgeBaseDetail,
@@ -17,6 +18,7 @@ import type { SplitPlacement } from '../../editor-groups/layoutModel'
 
 import { createDocuments } from './documents'
 import { collectAssetEditorSnapshot } from './assetWriteSnapshot'
+import { flushHistoryWriters } from '../../history/flushWriters'
 import { createTabClosing, type ClosingResource } from './closeTabs'
 import { createGit } from './git'
 import {
@@ -244,6 +246,28 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
   async function saveAllDocuments(): Promise<void> {
     await saveAllNoteDocuments()
+  }
+
+  /** 历史恢复前的写者快照（与资源写入门禁共用同一套统计）。 */
+  function collectWritersSnapshot(knowledgeBaseId: string): AssetEditorSnapshotDto {
+    return collectAssetEditorSnapshot({
+      knowledgeBaseId,
+      editor,
+      documents: documents.value,
+      pendingRecoveries: pendingRecoveries.value
+    })
+  }
+
+  /**
+   * 历史恢复前受控 flush：settle 画布 → 保存笔记 → 返回写者快照。
+   * 画布写不完会抛 `HistoryFlushError`，调用方必须停下而不是拿半份状态去备份。
+   */
+  async function flushForHistoryRestore(knowledgeBaseId: string): Promise<AssetEditorSnapshotDto> {
+    return await flushHistoryWriters({
+      knowledgeBaseId,
+      saveDocuments: saveAllDocuments,
+      snapshot: () => collectWritersSnapshot(knowledgeBaseId)
+    })
   }
 
   const { updateSettings, applySettings, setAppZoom, adjustAppZoom, zoomFeedbackSequence } =
@@ -644,6 +668,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     isTabDirty,
     closingTabs,
     saveAllDocuments,
+    collectWritersSnapshot,
+    flushForHistoryRestore,
     writeLocalAttachment,
     uploadImage,
     updateSettings,

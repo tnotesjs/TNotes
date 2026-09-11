@@ -4,6 +4,7 @@ import {
   describeCommit,
   resolveSelection,
   restoreDisabledReason,
+  restorePreviewDisabledReason,
   shallowNotice,
   summarizeChangedPaths,
   truncatedNotice
@@ -71,7 +72,17 @@ describe('浅克隆与恢复门禁文案', () => {
     expect(truncatedNotice({ truncated: true })).toContain('只扫描了最近的一部分')
   })
 
-  it('恢复禁用原因按优先级给出：未选版本 → 非文本正文 → H4/H5 门禁', () => {
+  it('查看影响范围只受「未选版本 / 非文本正文」限制', () => {
+    expect(
+      restorePreviewDisabledReason({ hasSelection: false, gate: { body: 'unknown' } })
+    ).toContain('选择一个历史版本')
+    expect(
+      restorePreviewDisabledReason({ hasSelection: true, gate: { body: 'binary' } })
+    ).toContain('不是文本文件')
+    expect(restorePreviewDisabledReason({ hasSelection: true, gate: { body: 'text' } })).toBe('')
+  })
+
+  it('写回禁用原因按优先级给出：未选版本 → 非文本正文 → H5 门禁', () => {
     expect(
       restoreDisabledReason({ hasSelection: false, gate: { open: false, body: 'unknown' } })
     ).toContain('选择一个历史版本')
@@ -80,7 +91,7 @@ describe('浅克隆与恢复门禁文案', () => {
     ).toContain('不是文本文件')
     expect(
       restoreDisabledReason({ hasSelection: true, gate: { open: false, body: 'text' } })
-    ).toContain('H4/H5')
+    ).toContain('H5')
     expect(restoreDisabledReason({ hasSelection: true, gate: { open: true, body: 'text' } })).toBe(
       ''
     )

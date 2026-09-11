@@ -1,6 +1,12 @@
 import { historyService } from '../history/historyService'
+import { historyRestorePlanStore, toHistoryRestorePlanDto } from '../history/restorePlan'
 import { IPC_CHANNELS } from '../../shared/contracts'
-import { historyAssetSchema, historyListSchema, historySnapshotSchema } from './schemas'
+import {
+  historyAssetSchema,
+  historyListSchema,
+  historyPlanSchema,
+  historySnapshotSchema
+} from './schemas'
 import { handle, type GetWindow } from './shared'
 
 /**
@@ -41,6 +47,17 @@ export function registerHistory(getWindow: GetWindow): () => void {
       // 渲染端直接用这个 URL；字节由 tnotes-asset://history 协议按 commit 读
       url: `tnotes-asset://history?${params.toString()}`
     }
+  })
+  handle(IPC_CHANNELS.historyPlan, getWindow, historyPlanSchema, async (input) => {
+    const plan = await historyService.plan(input.knowledgeBaseId, {
+      noteIndex: input.noteIndex,
+      commit: input.commit,
+      expectedHead: input.expectedHead,
+      writers: input.writers
+    })
+    // 计划留在主进程 store 里；渲染端只拿到影响范围与计划 ID
+    historyRestorePlanStore.put(plan)
+    return toHistoryRestorePlanDto(plan)
   })
   return () => undefined
 }

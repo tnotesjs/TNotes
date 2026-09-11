@@ -38,6 +38,46 @@ export function hasExcalidrawSession(knowledgeBaseId: string, relPath: string): 
   return (sessions.get(excalidrawSessionKey(knowledgeBaseId, relPath))?.size ?? 0) > 0
 }
 
+export interface SettleAllSessionsResult {
+  /** 已成功写完的路径 */
+  settled: string[]
+  /** 写不完的路径与原因：恢复必须因此停下，不能拿半份状态去备份 */
+  failures: Array<{ relPath: string; message: string }>
+}
+
+/**
+ * flush 某个知识库里所有打开中的画布会话并等到真的写完（计划 H4 恢复前 flush）。
+ *
+ * 历史恢复要「先把最后一笔画布写进备份」，而恢复计划在拿到快照前还不知道会涉及
+ * 哪些资源，所以这里按知识库整体 settle；单个失败不影响其它会话，但会回报给调用方。
+ */
+export async function settleExcalidrawSessions(
+  knowledgeBaseId: string
+): Promise<SettleAllSessionsResult> {
+  const prefix = `${knowledgeBaseId}\u0000`
+  const targets: Array<{ relPath: string; handle: ExcalidrawSessionHandle }> = []
+  for (const [key, bucket] of sessions) {
+    if (!key.startsWith(prefix)) continue
+    for (const handle of bucket) targets.push({ relPath: key.slice(prefix.length), handle })
+  }
+  const settled: string[] = []
+  const failures: Array<{ relPath: string; message: string }> = []
+  await Promise.all(
+    targets.map(async (target) => {
+      try {
+        await target.handle.settle()
+        settled.push(target.relPath)
+      } catch (error) {
+        failures.push({
+          relPath: target.relPath,
+          message: error instanceof Error ? error.message : String(error)
+        })
+      }
+    })
+  )
+  return { settled, failures }
+}
+
 /** 把所有打开中的该文件会话写完（失败不抛，交给各自的 UI 报错）。 */
 export async function flushExcalidrawSessions(
   knowledgeBaseId: string,

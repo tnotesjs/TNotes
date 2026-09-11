@@ -380,6 +380,24 @@ export const historyAssetSchema = z.object({
   relPath: z.string().min(1).max(4096)
 })
 
+export const historyPlanSchema = z.object({
+  knowledgeBaseId: z.string().min(1),
+  noteIndex: z.string().regex(/^\d{4}$/),
+  commit: fullOidSchema,
+  expectedHead: fullOidSchema.optional(),
+  writers: z
+    .object({
+      dirtyDocuments: z.array(
+        z.object({ noteUuid: z.string().min(1), title: z.string(), saving: z.boolean() })
+      ),
+      dirtyTabs: z.array(z.object({ type: z.string().min(1), title: z.string() })),
+      pendingRecoveries: z.array(z.object({ noteUuid: z.string().min(1), title: z.string() })),
+      pendingEdits: z.array(z.object({ noteUuid: z.string().min(1) })),
+      kbSettingsDirty: z.boolean()
+    })
+    .optional()
+})
+
 export const excalidrawReadSchema = z.object({
   knowledgeBaseId: z.string().min(1),
   relPath: excalidrawRelPathSchema

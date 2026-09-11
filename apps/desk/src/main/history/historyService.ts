@@ -1,6 +1,8 @@
 import path from 'node:path'
 
+import type { AssetEditorSnapshotDto } from '../../shared/contracts'
 import { workspaceManager } from '../workspaceManager'
+import { buildHistoryRestorePlan, type HistoryRestorePlan } from './restorePlan'
 import {
   listHistoryCommits,
   readHistoryBlob,
@@ -105,6 +107,28 @@ export class HistoryService {
 
   async head(knowledgeBaseId: string): Promise<string | null> {
     return await resolveHead(this.rootOf(knowledgeBaseId), this.options)
+  }
+
+  /**
+   * 创建恢复计划（H4）：只做验证与固化，不写任何文件。
+   * 渲染端只能拿到计划 DTO（写入路径与字节数），实际字节仍在主进程。
+   */
+  async plan(
+    knowledgeBaseId: string,
+    input: {
+      noteIndex: string
+      commit: string
+      expectedHead?: string
+      writers?: AssetEditorSnapshotDto
+    }
+  ): Promise<HistoryRestorePlan> {
+    return await buildHistoryRestorePlan(this.rootOf(knowledgeBaseId), {
+      knowledgeBaseId,
+      noteIndex: input.noteIndex,
+      commit: input.commit,
+      expectedHead: input.expectedHead,
+      writers: input.writers
+    })
   }
 }
 

@@ -9,10 +9,12 @@
 import { computed, onMounted, ref } from 'vue'
 
 import HistoryNotePreview from '../history/HistoryNotePreview.vue'
+import HistoryRestoreDialog from '../history/HistoryRestoreDialog.vue'
 import {
   describeCommit,
   resolveSelection,
   restoreDisabledReason,
+  restorePreviewDisabledReason,
   shallowNotice,
   truncatedNotice
 } from '../history/historyPaneModel'
@@ -42,10 +44,17 @@ const PAGE_SIZE = 50
 const selectedCommit = computed(() => props.tab.commit)
 const shallowHint = computed(() => shallowNotice({ shallow: shallow.value }))
 const truncatedHint = computed(() => truncatedNotice({ truncated: truncated.value }))
+const restoreOpen = ref(false)
+const previewDisabledReason = computed(() =>
+  restorePreviewDisabledReason({
+    hasSelection: Boolean(selectedCommit.value),
+    gate: { body: bodyKind.value }
+  })
+)
 const restoreReason = computed(() =>
   restoreDisabledReason({
     hasSelection: Boolean(selectedCommit.value),
-    // H4/H5 未验收前不开放恢复；正文类型由预览回调上来
+    // H5 未验收前不开放写回；正文类型由预览回调上来
     gate: { open: false, body: bodyKind.value }
   })
 )
@@ -107,6 +116,11 @@ function select(commit: HistoryCommitSummaryDto): void {
 function refresh(): void {
   if (loading.value) return
   void loadPage(true)
+}
+
+function openRestore(): void {
+  if (previewDisabledReason.value) return
+  restoreOpen.value = true
 }
 
 onMounted(() => void loadPage(true))
@@ -180,6 +194,13 @@ onMounted(() => void loadPage(true))
         :commit="selectedCommit"
         @body-kind="noteBodyKind"
       />
+      <HistoryRestoreDialog
+        v-if="restoreOpen && selectedCommit"
+        :tab="tab"
+        :commit="selectedCommit"
+        :expected-head="head"
+        @close="restoreOpen = false"
+      />
       <div v-else class="history-pane__placeholder" data-history-no-selection>
         <strong>选择一个历史版本</strong>
         <span>左侧列表按时间列出与编号 {{ tab.noteIndex }} 相关的提交。</span>
@@ -189,10 +210,11 @@ onMounted(() => void loadPage(true))
           type="button"
           class="history-pane__restore"
           data-history-restore
-          :disabled="Boolean(restoreReason)"
-          :title="restoreReason"
+          :disabled="Boolean(previewDisabledReason)"
+          :title="previewDisabledReason"
+          @click="openRestore"
         >
-          恢复到该版本
+          恢复到该版本…
         </button>
         <span class="history-pane__hint" data-history-restore-reason>{{ restoreReason }}</span>
       </footer>

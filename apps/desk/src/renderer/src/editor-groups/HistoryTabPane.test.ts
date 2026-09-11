@@ -115,13 +115,14 @@ async function openPane() {
 }
 
 describe('历史标签页（列表与门禁）', () => {
-  it('条目显示变更概览，选中版本后恢复按钮禁用并说明 H4/H5 门禁', async () => {
+  it('条目显示变更概览，选中版本后可以打开影响范围确认', async () => {
     const { wrapper } = await openPane()
     const entry = wrapper.get('[data-history-commits] button')
     expect(entry.text()).toContain('正文 1 · 资源 1')
+    // 按钮本身可用（只看影响范围）；写回仍被 H5 门禁挡住并说明原因
     const restore = wrapper.get('[data-history-restore]')
-    expect(restore.attributes('disabled')).toBeDefined()
-    expect(wrapper.get('[data-history-restore-reason]').text()).toContain('H4/H5')
+    expect(restore.attributes('disabled')).toBeUndefined()
+    expect(wrapper.get('[data-history-restore-reason]').text()).toContain('H5')
   })
 
   it('浅克隆给出本地历史不完整的提示', async () => {
@@ -130,10 +131,11 @@ describe('历史标签页（列表与门禁）', () => {
     expect(wrapper.get('[data-history-shallow]').text()).toContain('浅克隆')
   })
 
-  it('没有历史时仍可浏览，恢复原因提示先选版本', async () => {
+  it('没有历史时仍可浏览，恢复入口提示先选版本', async () => {
     listResult = { ok: true, value: page({ commits: [] }) }
     const { wrapper } = await openPane()
     expect(wrapper.find('[data-history-empty]').exists()).toBe(true)
+    expect(wrapper.get('[data-history-restore]').attributes('disabled')).toBeDefined()
     expect(wrapper.get('[data-history-restore-reason]').text()).toContain('选择一个历史版本')
   })
 

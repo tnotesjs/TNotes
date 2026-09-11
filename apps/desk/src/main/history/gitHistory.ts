@@ -191,6 +191,25 @@ async function changedPathsOf(
 }
 
 /**
+ * 该 commit 是否真的存在于本库（浅克隆/对象缺失都会被识别）。
+ * 计划阶段先验证它，避免把 `ls-tree` 的底层错误当成「源快照缺失」。
+ */
+export async function assertCommitExists(
+  rootPath: string,
+  commit: string,
+  options: GitHistoryOptions = {}
+): Promise<void> {
+  if (!FULL_OID.test(commit)) {
+    throw new GitHistoryError('BAD_REVISION', `只接受完整 commit OID：${commit}`)
+  }
+  try {
+    await runGitText(rootPath, ['cat-file', '-e', `${commit}^{commit}`], options)
+  } catch {
+    throw new GitHistoryError('UNKNOWN_COMMIT', `该提交不在当前知识库里：${commit}`)
+  }
+}
+
+/**
  * 是否浅克隆（`git clone --depth`）。
  *
  * 新 Git 用 `rev-parse --is-shallow-repository`；老版本不认这个参数时回退到

@@ -27,6 +27,7 @@ export const IPC_CHANNELS = {
   historySnapshot: 'history:snapshot',
   historyReadNote: 'history:read-note',
   historyReadAsset: 'history:read-asset',
+  historyPlan: 'history:plan',
   assetsScan: 'assets:scan',
   assetsScanCancel: 'assets:scan-cancel',
   assetsSummaries: 'assets:summaries',
@@ -704,6 +705,35 @@ export interface KbAssetsEditorTab {
  * 归属由文件名四位前缀决定；文件缺失/损坏时 `invalid` 置位，只显示失效状态，
  * 不按旧路径自动重建。
  */
+export interface HistoryRestorePlanRequest {
+  knowledgeBaseId: string
+  noteIndex: string
+  /** 恢复来源（完整 40 位 OID） */
+  commit: string
+  /** 计划创建时的 HEAD；不一致说明外部动过仓库 */
+  expectedHead?: string
+  /** 渲染端 flush 之后的写者快照；有未完成写入时主进程拒绝创建计划 */
+  writers?: AssetEditorSnapshotDto
+}
+
+export interface HistoryRestorePlanDto {
+  planId: string
+  revision: number
+  knowledgeBaseId: string
+  sourceCommit: string
+  head: string
+  noteIndex: string
+  note: { relPath: string; bytes: number }
+  resources: Array<{ relPath: string; bytes: number }>
+  /** 当前版本里较新、恢复时保留的资源 */
+  preserved: Array<{ relPath: string; bytes: number }>
+  writeCount: number
+  totalBytes: number
+  backupMessage: string
+  backupRequired: boolean
+  limitations: Array<{ code: string; message: string }>
+}
+
 export interface ExcalidrawEditorTab {
   id: string
   type: 'excalidraw'
@@ -1289,6 +1319,7 @@ export interface DeskApi {
     snapshot(request: HistorySnapshotRequest): Promise<DeskResult<HistorySnapshotDto>>
     readNote(request: HistorySnapshotRequest): Promise<DeskResult<HistoryNoteDto>>
     readAsset(request: HistoryAssetRequest): Promise<DeskResult<HistoryAssetDto>>
+    plan(request: HistoryRestorePlanRequest): Promise<DeskResult<HistoryRestorePlanDto>>
   }
   assets: {
     scan(knowledgeBaseId: string, generation: number): Promise<DeskResult<AssetScanReportDto>>

@@ -11,6 +11,7 @@ import type {
   HistoryAssetDto,
   HistoryListResultDto,
   HistoryNoteDto,
+  HistoryRestorePlanDto,
   HistorySnapshotDto,
   ImageSettingsValidateResult,
   ImageOptimizePreviewResult,
@@ -172,7 +173,8 @@ const api: DeskApi = {
     list: (request) => invoke<HistoryListResultDto>(IPC_CHANNELS.historyList, request),
     snapshot: (request) => invoke<HistorySnapshotDto>(IPC_CHANNELS.historySnapshot, request),
     readNote: (request) => invoke<HistoryNoteDto>(IPC_CHANNELS.historyReadNote, request),
-    readAsset: (request) => invoke<HistoryAssetDto>(IPC_CHANNELS.historyReadAsset, request)
+    readAsset: (request) => invoke<HistoryAssetDto>(IPC_CHANNELS.historyReadAsset, request),
+    plan: (request) => invoke<HistoryRestorePlanDto>(IPC_CHANNELS.historyPlan, request)
   },
   assets: {
     scan: (knowledgeBaseId, generation) =>

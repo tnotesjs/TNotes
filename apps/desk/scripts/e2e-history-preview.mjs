@@ -448,8 +448,8 @@ try {
     .locator('[data-history-restore]')
     .evaluate((button) => button.disabled)
   record(
-    'H3-2 恢复按钮禁用并说明原因（H4/H5 门禁）',
-    restoreDisabled && restoreReason.includes('H4/H5'),
+    'H3-2 写回仍被 H5 门禁挡住并说明原因（只保留影响范围入口）',
+    !restoreDisabled && restoreReason.includes('H5'),
     restoreReason
   )
 
@@ -494,6 +494,53 @@ try {
   record('H2-16 连续切版本只保留最后一次结果', Boolean(settled))
 
   await page.screenshot({ path: join(shots, '02-after-switch.png'), fullPage: false })
+
+  // H4：恢复影响范围确认（计划在主进程验证并固化；写回在 H5）
+  await selectCommit(page, OLD_COMMIT)
+  await page.locator('[data-history-restore]').click()
+  const dialog = page.locator('[data-history-restore-dialog]')
+  const dialogReady = await waitFor(
+    async () => (await dialog.locator('[data-history-restore-facts]').count()) > 0
+  )
+  const facts = dialogReady
+    ? await page.evaluate(() => ({
+        note: document.querySelector('[data-history-restore-note]')?.textContent?.trim() ?? '',
+        resources:
+          document.querySelector('[data-history-restore-resources]')?.textContent?.trim() ?? '',
+        preserved:
+          document.querySelector('[data-history-restore-preserved]')?.textContent?.trim() ?? '',
+        size: document.querySelector('[data-history-restore-size]')?.textContent?.trim() ?? '',
+        backup: document.querySelector('[data-history-restore-backup]')?.textContent?.trim() ?? '',
+        confirmDisabled: document.querySelector('[data-history-restore-confirm]')?.disabled ?? null,
+        hint: document.querySelector('[data-history-restore-hint]')?.textContent?.trim() ?? '',
+        error: document.querySelector('[data-history-restore-error]')?.textContent?.trim() ?? ''
+      }))
+    : null
+  record(
+    'H4-1 恢复影响范围：正文写当前路径 + 历史资源 + 保留较新资源 + 备份说明',
+    Boolean(facts) &&
+      facts.note === 'notes/0042. 历史笔记.md' &&
+      // 旧 commit 里有 3 个同编号资源（含当前版本已删除的）
+      facts.resources.includes('3 个') &&
+      facts.resources.includes('0042-drawing.excalidraw') &&
+      facts.resources.includes('0042-gone.png') &&
+      // 当前版本已把旧资源全部删除 → 没有「较新资源」需要保留
+      facts.preserved.includes('0 个') &&
+      facts.size.includes('4 个文件') &&
+      facts.backup.includes('backup: 0042'),
+    JSON.stringify(facts)
+  )
+  record(
+    'H4-2 写回按钮禁用并说明 H5 门禁（H4 只固化影响范围）',
+    Boolean(facts) && facts.confirmDisabled === true && facts.hint.includes('H5'),
+    facts?.hint ?? facts?.error ?? '无对话框'
+  )
+  await page.screenshot({ path: join(shots, '04-restore-plan.png'), fullPage: false })
+  await page.locator('[data-history-restore-cancel]').click()
+  const dialogClosed = await waitFor(
+    async () => (await page.locator('[data-history-restore-dialog]').count()) === 0
+  )
+  record('H4-3 取消后对话框关闭且未做任何写入', Boolean(dialogClosed))
 
   // H3：多标签隔离 —— 0043 的历史页有自己的选中版本，互不影响
   const otherNode = page.locator(`.toc-row[data-note-uuid="${BROTHER_UUID}"]`)

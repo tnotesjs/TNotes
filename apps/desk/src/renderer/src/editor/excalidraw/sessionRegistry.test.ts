@@ -4,7 +4,8 @@ import {
   excalidrawSessionKey,
   flushExcalidrawSessions,
   hasExcalidrawSession,
-  registerExcalidrawSession
+  registerExcalidrawSession,
+  settleExcalidrawSessions
 } from './sessionRegistry'
 
 describe('画布会话登记表', () => {
@@ -46,6 +47,28 @@ describe('画布会话登记表', () => {
     expect(ok.settle).toHaveBeenCalledOnce()
     disposeFailing()
     disposeOk()
+  })
+
+  it('恢复前按知识库 settle 全部画布，失败单独回报', async () => {
+    const ok = { settle: vi.fn(async () => undefined) }
+    const failing = {
+      settle: vi.fn(async () => {
+        throw new Error('磁盘已满')
+      })
+    }
+    const disposeA = registerExcalidrawSession('kb-a', 'assets/a.excalidraw', ok)
+    const disposeB = registerExcalidrawSession('kb-a', 'assets/b.excalidraw', failing)
+    const disposeC = registerExcalidrawSession('kb-b', 'assets/c.excalidraw', ok)
+
+    const result = await settleExcalidrawSessions('kb-a')
+
+    expect(result.settled).toEqual(['assets/a.excalidraw'])
+    expect(result.failures).toEqual([{ relPath: 'assets/b.excalidraw', message: '磁盘已满' }])
+    // 别的知识库不受影响，也不会被 settle
+    expect(ok.settle).toHaveBeenCalledOnce()
+    disposeA()
+    disposeB()
+    disposeC()
   })
 
   it('key 用不可见分隔符，避免拼接歧义', () => {

@@ -40,6 +40,23 @@ const mocks = vi.hoisted(() => {
       bytes: Buffer.from([1, 2, 3]),
       oid: 'd'.repeat(40),
       contentType: 'image/png'
+    })),
+    plan: vi.fn(async () => ({
+      id: 'history-restore-1',
+      revision: 1,
+      knowledgeBaseId: 'kb',
+      rootPath: '/tmp/kb',
+      head: 'b'.repeat(40),
+      sourceCommit: 'a'.repeat(40),
+      noteIndex: '0042',
+      note: { relPath: 'notes/0042. A.md', oid: 'c'.repeat(40), bytes: 10 },
+      resources: [{ relPath: 'assets/0042-a.png', oid: 'e'.repeat(40), bytes: 3 }],
+      preserved: [{ relPath: 'assets/0042-new.png', oid: 'f'.repeat(40), bytes: 4 }],
+      writePaths: ['notes/0042. A.md', 'assets/0042-a.png'],
+      backupPaths: ['assets/0042-a.png', 'assets/0042-new.png', 'notes/0042. A.md'],
+      backupMessage: 'backup: 0042 恢复历史版本前备份',
+      limitations: [],
+      createdAt: 1
     }))
   }
   return { handlers, service }
@@ -55,6 +72,10 @@ vi.mock('electron', () => ({
   BrowserWindow: { getAllWindows: () => [] }
 }))
 vi.mock('../history/historyService', () => ({ historyService: mocks.service }))
+vi.mock('../history/restorePlan', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../history/restorePlan')>()
+  return { ...actual, historyRestorePlanStore: { put: vi.fn(), require: vi.fn(), drop: vi.fn() } }
+})
 vi.mock('../log', () => ({ deskLog: vi.fn() }))
 
 import { IPC_CHANNELS } from '../../shared/contracts'
@@ -195,6 +216,57 @@ describe('历史 IPC 契约', () => {
       skip: undefined,
       limit: undefined
     })
+  })
+
+  it('创建恢复计划：只回影响范围与计划 ID，写入路径不出主进程', async () => {
+    const result = await invoke(IPC_CHANNELS.historyPlan, {
+      knowledgeBaseId: 'kb',
+      noteIndex: '0042',
+      commit: OID,
+      expectedHead: OID_2,
+      writers: {
+        dirtyDocuments: [],
+        dirtyTabs: [],
+        pendingRecoveries: [],
+        pendingEdits: [],
+        kbSettingsDirty: false
+      }
+    })
+    expect(result.ok).toBe(true)
+    const value = result.value as Record<string, unknown>
+    expect(value.planId).toBe('history-restore-1')
+    expect(value.writeCount).toBe(2)
+    expect(value.backupMessage).toContain('backup: 0042')
+    expect(value.resources).toEqual([{ relPath: 'assets/0042-a.png', bytes: 3 }])
+    // 计划里的 OID / 磁盘路径不能出现在渲染端 DTO 里
+    const serialized = JSON.stringify(value)
+    expect(serialized).not.toContain('e'.repeat(40))
+    expect(serialized).not.toContain('/tmp/kb')
+    expect(serialized).not.toContain('writePaths')
+    expect(mocks.service.plan).toHaveBeenCalledWith('kb', {
+      noteIndex: '0042',
+      commit: OID,
+      expectedHead: OID_2,
+      writers: expect.objectContaining({ kbSettingsDirty: false })
+    })
+  })
+
+  it('恢复计划同样拒绝 revision 表达式与坏快照', async () => {
+    const badCommit = await invoke(IPC_CHANNELS.historyPlan, {
+      knowledgeBaseId: 'kb',
+      noteIndex: '0042',
+      commit: 'HEAD~1'
+    })
+    expect(badCommit.ok).toBe(false)
+
+    const badWriters = await invoke(IPC_CHANNELS.historyPlan, {
+      knowledgeBaseId: 'kb',
+      noteIndex: '0042',
+      commit: OID,
+      writers: { dirtyDocuments: 'nope' }
+    })
+    expect(badWriters.ok).toBe(false)
+    expect(mocks.service.plan).not.toHaveBeenCalled()
   })
 
   it('拒绝来自未知页面的请求', async () => {

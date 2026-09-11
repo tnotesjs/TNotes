@@ -64,17 +64,31 @@ export function truncatedNotice(page: Pick<HistoryListResultDto, 'truncated'> | 
 }
 
 /**
- * 恢复按钮禁用原因（按钮文案固定，原因必须说清）。
+ * 「查看恢复影响」按钮的禁用原因：只看影响范围，不需要 H5 写回能力。
  *
- * 顺序即优先级：先选版本，再看正文能不能写回，最后才是 H4/H5 门禁。
+ * 顺序即优先级：先选版本，再看正文能不能作为恢复来源。
+ */
+export function restorePreviewDisabledReason(input: {
+  hasSelection: boolean
+  gate: Pick<HistoryRestoreGate, 'body'>
+}): string {
+  if (!input.hasSelection) return '先在左侧选择一个历史版本'
+  if (input.gate.body === 'binary') return '该版本正文不是文本文件，无法恢复'
+  return ''
+}
+
+/**
+ * 真正写回的禁用原因（在确认对话框里）。
+ *
+ * H5 未验收前不开放写回：必须给出原因，而不是让按钮静默不可用。
  */
 export function restoreDisabledReason(input: {
   hasSelection: boolean
   gate: HistoryRestoreGate
 }): string {
-  if (!input.hasSelection) return '先在左侧选择一个历史版本'
-  if (input.gate.body === 'binary') return '该版本正文不是文本文件，无法恢复'
-  if (!input.gate.open) return '恢复需要备份提交与事务日志（计划 H4/H5），当前只能浏览'
+  const preview = restorePreviewDisabledReason(input)
+  if (preview) return preview
+  if (!input.gate.open) return '恢复写回与恢复提交将在 H5 开放；当前只能确认影响范围'
   return ''
 }
 
