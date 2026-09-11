@@ -149,6 +149,29 @@ describe('static site build', () => {
     expect(guide).toMatch(/\{\{\s*n\s*\}\}|&#123;&#123;\s*n\s*&#125;&#125;/)
   })
 
+  it('自包含画布：字体随产物、只读岛、产物不含机器路径（E8）', () => {
+    // 官方字体随站点产物分发（客户端把 EXCALIDRAW_ASSET_PATH 指到这里）
+    const fontDir = dist('excalidraw/fonts')
+    expect(fs.existsSync(fontDir)).toBe(true)
+    const fontFiles = fs.readdirSync(fontDir, { recursive: true }) as string[]
+    expect(fontFiles.some((name) => String(name).endsWith('.woff2'))).toBe(true)
+
+    // 产物里不应残留本机绝对路径（Vite manifest 的键、SFC 的 __file 元数据）
+    const leaked: string[] = []
+    const walk = (dir: string) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const next = path.join(dir, entry.name)
+        if (entry.isDirectory()) walk(next)
+        else {
+          const content = fs.readFileSync(next)
+          if (content.includes('/Users/') || content.includes('/home/')) leaked.push(next)
+        }
+      }
+    }
+    walk(dist())
+    expect(leaked).toEqual([])
+  })
+
   it('copies library assets and public files into dist', () => {
     expect(fs.readFileSync(dist('assets/pic.txt'), 'utf8')).toBe('asset file')
     expect(fs.readFileSync(dist('fixture.txt'), 'utf8')).toBe('public asset')

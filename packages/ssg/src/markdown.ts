@@ -372,6 +372,58 @@ function configureMermaidFence(md: MarkdownIt) {
 }
 
 /** Canonical `mindmap` fence. */
+const EXCALIDRAW_TAG = /^ {0,3}<Excalidraw\b([^>]*?)\/?>\s*$/
+const EXCALIDRAW_PATH_ATTR = /(?<![\w:-])path\s*=\s*(?:"([^"]*)"|'([^']*)')/
+const EXCALIDRAW_HEIGHT_ATTR = /(?<![\w:-])height\s*=\s*(?:"([^"]*)"|'([^']*)')/
+
+/**
+ * `<Excalidraw path="…" />` → 只读岛。
+ *
+ * 服务端把标签包进 `[data-tn-island=excalidraw]` 并交给已注册的 Excalidraw 组件
+ * 渲染占位（关闭 JS 时看到的就是这段提示）；客户端 `hydrateIslands` 再按
+ * `data-src` 拉取源文件、用共享只读组件导出 SVG。
+ */
+function configureExcalidrawComponent(md: MarkdownIt, base: string) {
+  const render = (source: string): string | null => {
+    if (!EXCALIDRAW_TAG.test(source.trim())) return null
+    const attrs = source.trim().match(EXCALIDRAW_TAG)?.[1] ?? ''
+    const pathAttr = EXCALIDRAW_PATH_ATTR.exec(attrs)
+    const rawPath = pathAttr?.[1] ?? pathAttr?.[2] ?? ''
+    if (!rawPath) return null
+    const heightAttr = EXCALIDRAW_HEIGHT_ATTR.exec(attrs)
+    const height = Number.parseInt(
+      ((heightAttr?.[1] ?? heightAttr?.[2] ?? '') || '').replace(/px$/i, ''),
+      10
+    )
+    const src = escapeHtml(rewriteAssetSrc(rawPath, base))
+    const island = [
+      'data-tn-island="excalidraw"',
+      `data-src="${src}"`,
+      Number.isFinite(height) && height > 0 ? `data-height="${height}"` : ''
+    ]
+      .filter(Boolean)
+      .join(' ')
+    const component = [
+      `src="${src}"`,
+      Number.isFinite(height) && height > 0 ? `:height="${height}"` : ''
+    ]
+      .filter(Boolean)
+      .join(' ')
+    return `<div ${island}><Excalidraw ${component}></Excalidraw></div>\n`
+  }
+
+  for (const rule of ['html_block', 'html_inline'] as const) {
+    const original = md.renderer.rules[rule]
+    md.renderer.rules[rule] = (tokens, index, options, env, self) => {
+      const replaced = render(tokens[index].content)
+      if (replaced != null) return replaced
+      return original
+        ? original(tokens, index, options, env, self)
+        : self.renderToken(tokens, index, options)
+    }
+  }
+}
+
 function configureMindmapFence(md: MarkdownIt) {
   const fence = md.renderer.rules.fence!.bind(md.renderer.rules)
   md.renderer.rules.fence = (tokens, index, options, env, self) => {
@@ -592,6 +644,7 @@ export async function createMarkdownCompiler(
   configureCodeBlocks(md, config.markdown.lineNumbers)
   configureMermaidFence(md)
   configureMindmapFence(md)
+  configureExcalidrawComponent(md, config.base)
 
   return {
     async prepare(sources: string[]) {

@@ -185,3 +185,56 @@ describe('Markdown compatibility helpers', () => {
     expect(html).not.toMatch(/\{\{/)
   })
 })
+
+describe('Excalidraw 组件岛（E8）', () => {
+  it('把 <Excalidraw path> 包成只读岛并解析到站点 base', async () => {
+    const compiler = await createMarkdownCompiler(compilerConfig)
+    const { html } = compiler.compile(
+      '<Excalidraw path="../assets/0004-drawing.excalidraw" height="480" />\n',
+      'notes/0004. a.md',
+      '/notes/0004',
+      'a'
+    )
+    expect(html).toContain('data-tn-island="excalidraw"')
+    expect(html).toContain('data-src="/assets/0004-drawing.excalidraw"')
+    expect(html).toContain('data-height="480"')
+    expect(html).toContain('<Excalidraw src="/assets/0004-drawing.excalidraw" :height="480">')
+  })
+
+  it('部署在子路径时前缀跟着 base；带 base 的写法也照常工作', async () => {
+    const compiler = await createMarkdownCompiler({ ...compilerConfig, base: '/TNotes.example/' })
+    const { html } = compiler.compile(
+      "<Excalidraw path='../assets/a.excalidraw' />\n",
+      'notes/a.md',
+      '/notes/a',
+      'a'
+    )
+    expect(html).toContain('data-src="/TNotes.example/assets/a.excalidraw"')
+  })
+
+  it('缺少 path 的组件保持原样，不发明岛（避免误判普通 HTML）', async () => {
+    const compiler = await createMarkdownCompiler(compilerConfig)
+    const { html } = compiler.compile(
+      '<Excalidraw :path="someVar" />\n\n<div class="x">html</div>\n',
+      'notes/a.md',
+      '/notes/a',
+      'a'
+    )
+    expect(html).not.toContain('data-tn-island="excalidraw"')
+    expect(html).toContain('class="x"')
+  })
+})
+
+describe('Excalidraw 组件 URL 边界（E8）', () => {
+  it('保留 URL 编码的文件名，不引入本地绝对路径', async () => {
+    const compiler = await createMarkdownCompiler({ ...compilerConfig, base: '/TNotes.example/' })
+    const { html } = compiler.compile(
+      '<Excalidraw path="../assets/%E4%B8%AD%E6%96%87%20(1).excalidraw" />\n',
+      'notes/a.md',
+      '/notes/a',
+      'a'
+    )
+    expect(html).toContain('data-src="/TNotes.example/assets/%E4%B8%AD%E6%96%87%20(1).excalidraw"')
+    expect(html).not.toMatch(/\/Users\/|\/home\//)
+  })
+})

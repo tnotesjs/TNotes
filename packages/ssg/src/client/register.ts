@@ -26,6 +26,8 @@ function lazyComponent(loader: () => Promise<unknown>) {
 }
 
 const BilibiliVideo = lazyComponent(() => import('@tnotesjs/ui/bilibili-video'))
+/** 画布卡片：宿主强制只读，笔记无法传入编辑权限（计划 E8） */
+const Excalidraw = lazyComponent(() => import('./components/ExcalidrawAdapter.vue'))
 const Footprints = lazyComponent(() => import('@tnotesjs/ui/footprints'))
 const Mermaid = lazyComponent(() => import('@tnotesjs/ui/mermaid'))
 const Mindmap = lazyComponent(() => import('@tnotesjs/ui/mindmap'))
@@ -44,6 +46,7 @@ export function registerTNotesComponents(
     CodeBlock,
     CodeGroup,
     Discussions,
+    Excalidraw,
     Footprints,
     ImagePreview,
     Mermaid,

@@ -219,6 +219,24 @@ async function hydrateMindmaps(root: ParentNode, base: string): Promise<void> {
   }
 }
 
+async function hydrateExcalidraws(root: ParentNode, base: string): Promise<void> {
+  const nodes = [...root.querySelectorAll<HTMLElement>('[data-tn-island="excalidraw"]')].filter(
+    (el) => el.dataset.tnReady !== '1'
+  )
+  if (!nodes.length) return
+  const adapter = (await import('./components/ExcalidrawAdapter.vue')).default
+  for (const el of nodes) {
+    el.dataset.tnReady = '1'
+    const height = Number.parseInt(el.dataset.height ?? '', 10)
+    const app = createApp(adapter, {
+      src: el.dataset.src ?? '',
+      ...(Number.isFinite(height) && height > 0 ? { height } : {})
+    })
+    app.provide('tn-site-base', base)
+    app.mount(el)
+  }
+}
+
 export async function hydrateIslands(
   root: ParentNode = document,
   options: HydrateIslandsOptions = {}
@@ -226,5 +244,9 @@ export async function hydrateIslands(
   hydrateCodeGroups(root)
   hydrateCodeBlocks(root)
   hydrateTnSwipers(root)
-  await Promise.all([hydrateMermaids(root), hydrateMindmaps(root, options.base ?? '/')])
+  await Promise.all([
+    hydrateMermaids(root),
+    hydrateMindmaps(root, options.base ?? '/'),
+    hydrateExcalidraws(root, options.base ?? '/')
+  ])
 }

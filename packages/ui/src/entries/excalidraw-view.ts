@@ -10,4 +10,6 @@ export type {
   ExcalidrawViewState
 } from '../excalidraw/renderer'
 export { parseExcalidrawScene, sceneCacheKey, svgCache, SvgCache } from '../excalidraw/scene'
+/** 部署站点需要把官方字体指向站点内的目录（离线自包含） */
+export { setExcalidrawAssetPath, getExcalidrawAssetPath } from '../excalidraw/fonts'
 export type { ExcalidrawScene, SceneParseResult } from '../excalidraw/scene'
