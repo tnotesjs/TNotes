@@ -3,7 +3,9 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
+  apply: vi.fn(),
   workspace: {
+    reloadNoteFromDisk: vi.fn(async () => undefined),
     flushForHistoryRestore: vi.fn(async () => ({
       dirtyDocuments: [],
       dirtyTabs: [],
@@ -16,6 +18,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('../stores/workspace', () => ({ useWorkspaceStore: () => mocks.workspace }))
+vi.mock('../stores/toast', () => ({ pushToast: vi.fn() }))
 
 import HistoryRestoreDialog from './HistoryRestoreDialog.vue'
 import { HistoryFlushError } from './flushWriters'
@@ -58,8 +61,22 @@ const plan: HistoryRestorePlanDto = {
 
 beforeEach(() => {
   mocks.plan.mockReset()
+  mocks.apply.mockReset()
   mocks.workspace.flushForHistoryRestore.mockClear()
-  ;(window as unknown as { desk: unknown }).desk = { history: { plan: mocks.plan } }
+  mocks.workspace.reloadNoteFromDisk.mockClear()
+  mocks.apply.mockResolvedValue({
+    ok: true,
+    value: {
+      operationId: 'history-restore-1',
+      backupCommit: 'b'.repeat(40),
+      restoreCommit: 'c'.repeat(40),
+      writtenPaths: ['notes/0042. A.md', 'assets/0042-a.png'],
+      headDrift: false
+    }
+  })
+  ;(window as unknown as { desk: unknown }).desk = {
+    history: { plan: mocks.plan, apply: mocks.apply }
+  }
 })
 
 async function open() {
@@ -91,10 +108,36 @@ describe('恢复影响范围确认', () => {
     expect(wrapper.get('[data-history-restore-limits]').text()).toContain('归属不明确')
   })
 
-  it('写回按钮禁用并说明 H5 门禁，取消会关闭对话框', async () => {
+  it('确认恢复只提交计划 ID + revision，成功后失效旧编辑会话并显示结果', async () => {
     const wrapper = await open()
+    const confirm = wrapper.get('[data-history-restore-confirm]')
+    expect(confirm.attributes('disabled')).toBeUndefined()
+    await confirm.trigger('click')
+    await flushPromises()
+
+    expect(mocks.apply).toHaveBeenCalledWith({ planId: 'history-restore-1', revision: 1 })
+    expect(mocks.workspace.reloadNoteFromDisk).toHaveBeenCalledWith('kb-1', 'note-1')
+    expect(wrapper.get('[data-history-restore-done]').text()).toContain('恢复完成')
+    expect(wrapper.get('[data-history-restore-done]').text()).toContain('ccccccc')
+    // 完成后按钮不再可点，取消文案变成关闭
     expect(wrapper.get('[data-history-restore-confirm]').attributes('disabled')).toBeDefined()
-    expect(wrapper.get('[data-history-restore-hint]').text()).toContain('H5')
+    expect(wrapper.get('[data-history-restore-cancel]').text()).toBe('关闭')
+  })
+
+  it('主进程拒绝恢复时显示错误且不动编辑会话', async () => {
+    mocks.apply.mockResolvedValue({
+      ok: false,
+      error: { code: 'RESTORE_IN_FLIGHT', message: '该知识库已有恢复在进行' }
+    })
+    const wrapper = await open()
+    await wrapper.get('[data-history-restore-confirm]').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[data-history-restore-error]').text()).toContain('已有恢复在进行')
+    expect(mocks.workspace.reloadNoteFromDisk).not.toHaveBeenCalled()
+  })
+
+  it('取消会关闭对话框', async () => {
+    const wrapper = await open()
     await wrapper.get('[data-history-restore-cancel]').trigger('click')
     expect(wrapper.emitted('close')).toHaveLength(1)
   })

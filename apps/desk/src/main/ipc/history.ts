@@ -2,6 +2,7 @@ import { historyService } from '../history/historyService'
 import { historyRestorePlanStore, toHistoryRestorePlanDto } from '../history/restorePlan'
 import { IPC_CHANNELS } from '../../shared/contracts'
 import {
+  historyApplySchema,
   historyAssetSchema,
   historyListSchema,
   historyPlanSchema,
@@ -48,6 +49,9 @@ export function registerHistory(getWindow: GetWindow): () => void {
       url: `tnotes-asset://history?${params.toString()}`
     }
   })
+  handle(IPC_CHANNELS.historyApply, getWindow, historyApplySchema, (input) =>
+    historyService.applyPlan(input.planId, input.revision)
+  )
   handle(IPC_CHANNELS.historyPlan, getWindow, historyPlanSchema, async (input) => {
     const plan = await historyService.plan(input.knowledgeBaseId, {
       noteIndex: input.noteIndex,

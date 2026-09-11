@@ -18,6 +18,8 @@ import { assetWriteGate } from './assetWriteGate'
 import { gitManager } from './gitManager'
 import { loadSettings, settingsForKnowledgeBase } from './settings'
 import { loadWorkspace, saveWorkspace } from './workspace'
+import { recoverHistoryRestore } from './history/restoreApply'
+import { historyRestoreJournalDir, listRestoreJournals } from './history/restoreJournal'
 import { knowledgeBaseAssetHashCache, knowledgeBaseAssetStore } from './workspace/assetStore'
 import { descriptor, toDetail, toSettingsDto } from './workspace/dto'
 import * as noteIo from './workspace/noteIo'
@@ -670,7 +672,21 @@ export class WorkspaceManager {
     for (const handle of this.scanState.handles.values()) {
       const store = knowledgeBaseAssetStore(userDataDir, handle.rootPath)
       const incomplete = await listIncompleteJournals(store)
-      if (incomplete.length > 0) {
+      // 历史恢复的未完成事务：先按日志回滚/确认提交，再决定是否继续拦写入
+      const historyJournalDir = historyRestoreJournalDir(userDataDir, handle.rootPath)
+      try {
+        await recoverHistoryRestore({ journalDir: historyJournalDir })
+      } catch (error) {
+        deskLog(
+          'history-restore',
+          `恢复未完成事务失败：${handle.rootPath}`,
+          error instanceof Error ? error.message : String(error)
+        )
+      }
+      const unfinishedHistory = (await listRestoreJournals(historyJournalDir)).filter(
+        (journal) => journal.phase === 'failed'
+      )
+      if (incomplete.length > 0 || unfinishedHistory.length > 0) {
         assetWriteGate.setSticky(handle.id, 'incomplete-journal')
         gitManager.pauseForAssetWrite(handle.id)
       } else if (!assetWriteGate.inTransaction(handle.id)) {

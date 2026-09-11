@@ -10,6 +10,7 @@ import type {
   ExcalidrawDocumentRefDto,
   HistoryAssetDto,
   HistoryListResultDto,
+  HistoryApplyResultDto,
   HistoryNoteDto,
   HistoryRestorePlanDto,
   HistorySnapshotDto,
@@ -174,7 +175,8 @@ const api: DeskApi = {
     snapshot: (request) => invoke<HistorySnapshotDto>(IPC_CHANNELS.historySnapshot, request),
     readNote: (request) => invoke<HistoryNoteDto>(IPC_CHANNELS.historyReadNote, request),
     readAsset: (request) => invoke<HistoryAssetDto>(IPC_CHANNELS.historyReadAsset, request),
-    plan: (request) => invoke<HistoryRestorePlanDto>(IPC_CHANNELS.historyPlan, request)
+    plan: (request) => invoke<HistoryRestorePlanDto>(IPC_CHANNELS.historyPlan, request),
+    apply: (request) => invoke<HistoryApplyResultDto>(IPC_CHANNELS.historyApply, request)
   },
   assets: {
     scan: (knowledgeBaseId, generation) =>

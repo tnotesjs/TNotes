@@ -270,6 +270,20 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     })
   }
 
+  /**
+   * 历史恢复成功后让这篇笔记重新读盘：旧编辑缓冲/缓存不允许再 autosave 覆盖恢复结果。
+   * 脏文档不静默丢弃，标记外部冲突交给用户决定。
+   */
+  async function reloadNoteFromDisk(knowledgeBaseId: string, noteUuid: string): Promise<void> {
+    const key = documentKey(knowledgeBaseId, noteUuid)
+    const session = documents.value[key]
+    if (session?.dirty) {
+      setDocumentSession(key, { ...session, externalConflict: true })
+      return
+    }
+    if (session) await reloadDocument(key)
+  }
+
   const { updateSettings, applySettings, setAppZoom, adjustAppZoom, zoomFeedbackSequence } =
     createSettings({
       editor,
@@ -670,6 +684,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     saveAllDocuments,
     collectWritersSnapshot,
     flushForHistoryRestore,
+    reloadNoteFromDisk,
     writeLocalAttachment,
     uploadImage,
     updateSettings,

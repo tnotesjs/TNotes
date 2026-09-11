@@ -28,6 +28,7 @@ export const IPC_CHANNELS = {
   historyReadNote: 'history:read-note',
   historyReadAsset: 'history:read-asset',
   historyPlan: 'history:plan',
+  historyApply: 'history:apply',
   assetsScan: 'assets:scan',
   assetsScanCancel: 'assets:scan-cancel',
   assetsSummaries: 'assets:summaries',
@@ -734,6 +735,20 @@ export interface HistoryRestorePlanDto {
   limitations: Array<{ code: string; message: string }>
 }
 
+export interface HistoryApplyRequest {
+  planId: string
+  revision: number
+}
+
+export interface HistoryApplyResultDto {
+  operationId: string
+  backupCommit: string | null
+  restoreCommit: string | null
+  writtenPaths: string[]
+  /** 计划创建后 HEAD 已被外部改动（备份仍然保留） */
+  headDrift: boolean
+}
+
 export interface ExcalidrawEditorTab {
   id: string
   type: 'excalidraw'
@@ -1320,6 +1335,7 @@ export interface DeskApi {
     readNote(request: HistorySnapshotRequest): Promise<DeskResult<HistoryNoteDto>>
     readAsset(request: HistoryAssetRequest): Promise<DeskResult<HistoryAssetDto>>
     plan(request: HistoryRestorePlanRequest): Promise<DeskResult<HistoryRestorePlanDto>>
+    apply(request: HistoryApplyRequest): Promise<DeskResult<HistoryApplyResultDto>>
   }
   assets: {
     scan(knowledgeBaseId: string, generation: number): Promise<DeskResult<AssetScanReportDto>>

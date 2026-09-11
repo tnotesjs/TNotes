@@ -41,6 +41,13 @@ const mocks = vi.hoisted(() => {
       oid: 'd'.repeat(40),
       contentType: 'image/png'
     })),
+    applyPlan: vi.fn(async () => ({
+      operationId: 'history-restore-1',
+      backupCommit: 'b'.repeat(40),
+      restoreCommit: 'c'.repeat(40),
+      writtenPaths: ['notes/0042. A.md', 'assets/0042-a.png'],
+      headDrift: false
+    })),
     plan: vi.fn(async () => ({
       id: 'history-restore-1',
       revision: 1,
@@ -249,6 +256,34 @@ describe('历史 IPC 契约', () => {
       expectedHead: OID_2,
       writers: expect.objectContaining({ kbSettingsDirty: false })
     })
+  })
+
+  it('执行恢复只接受计划 ID + revision', async () => {
+    const result = await invoke(IPC_CHANNELS.historyApply, {
+      planId: 'history-restore-1',
+      revision: 1
+    })
+    expect(result.ok).toBe(true)
+    expect(result.value).toMatchObject({
+      operationId: 'history-restore-1',
+      restoreCommit: 'c'.repeat(40),
+      headDrift: false
+    })
+    expect(mocks.service.applyPlan).toHaveBeenCalledWith('history-restore-1', 1)
+
+    // 渲染端不能传路径、内容或任意提交
+    const injected = await invoke(IPC_CHANNELS.historyApply, {
+      planId: 'history-restore-1',
+      revision: 1,
+      writePaths: ['../../etc/passwd'],
+      content: 'x'
+    })
+    expect(injected.ok).toBe(true)
+    expect(mocks.service.applyPlan).toHaveBeenLastCalledWith('history-restore-1', 1)
+
+    const missingRevision = await invoke(IPC_CHANNELS.historyApply, { planId: 'x' })
+    expect(missingRevision.ok).toBe(false)
+    expect(missingRevision.error?.code).toBe('INVALID_REQUEST')
   })
 
   it('恢复计划同样拒绝 revision 表达式与坏快照', async () => {

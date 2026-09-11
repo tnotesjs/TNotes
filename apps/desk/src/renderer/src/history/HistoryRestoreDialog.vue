@@ -10,6 +10,7 @@
 import { onMounted, ref } from 'vue'
 
 import { HistoryFlushError } from '../history/flushWriters'
+import { pushToast } from '../stores/toast'
 import { useWorkspaceStore } from '../stores/workspace'
 
 import type { HistoryRestorePlanDto, NoteHistoryEditorTab } from '../../../shared/contracts'
@@ -25,10 +26,10 @@ const emit = defineEmits<{ close: [] }>()
 
 const workspace = useWorkspaceStore()
 const loading = ref(true)
+const applying = ref(false)
 const error = ref('')
 const plan = ref<HistoryRestorePlanDto | null>(null)
-
-const APPLY_DISABLED_REASON = '恢复写回与恢复提交将在 H5 开放；这里先确认影响范围。'
+const result = ref<{ restoreCommit: string | null; backupCommit: string | null } | null>(null)
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
@@ -63,6 +64,44 @@ async function loadPlan(): Promise<void> {
           : String(cause)
   } finally {
     loading.value = false
+  }
+}
+
+/**
+ * 确认恢复：只把计划 ID + revision 交给主进程，写回/提交/回滚全在主进程完成。
+ * 成功后让所有编辑会话重新读盘，避免旧缓存 autosave 覆盖恢复结果。
+ */
+async function confirmRestore(): Promise<void> {
+  if (!plan.value || applying.value) return
+  applying.value = true
+  error.value = ''
+  try {
+    const applied = await window.desk.history.apply({
+      planId: plan.value.planId,
+      revision: plan.value.revision
+    })
+    if (!applied.ok) {
+      error.value = applied.error.message
+      return
+    }
+    result.value = {
+      restoreCommit: applied.value.restoreCommit,
+      backupCommit: applied.value.backupCommit
+    }
+    // 失效旧编辑会话：笔记按 uuid 重新读盘；画布会话由主进程的资源变更事件处理
+    const noteUuid = props.tab.noteUuid
+    if (noteUuid) await workspace.reloadNoteFromDisk(props.tab.knowledgeBaseId, noteUuid)
+    pushToast(
+      `已恢复到 ${props.commit.slice(0, 7)}：${applied.value.writtenPaths.length} 个文件` +
+        (applied.value.restoreCommit
+          ? `，恢复提交 ${applied.value.restoreCommit.slice(0, 7)}`
+          : ''),
+      'success'
+    )
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : String(cause)
+  } finally {
+    applying.value = false
   }
 }
 
@@ -123,20 +162,30 @@ onMounted(() => void loadPlan())
         <li v-for="(item, index) in plan.limitations" :key="index">{{ item.message }}</li>
       </ul>
 
+      <p v-if="result" class="history-restore__done" data-history-restore-done>
+        恢复完成：写入 {{ plan.writeCount }} 个文件<template v-if="result.backupCommit">
+          ，备份提交 {{ result.backupCommit.slice(0, 7) }}</template
+        ><template v-if="result.restoreCommit">
+          ，恢复提交 {{ result.restoreCommit.slice(0, 7) }}</template
+        >。
+      </p>
       <footer class="history-restore__actions">
-        <button type="button" data-history-restore-cancel @click="emit('close')">取消</button>
+        <button type="button" data-history-restore-cancel @click="emit('close')">
+          {{ result ? '关闭' : '取消' }}
+        </button>
         <button
           type="button"
           class="history-restore__confirm"
           data-history-restore-confirm
-          disabled
-          :title="APPLY_DISABLED_REASON"
+          :disabled="applying || Boolean(result)"
+          @click="confirmRestore"
         >
-          确认恢复
+          {{ applying ? '正在恢复…' : '确认恢复' }}
         </button>
-        <span class="history-restore__hint" data-history-restore-hint>{{
-          APPLY_DISABLED_REASON
-        }}</span>
+        <span class="history-restore__hint" data-history-restore-hint>
+          恢复会先为相关未提交改动生成备份提交，再按历史字节写回并生成一个恢复提交；TOC
+          与其它笔记不动。
+        </span>
       </footer>
     </template>
   </div>
@@ -212,6 +261,18 @@ onMounted(() => void loadPlan())
 .history-restore__confirm:disabled {
   cursor: not-allowed;
   opacity: 0.6;
+}
+
+.history-restore__done {
+  margin: 0;
+  color: var(--tn-success, #15803d);
+  font-size: 12px;
+}
+
+.history-restore__done {
+  margin: 0;
+  color: var(--vn-success, #15803d);
+  font-size: 12px;
 }
 
 .history-restore__hint {

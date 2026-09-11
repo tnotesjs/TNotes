@@ -51,12 +51,17 @@ const previewDisabledReason = computed(() =>
     gate: { body: bodyKind.value }
   })
 )
+// 写回已在 H5 开放：只有「未选版本 / 非文本正文」会挡住入口
 const restoreReason = computed(() =>
   restoreDisabledReason({
     hasSelection: Boolean(selectedCommit.value),
-    // H5 未验收前不开放写回；正文类型由预览回调上来
-    gate: { open: false, body: bodyKind.value }
+    gate: { open: true, body: bodyKind.value }
   })
+)
+const restoreHint = computed(
+  () =>
+    restoreReason.value ||
+    '恢复会先为相关未提交改动生成备份提交，再按历史字节写回，并生成一个恢复提交；TOC 与其它笔记不动。'
 )
 
 function noteBodyKind(kind: 'unknown' | 'text' | 'binary'): void {
@@ -216,7 +221,7 @@ onMounted(() => void loadPage(true))
         >
           恢复到该版本…
         </button>
-        <span class="history-pane__hint" data-history-restore-reason>{{ restoreReason }}</span>
+        <span class="history-pane__hint" data-history-restore-reason>{{ restoreHint }}</span>
       </footer>
     </div>
   </div>

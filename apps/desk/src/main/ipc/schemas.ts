@@ -398,6 +398,12 @@ export const historyPlanSchema = z.object({
     .optional()
 })
 
+export const historyApplySchema = z.object({
+  /** 只接受主进程发出去的计划 ID：渲染端无法构造任意恢复 */
+  planId: z.string().min(1).max(200),
+  revision: z.number().int().min(1)
+})
+
 export const excalidrawReadSchema = z.object({
   knowledgeBaseId: z.string().min(1),
   relPath: excalidrawRelPathSchema

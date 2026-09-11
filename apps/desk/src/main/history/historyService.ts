@@ -2,7 +2,18 @@ import path from 'node:path'
 
 import type { AssetEditorSnapshotDto } from '../../shared/contracts'
 import { workspaceManager } from '../workspaceManager'
-import { buildHistoryRestorePlan, type HistoryRestorePlan } from './restorePlan'
+import {
+  applyHistoryRestore,
+  recoverHistoryRestore,
+  type ApplyHistoryRestoreResult,
+  type RecoverHistoryRestoreOutcome
+} from './restoreApply'
+import { historyRestoreJournalDir } from './restoreJournal'
+import {
+  buildHistoryRestorePlan,
+  historyRestorePlanStore,
+  type HistoryRestorePlan
+} from './restorePlan'
 import {
   listHistoryCommits,
   readHistoryBlob,
@@ -107,6 +118,31 @@ export class HistoryService {
 
   async head(knowledgeBaseId: string): Promise<string | null> {
     return await resolveHead(this.rootOf(knowledgeBaseId), this.options)
+  }
+
+  private journalDirOf(rootPath: string): string {
+    const userDataDir = workspaceManager.assetUserDataDir()
+    if (!userDataDir) throw new Error('应用数据目录尚未就绪，无法执行历史恢复')
+    return historyRestoreJournalDir(userDataDir, rootPath)
+  }
+
+  /**
+   * 执行恢复（H5）：渲染端只给计划 ID 与 revision，字节、路径、提交都在主进程。
+   */
+  async applyPlan(planId: string, revision: number): Promise<ApplyHistoryRestoreResult> {
+    const plan = historyRestorePlanStore.require(planId, revision)
+    const result = await applyHistoryRestore(plan, {
+      journalDir: this.journalDirOf(plan.rootPath)
+    })
+    historyRestorePlanStore.drop(planId)
+    return result
+  }
+
+  /** 打开知识库时恢复未完成的历史恢复事务（启动/重开都要跑）。 */
+  async recoverRestores(knowledgeBaseId: string): Promise<RecoverHistoryRestoreOutcome[]> {
+    return await recoverHistoryRestore({
+      journalDir: this.journalDirOf(this.rootOf(knowledgeBaseId))
+    })
   }
 
   /**

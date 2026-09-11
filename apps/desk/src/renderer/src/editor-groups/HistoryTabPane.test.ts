@@ -119,10 +119,10 @@ describe('历史标签页（列表与门禁）', () => {
     const { wrapper } = await openPane()
     const entry = wrapper.get('[data-history-commits] button')
     expect(entry.text()).toContain('正文 1 · 资源 1')
-    // 按钮本身可用（只看影响范围）；写回仍被 H5 门禁挡住并说明原因
+    // 按钮可用，并说明会先备份再写回
     const restore = wrapper.get('[data-history-restore]')
     expect(restore.attributes('disabled')).toBeUndefined()
-    expect(wrapper.get('[data-history-restore-reason]').text()).toContain('H5')
+    expect(wrapper.get('[data-history-restore-reason]').text()).toContain('备份提交')
   })
 
   it('浅克隆给出本地历史不完整的提示', async () => {

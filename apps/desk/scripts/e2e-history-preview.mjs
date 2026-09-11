@@ -203,7 +203,25 @@ function repoState() {
 }
 
 const before = repoState()
+// H5 之前的「当前磁盘已删除旧资源」断言需要原始字节做对比
+const oldImageBytesForH5 = oldImageBytes
+const goneImageBytesForH5 = goneImageBytes
 const beforeAssets = existsSync(join(kb, OLD_IMAGE)) || existsSync(join(kb, GONE_IMAGE))
+
+/** 只要 0042 那一个历史页（H5 的恢复必须在它上面做）。 */
+function notePane(page, noteIndex) {
+  return page.locator('[data-note-history-pane]').filter({ hasText: `历史版本 · ${noteIndex}` })
+}
+
+/** 在指定历史页里按 data-commit 点击。 */
+async function selectCommitIn(pane, oid) {
+  await pane.locator('[data-history-commits]').evaluate((list, target) => {
+    const button = [...list.querySelectorAll('button')].find(
+      (node) => node.getAttribute('data-commit') === target
+    )
+    button?.click()
+  }, oid)
+}
 
 /** 列表项可能多个：用容器定位后再按 data-commit 点击。 */
 async function selectCommit(page, oid) {
@@ -448,8 +466,8 @@ try {
     .locator('[data-history-restore]')
     .evaluate((button) => button.disabled)
   record(
-    'H3-2 写回仍被 H5 门禁挡住并说明原因（只保留影响范围入口）',
-    !restoreDisabled && restoreReason.includes('H5'),
+    'H3-2 恢复入口可用并说明会先备份再写回',
+    !restoreDisabled && restoreReason.includes('备份提交'),
     restoreReason
   )
 
@@ -531,8 +549,8 @@ try {
     JSON.stringify(facts)
   )
   record(
-    'H4-2 写回按钮禁用并说明 H5 门禁（H4 只固化影响范围）',
-    Boolean(facts) && facts.confirmDisabled === true && facts.hint.includes('H5'),
+    'H4-2 确认恢复可用（H5 写回已开）',
+    Boolean(facts) && facts.confirmDisabled === false,
     facts?.hint ?? facts?.error ?? '无对话框'
   )
   await page.screenshot({ path: join(shots, '04-restore-plan.png'), fullPage: false })
@@ -540,7 +558,7 @@ try {
   const dialogClosed = await waitFor(
     async () => (await page.locator('[data-history-restore-dialog]').count()) === 0
   )
-  record('H4-3 取消后对话框关闭且未做任何写入', Boolean(dialogClosed))
+  record('H4-3 关闭对话框后不做任何写入', Boolean(dialogClosed))
 
   // H3：多标签隔离 —— 0043 的历史页有自己的选中版本，互不影响
   const otherNode = page.locator(`.toc-row[data-note-uuid="${BROTHER_UUID}"]`)
@@ -637,6 +655,99 @@ try {
   )
 
   record('H2-18 渲染过程没有未捕获异常', pageErrors.length === 0, pageErrors.join(' | '))
+
+  // H5：制造一笔未提交修改（模拟自动保存后的工作区），再确认恢复
+  const notePath = join(notes, '0042. 历史笔记.md')
+  writeFileSync(notePath, `${readFileSync(notePath, 'utf8')}\nUNCOMMITTED-BEFORE-RESTORE\n`)
+  const headBeforeRestore = git('rev-parse', 'HEAD')
+  const commitsBeforeRestore = git('log', '--format=%H').trim().split('\n')
+
+  // 恢复必须在 0042 的历史页上做：先把 0042 的历史页开出来并选中旧 commit
+  await page.locator(`.toc-row[data-note-uuid="${NOTE_UUID}"]`).click({ button: 'right' })
+  const pane0042 = notePane(page, '0042')
+  const paneReady = await waitFor(async () => (await pane0042.count()) === 1)
+  await selectCommitIn(pane0042, OLD_COMMIT)
+  await waitFor(async () => {
+    const text = await pane0042.locator('[data-history-body]').innerText()
+    return text.includes('OLD-VERSION-MARKER')
+  })
+  await pane0042.locator('[data-history-restore]').click()
+  const reopenedDialog = await waitFor(
+    async () => (await pane0042.locator('[data-history-restore-confirm]').count()) > 0,
+    15000
+  )
+  const reopenedFacts = reopenedDialog
+    ? await pane0042.locator('[data-history-restore-facts]').innerText()
+    : ''
+  record(
+    'H5-0 重新打开影响范围确认（0042 历史页）',
+    Boolean(paneReady) && Boolean(reopenedDialog) && reopenedFacts.includes('4 个文件'),
+    reopenedFacts.replace(/\s+/g, ' ').slice(0, 160)
+  )
+  await pane0042.locator('[data-history-restore-confirm]').click()
+  const applied = await waitFor(
+    async () => (await pane0042.locator('[data-history-restore-done]').count()) > 0,
+    30000
+  )
+  const doneText = applied
+    ? await pane0042.locator('[data-history-restore-done]').innerText()
+    : (await pane0042
+        .locator('[data-history-restore-error]')
+        .innerText()
+        .catch(() => '')) || '无结果'
+  const headAfterRestore = git('rev-parse', 'HEAD')
+  const commitsAfterRestore = git('log', '--format=%H').trim().split('\n')
+  const noteAfterRestore = readFileSync(notePath, 'utf8')
+  record(
+    'H5-1 恢复把正文写回历史字节，并生成备份 + 恢复两个提交',
+    Boolean(applied) &&
+      noteAfterRestore.includes('OLD-VERSION-MARKER') &&
+      !noteAfterRestore.includes('UNCOMMITTED-BEFORE-RESTORE') &&
+      headAfterRestore !== headBeforeRestore &&
+      commitsAfterRestore.length === commitsBeforeRestore.length + 2,
+    `${doneText} / 提交数 ${commitsBeforeRestore.length}→${commitsAfterRestore.length}`
+  )
+  // -z：带空格的路径不会被引号/八进制转义
+  const changedPaths = git('show', '--name-only', '--format=', '-z', headAfterRestore)
+    .split('\0')
+    .map((value) => value.replace(/^\n+/, '').trim())
+    .filter(Boolean)
+  record(
+    'H5-2 旧提交仍在，恢复提交只含目标路径',
+    git('log', '--format=%H').split('\n').includes(headBeforeRestore) &&
+      changedPaths.length > 0 &&
+      changedPaths.every((relPath) =>
+        ['notes/0042. 历史笔记.md', OLD_IMAGE, GONE_IMAGE, DRAWING].includes(relPath)
+      ),
+    changedPaths.join('、')
+  )
+  record(
+    'H5-3 历史 blob 字节写回磁盘（图片逐字节一致）',
+    readFileSync(join(kb, OLD_IMAGE)).equals(oldImageBytesForH5) &&
+      readFileSync(join(kb, GONE_IMAGE)).equals(goneImageBytesForH5),
+    `old.png ${readFileSync(join(kb, OLD_IMAGE)).length}B`
+  )
+  record(
+    'H5-4 恢复后历史预览仍可读（正文与磁盘一致）',
+    await waitFor(async () => {
+      const text = await pane0042.locator('[data-history-body]').innerText()
+      return text.includes('OLD-VERSION-MARKER')
+    })
+  )
+  await page.screenshot({ path: join(shots, '05-restored.png'), fullPage: false })
+  await pane0042.locator('[data-history-restore-cancel]').click()
+  const closedAfterRestore = await waitFor(
+    async () => (await pane0042.locator('[data-history-restore-dialog]').count()) === 0
+  )
+  record('H5-5 恢复完成后可以关闭对话框', Boolean(closedAfterRestore))
+
+  // 恢复后工作区/索引一致：没有半成品文件，也没有多余未跟踪文件
+  const statusAfterRestore = git('status', '--porcelain').trim()
+  record(
+    'H5-6 恢复后工作区干净（没有半成品或残留文件）',
+    statusAfterRestore === '',
+    statusAfterRestore || '干净'
+  )
 } catch (error) {
   record('H2 断言执行', false, error instanceof Error ? error.message : String(error))
 } finally {

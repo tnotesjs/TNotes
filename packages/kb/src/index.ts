@@ -103,6 +103,8 @@ export {
   fillCompletedNotesCount,
   toMonthKey
 } from './stats'
+export { applyAtomicWrites, writeFileAtomic } from './atomic'
+export type { AtomicWrite } from './atomic'
 export {
   EXCALIDRAW_EXTENSION,
   copyExcalidrawDocument,
