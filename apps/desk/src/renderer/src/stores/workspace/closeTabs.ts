@@ -28,7 +28,7 @@ export function createTabClosing(ctx: CloseTabsContext) {
 
   function isTabDirty(tab: EditorTab): boolean {
     return (
-      (tab.type !== 'web' && tab.dirty) ||
+      (tab.type !== 'web' && tab.type !== 'note-history' && tab.dirty) ||
       (tab.type === 'note' && hasPendingEdits(tab.knowledgeBaseId, tab.noteUuid)) ||
       ctx.resourcesFor(tab).some((resource) => resource.dirty())
     )

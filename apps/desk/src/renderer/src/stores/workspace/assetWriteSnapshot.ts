@@ -58,7 +58,7 @@ export function collectAssetEditorSnapshot(input: {
       saving: session.saving
     }))
   const dirtyTabs = tabs
-    .filter((tab) => tab.type !== 'web' && Boolean(tab.dirty))
+    .filter((tab) => tab.type !== 'web' && tab.type !== 'note-history' && Boolean(tab.dirty))
     .map((tab) => ({ type: tab.type, title: tab.title }))
   const pendingRecoveries = input.pendingRecoveries
     .filter((record) => record.knowledgeBaseId === input.knowledgeBaseId)

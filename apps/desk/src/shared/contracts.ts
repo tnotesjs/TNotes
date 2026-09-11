@@ -426,6 +426,7 @@ export type ContextMenuAction =
   | 'toggle-pin'
   | 'open-ide'
   | 'open-split'
+  | 'show-history'
   | 'rename'
   | 'toggle-done'
   | 'add-before'
@@ -436,7 +437,7 @@ export type ContextMenuRequest =
   | { kind: 'group' }
   | {
       kind: 'tab'
-      tabType: 'note' | 'web' | 'kb-settings' | 'kb-assets' | 'excalidraw'
+      tabType: 'note' | 'web' | 'kb-settings' | 'kb-assets' | 'excalidraw' | 'note-history'
       pinned: boolean
     }
   | { kind: 'code-group-tab' }
@@ -703,6 +704,40 @@ export interface KbAssetsEditorTab {
  * 归属由文件名四位前缀决定；文件缺失/损坏时 `invalid` 置位，只显示失效状态，
  * 不按旧路径自动重建。
  */
+export interface ExcalidrawEditorTab {
+  id: string
+  type: 'excalidraw'
+  knowledgeBaseId: string
+  knowledgeBaseName: string
+  relPath: string
+  ownerNoteIndex: string | null
+  title: string
+  icon: KnowledgeBaseIconDto | null
+  pinned?: boolean
+  openedAt?: number
+  dirty?: boolean
+  invalid?: boolean
+}
+
+/**
+ * 笔记历史标签页（计划 H3 会补齐列表/分页/恢复门禁）。
+ * 同一 KB + 同一编号只保留一个历史标签页，切换 commit 只更新该页内的选中版本。
+ */
+export interface NoteHistoryEditorTab {
+  id: string
+  type: 'note-history'
+  knowledgeBaseId: string
+  knowledgeBaseName: string
+  noteIndex: string
+  noteUuid?: string
+  /** 当前选中的历史 commit（完整 40 位 OID） */
+  commit: string
+  title: string
+  icon: KnowledgeBaseIconDto | null
+  pinned?: boolean
+  openedAt?: number
+}
+
 export interface HistoryListRequest {
   knowledgeBaseId: string
   /** 只看与该四位编号相关的提交（笔记文件 + 同编号资源） */
@@ -777,23 +812,13 @@ export interface HistoryAssetDto {
   contentType: string
 }
 
-export interface ExcalidrawEditorTab {
-  id: string
-  type: 'excalidraw'
-  knowledgeBaseId: string
-  knowledgeBaseName: string
-  relPath: string
-  ownerNoteIndex: string | null
-  title: string
-  icon: KnowledgeBaseIconDto | null
-  pinned?: boolean
-  openedAt?: number
-  dirty?: boolean
-  invalid?: boolean
-}
-
 export type EditorTab =
-  NoteEditorTab | WebEditorTab | KbSettingsEditorTab | KbAssetsEditorTab | ExcalidrawEditorTab
+  | NoteEditorTab
+  | WebEditorTab
+  | KbSettingsEditorTab
+  | KbAssetsEditorTab
+  | ExcalidrawEditorTab
+  | NoteHistoryEditorTab
 
 export interface EditorGroupNode {
   type: 'group'

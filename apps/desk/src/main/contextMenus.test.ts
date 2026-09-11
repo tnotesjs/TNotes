@@ -32,6 +32,7 @@ describe('native context menus', () => {
       '固定',
       'separator',
       '在右侧打开',
+      '历史版本',
       '重命名',
       '标记为完成',
       '在 VSCode 中打开',
@@ -41,6 +42,11 @@ describe('native context menus', () => {
       'separator',
       '永久删除'
     ])
+  })
+
+  it('笔记菜单提供历史版本入口', () => {
+    const template = contextMenuTemplate({ kind: 'note', pinned: false, completed: false }, vi.fn())
+    expect(template.find((item) => item.id === 'show-history')?.label).toBe('历史版本')
   })
 
   it('uses the configured IDE and current pin state', () => {

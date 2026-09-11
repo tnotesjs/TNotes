@@ -5,6 +5,7 @@ import KnowledgeBaseIcon from '../components/KnowledgeBaseIcon.vue'
 import UiTooltip from '../components/UiTooltip.vue'
 import KbSettingsPane from './KbSettingsPane.vue'
 import ExcalidrawTabPane from './ExcalidrawTabPane.vue'
+import HistoryTabPane from './HistoryTabPane.vue'
 import KbAssetsPane from './KbAssetsPane.vue'
 import NoteTabPane from './NoteTabPane.vue'
 import WebTabPane from './WebTabPane.vue'
@@ -128,7 +129,9 @@ function isDirty(tab: EditorTab): boolean {
 
 function tabAriaLabel(tab: EditorTab): string {
   if (tab.type === 'web') return tab.url
-  if (tab.type === 'kb-settings' || tab.type === 'kb-assets') return tab.title
+  if (tab.type === 'kb-settings' || tab.type === 'kb-assets' || tab.type === 'note-history') {
+    return tab.title
+  }
   return `${tab.knowledgeBaseName} · ${tab.title}`
 }
 
@@ -327,6 +330,12 @@ async function runTabAction(action: ContextMenuAction, tab: EditorTab): Promise<
         />
         <ExcalidrawTabPane
           v-else-if="tab.type === 'excalidraw'"
+          :tab="tab"
+          :group-id="group.id"
+          :active="tab.id === group.activeTabId"
+        />
+        <HistoryTabPane
+          v-else-if="tab.type === 'note-history'"
           :tab="tab"
           :group-id="group.id"
           :active="tab.id === group.activeTabId"

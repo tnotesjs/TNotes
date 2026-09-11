@@ -230,6 +230,35 @@ async function runNodeContextAction(
     await store.revealNoteInFileManager(target)
     return
   }
+  if (action === 'show-history') {
+    // 浏览历史不需要 flush：先取最新相关提交作为初始选中版本
+    const list = await window.desk.history.list({
+      knowledgeBaseId,
+      noteIndex: node.noteIndex,
+      limit: 1
+    })
+    if (!list.ok) {
+      store.error = list.error.message
+      return
+    }
+    const commit = list.value.commits[0]?.oid
+    if (!commit) {
+      store.error = `编号 ${node.noteIndex} 还没有历史提交`
+      return
+    }
+    const descriptor = store.overview.allKnowledgeBases.find((item) => item.id === knowledgeBaseId)
+    if (!descriptor) {
+      store.error = '知识库已关闭，无法打开历史版本'
+      return
+    }
+    editor.openNoteHistory(descriptor, {
+      noteIndex: node.noteIndex,
+      commit,
+      noteUuid: node.uuid,
+      title: `历史 · ${node.title}`
+    })
+    return
+  }
   if (action === 'open-ide') {
     const result = await window.desk.ide.openNote(knowledgeBaseId, node.uuid)
     if (!result.ok) store.error = result.error.message

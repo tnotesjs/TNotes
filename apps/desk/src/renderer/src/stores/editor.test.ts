@@ -415,3 +415,75 @@ describe('画布标签页（E4）', () => {
     ])
   })
 })
+
+describe('editor store 历史标签页', () => {
+  const OID = 'a'.repeat(40)
+  const OID_2 = 'b'.repeat(40)
+
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    useEditorStore().configure(settings)
+  })
+
+  it('同一 KB + 同一编号只开一个历史标签页，切换 commit 只更新该页', () => {
+    const editor = useEditorStore()
+    const first = editor.openNoteHistory(knowledgeBase, { noteIndex: '0042', commit: OID })
+    const second = editor.openNoteHistory(knowledgeBase, {
+      noteIndex: '0042',
+      commit: OID_2,
+      noteUuid: 'note-a'
+    })
+
+    expect(second).toBe(first)
+    expect(editor.groups.flatMap((group) => group.tabs)).toHaveLength(1)
+    expect(editor.activeTab).toMatchObject({
+      type: 'note-history',
+      noteIndex: '0042',
+      noteUuid: 'note-a',
+      commit: OID_2
+    })
+  })
+
+  it('不同编号各自开标签页', () => {
+    const editor = useEditorStore()
+    editor.openNoteHistory(knowledgeBase, { noteIndex: '0042', commit: OID })
+    editor.openNoteHistory(knowledgeBase, { noteIndex: '0043', commit: OID })
+    expect(editor.groups.flatMap((group) => group.tabs).map((tab) => tab.id)).toEqual([
+      `note-history:${knowledgeBase.id}:0042`,
+      `note-history:${knowledgeBase.id}:0043`
+    ])
+  })
+
+  it('跨会话恢复保留合法 commit，非法 commit 清空而不是丢标签', () => {
+    const editor = useEditorStore()
+    const tabId = editor.openNoteHistory(knowledgeBase, { noteIndex: '0042', commit: OID })
+    const session = editor.toSession(knowledgeBase.id)
+    editor.selectHistoryCommit(tabId, 'HEAD~1')
+
+    setActivePinia(createPinia())
+    const restored = useEditorStore()
+    restored.configure(settings)
+    restored.restore(session, [knowledgeBase, otherKnowledgeBase])
+    expect(restored.activeTab).toMatchObject({ type: 'note-history', commit: OID })
+
+    const broken = editor.toSession(knowledgeBase.id)
+    const nestedTab = broken.layout as { tabs: Array<{ commit: string }> }
+    nestedTab.tabs[0]!.commit = 'HEAD~1'
+    setActivePinia(createPinia())
+    const recovered = useEditorStore()
+    recovered.configure(settings)
+    recovered.restore(broken, [knowledgeBase, otherKnowledgeBase])
+    expect(recovered.activeTab).toMatchObject({ type: 'note-history', commit: '' })
+  })
+
+  it('未知知识库的历史标签在恢复时被丢弃', () => {
+    const editor = useEditorStore()
+    editor.openNoteHistory(knowledgeBase, { noteIndex: '0042', commit: OID })
+    const session = editor.toSession(knowledgeBase.id)
+    setActivePinia(createPinia())
+    const restored = useEditorStore()
+    restored.configure(settings)
+    restored.restore(session, [otherKnowledgeBase])
+    expect(restored.groups.flatMap((group) => group.tabs)).toHaveLength(0)
+  })
+})

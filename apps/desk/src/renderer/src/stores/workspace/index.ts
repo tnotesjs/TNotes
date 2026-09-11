@@ -500,7 +500,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       tab.type === 'web' ||
       tab.type === 'kb-settings' ||
       tab.type === 'kb-assets' ||
-      tab.type === 'excalidraw'
+      tab.type === 'excalidraw' ||
+      tab.type === 'note-history'
     ) {
       return
     }

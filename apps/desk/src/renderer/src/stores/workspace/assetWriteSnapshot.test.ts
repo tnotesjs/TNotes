@@ -110,4 +110,27 @@ describe('collectAssetEditorSnapshot', () => {
     })
     expect(snapshot.dirtyTabs).toEqual([{ type: 'excalidraw', title: '0042-x.excalidraw' }])
   })
+
+  it('历史标签页只读：不进入脏标签门禁，也不暂停 Git/资源写入', () => {
+    const layout = createGroup([
+      {
+        id: 'history-1',
+        type: 'note-history',
+        knowledgeBaseId: 'kb-a',
+        knowledgeBaseName: 'A',
+        noteIndex: '0042',
+        commit: 'a'.repeat(40),
+        title: '历史 · 0042',
+        icon: null
+      }
+    ])
+    const snapshot = collectAssetEditorSnapshot({
+      knowledgeBaseId: 'kb-a',
+      editor: { layout, knowledgeBaseEditors: {} } as never,
+      documents: {},
+      pendingRecoveries: []
+    })
+    expect(snapshot.dirtyTabs).toEqual([])
+    expect(snapshot.kbSettingsDirty).toBe(false)
+  })
 })

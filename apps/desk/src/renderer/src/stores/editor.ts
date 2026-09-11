@@ -39,6 +39,7 @@ import type {
   KbSettingsEditorTab,
   KbAssetsEditorTab,
   ExcalidrawEditorTab,
+  NoteHistoryEditorTab,
   NoteEditorTab,
   NotePageWidth,
   NoteViewMode,
@@ -79,7 +80,12 @@ function sanitizeLayout(
             return false
           }
         }
-        if (tab.type === 'kb-settings' || tab.type === 'kb-assets' || tab.type === 'excalidraw') {
+        if (
+          tab.type === 'kb-settings' ||
+          tab.type === 'kb-assets' ||
+          tab.type === 'excalidraw' ||
+          tab.type === 'note-history'
+        ) {
           return (
             knowledgeBaseIds.has(tab.knowledgeBaseId) &&
             (!scopedKnowledgeBaseId || tab.knowledgeBaseId === scopedKnowledgeBaseId)
@@ -109,7 +115,9 @@ function sanitizeLayout(
             ? { dirty: Boolean(tab.dirty) }
             : tab.type === 'excalidraw'
               ? { dirty: Boolean(tab.dirty), invalid: Boolean(tab.invalid) }
-              : {})
+              : tab.type === 'note-history'
+                ? { commit: /^[0-9a-f]{40}$/.test(tab.commit) ? tab.commit : '' }
+                : {})
       }))
     return {
       ...node,
@@ -196,7 +204,8 @@ export const useEditorStore = defineStore('editor', () => {
   let unsubscribeWebState: (() => void) | null = null
   let unsubscribeWebOpen: (() => void) | null = null
   let unsubscribePreview: (() => void) | null = null
-  let hasUnsavedChanges = (tab: EditorTab): boolean => tab.type !== 'web' && Boolean(tab.dirty)
+  let hasUnsavedChanges = (tab: EditorTab): boolean =>
+    tab.type !== 'web' && tab.type !== 'note-history' && Boolean(tab.dirty)
 
   function setUnsavedChangesResolver(resolver: (tab: EditorTab) => boolean): void {
     hasUnsavedChanges = resolver
@@ -815,6 +824,56 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   /**
+   * 打开笔记历史标签页。同一 KB + 同一编号只保留一个标签页：
+   * 切换 commit 只更新该页选中版本，不会打开大量标签页（计划 5）。
+   */
+  function openNoteHistory(
+    knowledgeBase: KnowledgeBaseDescriptor,
+    input: { noteIndex: string; commit: string; noteUuid?: string; title?: string }
+  ): string {
+    if (activeKnowledgeBaseId.value !== knowledgeBase.id) switchKnowledgeBase(knowledgeBase.id)
+    for (const group of groups.value) {
+      const existing = group.tabs.find(
+        (tab) =>
+          tab.type === 'note-history' &&
+          tab.knowledgeBaseId === knowledgeBase.id &&
+          tab.noteIndex === input.noteIndex
+      )
+      if (existing?.type === 'note-history') {
+        existing.commit = input.commit
+        if (input.noteUuid !== undefined) existing.noteUuid = input.noteUuid
+        layout.value = { ...layout.value }
+        activate(group.id, existing.id)
+        return existing.id
+      }
+    }
+    ensureRoomForTab()
+    const tab: NoteHistoryEditorTab = {
+      id: `note-history:${knowledgeBase.id}:${input.noteIndex}`,
+      type: 'note-history',
+      knowledgeBaseId: knowledgeBase.id,
+      knowledgeBaseName: knowledgeBase.displayName,
+      noteIndex: input.noteIndex,
+      noteUuid: input.noteUuid,
+      commit: input.commit,
+      title: input.title ?? `历史 · ${input.noteIndex}`,
+      icon: knowledgeBase.icon,
+      pinned: false,
+      openedAt: Date.now()
+    }
+    layout.value = insertTab(layout.value, activeGroupId.value, tab)
+    return tab.id
+  }
+
+  /** 历史标签页切换选中 commit（只影响显示，不写任何文件）。 */
+  function selectHistoryCommit(tabId: string, commit: string): void {
+    const located = findTab(layout.value, tabId)
+    if (located?.tab.type !== 'note-history') return
+    located.tab.commit = commit
+    layout.value = { ...layout.value }
+  }
+
+  /**
    * 打开画布源文件。同一文件只保留一个标签页：再次打开定位到已有实例，
    * 避免出现第二个编辑会话（计划 2.3 单文件单写者）。
    */
@@ -981,7 +1040,9 @@ export const useEditorStore = defineStore('editor', () => {
   function closeSavedNotes(): void {
     const targets = groups.value.flatMap((group) =>
       group.tabs
-        .filter((tab) => tab.type !== 'web' && !tab.dirty && !tab.pinned)
+        .filter(
+          (tab) => tab.type !== 'web' && tab.type !== 'note-history' && !tab.dirty && !tab.pinned
+        )
         .map((tab) => ({ groupId: group.id, tabId: tab.id }))
     )
     for (const target of targets) close(target.groupId, target.tabId)
@@ -1168,6 +1229,8 @@ export const useEditorStore = defineStore('editor', () => {
     openKbSettings,
     openKbAssets,
     openExcalidraw,
+    openNoteHistory,
+    selectHistoryCommit,
     excalidrawTabIdFor,
     updateExcalidrawTabMeta,
     repathExcalidrawTab,
