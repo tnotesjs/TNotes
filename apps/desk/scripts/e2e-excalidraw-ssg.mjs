@@ -2,8 +2,6 @@
 // 客户端读源文件导出 SVG；产物不含用户机器路径，源库不新增派生资源。
 // 需要先构建：pnpm --filter @tnotesjs/ssg build
 // Run: node apps/desk/scripts/e2e-excalidraw-ssg.mjs
-import { _electron } from 'playwright-core'
-import { createRequire } from 'node:module'
 import { createServer } from 'node:http'
 import {
   existsSync,
@@ -20,7 +18,6 @@ import { tmpdir } from 'node:os'
 import { dirname, extname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
-const require = createRequire(import.meta.url)
 const deskDir = join(dirname(fileURLToPath(import.meta.url)), '..')
 const repoRoot = join(deskDir, '..', '..')
 const ssgEntry = join(repoRoot, 'packages', 'ssg', 'dist', 'index.js')
