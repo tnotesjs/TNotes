@@ -90,6 +90,22 @@ function fileStatus(code: string): GitFileStatus {
   return 'modified'
 }
 
+/** 变更项是否落在给定目标（文件或目录）范围内。 */
+export function changesInsideTargets(
+  changes: GitFileChangeDto[],
+  rootPath: string,
+  targets: string[]
+): GitFileChangeDto[] {
+  if (targets.length === 0) return []
+  const normalizedTargets = targets.map((target) => path.resolve(target))
+  return changes.filter((change) => {
+    const absolutePath = path.resolve(rootPath, change.path)
+    return normalizedTargets.some(
+      (target) => absolutePath === target || absolutePath.startsWith(`${target}${path.sep}`)
+    )
+  })
+}
+
 export function parseGitStatus(output: string): GitFileChangeDto[] {
   const entries = output.split('\0')
   const changes: GitFileChangeDto[] = []
@@ -273,17 +289,39 @@ export class GitManager {
     return this.enqueue(knowledgeBaseId, (repository) => this.publishRepository(repository))
   }
 
+  /**
+   * 目标范围内的变更项；仓库/状态还没准备好时返回空数组。
+   *
+   * 这两个方法只用于「给用户提示后果」，不能因为启动后 Git 状态尚未就绪
+   * （`configure` 是 2 秒防抖）就抛错——否则打开知识库后立刻点删除会直接失败。
+   */
+  /** Git 状态是否已就绪（启动后 configure 有 2 秒防抖）。 */
+  isReady(knowledgeBaseId: string): boolean {
+    return this.repositories.has(knowledgeBaseId) && this.states.has(knowledgeBaseId)
+  }
+
+  private changesInsideScope(knowledgeBaseId: string, targets: string[]): GitFileChangeDto[] {
+    const repository = this.repositories.get(knowledgeBaseId)
+    const state = this.states.get(knowledgeBaseId)
+    if (!repository || !state) return []
+    return changesInsideTargets(state.changes, repository.rootPath, targets)
+  }
+
   untrackedFilesInside(knowledgeBaseId: string, targets: string[]): string[] {
-    const repository = this.getRepository(knowledgeBaseId)
-    const normalizedTargets = targets.map((target) => path.resolve(target))
-    return this.getState(knowledgeBaseId).changes.flatMap((change) => {
-      if (change.status !== 'untracked') return []
-      const absolutePath = path.resolve(repository.rootPath, change.path)
-      const inside = normalizedTargets.some(
-        (target) => absolutePath === target || absolutePath.startsWith(`${target}${path.sep}`)
-      )
-      return inside ? [absolutePath] : []
-    })
+    const rootPath = this.repositories.get(knowledgeBaseId)?.rootPath
+    if (!rootPath) return []
+    return this.changesInsideScope(knowledgeBaseId, targets)
+      .filter((change) => change.status === 'untracked')
+      .map((change) => path.resolve(rootPath, change.path))
+  }
+
+  /** 目标范围内「已跟踪但有未提交改动」的文件（删除后这部分内容 git 里没有）。 */
+  uncommittedFilesInside(knowledgeBaseId: string, targets: string[]): string[] {
+    const rootPath = this.repositories.get(knowledgeBaseId)?.rootPath
+    if (!rootPath) return []
+    return this.changesInsideScope(knowledgeBaseId, targets)
+      .filter((change) => change.status !== 'untracked')
+      .map((change) => path.resolve(rootPath, change.path))
   }
 
   applyAutoPushSchedules(reset = false): void {

@@ -5,6 +5,7 @@ import { flushPendingEdits, hasPendingEdits } from '../../editor/markdown/pendin
 
 import type {
   AppSettings,
+  DeleteCommitResultDto,
   DeletePreviewDto,
   DeskTocNode,
   KnowledgeBaseDetail,
@@ -239,6 +240,19 @@ export function createToc(ctx: TocContext) {
     )
   }
 
+  /** 删除前把该范围的当前版本提交一次（用户显式点按钮才发生）。 */
+  async function commitDeleteScope(preview: DeletePreviewDto): Promise<DeleteCommitResultDto> {
+    // preview 来自 ref，直接传会把 Vue 响应式代理丢给 IPC（structured clone 会失败）
+    return resultValue(
+      await window.desk.toc.commitBeforeDelete(
+        ipcPlain({
+          knowledgeBaseId: preview.knowledgeBaseId,
+          entry: preview.entry
+        })
+      )
+    )
+  }
+
   async function deleteNode(preview: DeletePreviewDto): Promise<void> {
     // 删除会连同会话与恢复快照一起移除，未保存的编辑再也拿不回来：
     // 先拒绝并说明是哪些笔记，用户保存或撤销后重试。
@@ -283,6 +297,7 @@ export function createToc(ctx: TocContext) {
     moveTocNode,
     toggleDone,
     previewDeleteNode,
+    commitDeleteScope,
     deleteNode
   }
 }

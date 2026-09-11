@@ -105,6 +105,8 @@ export async function previewDelete(
     filePaths: notes.map((note) => note.directoryPath),
     directoryPaths: [],
     untrackedFilePaths: [],
+    uncommittedFilePaths: [],
+    gitReady: false,
     snapshotRevision: handle.snapshot.revision
   }
 }

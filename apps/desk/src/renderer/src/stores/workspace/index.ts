@@ -318,6 +318,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     moveTocNode,
     toggleDone,
     previewDeleteNode,
+    commitDeleteScope,
     deleteNode
   } = createToc({
     editor,
@@ -705,6 +706,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     moveTocNode,
     toggleDone,
     previewDeleteNode,
+    commitDeleteScope,
     deleteNode,
     ensureDocument,
     getDocumentSession

@@ -21,6 +21,7 @@ import type {
   GitOperationResult,
   GitRepositoryStateDto,
   BootstrapPayload,
+  DeleteCommitResultDto,
   DeletePreviewDto,
   DeskApi,
   DeskResult,
@@ -331,7 +332,9 @@ const api: DeskApi = {
         entry
       }),
     delete: (request: TocDeleteRequest) =>
-      invoke<KnowledgeBaseDetail>(IPC_CHANNELS.tocDelete, request)
+      invoke<KnowledgeBaseDetail>(IPC_CHANNELS.tocDelete, request),
+    commitBeforeDelete: (request) =>
+      invoke<DeleteCommitResultDto>(IPC_CHANNELS.tocCommitBeforeDelete, request)
   },
   session: {
     read: () => invoke<WorkspaceSession | null>(IPC_CHANNELS.sessionRead),

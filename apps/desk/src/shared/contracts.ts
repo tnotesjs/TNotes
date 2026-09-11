@@ -83,6 +83,7 @@ export const IPC_CHANNELS = {
   tocCreateGroup: 'toc:create-group',
   tocRenameGroup: 'toc:rename-group',
   tocPreviewDelete: 'toc:preview-delete',
+  tocCommitBeforeDelete: 'toc:commit-before-delete',
   tocDelete: 'toc:delete',
   sessionRead: 'session:read',
   sessionSave: 'session:save',
@@ -1128,6 +1129,13 @@ export interface SearchResultDto {
 export type GitFileStatus =
   'modified' | 'added' | 'deleted' | 'renamed' | 'untracked' | 'conflicted'
 
+export interface DeleteCommitResultDto {
+  /** null 表示该范围相对 HEAD 没有变化，未产生提交 */
+  commit: string | null
+  /** 提交后重新预览的结果（未跟踪/未提交计数应为 0） */
+  preview: DeletePreviewDto
+}
+
 export interface GitFileChangeDto {
   path: string
   previousPath?: string
@@ -1251,6 +1259,10 @@ export interface DeletePreviewDto {
   filePaths: string[]
   directoryPaths: string[]
   untrackedFilePaths: string[]
+  /** 已跟踪但有未提交改动的文件（这些内容删除后 git 里没有） */
+  uncommittedFilePaths: string[]
+  /** Git 状态是否已就绪；未就绪时不能声称「都已提交」 */
+  gitReady: boolean
   snapshotRevision: string
 }
 
@@ -1423,6 +1435,11 @@ export interface DeskApi {
       entry: TocEntryRefDto
     ): Promise<DeskResult<DeletePreviewDto>>
     delete(request: TocDeleteRequest): Promise<DeskResult<KnowledgeBaseDetail>>
+    /** 删除前把该范围的当前版本提交一次（用户显式点按钮时才会发生） */
+    commitBeforeDelete(request: {
+      knowledgeBaseId: string
+      entry: TocEntryRefDto
+    }): Promise<DeskResult<DeleteCommitResultDto>>
   }
   session: {
     read(): Promise<DeskResult<WorkspaceSession | null>>

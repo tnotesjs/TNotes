@@ -2,6 +2,7 @@ import { clipboard, shell } from 'electron'
 import { z } from 'zod'
 
 import { gitManager } from '../gitManager'
+import { commitDeleteScope } from '../workspace/deleteScope'
 import { imageBedManager } from '../imageBed'
 import { maybeOptimizeUploadRequest } from '../imageUploadOptimize'
 import { workspaceManager } from '../workspaceManager'
@@ -20,8 +21,23 @@ import {
 } from './schemas'
 import { handle, type GetWindow } from './shared'
 
+/**
+ * 给删除预览补上 Git 后果信息；Git 状态没就绪时用 `gitReady: false` 明确表示
+ * 「读不到」，而不是谎称「都已提交」。
+ */
+function withDeleteGitInfo(knowledgeBaseId: string, preview: DeletePreviewDto): DeletePreviewDto {
+  const targets = [...preview.filePaths, ...preview.directoryPaths]
+  return {
+    ...preview,
+    untrackedFilePaths: gitManager.untrackedFilesInside(knowledgeBaseId, targets),
+    uncommittedFilePaths: gitManager.uncommittedFilesInside(knowledgeBaseId, targets),
+    gitReady: gitManager.isReady(knowledgeBaseId)
+  }
+}
+
 import type {
   AttachmentWriteLocalRequest,
+  DeletePreviewDto,
   ImageUploadRequest,
   NoteCreateRequest,
   NoteRenameRequest,
@@ -111,15 +127,31 @@ export function registerNotes(getWindow: GetWindow): void {
       knowledgeBaseId: z.string().min(1),
       entry: entryRefSchema
     }),
+    async ({ knowledgeBaseId, entry }) =>
+      await withDeleteGitInfo(
+        knowledgeBaseId,
+        await workspaceManager.previewDelete(knowledgeBaseId, entry as TocEntryRefDto)
+      )
+  )
+  handle(
+    IPC_CHANNELS.tocCommitBeforeDelete,
+    getWindow,
+    z.object({
+      knowledgeBaseId: z.string().min(1),
+      entry: entryRefSchema
+    }),
     async ({ knowledgeBaseId, entry }) => {
-      const preview = await workspaceManager.previewDelete(knowledgeBaseId, entry as TocEntryRefDto)
-      return {
-        ...preview,
-        untrackedFilePaths: gitManager.untrackedFilesInside(knowledgeBaseId, [
-          ...preview.filePaths,
-          ...preview.directoryPaths
-        ])
-      }
+      const preview = await withDeleteGitInfo(
+        knowledgeBaseId,
+        await workspaceManager.previewDelete(knowledgeBaseId, entry as TocEntryRefDto)
+      )
+      return await commitDeleteScope({
+        knowledgeBaseId,
+        rootPath: workspaceManager.getHandle(knowledgeBaseId).rootPath,
+        preview,
+        untrackedFilePaths: preview.untrackedFilePaths,
+        uncommittedFilePaths: preview.uncommittedFilePaths
+      })
     }
   )
   handle(IPC_CHANNELS.tocDelete, getWindow, tocDeleteSchema, (input) =>

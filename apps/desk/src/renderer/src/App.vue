@@ -35,7 +35,7 @@ import type {
   NoteCreateRequest,
   TabShortcutCommand
 } from '../../shared/contracts'
-import { isEmptyDeletePreview } from './deletePreview'
+import { deleteConsequenceLines, isEmptyDeletePreview } from './deletePreview'
 import { focusDialogInput } from './dialogInputFocus'
 
 const store = useWorkspaceStore()
@@ -386,6 +386,30 @@ async function requestDelete(node: DeskTocNode): Promise<void> {
       return
     }
     deletePreview.value = preview
+  } finally {
+    dialogBusy.value = false
+  }
+}
+
+const deleteConsequences = computed(() =>
+  deletePreview.value ? deleteConsequenceLines(deletePreview.value) : []
+)
+
+/** 用户显式要求先记录当前版本：提交后对话框原地刷新，计数归零。 */
+async function commitBeforeDelete(): Promise<void> {
+  if (!deletePreview.value || dialogBusy.value) return
+  dialogBusy.value = true
+  try {
+    const result = await store.commitDeleteScope(deletePreview.value)
+    deletePreview.value = result.preview
+    if (result.commit) {
+      store.status = `已记录当前版本（${result.commit.slice(0, 7)}），现在删除也可以从历史找回`
+    } else {
+      store.status = '范围内的内容与上次提交一致，无需记录'
+    }
+    await store.refreshGit()
+  } catch (cause) {
+    store.error = cause instanceof Error ? cause.message : String(cause)
   } finally {
     dialogBusy.value = false
   }
@@ -787,12 +811,13 @@ onUnmounted(() => {
         </div>
         <p>
           文件将被直接永久删除，不进入系统废纸篓。
-          <template v-if="deletePreview.untrackedFilePaths.length">
-            其中有 {{ deletePreview.untrackedFilePaths.length }} 个文件尚未被 Git
-            跟踪，删除后无法通过 Git 找回。
+          <template v-if="deleteConsequences.length === 0">
+            范围内内容都已提交，删除后仍可在 Git 历史里查看。
           </template>
-          <template v-else>当前删除范围内没有检测到 Git 未跟踪文件。</template>
         </p>
+        <ul v-if="deleteConsequences.length" class="delete-consequences" data-delete-consequences>
+          <li v-for="line in deleteConsequences" :key="line">{{ line }}</li>
+        </ul>
         <div v-if="deletePreview.untrackedFilePaths.length" class="untracked-files">
           <span v-for="filePath in deletePreview.untrackedFilePaths.slice(0, 8)" :key="filePath">
             {{ filePath }}
@@ -800,6 +825,16 @@ onUnmounted(() => {
         </div>
         <footer>
           <button type="button" class="secondary" @click="deletePreview = null">取消</button>
+          <button
+            v-if="!deletePreview.gitReady || deleteConsequences.length > 0"
+            type="button"
+            class="secondary"
+            data-delete-commit
+            :disabled="dialogBusy"
+            @click="commitBeforeDelete"
+          >
+            先记录当前版本
+          </button>
           <button type="button" class="danger" :disabled="dialogBusy" @click="confirmDelete">
             确认永久删除
           </button>
