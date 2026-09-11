@@ -153,7 +153,9 @@ function buildCard(): CardElements {
 export function mountRawExcalidraw(ctx: DeskRawBlockMountContext): void {
   const { block, dom, cleanupTasks, deps, view, getPos } = ctx
   dom.classList.add('desk-raw-block--component', 'desk-raw-block--excalidraw')
-  dom.replaceChildren()
+  // 保留整块选择热区：边界热区在挂载前就 append 到 dom 上，replaceChildren 会把它清掉
+  const boundaryHits = [...dom.querySelectorAll('.desk-raw-block__boundary-hit')]
+  dom.replaceChildren(...boundaryHits)
 
   const fail = (reason: string): void => {
     const paragraph = document.createElement('p')

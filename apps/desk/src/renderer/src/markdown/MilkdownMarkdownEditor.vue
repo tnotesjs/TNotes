@@ -17,9 +17,10 @@ import {
   TN_NOTES_SLASH_ITEMS
 } from './slashMenu'
 import { buildExcalidrawSource } from '../editor/markdown/excalidrawComponent'
+import { createExcalidrawClipboardPlugin } from './excalidrawClipboardPlugin'
 import { noteRelativeAssetPath } from './noteAssetPath'
 import { useWorkspaceStore } from '../stores/workspace'
-import { documentKey } from '../stores/workspace/helpers'
+import { documentKey, type DocumentSession } from '../stores/workspace/helpers'
 import type { SlashMenuItem } from './slashMenu'
 import {
   createBlockShortcutPlugin,
@@ -148,6 +149,12 @@ let addBelowMenuOpened = false
 
 function isEffectivelyReadOnly(): boolean {
   return props.readOnly || props.mode === 'readonly'
+}
+
+/** 当前笔记的文档会话（剪贴板归属判断与相对路径都要用）。 */
+function currentNoteSession(): DocumentSession | undefined {
+  const workspace = useWorkspaceStore()
+  return workspace.documents[documentKey(props.knowledgeBaseId, props.noteUuid)]
 }
 
 function editorView(): EditorView | null {
@@ -1008,6 +1015,15 @@ onMounted(async () => {
       }
     }
   })
+  editor.editor.use(
+    createExcalidrawClipboardPlugin({
+      knowledgeBaseId: () => props.knowledgeBaseId,
+      noteUuid: () => props.noteUuid,
+      noteIndex: () => currentNoteSession()?.document.index ?? '',
+      noteRelPath: () => currentNoteSession()?.document.relPath ?? '',
+      isEffectivelyReadOnly
+    })
+  )
   editor.editor.use(rawBlockProjectionPlugins)
   editor.editor.use(createDeskCalloutView())
   editor.editor.use(deskCalloutKeymapPlugin)

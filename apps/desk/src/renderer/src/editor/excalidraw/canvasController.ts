@@ -17,6 +17,8 @@ import { ref, shallowRef, watch, type Ref } from 'vue'
 
 import type { ExcalidrawSession, ExcalidrawWriteState } from '@tnotesjs/ui/excalidraw-editor'
 
+import { registerExcalidrawSession } from './sessionRegistry'
+
 /**
  * 官方字体基址。主进程的 `tnotes-asset://app/` 路由只暴露渲染端产物目录，
  * 字体在构建时复制到 `out/renderer/excalidraw/fonts`（见 electron.vite.config.ts）。
@@ -95,6 +97,7 @@ export function createExcalidrawCanvasController(
   let interacted = false
   let themeObserver: MutationObserver | null = null
   let lastDirty: boolean | null = null
+  let unregisterSession: (() => void) | null = null
 
   const readTheme = (): 'light' | 'dark' => options.theme?.() ?? currentAppTheme()
 
@@ -235,6 +238,11 @@ export function createExcalidrawCanvasController(
         attributeFilter: ['data-theme']
       })
     }
+    // 登记到会话表：跨笔记复制前会先把这里 settle 掉，避免复制到过时磁盘内容
+    unregisterSession?.()
+    unregisterSession = registerExcalidrawSession(options.knowledgeBaseId(), options.relPath(), {
+      settle
+    })
     phase.value = 'ready'
     syncDirty()
   }
@@ -284,6 +292,8 @@ export function createExcalidrawCanvasController(
 
   function destroy(): void {
     disposed = true
+    unregisterSession?.()
+    unregisterSession = null
     themeObserver?.disconnect()
     themeObserver = null
     void session.value?.flush()
