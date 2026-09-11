@@ -23,6 +23,10 @@ export const IPC_CHANNELS = {
   excalidrawRead: 'excalidraw:read',
   excalidrawWrite: 'excalidraw:write',
   excalidrawCopy: 'excalidraw:copy',
+  historyList: 'history:list',
+  historySnapshot: 'history:snapshot',
+  historyReadNote: 'history:read-note',
+  historyReadAsset: 'history:read-asset',
   assetsScan: 'assets:scan',
   assetsScanCancel: 'assets:scan-cancel',
   assetsSummaries: 'assets:summaries',
@@ -699,6 +703,80 @@ export interface KbAssetsEditorTab {
  * 归属由文件名四位前缀决定；文件缺失/损坏时 `invalid` 置位，只显示失效状态，
  * 不按旧路径自动重建。
  */
+export interface HistoryListRequest {
+  knowledgeBaseId: string
+  /** 只看与该四位编号相关的提交（笔记文件 + 同编号资源） */
+  noteIndex?: string
+  head?: string
+  skip?: number
+  limit?: number
+}
+
+export interface HistoryCommitSummaryDto {
+  oid: string
+  shortOid: string
+  committedAt: number
+  authorName: string
+  subject: string
+  parents: string[]
+  changedPaths: string[]
+  isMerge: boolean
+  touchesIndex: boolean
+}
+
+export interface HistoryListResultDto {
+  head: string
+  commits: HistoryCommitSummaryDto[]
+  hasMore: boolean
+}
+
+export interface HistorySnapshotRequest {
+  knowledgeBaseId: string
+  commit: string
+  noteIndex: string
+  noteUuid?: string
+}
+
+export interface HistoryTreeEntryDto {
+  relPath: string
+  oid: string
+  mode: string
+  size: number
+}
+
+export interface HistorySnapshotDto {
+  commit: string
+  noteIndex: string
+  note: { relPath: string; oid: string; noteUuid: string | null } | null
+  ambiguousNotePaths: string[]
+  assets: HistoryTreeEntryDto[]
+  noteCandidates: HistoryTreeEntryDto[]
+  limitations: Array<{ code: string; message: string }>
+}
+
+export interface HistoryNoteDto {
+  commit: string
+  relPath: string
+  oid: string
+  bytes: number
+  text: string | null
+  snapshot: HistorySnapshotDto
+}
+
+export interface HistoryAssetRequest {
+  knowledgeBaseId: string
+  commit: string
+  relPath: string
+}
+
+export interface HistoryAssetDto {
+  oid: string
+  bytes: number
+  /** 供渲染端拼 data URL / 缓存用；实际字节走 tnotes-asset://history 协议 */
+  url: string
+  contentType: string
+}
+
 export interface ExcalidrawEditorTab {
   id: string
   type: 'excalidraw'
@@ -1175,6 +1253,13 @@ export interface DeskApi {
     read(request: ExcalidrawReadRequest): Promise<DeskResult<ExcalidrawDocumentDto>>
     write(request: ExcalidrawWriteRequest): Promise<DeskResult<ExcalidrawDocumentRefDto>>
     copy(request: ExcalidrawCopyRequest): Promise<DeskResult<ExcalidrawDocumentRefDto>>
+  }
+  /** 只读历史：列表 / 快照 / 正文与资源字节（全部限制在已校验的 commit + path） */
+  history: {
+    list(request: HistoryListRequest): Promise<DeskResult<HistoryListResultDto>>
+    snapshot(request: HistorySnapshotRequest): Promise<DeskResult<HistorySnapshotDto>>
+    readNote(request: HistorySnapshotRequest): Promise<DeskResult<HistoryNoteDto>>
+    readAsset(request: HistoryAssetRequest): Promise<DeskResult<HistoryAssetDto>>
   }
   assets: {
     scan(knowledgeBaseId: string, generation: number): Promise<DeskResult<AssetScanReportDto>>

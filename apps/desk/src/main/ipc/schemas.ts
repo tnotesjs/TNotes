@@ -319,6 +319,32 @@ export const excalidrawCreateSchema = z.object({
     .optional()
 })
 
+const fullOidSchema = z.string().regex(/^[0-9a-f]{40}$/, '只接受完整 commit OID')
+
+export const historyListSchema = z.object({
+  knowledgeBaseId: z.string().min(1),
+  noteIndex: z
+    .string()
+    .regex(/^\d{4}$/)
+    .optional(),
+  head: fullOidSchema.optional(),
+  skip: z.number().int().min(0).max(100_000).optional(),
+  limit: z.number().int().min(1).max(200).optional()
+})
+
+export const historySnapshotSchema = z.object({
+  knowledgeBaseId: z.string().min(1),
+  commit: fullOidSchema,
+  noteIndex: z.string().regex(/^\d{4}$/),
+  noteUuid: z.string().min(1).max(128).optional()
+})
+
+export const historyAssetSchema = z.object({
+  knowledgeBaseId: z.string().min(1),
+  commit: fullOidSchema,
+  relPath: z.string().min(1).max(4096)
+})
+
 export const excalidrawReadSchema = z.object({
   knowledgeBaseId: z.string().min(1),
   relPath: excalidrawRelPathSchema

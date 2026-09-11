@@ -3,10 +3,12 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
+import { historyService } from './history/historyService'
 import { deskLog } from './log'
 import { workspaceManager } from './workspaceManager'
 
 const SCHEME = 'tnotes-asset'
+const FULL_OID = /^[0-9a-f]{40}$/
 
 export function registerAssetScheme(): void {
   protocol.registerSchemesAsPrivileged([
@@ -74,6 +76,25 @@ export function handleAssetProtocol(): void {
   protocol.handle(SCHEME, async (request) => {
     try {
       const url = new URL(request.url)
+      if (url.hostname === 'history') {
+        // 历史资源：只按「已校验 commit + 快照内路径」读取，绝不回退到当前磁盘
+        const knowledgeBaseId = url.searchParams.get('knowledgeBaseId') ?? ''
+        const commit = url.searchParams.get('commit') ?? ''
+        const relPath = url.searchParams.get('path') ?? ''
+        if (!knowledgeBaseId || !FULL_OID.test(commit) || !relPath) {
+          return new Response('Not found', { status: 404 })
+        }
+        const asset = await historyService.readAsset(knowledgeBaseId, { commit, relPath })
+        return new Response(new Uint8Array(asset.bytes), {
+          status: 200,
+          headers: {
+            'content-type': asset.contentType,
+            'access-control-allow-origin': '*',
+            // 历史内容不可变：按 commit + blob OID 命中即可长期缓存
+            'cache-control': 'private, max-age=31536000, immutable'
+          }
+        })
+      }
       if (url.hostname === 'app') {
         const absolutePath = resolveAppFile(url.pathname)
         if (!absolutePath) return new Response('Not found', { status: 404 })
