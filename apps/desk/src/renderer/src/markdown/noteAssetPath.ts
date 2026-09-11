@@ -38,3 +38,26 @@ export function resolveNoteAssetRelPath(noteRelPath: string, source: string): st
   if (!normalized) return null
   return normalized.startsWith('assets/') ? normalized : null
 }
+
+/**
+ * 反向：知识库相对路径 → 笔记相对引用（插入组件时用）。
+ *
+ * `notesDir` 表示笔记所在目录（空字符串表示笔记就在库根）。
+ */
+export function noteRelativeAssetPath(noteRelPath: string, assetRelPath: string): string | null {
+  if (!noteRelPath || !assetRelPath) return null
+  const noteDir = noteRelPath.split('/').slice(0, -1)
+  const assetSegments = assetRelPath.split('/').filter(Boolean)
+  if (assetSegments.length === 0) return null
+  let common = 0
+  while (
+    common < noteDir.length &&
+    common < assetSegments.length - 1 &&
+    noteDir[common] === assetSegments[common]
+  ) {
+    common += 1
+  }
+  const up = noteDir.length - common
+  const prefix = up > 0 ? '../'.repeat(up) : './'
+  return `${prefix}${assetSegments.slice(common).join('/')}`
+}

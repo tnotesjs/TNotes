@@ -148,6 +148,17 @@ export const TN_NOTES_SLASH_ITEMS: SlashMenuItem[] = [
     shortcut: '/mmp',
     keywords: ['mindmap', 'mm', 'mmp', '思维导图'],
     insert: '```mindmap\n\n```\n'
+  },
+  {
+    id: 'excalidraw',
+    label: 'Excalidraw 画布',
+    kind: 'component',
+    shortcut: '/ex',
+    keywords: ['excalidraw', 'canvas', 'draw', '画布', '绘图'],
+    // 真实插入路径必须由主进程先建文件、再按实际文件名插入组件（见
+    // MilkdownMarkdownEditor.runSlashItemInsert）；这个占位串只服务
+    // 「先插入原子」的通用路径与单测，落到正文里只会得到一张坏路径卡片。
+    insert: '<Excalidraw path="./assets/0000-excalidraw.excalidraw" />\n'
   }
 ]
 

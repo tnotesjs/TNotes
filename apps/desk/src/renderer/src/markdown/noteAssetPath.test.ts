@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { normalizePosixRelative, resolveNoteAssetRelPath } from './noteAssetPath'
+import {
+  normalizePosixRelative,
+  noteRelativeAssetPath,
+  resolveNoteAssetRelPath
+} from './noteAssetPath'
 
 describe('normalizePosixRelative', () => {
   it('合并 . 与空段', () => {
@@ -45,5 +49,32 @@ describe('resolveNoteAssetRelPath', () => {
     expect(resolveNoteAssetRelPath('0001. x.md', './assets/a.excalidraw')).toBe(
       'assets/a.excalidraw'
     )
+  })
+})
+
+describe('noteRelativeAssetPath（插入组件用）', () => {
+  it('从库根/notes/ 子目录都给出可解析回来的相对引用', () => {
+    expect(noteRelativeAssetPath('notes/0001. x.md', 'assets/0001-a.excalidraw')).toBe(
+      '../assets/0001-a.excalidraw'
+    )
+    expect(noteRelativeAssetPath('0001. x.md', 'assets/0001-a.excalidraw')).toBe(
+      './assets/0001-a.excalidraw'
+    )
+    expect(noteRelativeAssetPath('notes/sub/0001. x.md', 'assets/0001-a.excalidraw')).toBe(
+      '../../assets/0001-a.excalidraw'
+    )
+  })
+
+  it('与 resolveNoteAssetRelPath 互为逆运算', () => {
+    for (const note of ['notes/0001. x.md', '0001. x.md', 'notes/a/b/0001. x.md']) {
+      const relative = noteRelativeAssetPath(note, 'assets/0001-a.excalidraw')
+      expect(relative).not.toBeNull()
+      expect(resolveNoteAssetRelPath(note, relative!)).toBe('assets/0001-a.excalidraw')
+    }
+  })
+
+  it('空参数返回 null', () => {
+    expect(noteRelativeAssetPath('', 'assets/a.excalidraw')).toBeNull()
+    expect(noteRelativeAssetPath('notes/a.md', '')).toBeNull()
   })
 })

@@ -11,7 +11,15 @@ import { uploadConfig } from '@milkdown/kit/plugin/upload'
 import { blockConfig } from '@milkdown/kit/plugin/block'
 import { Plugin, TextSelection } from '@milkdown/kit/prose/state'
 import type { EditorView } from '@milkdown/kit/prose/view'
-import { buildTNotesSlashGroup, installSlashMenuPresentation } from './slashMenu'
+import {
+  buildTNotesSlashGroup,
+  installSlashMenuPresentation,
+  TN_NOTES_SLASH_ITEMS
+} from './slashMenu'
+import { buildExcalidrawSource } from '../editor/markdown/excalidrawComponent'
+import { noteRelativeAssetPath } from './noteAssetPath'
+import { useWorkspaceStore } from '../stores/workspace'
+import { documentKey } from '../stores/workspace/helpers'
 import type { SlashMenuItem } from './slashMenu'
 import {
   createBlockShortcutPlugin,
@@ -410,6 +418,10 @@ function insertTable(): void {
  * - 普通代码块：走 Crepe 代码块（createCodeBlockCommand）。
  */
 function runSlashItemInsert(item: SlashMenuItem): void {
+  if (item.id === 'excalidraw') {
+    void insertExcalidrawComponent()
+    return
+  }
   if (item.kind === 'code') {
     run((editor) => {
       editor.editor.action((ctx) => {
@@ -446,6 +458,98 @@ function runSlashItemInsert(item: SlashMenuItem): void {
   })
 
   if (newBlockPos != null) openRawSourceEditorAt(newBlockPos)
+}
+
+/**
+ * 插入 Excalidraw 画布（计划 E6）。
+ *
+ * 顺序固定为「先让主进程建文件，成功后再定点插入组件」：
+ * - 笔记必须有四位编号，否则不创建（文件名归属靠它）
+ * - 创建成功但插入失败时报告文件位置，文件保留（不自动删除）
+ * - 撤销/重做只作用在组件调用上，不会删资源、也不会再建第二份文件
+ */
+async function insertExcalidrawComponent(): Promise<void> {
+  const workspace = useWorkspaceStore()
+  const session = workspace.documents[documentKey(props.knowledgeBaseId, props.noteUuid)]
+  const noteRelPath = session?.document.relPath
+  const noteIndex = session?.document.index ?? ''
+  if (!noteRelPath) {
+    workspace.error = '无法定位当前笔记，画布未创建'
+    return
+  }
+  if (!/^\d{4}$/.test(noteIndex)) {
+    workspace.error = '当前笔记缺少四位编号，画布未创建（文件名归属需要它）'
+    return
+  }
+  const created = await window.desk.excalidraw.create({
+    knowledgeBaseId: props.knowledgeBaseId,
+    noteUuid: props.noteUuid
+  })
+  if (!created.ok) {
+    workspace.error = `无法创建画布：${created.error.message}`
+    return
+  }
+  const createdRelPath = created.value.relPath
+  const relative = noteRelativeAssetPath(noteRelPath, createdRelPath)
+  if (!relative) {
+    workspace.error = `画布已创建但无法计算相对路径，请在资源面板找到它：${createdRelPath}`
+    return
+  }
+  const position = insertRawBlockSource(buildExcalidrawSource({ path: relative }))
+  if (position == null) {
+    workspace.error = `画布已创建但插入组件失败，请在资源面板找到它：${createdRelPath}`
+    return
+  }
+  workspace.status = `已创建画布 ${createdRelPath}`
+  openExcalidrawEditorAt(position)
+}
+
+/** 用给定源码插入一个 raw 原子；返回新原子位置（失败返回 null）。 */
+function insertRawBlockSource(source: string): number | null {
+  let newBlockPos: number | null = null
+  run((editor) => {
+    editor.editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      const before = rawBlockPositions(view.state.doc)
+      const transaction = replaceCurrentParagraphWithItem(
+        view.state,
+        {
+          ...(TN_NOTES_SLASH_ITEMS.find((entry) => entry.id === 'excalidraw') as SlashMenuItem),
+          insert: source
+        },
+        view.state.selection.from
+      )
+      if (!transaction) return
+      view.dispatch(transaction)
+      const after = rawBlockPositions(view.state.doc)
+      newBlockPos = findAddedBlockPos(before, after)
+    })
+  })
+  return newBlockPos
+}
+
+/** 新插入的画布卡片直接进入编辑（与其它组件插入后打开编辑一致）。 */
+function openExcalidrawEditorAt(position: number): void {
+  if (isEffectivelyReadOnly()) return
+  let attempts = 0
+  const tryOpen = (): void => {
+    attempts += 1
+    const view = crepe?.editor.action((ctx) => ctx.get(editorViewCtx))
+    const dom = view?.nodeDOM(position)
+    if (!(dom instanceof HTMLElement)) {
+      if (attempts >= 20) window.clearInterval(pollTimer)
+      return
+    }
+    const editButton = dom.querySelector<HTMLButtonElement>('.desk-excalidraw [data-action="edit"]')
+    if (!editButton) {
+      if (attempts >= 20) window.clearInterval(pollTimer)
+      return
+    }
+    editButton.click()
+    window.clearInterval(pollTimer)
+  }
+  const pollTimer = window.setInterval(tryOpen, 50)
+  tryOpen()
 }
 
 /**
