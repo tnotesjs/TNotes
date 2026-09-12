@@ -18,6 +18,7 @@
 import type { MilkdownPlugin } from '@milkdown/kit/ctx'
 import type { Node as ProseMirrorNode, ResolvedPos } from '@milkdown/kit/prose/model'
 import { Plugin, PluginKey, TextSelection } from '@milkdown/kit/prose/state'
+import type { Selection } from '@milkdown/kit/prose/state'
 import type { EditorState, Transaction } from '@milkdown/kit/prose/state'
 import type { EditorView } from '@milkdown/kit/prose/view'
 import { $prose } from '@milkdown/kit/utils'
@@ -128,12 +129,59 @@ function isOnFirstLineOfTextblock($head: EditorState['selection']['$head']): boo
   return !textBetweenInParent($head, 0, $head.parentOffset).includes('\n')
 }
 
+/**
+ * 键盘归属（每个编辑器一份）。
+ *
+ * 光看 `document.activeElement` 判断「现在在不在代码编辑器里」是不可靠的：
+ * 块边界光标贴着代码块时，PM 的 `selectionToDOM` 会把 DOM 选区放进代码块的
+ * contentDOM，Chromium 于是把焦点也带进 `.cm-content`（实测 blur + view.focus()
+ * 之后 activeElement 仍然回到 cm-content）。此时方向键必须归边界分支，
+ * 否则会在同一个边界位置上反复落位——「相邻两个代码块，从下面那个按 ↑ 上不去」。
+ *
+ * 所以由我们自己记账：刚把 PM 选区放到边界上 = 'boundary'；主动进代码编辑器
+ * （↓/→ 进块）或用户自己点进代码块 = 'code'。
+ */
+const keyboardOwner = new WeakMap<EditorView, 'boundary' | 'code'>()
+
+/**
+ * 我们自己发起、只改选区的 dispatch。
+ *
+ * 贴着代码块的边界光标会被 PM 的 `selectionToDOM` 写进代码块的 contentDOM，
+ * CM 于是把它当成自己的选区变化、回同步一次 PM 选区，把边界光标顶掉。所以
+ * appendTransaction 里有一道守卫把这些「外部同步」还原；守卫必须放行我们自己
+ * 的这次 dispatch，用这个标记区分。
+ */
+const pendingSelectionTransactions = new WeakSet<EditorView>()
+
+function dispatchSelection(view: EditorView, ...args: Parameters<EditorView['dispatch']>): void {
+  pendingSelectionTransactions.add(view)
+  try {
+    view.dispatch(...args)
+  } finally {
+    pendingSelectionTransactions.delete(view)
+  }
+}
+
+/** 选区是否落在代码块内部（CM 回同步 PM 选区的特征）。 */
+function isInsideCodeBlock(selection: Selection): boolean {
+  const $head = selection.$head
+  for (let depth = $head.depth; depth > 0; depth -= 1) {
+    if ($head.node(depth).type.name === 'code_block') return true
+  }
+  return false
+}
+
+function focusProseMirror(view: EditorView): void {
+  keyboardOwner.set(view, 'boundary')
+  view.focus()
+}
+
 function placeText(view: EditorView, pos: number, bias: -1 | 1): boolean {
   const doc = view.state.doc
   const clamped = Math.max(0, Math.min(pos, doc.content.size))
   const selection = TextSelection.near(doc.resolve(clamped), bias)
-  view.dispatch(view.state.tr.setSelection(selection).scrollIntoView())
-  view.focus()
+  dispatchSelection(view, view.state.tr.setSelection(selection).scrollIntoView())
+  focusProseMirror(view)
   return true
 }
 
@@ -145,8 +193,8 @@ export function placeBoundaryCaret(
 ): boolean {
   const caret = blockBoundaryCaretAt(view.state.doc, pos, side)
   if (!caret) return false
-  view.dispatch(view.state.tr.setSelection(caret).scrollIntoView())
-  view.focus()
+  dispatchSelection(view, view.state.tr.setSelection(caret).scrollIntoView())
+  focusProseMirror(view)
   return true
 }
 
@@ -168,8 +216,8 @@ export function materializeLineAt(view: EditorView, boundaryPos: number): boolea
   if (!$pos.parent.canReplaceWith($pos.index(), $pos.index(), paragraph)) return false
   const tr = state.tr.insert(pos, paragraph.create())
   tr.setSelection(TextSelection.near(tr.doc.resolve(pos + 1), 1))
-  view.dispatch(tr.scrollIntoView())
-  view.focus()
+  dispatchSelection(view, tr.scrollIntoView())
+  focusProseMirror(view)
   return true
 }
 
@@ -183,8 +231,8 @@ function growTrailingParagraph(view: EditorView, afterPos: number): boolean {
   if (!$pos.parent.canReplaceWith($pos.index(), $pos.index(), paragraph)) return false
   const tr = state.tr.insert(pos, paragraph.create())
   tr.setSelection(TextSelection.near(tr.doc.resolve(pos + 1), 1))
-  view.dispatch(tr.scrollIntoView())
-  view.focus()
+  dispatchSelection(view, tr.scrollIntoView())
+  focusProseMirror(view)
   return true
 }
 
@@ -276,6 +324,7 @@ function focusCodeMirror(view: EditorView, blockDom: HTMLElement, forward: boole
       if (!(view.state.selection instanceof BlockBoundaryCaret)) return
       const next = visibleCodeMirror(blockDom)
       if (!next) return
+      keyboardOwner.set(view, 'code')
       next.focus()
       next.dispatch({
         selection: EditorSelection.cursor(forward ? 0 : next.state.doc.length),
@@ -284,6 +333,7 @@ function focusCodeMirror(view: EditorView, blockDom: HTMLElement, forward: boole
     })
     return true
   }
+  keyboardOwner.set(view, 'code')
   cm.focus()
   cm.dispatch({
     selection: EditorSelection.cursor(forward ? 0 : cm.state.doc.length),
@@ -311,7 +361,10 @@ function enterTable(view: EditorView, target: BlockBoundaryTarget, forward: bool
   const map = TableMap.get(tableNode)
   const row = forward ? 0 : map.height - 1
   const col = forward ? 0 : map.width - 1
-  const offset = map.map[row]?.[col]
+  // TableMap.map 是「宽 × 高的一维数组」，取单元格要用 positionAt（原来写
+  // `map.map[row][col]` 永远是 undefined，一直是靠 PM 默认的 → 蒙混过去的）。
+  if (row < 0 || col < 0) return false
+  const offset = map.positionAt(row, col, tableNode)
   if (offset == null) return false
   return placeText(view, target.blockPos + 1 + offset + 1, 1)
 }
@@ -524,8 +577,8 @@ function moveBackwardFromBoundary(
 function deleteRange(view: EditorView, from: number, to: number, caretPos: number): boolean {
   if (to <= from) return false
   const tr = view.state.tr.delete(from, to)
-  view.dispatch(placeAfterDelete(tr, caretPos))
-  view.focus()
+  dispatchSelection(view, placeAfterDelete(tr, caretPos))
+  focusProseMirror(view)
   return true
 }
 
@@ -643,7 +696,8 @@ export function handleBoundaryNavigationKeyDown(
   // raw block 的「源码编辑器」是块外壳上的编辑器，不是块内部（代码组 tab 的
   // `.desk-raw-block__include-cm` 才是块内部，要按 T4 在末尾出块）。
   const rawSourceEditor = element?.closest('.desk-raw-block__editor-cm')
-  if (cmDom && !rawSourceEditor) {
+  // 边界握着键盘时，即使 DOM 焦点被浏览器留在 .cm-content 里，也走边界分支。
+  if (cmDom && !rawSourceEditor && keyboardOwner.get(view) !== 'boundary') {
     if (!plainArrow) return false
     return handleCodeMirrorKey(view, event, cmDom)
   }
@@ -682,17 +736,31 @@ export function handleBoundaryTextInput(view: EditorView, text: string): boolean
   if (!activeBlockBoundaryTarget(view.state)) return false
   const pos = view.state.selection.from
   if (!materializeLineAt(view, pos)) return false
-  view.dispatch(view.state.tr.insertText(text, view.state.selection.from))
+  dispatchSelection(view, view.state.tr.insertText(text, view.state.selection.from))
   return true
 }
 
 export function createBlockBoundaryNavigationPlugin(
   options: BlockBoundaryNavigationOptions = {}
 ): MilkdownPlugin {
+  let currentView: EditorView | null = null
   return $prose(
     () =>
       new Plugin({
         key: blockBoundaryNavigationKey,
+        appendTransaction: (transactions, oldState, newState) => {
+          // 边界握着键盘时，只改选区的「外部同步」（代码块里的 CM 被 PM 写入选区后
+          // 回同步）不能把边界光标顶掉。
+          if (!currentView || keyboardOwner.get(currentView) !== 'boundary') return null
+          if (pendingSelectionTransactions.has(currentView)) return null
+          if (transactions.some((transaction) => transaction.docChanged)) return null
+          if (!(oldState.selection instanceof BlockBoundaryCaret)) return null
+          if (newState.selection instanceof BlockBoundaryCaret) return null
+          // 只挡这一种：新选区落在代码块内部（CM 被 PM 写入选区后回同步）。
+          // PM 默认的方向键移动（表格单元格、列表等）必须放行。
+          if (!isInsideCodeBlock(newState.selection)) return null
+          return newState.tr.setSelection(oldState.selection)
+        },
         props: {
           handleKeyDown: (view, event) => handleBoundaryNavigationKeyDown(view, event, options),
           handleTextInput: (view, _from, _to, text) => handleBoundaryTextInput(view, text),
@@ -709,6 +777,24 @@ export function createBlockBoundaryNavigationPlugin(
               if (!activeBlockBoundaryTarget(view.state)) return false
               materializeLineAt(view, view.state.selection.from)
               return false
+            }
+          }
+        },
+        view(view) {
+          currentView = view
+          // 用户自己点进代码块 → 键盘归代码编辑器；点别处则清掉归属（走 PM 默认）。
+          const onPointerDown = (event: Event): void => {
+            const target = event.target
+            if (!(target instanceof Element)) return
+            if (target.closest('.cm-editor')) keyboardOwner.set(view, 'code')
+            else keyboardOwner.delete(view)
+          }
+          const doc = view.dom.ownerDocument
+          doc.addEventListener('pointerdown', onPointerDown, true)
+          return {
+            destroy: () => {
+              doc.removeEventListener('pointerdown', onPointerDown, true)
+              if (currentView === view) currentView = null
             }
           }
         }

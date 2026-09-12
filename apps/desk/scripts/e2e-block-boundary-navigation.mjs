@@ -64,6 +64,19 @@ const source = [
   '![独立图片](../assets/0002-big.png) {w=400px}',
   '',
   '图片后段落',
+  '',
+  '## 相邻代码块',
+  '',
+  '```js',
+  'const first = 1',
+  '```',
+  '```css {1} [相邻的第二块]',
+  '.demo {',
+  '  color: red;',
+  '}',
+  '```',
+  '',
+  '相邻代码块结束段落',
   ''
 ].join('\n')
 writeFileSync(noteFile, source)
@@ -426,19 +439,29 @@ try {
     const caret = document.querySelector('.desk-block-boundary-caret')
     if (!caret) return null
     const style = getComputedStyle(caret)
-    const samples = []
-    for (let index = 0; index < 22; index += 1) {
-      samples.push(Number(getComputedStyle(caret).opacity))
-      await new Promise((resolve) => setTimeout(resolve, 60))
+    // 轮询到「看到全亮 + 全灭 + 中间过渡」为止（最多 2.5s）：并发跑时 rAF/定时器
+    // 会被拖慢，固定采样次数容易采不到。
+    let max = 0
+    let min = 1
+    let between = 0
+    const started = performance.now()
+    while (performance.now() - started < 2500) {
+      const value = Number(getComputedStyle(caret).opacity)
+      if (value > max) max = value
+      if (value < min) min = value
+      if (value > 0.15 && value < 0.85) between += 1
+      if (max >= 0.95 && min <= 0.05 && between >= 2) break
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((resolve) => setTimeout(resolve, 40))
     }
     return {
       name: style.animationName,
       timing: style.animationTimingFunction,
       delay: style.animationDelay,
       iterations: style.animationIterationCount,
-      max: Math.max(...samples),
-      min: Math.min(...samples),
-      between: samples.filter((value) => value > 0.15 && value < 0.85).length
+      max,
+      min,
+      between
     }
   })
   record(
@@ -477,6 +500,67 @@ try {
     current.side === null && (current.text?.includes('图片后段落') ?? false),
     JSON.stringify(current.text)
   )
+
+  // 相邻代码块（中间没有空行）：↓ 进得去，↑ 也必须原路回来。
+  const firstFence = pm.locator(':scope > .milkdown-code-block', { hasText: 'const first = 1' })
+  const secondFence = pm.locator(':scope > .milkdown-code-block', { hasText: 'color: red' })
+  /** 连按方向键直到落到指定侧的边界光标（CM 末尾是否有空行会让 ↓ 次数差一次）。 */
+  const pressUntilCaret = async (key, side, max = 4) => {
+    let current = await state()
+    for (let index = 0; index < max && current.side !== side; index += 1) {
+      await press(key)
+      current = await state()
+    }
+    return current
+  }
+  const enterCodeStart = async (block) => {
+    const content = block.locator('.cm-content:visible')
+    await content.click()
+    await page.keyboard.press('ControlOrMeta+Home')
+    await page.waitForTimeout(200)
+  }
+  const enterCodeEnd = async (block) => {
+    // 直接点最后一行 + End：比 ControlOrMeta+End 稳（后者在 CM 里偶尔不生效）。
+    await block.locator('.cm-line:visible').last().click()
+    await page.keyboard.press('End')
+    await page.waitForTimeout(200)
+  }
+
+  await enterCodeEnd(firstFence)
+  current = await pressUntilCaret('ArrowDown', 'after')
+  record(
+    '相邻块 ↓：第一块末行 → 第一块块后光标',
+    current.side === 'after' && current.caretParent.startsWith('milkdown-code-block'),
+    JSON.stringify({ side: current.side, parent: current.caretParent })
+  )
+  current = await pressUntilCaret('ArrowDown', 'before')
+  record(
+    '相邻块 ↓：→ 第二块块前光标',
+    current.side === 'before' && current.caretParent.startsWith('milkdown-code-block'),
+    JSON.stringify({ side: current.side, parent: current.caretParent })
+  )
+  await press('ArrowDown')
+  current = await state()
+  record('相邻块 ↓：→ 进入第二块 CM', current.cmFocus === true, JSON.stringify(current.text))
+
+  await enterCodeStart(secondFence)
+  await press('ArrowUp')
+  current = await state()
+  record(
+    '相邻块 ↑：第二块首行 → 第二块块前光标',
+    current.side === 'before' && current.caretParent.startsWith('milkdown-code-block'),
+    JSON.stringify({ side: current.side, parent: current.caretParent, cmFocus: current.cmFocus })
+  )
+  await press('ArrowUp')
+  current = await state()
+  record(
+    '相邻块 ↑：→ 第一块块后光标',
+    current.side === 'after' && current.caretParent.startsWith('milkdown-code-block'),
+    JSON.stringify({ side: current.side, parent: current.caretParent, cmFocus: current.cmFocus })
+  )
+  await press('ArrowUp')
+  current = await state()
+  record('相邻块 ↑：→ 回到第一块 CM', current.cmFocus === true, JSON.stringify(current.text))
 
   // 未编辑：导航不产生任何 markdown 变更
   await page.keyboard.press('ControlOrMeta+s')

@@ -149,6 +149,29 @@ describe('block boundary caret', () => {
     expect(host.querySelector('.desk-block-boundary-caret')).toBe(caret)
   })
 
+  it('相邻代码块（中间没有空行）：块前 ↑ / 块后 ↓ 在两个块之间来回', async () => {
+    const view = await setup(
+      '```js\nconst first = 1\n```\n```css\n.demo {\n  color: red;\n}\n```\n'
+    )
+    const children = childPositions(view.state.doc)
+    expect(children.map((child) => child.node.type.name)).toEqual(['code_block', 'code_block'])
+    const [first, second] = children
+
+    // 第二块块前 ↑ → 第一块块后
+    placeBoundaryCaret(view, second!.pos, 'before')
+    expect(view.state.selection).toBeInstanceOf(BlockBoundaryCaret)
+    view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }))
+    expect(view.state.selection).toBeInstanceOf(BlockBoundaryCaret)
+    expect(activeBlockBoundaryTarget(view.state)?.side).toBe('after')
+    expect(view.state.selection.from).toBe(first!.pos + first!.node.nodeSize)
+
+    // 第一块块后 ↓ → 第二块块前
+    view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+    expect(view.state.selection).toBeInstanceOf(BlockBoundaryCaret)
+    expect(activeBlockBoundaryTarget(view.state)?.side).toBe('before')
+    expect(view.state.selection.from).toBe(second!.pos)
+  })
+
   it('renders exactly one visible caret element', async () => {
     const view = await setup('前段\n\n<B id="x" />\n\n后段\n')
     const raw = childPositions(view.state.doc).find(
