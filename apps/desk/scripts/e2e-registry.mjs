@@ -236,6 +236,19 @@ export const SUITES = [
     note: '行内 <br>（段落 + 表格单元格）渲染与磁盘保真（未编辑零 diff、编辑后不丢）'
   },
   {
+    name: 'e2e-list-fold.mjs',
+    area: 'block-editing',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/renderer/src/markdown/listItemCollapse.ts',
+      'apps/desk/src/renderer/src/markdown/milkdownMarkdownEditor.scoped.css',
+      'apps/desk/src/renderer/src/markdown/MilkdownMarkdownEditor.vue'
+    ],
+    serial: false,
+    smoke: false,
+    note: '缩进列表折叠（语雀交互）：按钮只在有子列表的项出现 / 悬停显形 / 折叠只改视图（markdown 零 diff）/ 上下箭头跳过隐藏子树'
+  },
+  {
     name: 'e2e-code-exit.mjs',
     area: 'code-block',
     tier: 'regression',

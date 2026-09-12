@@ -101,6 +101,10 @@ import {
   expandCollapsedSectionsContaining,
   type HeadingFoldCommand
 } from './headingSectionCollapse'
+import {
+  createListItemCollapsePlugin,
+  expandCollapsedListItemsContaining
+} from './listItemCollapse'
 
 import type { NotePageWidth, NoteTocDisplay, NoteViewMode } from '../../../shared/contracts'
 
@@ -1070,6 +1074,7 @@ onMounted(async () => {
   editor.editor.use(createDocumentSelectAllPlugin({ isPaneActive: () => props.active }))
   editor.editor.use(createRawBlockSelectionPlugin())
   editor.editor.use(createHeadingSectionCollapsePlugin())
+  editor.editor.use(createListItemCollapsePlugin())
   editor.editor.use(
     createReadonlyTransactionGuard({
       isReadOnly: isEffectivelyReadOnly,
@@ -1111,6 +1116,13 @@ onMounted(async () => {
                   !view.state.doc.eq(previousState.doc)
                 ) {
                   reportHeadingLevel(view)
+                }
+                // 选区落进被折叠的列表子树（撤销 / 程序化定位）时自动展开；
+                // 延到微任务里，避免在 view update 过程中再 dispatch。
+                if (!view.state.selection.eq(previousState.selection)) {
+                  queueMicrotask(() => {
+                    expandCollapsedListItemsContaining(view, view.state.selection.from)
+                  })
                 }
               }
             }

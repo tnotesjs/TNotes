@@ -157,6 +157,92 @@
   background-size: 12px 12px;
 }
 
+/* 缩进列表折叠（交互对齐语雀）：按钮贴在 marker 列左侧的缩进空档里（距列表项左边缘
+   4px，正好落在 24px 缩进里），16×16 / 圆角 4px；平时透明，悬停该项或已折叠时显形。
+   折叠只改视图：子列表 `display: none`，文档与 markdown 都不变。 */
+.milkdown-markdown-editor :deep(.milkdown .milkdown-list-item-block > .list-item) {
+  position: relative;
+}
+
+.milkdown-markdown-editor :deep(.milkdown .milkdown-list-item-block .desk-list-item-toggle) {
+  position: absolute;
+  top: 16px;
+  left: -20px;
+  z-index: 2;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(-50%);
+}
+
+/* 让指针从正文挪到按钮（按钮在列表项盒外）时不会丢掉 hover。 */
+.milkdown-markdown-editor
+  :deep(.milkdown .milkdown-list-item-block .desk-list-item-toggle::before) {
+  position: absolute;
+  inset: -4px -6px -4px 0;
+  content: '';
+}
+
+/* 只显示指针所在那一层的按钮：按钮必须长在这一项自己的 `.content-dom` 里，
+   悬停子项时祖先项的按钮要收起来（祖先也是 `:hover`，靠 :has 收口）。 */
+.milkdown-markdown-editor
+  :deep(
+    .milkdown
+      .milkdown-list-item-block
+      > .list-item:hover
+      > .children
+      > .content-dom
+      > .desk-list-item-toggle
+  ),
+.milkdown-markdown-editor :deep(.milkdown .milkdown-list-item-block .desk-list-item-toggle:hover),
+.milkdown-markdown-editor
+  :deep(.milkdown .milkdown-list-item-block .desk-list-item-toggle:focus-visible),
+.milkdown-markdown-editor
+  :deep(.milkdown .milkdown-list-item-block.desk-list-item--collapsed .desk-list-item-toggle) {
+  opacity: 1;
+}
+
+.milkdown-markdown-editor
+  :deep(
+    .milkdown
+      .milkdown-list-item-block
+      > .list-item:has(.list-item:hover)
+      > .children
+      > .content-dom
+      > .desk-list-item-toggle
+  ) {
+  opacity: 0;
+}
+
+.milkdown-markdown-editor :deep(.milkdown .milkdown-list-item-block .desk-list-item-toggle:hover) {
+  background: var(--hover);
+  color: var(--editor-text);
+}
+
+.milkdown-markdown-editor :deep(.milkdown .milkdown-list-item-block .desk-list-item-toggle svg) {
+  display: block;
+  width: 12px;
+  height: 12px;
+}
+
+.milkdown-markdown-editor
+  :deep(.milkdown .milkdown-list-item-block.desk-list-item--collapsed .content-dom > ul),
+.milkdown-markdown-editor
+  :deep(.milkdown .milkdown-list-item-block.desk-list-item--collapsed .content-dom > ol) {
+  display: none !important;
+}
+
 .milkdown-markdown-editor :deep(.milkdown .milkdown-toolbar) {
   background: var(--raised);
   border: 1px solid var(--border);
