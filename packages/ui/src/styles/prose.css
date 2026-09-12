@@ -86,6 +86,11 @@
 :is(.tn-prose, .vp-doc) :where(table) {
   border-collapse: collapse;
   margin: 16px 0;
+  /* 铺满内容列：与 Desk 可视化编辑器里的表格宽度一致（编辑器里表格宽度 = 内容列宽）。
+     不加这条时站点表格按内容收缩（实测 3 列表只有 182px，挤在 892px 的阅读列里），
+     两边观感不一致。列宽仍由 table-layout: auto 按内容分配。 */
+  width: 100%;
+  max-width: 100%;
 }
 :is(.tn-prose, .vp-doc) :where(th, td) {
   border: 1px solid var(--tn-c-divider);
