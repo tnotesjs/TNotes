@@ -16,6 +16,7 @@ import {
   FIDELITY_CASE_D3,
   FIDELITY_CASE_FRONTMATTER
 } from './projectionFidelity.cases'
+import { parseMarkdownSource } from './sourcePreservation'
 import {
   canonicalizeMarkdown,
   classifyProjectionFidelity,
@@ -222,5 +223,55 @@ describe('projectionFidelity · 降级之后的文档', () => {
     expect(element.querySelector('.desk-raw-block__unparsed-text')?.textContent).toBe(
       '::: tip T\n\n原文'
     )
+  })
+})
+
+describe('projectionFidelity · 降级最小性', () => {
+  it('只降级出问题的区域，后面的正常段落不动', async () => {
+    const source = [
+      '---',
+      'id: fidelity-e2e',
+      '---',
+      '',
+      '::: tip 正常提示块',
+      '',
+      '正常正文',
+      '',
+      ':::',
+      '',
+      '::: tip T',
+      '',
+      '外层',
+      '',
+      '::: info I',
+      '',
+      '内层',
+      '',
+      ':::',
+      '',
+      ':::',
+      '',
+      '222',
+      ''
+    ].join('\n')
+    // 找到 222 段落所在的顶层块下标
+    const sourceBlocks = parseMarkdownSource(source).blocks
+    const plainIndex = sourceBlocks.findIndex((block) => block.source.trim() === '222')
+    expect(plainIndex).toBeGreaterThan(0)
+
+    let plan = degradableBlockIndexes(source, await projectToCanonical(source))
+    for (let round = 0; round < 6; round += 1) {
+      const rebuilt = await canonicalFromVirtual(
+        projectRawBlocksForMilkdown(source, { forceRawBlockIndexes: new Set(plan) })
+      )
+      if (classifyProjectionFidelity(source, rebuilt).ok) break
+      plan = extendDegradationIndexes(source, rebuilt, plan)
+    }
+    expect(plan, `plan=${JSON.stringify(plan)} plainIndex=${plainIndex}`).not.toContain(plainIndex)
+    const rebuilt = await canonicalFromVirtual(
+      projectRawBlocksForMilkdown(source, { forceRawBlockIndexes: new Set(plan) })
+    )
+    expect(classifyProjectionFidelity(source, rebuilt).ok).toBe(true)
+    expect(rebuilt).toContain('222')
   })
 })

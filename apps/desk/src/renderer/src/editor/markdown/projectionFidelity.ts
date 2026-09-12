@@ -315,15 +315,18 @@ export function classifyProjectionFidelity(source: string, canonical: string): F
   const sourceComparable = comparableBlocks(source)
   const canonicalComparable = comparableBlocks(canonical)
   const results: FidelityBlockResult[] = []
+  const claimed = new Set<number>()
 
   sourceComparable.forEach((text, index) => {
     const block = sourceBlocks[index]!
     if (canonicalComparable[index] === text) {
+      claimed.add(index)
       results.push({ index, kind: block.kind, verdict: 'faithful', source: block.source })
       return
     }
     const anywhere = canonicalComparable.indexOf(text)
     if (anywhere >= 0) {
+      claimed.add(anywhere)
       results.push({
         index,
         kind: block.kind,
@@ -376,8 +379,10 @@ export function classifyProjectionFidelity(source: string, canonical: string): F
     })
   })
 
+  // extra = canonical 里没有任何源码块认领的块（可能是尾部多出来的，也可能是中间错位）
   const extras: FidelityBlockResult[] = []
-  for (let index = sourceComparable.length; index < canonicalComparable.length; index += 1) {
+  canonicalComparable.forEach((_text, index) => {
+    if (claimed.has(index)) return
     extras.push({
       index,
       kind: canonicalBlocks[index]!.kind,
@@ -385,7 +390,7 @@ export function classifyProjectionFidelity(source: string, canonical: string): F
       reason: 'extra',
       source: canonicalBlocks[index]!.source
     })
-  }
+  })
 
   const problematic = [...results.filter((item) => item.verdict === 'unfaithful'), ...extras]
   return {
@@ -449,15 +454,15 @@ export function degradableBlockIndexes(source: string, canonical: string): numbe
     // 未编辑的块在保存时本来就逐字取原文（reconcile 的原文复用），不会丢内容，
     // 没必要因此把正常内容变成"按原文显示"。
     if (item.reason === 'content-changed') continue
+    // reordered 是下游症状（真正出问题的是它上游那一块），不单独降级它 ——
+    // 否则会把无辜的后续段落（例如 222）一起变成原文卡片。
+    if (item.reason === 'reordered') continue
     if (item.reason === 'extra') {
-      picked.add(Math.max(0, sourceBlockCount - 1))
+      // canonical 多出来的块出现在第 index 位，说明它上游那一块没投影干净：降级它前一块
+      picked.add(Math.max(0, Math.min(item.index - 1, sourceBlockCount - 1)))
       continue
     }
-    const from = Math.min(item.index, item.againstIndex ?? item.index)
-    const to = Math.max(item.index, item.againstIndex ?? item.index)
-    for (let index = Math.max(0, from); index <= Math.min(to, sourceBlockCount - 1); index += 1) {
-      picked.add(index)
-    }
+    picked.add(Math.min(Math.max(0, item.index), Math.max(0, sourceBlockCount - 1)))
   }
   return [...picked].sort((a, b) => a - b)
 }
@@ -475,14 +480,11 @@ export function extendDegradationIndexes(
   const next = new Set(current)
   for (const item of report.problematic) {
     if (item.reason === 'extra') {
-      next.add(Math.max(0, report.sourceBlockCount - 1))
+      next.add(Math.max(0, Math.min(item.index - 1, report.sourceBlockCount - 1)))
       continue
     }
-    next.add(item.index)
-    next.add(Math.max(0, item.index - 1))
-    if (item.againstIndex != null) {
-      next.add(Math.min(item.againstIndex, Math.max(0, report.sourceBlockCount - 1)))
-    }
+    if (item.reason === 'reordered' || item.reason === 'content-changed') continue
+    next.add(Math.min(item.index, Math.max(0, report.sourceBlockCount - 1)))
   }
   // 仍不忠实 → 区域向左扩一块：结构错位的根因往往在上游（容器/分隔符）那一块
   if (!report.ok && current.length > 0) {

@@ -511,5 +511,22 @@ export const SUITES = [
     serial: false,
     smoke: true,
     note: 'Inter 子集离线加载 + 标题/正文/callout 排印与主题色（真实字形）'
+  },
+  {
+    name: 'e2e-fidelity.mjs',
+    area: 'fidelity',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/renderer/src/editor/markdown/projectionFidelity.ts',
+      'apps/desk/src/renderer/src/editor/markdown/projectionFidelity.cases.ts',
+      'apps/desk/src/renderer/src/editor/markdown/rawBlockProjection.ts',
+      'apps/desk/src/renderer/src/editor/markdown/sourcePreservation.ts',
+      'apps/desk/src/renderer/src/markdown/MilkdownMarkdownEditor.vue',
+      'apps/desk/src/renderer/src/markdown/createDeskRawBlockView.ts',
+      'apps/desk/src/renderer/src/markdown/milkdownMarkdownEditor.scoped.css'
+    ],
+    serial: false,
+    smoke: false,
+    note: '渲染忠实性：结构性不忠实的区域降级为「按原文显示」，无关内容照常渲染，切视图不改磁盘'
   }
 ]
