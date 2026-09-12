@@ -105,6 +105,14 @@ const source = [
   ':::',
   '',
   '提示块区结束段落',
+  '',
+  '## 块级公式',
+  '',
+  '$$',
+  'a^2 + b^2 = c^2',
+  '$$',
+  '',
+  '公式区结束段落',
   ''
 ].join('\n')
 writeFileSync(noteFile, source)
@@ -565,8 +573,9 @@ try {
 
   /** 连按方向键直到落到指定侧的边界光标（CM 末尾是否有空行会让 ↓ 次数差一次）。 */
   const pressUntilCaret = async (key, side, max = 4) => {
+    const done = (current) => (side === 'cm' ? current.cmFocus === true : current.side === side)
     let current = await state()
-    for (let index = 0; index < max && current.side !== side; index += 1) {
+    for (let index = 0; index < max && !done(current); index += 1) {
       await press(key)
       current = await state()
     }
@@ -753,6 +762,37 @@ try {
   record(
     '提示块 最后一个 body 末尾 ↓ → 下一段文本',
     current.text?.includes('提示块区结束段落') ?? false,
+    JSON.stringify(current.text)
+  )
+
+  // 块级公式（预览形态的代码块）：↓ 要能展开源码进 CM，绝不能卡在块前光标上。
+  await clickHeading('块级公式')
+  await page.keyboard.press('End')
+  await page.waitForTimeout(150)
+  await press('ArrowDown')
+  current = await state()
+  record(
+    '块级公式 ↓ → 块前光标',
+    current.side === 'before' && current.caretParent.includes('milkdown-code-block'),
+    JSON.stringify({ side: current.side, parent: current.caretParent })
+  )
+  current = await pressUntilCaret('ArrowDown', 'cm', 4)
+  record(
+    '块级公式 ↓ → 展开源码并进入 CM（不再卡在块前光标）',
+    current.cmFocus === true,
+    JSON.stringify({ cm: current.cmFocus, text: current.text })
+  )
+  current = await pressUntilCaret('ArrowDown', 'after', 5)
+  record(
+    '块级公式 ↓ → 块后光标',
+    current.side === 'after' && current.caretParent.includes('milkdown-code-block'),
+    JSON.stringify({ side: current.side, parent: current.caretParent })
+  )
+  await press('ArrowDown')
+  current = await state()
+  record(
+    '块级公式 块后 ↓ → 下一段',
+    current.text?.includes('公式区结束段落') ?? false,
     JSON.stringify(current.text)
   )
 

@@ -1112,10 +1112,11 @@ describe('code_block keyboard selection', () => {
       expect(emptyPos).toBeGreaterThan(-1)
       expect(codePos).toBeGreaterThan(-1)
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, textEnd)))
-      // 紧邻的是空行：↓ 交给 ProseMirror，不落块边界光标（不跳过空行）。
+      // 紧邻的是空行：我们自己接管方向键（不再交给 PM/gapcursor），落点必须是空行本身，
+      // 不能跳过它直接停到代码块，也不该落块边界光标。
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
       expect(view.state.selection).not.toBeInstanceOf(BlockBoundaryCaret)
-      expect(view.state.selection.from).toBe(textEnd)
+      expect(view.state.selection.$head.parent.content.size).toBe(0)
       // 空行上的 ↓ 才落到代码块的「块前光标」。
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, emptyPos + 1)))
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))

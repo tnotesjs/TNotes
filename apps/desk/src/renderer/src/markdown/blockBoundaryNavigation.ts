@@ -36,9 +36,12 @@ import {
   type BlockBoundaryTarget
 } from './blockBoundaryCaret'
 import { parseContainerSource } from '../editor/markdown/containerBody'
+import { enterLatexSource, isLatexPreviewOnly } from './codeBlockLatexPreview'
 import {
   calloutBodyExitPosition,
+  calloutDepthAt,
   focusCalloutTitleInput,
+  isCaretEnteringCalloutTitle,
   isDeskCalloutNode
 } from '../editor/markdown/deskCallout'
 
@@ -157,6 +160,16 @@ const keyboardOwner = new WeakMap<EditorView, 'boundary' | 'code'>()
  */
 const pendingSelectionTransactions = new WeakSet<EditorView>()
 
+/**
+ * ProseMirror 的 DOMObserver 正在把 DOM 变化 / DOM 选区读回 state 的窗口深度。
+ *
+ * 边界光标贴着代码块时，PM 的 selectionToDOM 会把 DOM 选区写进代码块的 contentDOM，
+ * CM 反过来把这次「选区变化」同步给 PM；PM 的 DOMObserver 再把 DOM 读回来时，可能
+ * 算出一个完全不同的位置（实测直接把光标带到文档开头）。这类「读回」事务只应该被
+ * 忽略掉。而表格 / 列表的普通方向键走的是 keymap，不经过这个窗口，必须放行。
+ */
+let domObserverFlushDepth = 0
+
 function dispatchSelection(view: EditorView, ...args: Parameters<EditorView['dispatch']>): void {
   pendingSelectionTransactions.add(view)
   try {
@@ -164,15 +177,6 @@ function dispatchSelection(view: EditorView, ...args: Parameters<EditorView['dis
   } finally {
     pendingSelectionTransactions.delete(view)
   }
-}
-
-/** 选区是否落在代码块内部（CM 回同步 PM 选区的特征）。 */
-function isInsideCodeBlock(selection: Selection): boolean {
-  const $head = selection.$head
-  for (let depth = $head.depth; depth > 0; depth -= 1) {
-    if ($head.node(depth).type.name === 'code_block') return true
-  }
-  return false
 }
 
 /**
@@ -183,6 +187,15 @@ function isInsideCodeBlock(selection: Selection): boolean {
 function setCodeKeyboardOwner(view: EditorView, owns: boolean): void {
   if (owns) view.dom.dataset.codeKeyboard = 'true'
   else delete view.dom.dataset.codeKeyboard
+}
+
+/** 选区是否落在代码块内部（代码块里的 CM 直接回同步 PM 选区的特征）。 */
+function isInsideCodeBlock(selection: Selection): boolean {
+  const $head = selection.$head
+  for (let depth = $head.depth; depth > 0; depth -= 1) {
+    if ($head.node(depth).type.name === 'code_block') return true
+  }
+  return false
 }
 
 function focusProseMirror(view: EditorView): void {
@@ -322,39 +335,68 @@ function canEnterInterior(node: ProseMirrorNode): boolean {
   return node.type.name === 'code_block' || node.type.name === 'table' || isCodeGroupBlock(node)
 }
 
+/**
+ * 只认**可见**的 CodeMirror。
+ *
+ * 不要再 `?? candidates[0]` 兜底：块级公式这类预览块里可能藏着一个隐藏的 CM，
+ * 拿到它去 focus() 是无效的，而按键已经被 claim，方向键会永久卡在这个块上。
+ * 不可见就返回 null，交给 focusCodeMirror 去展开/重试，最后落回边界光标。
+ */
 function visibleCodeMirror(blockDom: HTMLElement): CodeMirrorView | null {
   const candidates = [...blockDom.querySelectorAll('.cm-editor')].filter(
     (element): element is HTMLElement => element instanceof HTMLElement
   )
-  const visible = candidates.find((element) => element.offsetParent !== null) ?? candidates[0]
+  const visible = candidates.find((element) => element.offsetParent !== null)
   return visible ? CodeMirrorView.findFromDOM(visible) : null
 }
 
-function focusCodeMirror(view: EditorView, blockDom: HTMLElement, forward: boolean): boolean {
+/** 预览形态的代码块（块级公式）：先把源码编辑器展开出来（等价于点「编辑」）。
+    注意判据是「源码 host 处于隐藏状态」，不能只看有没有 .cm-editor —— 预览态的
+    CM 恰好是存在的但藏在 .codemirror-host.hidden 里。 */
+function revealPreviewCodeEditor(blockDom: HTMLElement): void {
+  if (isLatexPreviewOnly(blockDom)) enterLatexSource(blockDom)
+}
+
+/** 展开/重试都进不去：按「不可进入的块」处理，落回块后（↓/→）或块前（↑/←）。 */
+function fallbackFromFailedEnter(view: EditorView, blockDom: HTMLElement, forward: boolean): void {
+  const blockPos = blockPositionForInteriorDom(view, blockDom)
+  if (blockPos == null) return
+  const node = view.state.doc.nodeAt(blockPos)
+  if (!node) return
+  if (forward) placeBoundaryCaret(view, blockPos + node.nodeSize, 'after')
+  else placeBoundaryCaret(view, blockPos, 'before')
+}
+
+/** 进 CM 的重试上限（约 10 帧）：块级公式展开源码需要几帧才挂上 CodeMirror。 */
+const MAX_ENTER_ATTEMPTS = 10
+
+function focusCodeMirror(
+  view: EditorView,
+  blockDom: HTMLElement,
+  forward: boolean,
+  attempt = 0
+): boolean {
   const cm = visibleCodeMirror(blockDom)
-  if (!cm) {
-    // 代码块在视口外时 CodeMirror 可能还没初始化：先滚进视口，下一帧再进。
-    blockDom.scrollIntoView({ block: 'center' })
-    requestAnimationFrame(() => {
-      if (!(view.state.selection instanceof BlockBoundaryCaret)) return
-      const next = visibleCodeMirror(blockDom)
-      if (!next) return
-      keyboardOwner.set(view, 'code')
-      setCodeKeyboardOwner(view, true)
-      next.focus()
-      next.dispatch({
-        selection: EditorSelection.cursor(forward ? 0 : next.state.doc.length),
-        scrollIntoView: true
-      })
+  if (cm) {
+    keyboardOwner.set(view, 'code')
+    setCodeKeyboardOwner(view, true)
+    cm.focus()
+    cm.dispatch({
+      selection: EditorSelection.cursor(forward ? 0 : cm.state.doc.length),
+      scrollIntoView: true
     })
     return true
   }
-  keyboardOwner.set(view, 'code')
-  setCodeKeyboardOwner(view, true)
-  cm.focus()
-  cm.dispatch({
-    selection: EditorSelection.cursor(forward ? 0 : cm.state.doc.length),
-    scrollIntoView: true
+  // 每次重试都试着把预览块的源码展开（chrome 是异步挂上来的，第一次可能还没有 host）
+  revealPreviewCodeEditor(blockDom)
+  if (attempt >= MAX_ENTER_ATTEMPTS) return false
+  // 代码块在视口外、或预览刚展开时 CodeMirror 还没就绪：先滚进视口，下一帧再试；
+  // 试满次数仍然进不去就落回边界光标 —— 绝不 claim 一个看不见的编辑器。
+  blockDom.scrollIntoView({ block: 'center' })
+  requestAnimationFrame(() => {
+    if (!(view.state.selection instanceof BlockBoundaryCaret)) return
+    if (focusCodeMirror(view, blockDom, forward, attempt + 1)) return
+    fallbackFromFailedEnter(view, blockDom, forward)
   })
   return true
 }
@@ -534,12 +576,12 @@ function moveForwardFromBoundary(
     const after = target.blockPos + target.node.nodeSize
     // 表格在竖向上是「一整行」：块前 ↓ 直接穿到块后，只有 → 才进第一个单元格。
     if (target.node.type.name === 'table') {
-      return direction === 'right'
-        ? enterInterior(view, target, 'right')
+      return direction === 'right' && enterInterior(view, target, 'right')
+        ? true
         : placeBoundaryCaret(view, after, 'after')
     }
-    if (canEnterInterior(target.node)) return enterInterior(view, target, direction)
-    // 不可进入内部的块（岛 / 原子）仍保留「块前 → 块后」两个停靠点，只是不进内部。
+    // 不可进入内部、或内部暂时进不去（预览块）：仍然保留「块前 → 块后」两个停靠点。
+    if (canEnterInterior(target.node) && enterInterior(view, target, direction)) return true
     return placeBoundaryCaret(view, after, 'after')
   }
   // 块后：下一个可停靠块 → 它的块前光标；否则落到下一行文本（可停靠块之间的空行透明）。
@@ -580,7 +622,7 @@ function moveBackwardFromBoundary(
         ? enterInterior(view, target, 'left')
         : placeBoundaryCaret(view, target.blockPos, 'before')
     }
-    if (canEnterInterior(target.node)) return enterInterior(view, target, direction)
+    if (canEnterInterior(target.node) && enterInterior(view, target, direction)) return true
     return placeBoundaryCaret(view, target.blockPos, 'before')
   }
   const previous = siblingBlock(doc, target.blockPos, target.node, -1)
@@ -738,13 +780,169 @@ export function handleBoundaryNavigationKeyDown(
       const exit = calloutBodyExitPosition($head, event.key === 'ArrowDown' ? 'down' : 'right')
       if (exit != null) return leaveCallout(view, exit)
     }
-    // callout body 与标题 input 是一套独立的键盘交互（↑ 进标题），
-    // 其余方向键不抢：交给 deskCalloutKeymapPlugin。
-    if (isInsideCalloutBody($head)) return false
+    // callout body 首行的 ↑/← = 进标题 chrome。这一步必须在捕获阶段自己做：
+    // 交给后面的 PM keymap 时，gapcursor / virtual-cursor 的 selectVertically
+    // 会先抢走按键，实测把光标直接带到文档开头。
+    if (isInsideCalloutBody($head)) {
+      if (
+        (event.key === 'ArrowUp' || event.key === 'ArrowLeft') &&
+        isCaretEnteringCalloutTitle($head, event.key === 'ArrowLeft' ? 'left' : 'up')
+      ) {
+        const calloutDepth = calloutDepthAt($head)
+        if (
+          calloutDepth >= 1 &&
+          focusCalloutTitleInput(view, $head.before(calloutDepth), $head.parentOffset)
+        ) {
+          return true
+        }
+      }
+      // body 内的其余方向键不抢：交给 deskCalloutKeymapPlugin / 浏览器。
+      return false
+    }
     const pos = adjacentBoundaryCaretPosition(view.state, ARROW_KEYS[event.key]!)
     if (pos != null) return placeBoundaryCaret(view, pos)
+    // ↑/← 从 callout 下面的段落回到 callout 内部：不接管的话 PM 的 gapcursor 会
+    // 一路找到文档开头的 gap（实测光标直接飞到笔记开头）。
+    if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+      const callout = previousCalloutPosition(
+        view.state,
+        $head,
+        event.key === 'ArrowLeft' ? 'left' : 'up'
+      )
+      if (callout != null) return enterCalloutFromBelow(view, callout)
+    }
+    // 文本块边缘的竖向移动全都自己接走：PM 的 gapcursor 与
+    // prosemirror-virtual-cursor 的 selectVertically 都会抢这两个键，
+    // 实测会把光标一路带到文档开头。
+    if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+      const forward = event.key === 'ArrowDown'
+      if (atTextblockVerticalEdge(view.state, forward ? 'down' : 'up')) {
+        const sibling = siblingBlock(
+          view.state.doc,
+          $head.before(1),
+          $head.parent,
+          forward ? 1 : -1
+        )
+        // 相邻的是停靠块：贴它的本侧边界光标（↓ → before，↑ → after）
+        if (sibling && isBoundaryStopBlock(sibling.node)) {
+          return placeBoundaryCaret(
+            view,
+            forward ? sibling.pos : sibling.pos + sibling.node.nodeSize,
+            forward ? 'before' : 'after'
+          )
+        }
+        // 相邻的是 callout：进出由它的标题 chrome 管，交给后面的插件
+        if (sibling && isDeskCalloutNode(sibling.node)) return false
+        // 普通邻居：优先用坐标模拟浏览器原生移动（保留 x 列）
+        if (moveVerticallyByCoords(view, forward)) return true
+        // 光标不在视口里时坐标探不出目标（posAtCoords 会返回原位置）：退化成
+        // 「相邻块的第一个 / 最后一个文本位置」
+        if (sibling) {
+          return placeText(
+            view,
+            forward ? sibling.pos + 1 : sibling.pos + sibling.node.nodeSize - 1,
+            forward ? 1 : -1
+          )
+        }
+      }
+    }
   }
   return false
+}
+
+/**
+ * 在文本块首/末行按下 ↑/↓ 时，用坐标模拟浏览器的原生竖向移动（保留 x 列）。
+ *
+ * 为什么必须由我们接走：PM 的 gapcursor 和 prosemirror-virtual-cursor 的
+ * `selectVertically` 都会抢这两个键，实测会一路找到文档开头的 gap / 直接
+ * 把选区落到位置 2（笔记开头）。只在「块的边缘」兜底，块内的逐行移动仍交给浏览器。
+ */
+/** 目标位置是否落在光标所在块的前/后一个顶层块（含同块）——坐标探测的合理性检查。 */
+function isNearbyBlockTarget(state: EditorState, target: number, caret: number): boolean {
+  const blockIndexAt = (pos: number): number => {
+    let found = -1
+    let index = 0
+    state.doc.forEach((node, offset) => {
+      if (pos >= offset && pos <= offset + node.nodeSize) found = index
+      index += 1
+    })
+    return found
+  }
+  const from = blockIndexAt(caret)
+  const to = blockIndexAt(target)
+  return from >= 0 && to >= 0 && Math.abs(from - to) <= 1
+}
+
+function moveVerticallyByCoords(view: EditorView, forward: boolean): boolean {
+  const { selection } = view.state
+  if (!(selection instanceof TextSelection) || !selection.empty) return false
+  let coords: { left: number; top: number; bottom: number }
+  try {
+    coords = view.coordsAtPos(selection.head)
+  } catch {
+    return false
+  }
+  // 光标必须真的在可视区里：posAtCoords 对可视区外的坐标会**夹到文档首/尾**，
+  // 直接把光标送到笔记开头（实测踩过）。不可视就返回 false，走相邻块兜底。
+  const scroller = view.dom.closest('.milkdown-markdown-editor__canvas')
+  const bounds = scroller?.getBoundingClientRect()
+  const top = bounds ? bounds.top : 0
+  const bottom = bounds ? bounds.bottom : window.innerHeight
+  if (coords.top < top - 1 || coords.bottom > bottom + 1) return false
+  const height = Math.max(6, coords.bottom - coords.top)
+  const probeTop = forward ? coords.bottom + height * 0.4 : coords.top - height * 0.4
+  // 探测点本身也必须落在可视区里：越界时 posAtCoords 会夹到文档首/尾，
+  // 实测把光标直接送到笔记开头。
+  if (probeTop < top + 1 || probeTop > bottom - 1) return false
+  const probe = view.posAtCoords({ left: coords.left, top: probeTop })
+  if (!probe) return false
+  // 再兜一层：目标必须落在相邻块里（同一块或前后各一块），否则宁可走相邻块路径。
+  if (!isNearbyBlockTarget(view.state, probe.pos, selection.head)) return false
+  const $target = view.state.doc.resolve(probe.pos)
+  // 目标落在代码块里时不在这里处理（那是 CM / 边界分支的事）
+  for (let depth = $target.depth; depth > 0; depth -= 1) {
+    if ($target.node(depth).type.name === 'code_block') return false
+  }
+  const target = TextSelection.near($target, forward ? 1 : -1)
+  if (target.eq(selection)) return false
+  return placeText(view, target.from, forward ? 1 : -1)
+}
+
+/** 光标是否在文本块的第一（↑）/ 最后（↓）条视觉行上。 */
+function atTextblockVerticalEdge(state: EditorState, direction: 'up' | 'down'): boolean {
+  const { selection } = state
+  if (!(selection instanceof TextSelection) || !selection.empty) return false
+  const { $head } = selection
+  if (!$head.parent.isTextblock) return false
+  return direction === 'up' ? isOnFirstLineOfTextblock($head) : isOnLastLineOfTextblock($head)
+}
+
+/** 光标在文本块首行（↑）/ 首位（←），且前一个兄弟是 callout → 返回那个 callout 的位置。 */
+function previousCalloutPosition(
+  state: EditorState,
+  $head: EditorState['selection']['$head'],
+  direction: 'up' | 'left'
+): number | null {
+  if (!$head.parent.isTextblock) return null
+  if (direction === 'left' ? $head.parentOffset !== 0 : !isOnFirstLineOfTextblock($head))
+    return null
+  for (let depth = $head.depth; depth > 1; depth -= 1) {
+    if ($head.index(depth - 1) > 0) return null
+  }
+  const before = $head.before(1)
+  const previous = state.doc.resolve(before).nodeBefore
+  if (!previous || !isDeskCalloutNode(previous)) return null
+  return before - previous.nodeSize
+}
+
+/** 进入 callout 的 body 末尾：最后是停靠块就停它的块后光标，否则放到最后一个文本位置。 */
+function enterCalloutFromBelow(view: EditorView, calloutPos: number): boolean {
+  const node = view.state.doc.nodeAt(calloutPos)
+  if (!node) return false
+  const contentEnd = calloutPos + 1 + node.content.size
+  const last = view.state.doc.resolve(contentEnd).nodeBefore
+  if (last && isBoundaryStopBlock(last)) return placeBoundaryCaret(view, contentEnd, 'after')
+  return placeText(view, Math.max(calloutPos + 1, contentEnd - 1), -1)
 }
 
 /** 离开 callout：下一个兄弟还是 callout 就进它的标题 chrome，否则放到下一块开头。 */
@@ -772,6 +970,86 @@ export function handleBoundaryTextInput(view: EditorView, text: string): boolean
   return true
 }
 
+/**
+ * 巡检用的只读探针：只有页面先设了 `window.__DESK_NAV_PROBE = true` 才挂上，
+ * 生产环境不装。返回的是 state 里的权威信息（选区类型 / 边界光标贴着哪个块 /
+ * 是否在 CodeMirror 里 / 表格单元格），避免用 DOM 几何去猜块。
+ */
+function installDebugProbe(view: EditorView): void {
+  const flags = window as unknown as {
+    __DESK_NAV_PROBE?: boolean
+    __deskNavProbe?: () => unknown
+    __deskNavOutline?: () => unknown
+  }
+  // 函数常驻（零成本，只在被调用时读 state）；开关由巡检脚本在页面加载后打开。
+  if (flags.__deskNavProbe) return
+  flags.__deskNavOutline = () => {
+    if (!flags.__DESK_NAV_PROBE) return []
+    const children: unknown[] = []
+    view.state.doc.forEach((node, offset) => {
+      children.push({
+        offset,
+        kind: node.type.name,
+        text: node.textContent.replace(/\s+/g, ' ').trim().slice(0, 22)
+      })
+    })
+    return children
+  }
+  flags.__deskNavProbe = () => {
+    if (!flags.__DESK_NAV_PROBE) return { error: 'probe-disabled' }
+    const { state } = view
+    const selection = state.selection
+    const target = activeBlockBoundaryTarget(state)
+    const anchorPos = target ? target.blockPos : selection.from
+    let blockIndex = -1
+    let blockKind = ''
+    let blockText = ''
+    let index = 0
+    state.doc.forEach((node, offset) => {
+      if (anchorPos >= offset && anchorPos <= offset + node.nodeSize) {
+        blockIndex = index
+        blockKind = node.type.name
+        blockText = node.textContent.replace(/\s+/g, ' ').trim().slice(0, 18)
+      }
+      index += 1
+    })
+    const active = document.activeElement
+    const cmDom = active instanceof Element ? active.closest('.cm-editor') : null
+    const cm = cmDom ? CodeMirrorView.findFromDOM(cmDom as HTMLElement) : null
+    const findTableIn = state.selection.$head
+    const table = state.selection instanceof TextSelection ? findTable(findTableIn) : null
+    let cell: string | null = null
+    if (table) {
+      const rect = selectedRect(state)
+      cell = `${rect.left}:${rect.top}`
+    }
+    return {
+      selection: selection.constructor.name,
+      from: selection.from,
+      to: selection.to,
+      side: target?.side ?? null,
+      boundaryKind: target?.node.type.name ?? null,
+      block: blockIndex,
+      blockKind,
+      blockText,
+      owner: keyboardOwner.get(view) ?? null,
+      cm: cm
+        ? {
+            line: cm.state.doc.lineAt(cm.state.selection.main.head).number,
+            head: cm.state.selection.main.head,
+            length: cm.state.doc.length
+          }
+        : null,
+      cell,
+      title: active instanceof HTMLInputElement ? active.value.trim().slice(0, 16) : null,
+      scroll: Math.round(
+        (view.dom.closest('.milkdown-markdown-editor__canvas') as HTMLElement | null)?.scrollTop ??
+          -1
+      )
+    }
+  }
+}
+
 export function createBlockBoundaryNavigationPlugin(
   options: BlockBoundaryNavigationOptions = {}
 ): MilkdownPlugin {
@@ -788,9 +1066,11 @@ export function createBlockBoundaryNavigationPlugin(
           if (transactions.some((transaction) => transaction.docChanged)) return null
           if (!(oldState.selection instanceof BlockBoundaryCaret)) return null
           if (newState.selection instanceof BlockBoundaryCaret) return null
-          // 只挡这一种：新选区落在代码块内部（CM 被 PM 写入选区后回同步）。
-          // PM 默认的方向键移动（表格单元格、列表等）必须放行。
-          if (!isInsideCodeBlock(newState.selection)) return null
+          // 两类「外部同步」都要还原：
+          //  a) PM 的 DOMObserver 把 DOM 读回来 —— 可能算出任意位置（实测跳到文档开头）；
+          //  b) 代码块里的 CM 直接回同步 —— 新选区落在 code_block 内部。
+          // 普通方向键（表格单元格、列表等）走 keymap，两条都不满足，必须原样放行。
+          if (domObserverFlushDepth === 0 && !isInsideCodeBlock(newState.selection)) return null
           return newState.tr.setSelection(oldState.selection)
         },
         props: {
@@ -814,6 +1094,20 @@ export function createBlockBoundaryNavigationPlugin(
         },
         view(view) {
           currentView = view
+          installDebugProbe(view)
+          const domObserver = (view as unknown as { domObserver?: { flush?: () => void } })
+            .domObserver
+          if (domObserver && typeof domObserver.flush === 'function') {
+            const originalFlush = domObserver.flush.bind(domObserver)
+            domObserver.flush = (): void => {
+              domObserverFlushDepth += 1
+              try {
+                originalFlush()
+              } finally {
+                domObserverFlushDepth -= 1
+              }
+            }
+          }
           // 用户自己点进代码块 → 键盘归代码编辑器；点别处则清掉归属（走 PM 默认）。
           const onPointerDown = (event: Event): void => {
             const target = event.target
