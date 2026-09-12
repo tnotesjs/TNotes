@@ -1,0 +1,77 @@
+name: E2E (desk)
+
+# desk 是真 Electron 应用，e2e 必须真启动 Electron：PR 上跑「受影响套件 + 冒烟核心集」，
+# main 上跑全量（26 个 regression 套件）。套件清单与 --since 的源码 glob 映射在
+# apps/desk/scripts/e2e-registry.mjs（体检结论也记录在那里）。
+#
+# runner 已处理：serial 套件独占（全局快捷键/原生菜单/拖拽/焦点/app.quit/系统剪贴板），
+# 其余并发 4；每套件独立超时并按进程组 kill，日志落在 /tmp/desk-e2e-logs。
+# 本地等价命令：pnpm --filter desk build && pnpm --filter desk test:e2e [--smoke|--since <ref>]
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-desk-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    # 公共仓库 macOS runner 免费，且与开发者本机（Apple Silicon）一致——不需要 xvfb，
+    # 也没有 Linux 上的沙箱/窗口焦点差异，真机结论可直接复用。
+    runs-on: macos-14
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # --since 需要目标分支的历史
+          fetch-depth: 0
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 11.10.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # e2e 验的是 apps/desk/out（构建产物）+ 各包 dist
+      - name: Build
+        run: pnpm build
+
+      - name: Resolve e2e selection
+        id: selection
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch --no-tags origin "${{ github.base_ref }}"
+            echo "args=--since origin/${{ github.base_ref }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "args=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Show e2e selection
+        run: node apps/desk/scripts/run-e2e.mjs ${{ steps.selection.outputs.args }} --dry-run
+
+      - name: Run e2e
+        run: node apps/desk/scripts/run-e2e.mjs ${{ steps.selection.outputs.args }} --json /tmp/e2e-report.json
+
+      - name: Upload e2e artifacts
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: desk-e2e-artifacts
+          path: |
+            /tmp/desk-e2e-logs/**
+            /tmp/e2e-report.json
+            apps/desk/scripts/shots/**
+          retention-days: 7

@@ -1,0 +1,465 @@
+// desk e2e 套件注册表：runner（scripts/run-e2e.mjs）据此做增量选择与并发调度。
+//
+// 字段：
+//   name   脚本文件名（相对 scripts/）
+//   area   区域标签（--only/--skip 可按键名、去前缀名或 area 匹配）
+//   tier   `regression`（默认参与全量）｜`manual`（人工工具/试验台/基准，默认不跑，
+//          用 --include-manual 才跑）
+//   globs  该套件覆盖的源码路径 glob（相对仓库根）；`--since <ref>` 用它和 git 改动
+//          文件求交。以「它实际断言的代码路径」为准，宁可多写主要依赖。
+//   serial true = 独占跑（全局快捷键 / 原生菜单 / 拖拽 / 焦点 / 大窗口 / 系统剪贴板 /
+//          固定端口 / app.quit 等对「同时还有别的 Electron 在跑」敏感的套件）
+//   smoke  true = PR 冒烟核心集（快、稳、覆盖面广）
+//   note   一句话说明验什么（--list 时人读）
+//
+// 体检结论（2026-09-12，4 路并行审计 + 实测）：
+//   · `e2e-mindmap` 没有任何断言（启动→截图→dump 像素），是人工观察工具 → tier=manual
+//   · `e2e-excalidraw-e0` 验的是 packages/ui/e0-spike 试验台而非产品，产品交接由
+//     excalidraw-tab 覆盖 → tier=manual
+//   · `e2e-open-random-notes` 的断言点已被单测 + 其它套件的启动/打开流程覆盖，
+//     属可删候选（保留是因为 4.5s 很便宜且是新 fixture 的启动冒烟）
+export const SUITES = [
+  {
+    name: 'e2e-assets-acceptance.mjs',
+    area: 'assets',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/renderer/src/editor-groups/KbAssetsPane.vue',
+      'apps/desk/src/renderer/src/editor-groups/kbAssetsReasons.ts',
+      'apps/desk/src/main/assetOperations.ts',
+      'apps/desk/src/main/imageEncode.ts',
+      'apps/desk/src/main/imageUploadOptimize.ts',
+      'apps/desk/src/main/encodeManager.ts',
+      'apps/desk/src/main/imageBed.ts',
+      'apps/desk/src/renderer/src/editor/markdown/pasteImageWidth.ts',
+      'apps/desk/src/renderer/src/editor/markdown/noteViewPosition.ts',
+      'packages/kb/**',
+      'packages/ssg/**',
+      'packages/ui/src/markdown/**'
+    ],
+    serial: true,
+    smoke: false,
+    note: '资源验收：盘点/合并/压缩/转格式/断链 + SSG 产物资源完整性（sharp/oxipng、系统剪贴板、固定端口 8123）'
+  },
+  {
+    name: 'e2e-kb-assets.mjs',
+    area: 'assets',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/renderer/src/editor-groups/KbAssetsPane.vue',
+      'apps/desk/src/renderer/src/editor-groups/kbAssetsReasons.ts',
+      'apps/desk/src/main/assetOperations.ts',
+      'packages/kb/src/asset-scan/**',
+      'packages/kb/src/assets.ts'
+    ],
+    serial: false,
+    smoke: true,
+    note: '资源改名/回收/恢复后磁盘与笔记引用同步'
+  },
+  {
+    name: 'e2e-image-chrome.mjs',
+    area: 'editor',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/renderer/src/editor/markdown/deskImageView.ts',
+      'apps/desk/src/renderer/src/editor/markdown/imageAttrs.ts',
+      'packages/ui/src/markdown/image.ts',
+      'apps/desk/src/renderer/src/markdown/MilkdownMarkdownEditor.vue'
+    ],
+    serial: true,
+    smoke: false,
+    note: '图片选中浮层几何 + 真实拖拽缩放（2px 容差，跨 DPI 易碎）'
+  },
+  {
+    name: 'e2e-history-preview.mjs',
+    area: 'history',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/main/history/**',
+      'apps/desk/src/main/assetProtocol.ts',
+      'apps/desk/src/renderer/src/history/**',
+      'apps/desk/src/renderer/src/editor-groups/HistoryTabPane.vue',
+      'packages/ui/src/components/Mermaid/**',
+      'packages/ui/src/excalidraw/**'
+    ],
+    serial: true,
+    smoke: false,
+    note: '历史标签页只读预览 + 恢复写回（自定义协议、真实 Git、原生菜单）'
+  },
+  {
+    name: 'e2e-delete-dialog.mjs',
+    area: 'notes',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/renderer/src/deletePreview.ts',
+      'apps/desk/src/main/workspace/deleteScope.ts',
+      'apps/desk/src/main/workspace/mutations.ts',
+      'apps/desk/src/main/gitManager.ts',
+      'apps/desk/src/main/contextMenus.ts',
+      'apps/desk/src/renderer/src/App.vue'
+    ],
+    serial: true,
+    smoke: true,
+    note: '删除对话框：按 Git 状态说明后果 + 可选「先记录当前版本」（原生菜单 + Git 时序）'
+  },
+  {
+    name: 'e2e-open-random-notes.mjs',
+    area: 'notes',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/renderer/src/components/TocNodeList.vue',
+      'apps/desk/src/renderer/src/stores/workspace/toc.ts',
+      'apps/desk/src/renderer/src/stores/workspace/documents.ts',
+      'apps/desk/src/main/workspace/scan.ts'
+    ],
+    serial: false,
+    smoke: false,
+    note: '自建 fixture：扫描 KB → 打开 3 篇笔记（体检结论：可删候选，断言已被单测+其它套件覆盖）'
+  },
+  {
+    name: 'e2e-clear-line-styles.mjs',
+    area: 'editor',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/renderer/src/markdown/clearLineStyles.ts',
+      'apps/desk/src/renderer/src/markdown/clearSourceLineStyles.ts',
+      'apps/desk/src/renderer/src/markdown/MilkdownMarkdownEditor.vue',
+      'apps/desk/src/renderer/src/markdown/MarkdownSourceEditor.vue'
+    ],
+    serial: false,
+    smoke: true,
+    note: 'Mod-\\ 清整行样式（可视化/源码双视图）+ ⌘S 落盘保真'
+  },
+  {
+    name: 'e2e-block-interactions.mjs',
+    area: 'block-editing',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/renderer/src/markdown/rawBlockInteractions.ts',
+      'apps/desk/src/renderer/src/markdown/verticalBlockSelection.ts',
+      'apps/desk/src/renderer/src/markdown/blockActionMenu.ts',
+      'apps/desk/src/renderer/src/markdown/BlockActionMenu.vue',
+      'apps/desk/src/renderer/src/markdown/createDeskRawBlockView.ts',
+      'apps/desk/src/renderer/src/markdown/deskRawBlockView/**',
+      'apps/desk/src/renderer/src/markdown/slashMenu.ts',
+      'apps/desk/src/renderer/src/markdown/milkdownMarkdownEditor.scoped.css',
+      'packages/ui/src/styles/tokens.css'
+    ],
+    serial: true,
+    smoke: false,
+    note: '块级交互：整块/范围选择、六点菜单、拖拽、复制剪切删除、暗色对比（体检建议拆 3：选块/拖拽菜单/剪贴板暗色）'
+  },
+  {
+    name: 'e2e-block-menus.mjs',
+    area: 'block-menu',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/renderer/src/markdown/blockActionMenu.ts',
+      'apps/desk/src/renderer/src/markdown/BlockActionMenu.vue',
+      'apps/desk/src/renderer/src/markdown/slashMenu.ts',
+      'apps/desk/src/renderer/src/markdown/rawBlockInteractions.ts',
+      'apps/desk/src/renderer/src/markdown/verticalBlockSelection.ts',
+      'apps/desk/src/renderer/src/editor/markdown/rawBlockProjection.ts',
+      'apps/desk/src/renderer/src/editor/markdown/sourcePreservation.ts'
+    ],
+    serial: false,
+    smoke: false,
+    note: '六点菜单 / 复制剪切删除 / 「在下方添加」子菜单（体检建议删掉已被单测覆盖的标题箭头段）'
+  },
+  {
+    name: 'e2e-block-ranges.mjs',
+    area: 'block-range',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/renderer/src/markdown/rawBlockInteractions.ts',
+      'apps/desk/src/renderer/src/markdown/verticalBlockSelection.ts',
+      'apps/desk/src/renderer/src/markdown/selectionKind.ts',
+      'apps/desk/src/renderer/src/markdown/standaloneImageParagraph.ts',
+      'apps/desk/src/renderer/src/markdown/createDeskRawBlockView.ts',
+      'apps/desk/src/renderer/src/markdown/milkdownMarkdownEditor.scoped.css',
+      'apps/desk/src/renderer/src/editor/markdown/rawBlockProjection.ts'
+    ],
+    serial: true,
+    smoke: true,
+    note: '块范围选择权威用例：Shift+↑↓ 整块一步一选、真实软换行视觉行、OS 剪贴板字节'
+  },
+  {
+    name: 'e2e-empty-break-deletion.mjs',
+    area: 'block-editing',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/renderer/src/editor/markdown/rawBlockProjection.ts',
+      'apps/desk/src/renderer/src/editor/markdown/sourcePreservation.ts',
+      'apps/desk/src/renderer/src/markdown/readonlyGuard.ts',
+      'apps/desk/src/renderer/src/markdown/MilkdownMarkdownEditor.vue',
+      'apps/desk/src/renderer/src/markdown/MarkdownSourceEditor.vue'
+    ],
+    serial: false,
+    smoke: true,
+    note: '独占一行 <br /> 映射空段落 + 点击后 Delete 语义'
+  },
+  {
+    name: 'e2e-markdown-input.mjs',
+    area: 'input',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/renderer/src/markdown/markdownInputRules.ts',
+      'apps/desk/src/renderer/src/markdown/slashMenu.ts',
+      'apps/desk/src/renderer/src/markdown/attachRawSourceEditor.ts',
+      'apps/desk/src/renderer/src/markdown/deskRawBlockView/diagram.ts',
+      'apps/desk/src/renderer/src/editor/markdown/deskCallout.ts',
+      'apps/desk/src/renderer/src/editor/markdown/componentBody.ts',
+      'apps/desk/src/renderer/src/editor/markdown/rawBlockProjection.ts',
+      'apps/desk/src/renderer/src/editor/markdown/diagramRenderer.ts',
+      'packages/ui/src/components/Mermaid/Mermaid.vue'
+    ],
+    serial: false,
+    smoke: true,
+    note: 'slash/输入规则：mermaid、提示块、组件、行内代码与公式的 canonical 源码'
+  },
+  {
+    name: 'e2e-code-exit.mjs',
+    area: 'code-block',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/renderer/src/markdown/rawBlockInteractions.ts',
+      'apps/desk/src/renderer/src/markdown/verticalBlockSelection.ts',
+      'apps/desk/src/renderer/src/markdown/attachRawSourceEditor.ts',
+      'apps/desk/src/renderer/src/markdown/MilkdownMarkdownEditor.vue',
+      'apps/desk/src/renderer/src/markdown/deskRawBlockView/container.ts',
+      'apps/desk/src/renderer/src/editor/markdown/deskCodeTabEditor.ts',
+      'apps/desk/src/renderer/src/editor/markdown/containerSourceEditor.ts',
+      'packages/ui/src/components/CodeGroup/CodeGroup.vue'
+    ],
+    serial: false,
+    smoke: false,
+    note: '代码块末尾光标 → 正文导航'
+  },
+  {
+    name: 'e2e-code-fence-input.mjs',
+    area: 'input',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/renderer/src/markdown/markdownInputRules.ts',
+      'apps/desk/src/renderer/src/markdown/MilkdownMarkdownEditor.vue',
+      'apps/desk/src/renderer/src/editor/markdown/codeBlockTitlePlugin.ts'
+    ],
+    serial: false,
+    smoke: false,
+    note: '中点代码围栏快捷键的真实输入路径（体检结论：可合并进 e2e-markdown-input，省一次启动、覆盖不减）'
+  },
+  {
+    name: 'e2e-excalidraw-copy.mjs',
+    area: 'excalidraw',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/renderer/src/editor/markdown/excalidrawClipboard.ts',
+      'apps/desk/src/renderer/src/markdown/excalidrawClipboardPlugin.ts',
+      'apps/desk/src/renderer/src/markdown/deskRawBlockView/excalidraw.ts',
+      'apps/desk/src/main/ipc/excalidraw.ts',
+      'apps/desk/src/main/workspaceManager.ts',
+      'packages/kb/src/excalidraw.ts',
+      'packages/kb/src/asset-scan/**'
+    ],
+    serial: false,
+    smoke: false,
+    note: '跨笔记粘贴画布走系统剪贴板并按目标编号复制独立文件'
+  },
+  {
+    name: 'e2e-excalidraw-e0.mjs',
+    area: 'excalidraw',
+    tier: 'manual',
+    globs: [
+      'packages/ui/src/excalidraw/**',
+      'packages/ui/src/entries/excalidraw-*.ts',
+      'packages/ui/e0-spike/**'
+    ],
+    serial: true,
+    smoke: false,
+    note: '试验台/基线：React 编辑器交接与首屏体积测量（非产品断言，固定端口 8124）'
+  },
+  {
+    name: 'e2e-excalidraw-git.mjs',
+    area: 'excalidraw',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/renderer/src/editor/excalidraw/canvasController.ts',
+      'apps/desk/src/main/git.ts',
+      'apps/desk/src/main/gitManager.ts',
+      'apps/desk/src/main/workspaceManager.ts',
+      'packages/kb/src/excalidraw.ts'
+    ],
+    serial: false,
+    smoke: false,
+    note: '画布每画一步只写盘、不产生 commit；笔记源码不变'
+  },
+  {
+    name: 'e2e-excalidraw-inline.mjs',
+    area: 'excalidraw',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/renderer/src/markdown/deskRawBlockView/excalidraw.ts',
+      'apps/desk/src/renderer/src/editor/excalidraw/**',
+      'apps/desk/src/renderer/src/editor/markdown/excalidraw*.ts',
+      'packages/ui/src/excalidraw/**'
+    ],
+    serial: false,
+    smoke: false,
+    note: '笔记内嵌画布卡片：就地编辑、全屏、字节零 diff、归属诊断'
+  },
+  {
+    name: 'e2e-excalidraw-insert.mjs',
+    area: 'excalidraw',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/renderer/src/markdown/markdownInputRules.ts',
+      'apps/desk/src/renderer/src/markdown/slashMenu.ts',
+      'apps/desk/src/renderer/src/editor/excalidraw/**',
+      'apps/desk/src/main/ipc/excalidraw.ts',
+      'packages/kb/src/excalidraw.ts'
+    ],
+    serial: false,
+    smoke: true,
+    note: '斜杠插入画布：主进程建文件 → 定点插入 → 直接进入编辑'
+  },
+  {
+    name: 'e2e-excalidraw-ssg.mjs',
+    area: 'ssg',
+    tier: 'regression',
+    globs: [
+      'packages/ssg/**',
+      'packages/ui/src/excalidraw/**',
+      'packages/ui/src/entries/excalidraw-view.ts'
+    ],
+    serial: false,
+    smoke: false,
+    note: 'SSG 产物画布只读岛：自包含字体、0 外部请求、无机器路径'
+  },
+  {
+    name: 'e2e-excalidraw-tab.mjs',
+    area: 'excalidraw',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/renderer/src/editor-groups/ExcalidrawTabPane.vue',
+      'apps/desk/src/renderer/src/editor-groups/KbAssetsPane.vue',
+      'apps/desk/src/renderer/src/editor-groups/kbAssetsReasons.ts',
+      'apps/desk/src/renderer/src/editor/excalidraw/**',
+      'apps/desk/src/renderer/src/stores/**',
+      'apps/desk/src/main/ipc/excalidraw.ts',
+      'apps/desk/src/main/workspaceManager.ts',
+      'apps/desk/src/main/assetOperations.ts',
+      'apps/desk/src/main/assetWriteGate.ts',
+      'packages/kb/src/excalidraw.ts',
+      'packages/kb/src/asset-scan/**'
+    ],
+    serial: false,
+    smoke: false,
+    note: '画布标签：自动写盘、失效态、资源面板保护、关标签/退出前 flush'
+  },
+  {
+    name: 'e2e-editor-focus.mjs',
+    area: 'editor',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/renderer/src/markdown/MilkdownMarkdownEditor.vue',
+      'apps/desk/src/renderer/src/markdown/milkdownMarkdownEditor.scoped.css',
+      'apps/desk/src/renderer/src/markdown/editorFocusReclaim.ts',
+      'apps/desk/src/renderer/src/markdown/rawBlockInteractions.ts',
+      'apps/desk/src/renderer/src/editor-groups/NoteTabPane.vue',
+      'apps/desk/src/renderer/src/editor-groups/FormatOverflowBar.vue'
+    ],
+    serial: true,
+    smoke: true,
+    note: '死光标回归：可编辑区铺满、空白点击收回焦点、失焦不留虚拟光标（1800×1100 大窗口）'
+  },
+  {
+    name: 'e2e-mindmap.mjs',
+    area: 'mindmap',
+    tier: 'manual',
+    globs: [
+      'apps/desk/src/renderer/src/markdown/deskRawBlockView/**',
+      'apps/desk/src/renderer/src/editor/markdown/diagramRenderer.ts',
+      'apps/desk/src/renderer/src/editor/markdown/componentPreview.ts',
+      'packages/ui/src/components/Mindmap/**'
+    ],
+    serial: true,
+    smoke: false,
+    note: '人工观察工具：无任何断言，只启动→截图→dump 像素（固定 profile /tmp）'
+  },
+  {
+    name: 'e2e-note-header.mjs',
+    area: 'editor',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/renderer/src/editor-groups/NoteTabPane.vue',
+      'apps/desk/src/renderer/src/editor-groups/FormatOverflowBar.vue',
+      'apps/desk/src/renderer/src/editor-groups/overflowFit.ts',
+      'apps/desk/src/renderer/src/stores/workspace/**',
+      'apps/desk/src/main/workspace/noteIo.ts',
+      'apps/desk/src/main/ipc/notes.ts'
+    ],
+    serial: false,
+    smoke: false,
+    note: '笔记头行内几何 + 重命名同步文件名/TOC/标签（1600×1000）'
+  },
+  {
+    name: 'e2e-numbered-tabs.mjs',
+    area: 'tabs',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/main/tabShortcuts.ts',
+      'apps/desk/src/main/index.ts',
+      'apps/desk/src/main/webContentsManager.ts',
+      'apps/desk/src/renderer/src/App.vue',
+      'apps/desk/src/renderer/src/editor-groups/layoutModel.ts',
+      'apps/desk/src/renderer/src/editor-groups/EditorGroup.vue',
+      'apps/desk/src/renderer/src/editor-groups/WebTabPane.vue'
+    ],
+    serial: true,
+    smoke: true,
+    note: 'Cmd/Ctrl+数字切「当前分屏组」标签（原生 before-input-event，CDP 无法替代）'
+  },
+  {
+    name: 'e2e-quit-flush.mjs',
+    area: 'window',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/main/closeGuard.ts',
+      'apps/desk/src/main/closeGuards.ts',
+      'apps/desk/src/main/index.ts',
+      'apps/desk/src/renderer/src/App.vue',
+      'apps/desk/src/renderer/src/stores/workspace/**'
+    ],
+    serial: true,
+    smoke: true,
+    note: '关窗/退出前先 flush 未保存内容（会真的退出应用）'
+  },
+  {
+    name: 'e2e-tab-drag.mjs',
+    area: 'tabs',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/renderer/src/editor-groups/tabDrag.ts',
+      'apps/desk/src/renderer/src/editor-groups/EditorGroup.vue',
+      'apps/desk/src/renderer/src/editor-groups/layoutModel.ts'
+    ],
+    serial: true,
+    smoke: true,
+    note: '标签真实拖拽：半区预览、拆分搬原标签、跨组合并'
+  },
+  {
+    name: 'e2e-typography.mjs',
+    area: 'typography',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/renderer/src/assets/fonts.css',
+      'apps/desk/src/renderer/src/assets/fonts/inter/**',
+      'packages/ui/src/styles/**',
+      'apps/desk/src/renderer/src/markdown/milkdownMarkdownEditor.scoped.css',
+      'packages/ui/src/components/Mermaid/**'
+    ],
+    serial: false,
+    smoke: true,
+    note: 'Inter 子集离线加载 + 标题/正文/callout 排印与主题色（真实字形）'
+  }
+]

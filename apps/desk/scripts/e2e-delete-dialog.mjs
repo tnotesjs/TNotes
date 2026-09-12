@@ -138,14 +138,25 @@ const openDeleteDialog = async (uuid) => {
     console.log('调试：找不到行', uuid, await page.locator('.toc-row').count())
     return null
   }
-  await row.click({ button: 'right' })
-  const opened = await waitFor(
-    async () => (await page.locator('[data-delete-consequences], .danger-dialog').count()) > 0
-  )
-  if (!opened && process.env.DEBUG_DELETE === '1') {
+  // 上一个对话框关闭后遮罩可能还在淡出，会吞掉紧接着的右键（实测偶发：第二次右键
+  // 毫无反应，30s 后才超时失败）。这里等遮罩彻底消失，并给右键短超时 + 重试。
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    await waitFor(async () => (await page.locator('.danger-dialog').count()) === 0, 5000)
+    try {
+      await row.click({ button: 'right', timeout: 5000 })
+    } catch {
+      continue
+    }
+    const opened = await waitFor(
+      async () => (await page.locator('[data-delete-consequences], .danger-dialog').count()) > 0,
+      5000
+    )
+    if (opened) return true
+  }
+  if (process.env.DEBUG_DELETE === '1') {
     console.log('调试：未打开', uuid, (await page.locator('body').innerText()).slice(-300))
   }
-  return opened
+  return false
 }
 
 /** 关掉对话框并等它真的从 DOM 消失，避免遮罩吞掉下一次右键。 */
@@ -180,16 +191,29 @@ try {
   record('D0b Git 状态就绪后可以给出准确后果', Boolean(gitReady))
 
   // 1) 有未提交改动 + 未跟踪：两句话都出现
-  const dialog = await openDeleteDialog(UUID_DIRTY)
-  const lines = dialog
-    ? await page
-        .locator('[data-delete-consequences] li')
-        .evaluateAll((nodes) => nodes.map((node) => (node.textContent ?? '').trim()))
-    : []
+  // 预览用的是渲染端 store 里的 Git 快照，它比主进程 `git.list()`（D0b）晚一拍：偶发第一次
+  // 打开的对话框仍是「暂时读不到 Git 状态」的无后果版本（实测 5 次里 2 次）。产品的降级文案
+  // 是对的，所以这里等到真正有后果行再断言，而不是把降级态当成 bug。
+  let lines = []
+  for (let attempt = 1; attempt <= 6 && lines.length === 0; attempt += 1) {
+    const opened = await openDeleteDialog(UUID_DIRTY)
+    if (!opened) continue
+    lines =
+      (await waitFor(async () => {
+        const values = await page
+          .locator('[data-delete-consequences] li')
+          .evaluateAll((nodes) => nodes.map((node) => (node.textContent ?? '').trim()))
+        return values.length ? values : null
+      }, 5000)) ?? []
+    if (!lines.length) {
+      console.log(`调试：第 ${attempt} 次预览还没拿到 Git 后果，关掉重开`)
+      await closeDialog()
+    }
+  }
   record(
     'D1 对话框说明未提交改动的后果（不堆文案）',
     lines.length === 1 && lines[0].includes('尚未提交') && lines[0].includes('先提交一次'),
-    lines.join(' | ') || '无对话框'
+    lines.join(' | ') || '对话框没有后果行（Git 快照一直没就绪）'
   )
   record(
     'D2 只有真正有风险时才提示，且给出「先记录当前版本」按钮',
