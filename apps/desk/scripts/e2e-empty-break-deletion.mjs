@@ -142,17 +142,25 @@ try {
   assert.ok(boxAfter)
   await page.mouse.click(boxAfter.x + boxAfter.width / 2, boxAfter.y + boxAfter.height / 2)
   // 鼠标点击只同步了原生选区，ProseMirror 内部 selection 会稍后才跟上（切回可视化视图后
-  // 还停在 H1）。不等这一拍就按 Delete，删除命令作用在旧选区上，什么都不会删：实测点击后
-  // 不等待 5/5 失败，等 30/100/300ms 则 9/9 通过。这里给足余量。
+  // 还停在 H1）。不等这一拍就按 Delete，删除命令作用在旧选区上，什么都不会删（本地不等待
+  // 5/5 失败、等 30–300ms 9/9 通过；CI runner 更慢，固定 120ms 仍会偶发）。所以这里不赌
+  // 固定延时：保存后数磁盘上的 <br />，没生效就再按一次，直到真的删掉一个为止（最多 3 次）。
+  const savedBreakCount = async () => {
+    await page.keyboard.press('ControlOrMeta+s')
+    await page.waitForTimeout(500)
+    return (readFileSync(noteFile, 'utf8').match(/<br \/>/g) ?? []).length
+  }
   await page.waitForTimeout(120)
-  await page.keyboard.press('Delete')
-  await page.waitForTimeout(200)
+  let remainingBreaks = await savedBreakCount()
+  for (let attempt = 1; attempt <= 3 && remainingBreaks === 3; attempt += 1) {
+    await page.keyboard.press('Delete')
+    await page.waitForTimeout(300)
+    remainingBreaks = await savedBreakCount()
+  }
   await page.screenshot({ path: join(shots, '06-middle-line-deleted.png') })
 
-  await page.keyboard.press('ControlOrMeta+s')
-  await page.waitForTimeout(500)
   const saved = readFileSync(noteFile, 'utf8')
-  assert.equal((saved.match(/<br \/>/g) ?? []).length, 2)
+  assert.equal(remainingBreaks, 2, `Delete 后应只剩 2 个 <br />，实际 ${remainingBreaks}`)
   assert.equal(saved.includes('before'), true)
   assert.equal(saved.includes('after'), true)
   console.log('✓ readonly mode rejects edits')

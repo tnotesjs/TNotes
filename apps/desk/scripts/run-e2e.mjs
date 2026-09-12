@@ -31,6 +31,7 @@ function parseArgs(argv) {
   const options = {
     concurrency: 4,
     timeoutMs: 300_000,
+    retries: 0,
     only: [],
     skip: [],
     since: null,
@@ -51,6 +52,7 @@ function parseArgs(argv) {
     }
     if (arg === '--concurrency') options.concurrency = Number(next())
     else if (arg === '--timeout') options.timeoutMs = Number(next()) * 1000
+    else if (arg === '--retries') options.retries = Number(next())
     else if (arg === '--only') options.only.push(...next().split(','))
     else if (arg === '--skip') options.skip.push(...next().split(','))
     else if (arg === '--since') options.since = next()
@@ -68,6 +70,9 @@ function parseArgs(argv) {
   }
   if (!Number.isFinite(options.timeoutMs) || options.timeoutMs <= 0) {
     throw new Error('--timeout 需要正数秒')
+  }
+  if (!Number.isInteger(options.retries) || options.retries < 0) {
+    throw new Error('--retries 需要非负整数')
   }
   return options
 }
@@ -201,9 +206,9 @@ function killGroup(child, signal) {
   }
 }
 
-function runSuite(suite, options, logDir) {
+function runSuiteOnce(suite, options, logDir, attempt) {
   return new Promise((resolve) => {
-    const logPath = join(logDir, `${suite.name}.log`)
+    const logPath = join(logDir, `${suite.name}${attempt > 1 ? `.attempt-${attempt}` : ''}.log`)
     const log = createWriteStream(logPath)
     const startedAt = Date.now()
     const child = spawn(process.execPath, [join(SCRIPTS_DIR, suite.name)], {
@@ -230,10 +235,28 @@ function runSuite(suite, options, logDir) {
         exitCode: code,
         timedOut,
         durationMs: Date.now() - startedAt,
-        logPath
+        logPath,
+        attempt
       })
     })
   })
+}
+
+/** 失败重试（CI 用 `--retries 1` 吸收残余 flake）；重试后过会标记 flaky，不静默掩盖。 */
+async function runSuite(suite, options, logDir) {
+  const attempts = []
+  for (let index = 0; index <= options.retries; index += 1) {
+    const result = await runSuiteOnce(suite, options, logDir, index + 1)
+    attempts.push(result)
+    if (result.ok) break
+  }
+  const last = attempts[attempts.length - 1]
+  return {
+    ...last,
+    attempts: attempts.length,
+    flaky: attempts.length > 1 && last.ok,
+    firstFailureLogPath: attempts.length > 1 ? attempts[0].logPath : null
+  }
 }
 
 async function pool(items, limit, worker) {
@@ -314,12 +337,16 @@ async function main() {
     console.log(`▶ ${suite.name} [serial]`)
     const result = await runSuite(suite, options, logDir)
     results.push(result)
-    console.log(`  ${result.ok ? '✓' : '✗'} ${suite.name} ${formatDuration(result.durationMs)}`)
+    console.log(
+      `  ${result.ok ? (result.flaky ? '⚠' : '✓') : '✗'} ${suite.name} ${formatDuration(result.durationMs)}`
+    )
   }
   if (parallelSuites.length) {
     const parallel = await pool(parallelSuites, options.concurrency, async (suite) => {
       const result = await runSuite(suite, options, logDir)
-      console.log(`  ${result.ok ? '✓' : '✗'} ${suite.name} ${formatDuration(result.durationMs)}`)
+      console.log(
+        `  ${result.ok ? (result.flaky ? '⚠' : '✓') : '✗'} ${suite.name} ${formatDuration(result.durationMs)}`
+      )
       return result
     })
     results.push(...parallel)
@@ -330,8 +357,10 @@ async function main() {
   const slowest = [...results].sort((a, b) => b.durationMs - a.durationMs).slice(0, 5)
 
   console.log('\n===== E2E SUMMARY =====')
+  const flaky = results.filter((result) => result.flaky)
   console.log(
-    `${results.length - failed.length}/${results.length} 通过 · 总耗时 ${formatDuration(totalMs)} · 日志 ${logDir}`
+    `${results.length - failed.length}/${results.length} 通过 · 总耗时 ${formatDuration(totalMs)} · 日志 ${logDir}` +
+      `${flaky.length ? ` · flaky ${flaky.length}（重试后过：${flaky.map((r) => r.name).join(', ')}）` : ''}`
   )
   console.log(
     `最慢：${slowest.map((r) => `${r.name} ${formatDuration(r.durationMs)}`).join(' · ')}`

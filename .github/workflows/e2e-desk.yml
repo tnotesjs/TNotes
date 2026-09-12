@@ -69,7 +69,7 @@ jobs:
         run: node apps/desk/scripts/run-e2e.mjs ${{ steps.selection.outputs.args }} --dry-run
 
       - name: Run e2e
-        run: node apps/desk/scripts/run-e2e.mjs ${{ steps.selection.outputs.args }} --json /tmp/e2e-report.json
+        run: node apps/desk/scripts/run-e2e.mjs ${{ steps.selection.outputs.args }} --retries 1 --json /tmp/e2e-report.json
 
       - name: Upload e2e artifacts
         if: failure()
