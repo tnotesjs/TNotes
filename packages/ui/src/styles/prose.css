@@ -101,6 +101,11 @@
 :is(.tn-prose, .vp-doc) :where(th) {
   font-weight: 600;
   background: var(--tn-c-bg-soft);
+  /* 表头默认左对齐：浏览器对 <th> 的 UA 默认是居中，而编辑器里 Milkdown 给单元格写了
+     内联 `text-align: left`，于是「站点表头居中 / 编辑器左对齐」两边不一致。
+     表格里显式写的 `:---:` / `:---:` / `---:` 会渲染成单元格内联样式，优先级高于本规则，
+     因此显式对齐不受影响（实测保留 left / center / right）。 */
+  text-align: left;
 }
 :is(.tn-prose, .vp-doc) :where(td p, th p) {
   margin: 0;
