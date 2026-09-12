@@ -503,6 +503,28 @@ try {
   // 相邻代码块（中间没有空行）：↓ 进得去，↑ 也必须原路回来。
   const firstFence = pm.locator(':scope > .milkdown-code-block', { hasText: 'const first = 1' })
   const secondFence = pm.locator(':scope > .milkdown-code-block', { hasText: 'color: red' })
+  /** 编辑器里是否还有代码编辑器画的光标（边界光标期间必须只有一根线）。 */
+  const codeMirrorCursors = () =>
+    page.evaluate(() => {
+      const cursors = [...document.querySelectorAll('.cm-editor .cm-cursor')]
+      const visible = cursors.filter((element) => {
+        const style = getComputedStyle(element)
+        return (
+          style.visibility !== 'hidden' &&
+          style.display !== 'none' &&
+          element.getBoundingClientRect().width > 0
+        )
+      })
+      const content = [...document.querySelectorAll('.cm-editor .cm-content')].find(
+        (element) => element.offsetParent !== null
+      )
+      return {
+        domCursors: cursors.length,
+        visibleCursors: visible.length,
+        caretColor: content ? getComputedStyle(content).caretColor : 'none'
+      }
+    })
+
   /** 边界光标是否真的画出来了（display 不为 none 且有尺寸）。 */
   const caretVisible = () =>
     page.evaluate(() => {
@@ -547,16 +569,29 @@ try {
   )
   current = await pressUntilCaret('ArrowDown', 'before')
   const beforeVisible = await caretVisible()
+  const cmCursors = await codeMirrorCursors()
   record(
-    '相邻块 ↓：→ 第二块块前光标（同样可见）',
+    '相邻块 ↓：→ 第二块块前光标（只有一根线：不许 CM 再画一个光标）',
     current.side === 'before' &&
       current.caretParent.startsWith('milkdown-code-block') &&
-      beforeVisible,
-    JSON.stringify({ side: current.side, parent: current.caretParent, visible: beforeVisible })
+      beforeVisible &&
+      cmCursors.visibleCursors === 0,
+    JSON.stringify({
+      side: current.side,
+      parent: current.caretParent,
+      visible: beforeVisible,
+      ...cmCursors
+    })
   )
+  await page.screenshot({ path: join(shots, 'adjacent-block-boundary.png') })
   await press('ArrowDown')
   current = await state()
-  record('相邻块 ↓：→ 进入第二块 CM', current.cmFocus === true, JSON.stringify(current.text))
+  const enteredCursors = await codeMirrorCursors()
+  record(
+    '相邻块 ↓：→ 进入第二块 CM（此时 CM 自己的光标要回来）',
+    current.cmFocus === true && enteredCursors.visibleCursors > 0,
+    JSON.stringify({ text: current.text, ...enteredCursors })
+  )
 
   await enterCodeStart(secondFence)
   await press('ArrowUp')

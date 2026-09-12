@@ -895,6 +895,17 @@
   animation-delay: 0.5s;
 }
 
+/* 边界光标握着键盘时，代码块里的 CodeMirror 可能仍被浏览器当成聚焦态、并画出
+   自己的光标（PM 把边界光标的 DOM 选区写进了它的 contentDOM）。同一时刻只留一根线。
+   真进代码块编辑时 PM 选区是文本光标，下面的属性/类都不再匹配，光标自然回来。 */
+.milkdown-markdown-editor:has(.ProseMirror[data-boundary-caret]) :deep(.cm-editor) {
+  caret-color: transparent;
+}
+
+.milkdown-markdown-editor:has(.ProseMirror[data-boundary-caret]) :deep(.cm-editor .cm-cursor) {
+  visibility: hidden;
+}
+
 /* 只在两种情况隐藏：当前没有边界光标（兜底，元素本由插件按需创建），
    或整个编辑器已经失焦（窗口切走 / 点了别的面板）。
    不要用 :has(.cm-editor:focus-within) 藏它：相邻代码块之间 DOM 焦点会被浏览器
