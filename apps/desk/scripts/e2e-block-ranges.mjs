@@ -43,7 +43,7 @@ writeFileSync(
       '',
       'RAW-BEFORE',
       '',
-      '::: info Selected raw',
+      '::: details Selected raw',
       '',
       'ATOMIC-BODY',
       '',
@@ -71,7 +71,7 @@ writeFileSync(
       '| --- | --- |',
       '| Chain C | Chain D |',
       '',
-      '::: info Chained raw',
+      '::: details Chained raw',
       '',
       'CHAIN-ATOM',
       '',
@@ -277,7 +277,7 @@ try {
   await press('Shift+ArrowDown')
   await press('ControlOrMeta+c')
   const rawCopy = await app.evaluate(({ clipboard }) => clipboard.readText())
-  assert.match(rawCopy, /::: info Selected raw/)
+  assert.match(rawCopy, /::: details Selected raw/)
   assert.match(rawCopy, /ATOMIC-BODY/)
   assert.doesNotMatch(rawCopy, /RAW-BEFORE|RAW-AFTER/)
   await caret('CODE-BEFORE')

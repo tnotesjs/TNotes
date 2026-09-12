@@ -33,3 +33,6 @@ overrides:
   # 行内公式（$...$）会抛 "state.compilePattern is not a function" 并中断编辑器创建。
   # 统一到 2.1.0（仍在 ^2.0.0 范围内，兼容）。
   'mdast-util-to-markdown@^2.0.0': 2.1.0
+
+patchedDependencies:
+  '@milkdown/ctx@7.22.1': patches/@milkdown__ctx@7.22.1.patch

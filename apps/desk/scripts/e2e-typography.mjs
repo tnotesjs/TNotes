@@ -232,13 +232,18 @@ try {
       }, theme)
       const markers = await pm.evaluate((element) => ({
         body: getComputedStyle(element.querySelector(':scope > p')).color,
-        bullets: Array.from(element.querySelectorAll('.label.bullet svg')).map((svg) => ({
-          fill: getComputedStyle(svg).fill,
-          glyphs: Array.from(svg.querySelectorAll('path, circle')).map(
-            (glyph) => getComputedStyle(glyph).fill
-          )
-        })),
-        callout: Array.from(element.querySelectorAll('.custom-block-body ul > li')).map((li) => ({
+        bullets: Array.from(element.querySelectorAll('.label.bullet svg'))
+          // callout 正文里的列表现在也是 .label.bullet：这里只统计文档自身的三级列表，
+          // callout 的 bullet 归下面的 callout 断言单独管。
+          .filter((svg) => !svg.closest('.custom-block-body'))
+          .map((svg) => ({
+            fill: getComputedStyle(svg).fill,
+            glyphs: Array.from(svg.querySelectorAll('path, circle')).map(
+              (glyph) => getComputedStyle(glyph).fill
+            )
+          })),
+        // callout 的 li 外面套了一层 div.milkdown-list-item-block，`ul > li` 选不到。
+        callout: Array.from(element.querySelectorAll('.custom-block-body ul li')).map((li) => ({
           text: getComputedStyle(li).color,
           marker: getComputedStyle(li, '::before').color
         }))

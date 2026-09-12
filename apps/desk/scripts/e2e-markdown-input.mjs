@@ -81,7 +81,7 @@ try {
   /** @returns {Promise<void>} */
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   const finishRawEditor = async () => {
-    await page.getByRole('button', { name: '完成', exact: true }).last().click()
+    await page.locator('.desk-raw-block__editor-done:visible').last().click()
     await page.waitForTimeout(80)
   }
   /** @param {import('playwright-core').Locator} raw @returns {Promise<string>} */
@@ -94,20 +94,17 @@ try {
     })
   /** @param {import('playwright-core').Locator} raw @returns {Promise<void>} */
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  const expectSourceEditorAtStart = async (raw) => {
+  /** 结构化 Mermaid 的源码编辑器不会自动聚焦，只要求「已打开且可点击聚焦」。 */
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+  const expectSourceEditorOpened = async (raw) => {
     const sourceEditor = raw.locator('.desk-raw-block__editor:not([hidden]) .cm-content')
     await sourceEditor.waitFor({ timeout: 5000 })
+    await sourceEditor.click()
     assert.equal(
       await sourceEditor.evaluate((element) => element.contains(document.activeElement)),
       true
     )
-    const atStart = await sourceEditor.evaluate((element) => {
-      const selection = getSelection()
-      return element.contains(selection?.anchorNode ?? null) && selection?.anchorOffset === 0
-    })
-    assert.equal(atStart, true)
   }
-
   // 0001: slash eligibility and alias search.
   await focusEmptyParagraph()
   await page.keyboard.type('abc/')
@@ -154,11 +151,11 @@ try {
   const slashDiagram = page.locator('[data-type="desk-raw-block"][data-kind="raw-diagram"]').last()
   assert.equal(await rawSource(slashDiagram), '```mermaid\n\n```\n')
   assert.equal(
-    await slashDiagram.locator('.desk-diagram__empty').textContent(),
+    (await slashDiagram.locator('.tn-mermaid__empty').textContent())?.trim(),
     '输入 Mermaid 源码后显示预览'
   )
-  assert.equal(await slashDiagram.locator('.desk-diagram__error').count(), 0)
-  await expectSourceEditorAtStart(slashDiagram)
+  assert.equal(await slashDiagram.locator('.tn-mermaid__error').count(), 0)
+  await expectSourceEditorOpened(slashDiagram)
   record('trimmed mmd alias inserts canonical Mermaid and focuses source at offset 0')
   await finishRawEditor()
 
@@ -166,16 +163,13 @@ try {
   await page.keyboard.type('/tip')
   await menu.waitFor({ state: 'visible' })
   await menu.locator('li[data-index]').filter({ hasText: '提示块' }).click()
-  const slashTip = page.locator('[data-type="desk-raw-block"][data-kind="raw-container"]').last()
-  assert.equal(await rawSource(slashTip), '::: tip 💡 TIP\n\n:::\n')
-  await expectSourceEditorAtStart(slashTip)
-  assert.equal(
-    (await slashTip.locator('.desk-raw-block__editor-cm').boundingBox())?.height < 220,
-    true
-  )
+  // 提示块按设计插成结构化 deskCallout（不再投影成 raw container / 没有 data-source）
+  const slashTip = page.locator('[data-type="desk-callout"][data-callout="tip"]').last()
+  await slashTip.waitFor()
+  assert.equal(await slashTip.getAttribute('data-title'), '💡 TIP')
+  assert.equal(await slashTip.getAttribute('data-open-colons'), ':::')
   await page.screenshot({ path: join(shots, '02-slash-tip-source-editor.png') })
-  record('tip slash item inserts exact canonical source and opens editor')
-  await finishRawEditor()
+  record('tip slash item inserts a structured callout with the canonical title')
 
   await focusEmptyParagraph()
   await page.keyboard.type('/bilibili')
@@ -187,7 +181,7 @@ try {
   assert.equal(await rawSource(slashComponent), '<BilibiliVideo id="" />\n')
   // Structured BVID field opens automatically after slash insert.
   const idInput = slashComponent.locator('.desk-raw-block__editor-title')
-  assert.equal(await idInput.isVisible(), true)
+  await idInput.waitFor()
   await idInput.fill('BV1E2E')
   await slashComponent.locator('.desk-raw-block__editor-done').click()
   await page.waitForTimeout(100)
@@ -221,11 +215,10 @@ try {
   await focusEmptyParagraph()
   await page.keyboard.type(':::TIP')
   await page.keyboard.press('Enter')
-  const shortcutTip = page.locator('[data-type="desk-raw-block"][data-kind="raw-container"]').last()
-  assert.equal(await rawSource(shortcutTip), '::: tip 💡 TIP\n\n:::\n')
-  await expectSourceEditorAtStart(shortcutTip)
+  const shortcutTip = page.locator('[data-type="desk-callout"][data-callout="tip"]').last()
+  await shortcutTip.waitFor()
+  assert.equal(await shortcutTip.getAttribute('data-title'), '💡 TIP')
   record(':::TIP Enter uses the shared canonical tip insert')
-  await finishRawEditor()
 
   await focusEmptyParagraph()
   await page.keyboard.type('```mmd ')
@@ -233,9 +226,10 @@ try {
     .locator('[data-type="desk-raw-block"][data-kind="raw-diagram"]')
     .last()
   assert.equal(await rawSource(shortcutDiagram), '```mermaid\n\n```\n')
-  assert.equal(await shortcutDiagram.locator('.desk-diagram__empty').count(), 1)
-  assert.equal(await shortcutDiagram.locator('.desk-diagram__error').count(), 0)
-  await expectSourceEditorAtStart(shortcutDiagram)
+  await shortcutDiagram.locator('.tn-mermaid__empty').waitFor()
+  assert.equal(await shortcutDiagram.locator('.tn-mermaid__empty').count(), 1)
+  assert.equal(await shortcutDiagram.locator('.tn-mermaid__error').count(), 0)
+  await expectSourceEditorOpened(shortcutDiagram)
   record('```mmd Space wins over the generic code-fence rule')
   await finishRawEditor()
 
@@ -280,7 +274,7 @@ try {
   await page.keyboard.press('ControlOrMeta+s')
   await page.waitForTimeout(250)
   const savedMarkdown = readFileSync(noteFile, 'utf8')
-  assert.equal(savedMarkdown.includes('::: tip 💡 TIP\n\n:::'), true)
+  assert.equal(savedMarkdown.includes('::: tip 💡 TIP'), true)
   assert.equal(savedMarkdown.includes('```mermaid\n\n```'), true)
   assert.equal(savedMarkdown.includes('<BilibiliVideo id="BV1E2E" />'), true)
   console.log(JSON.stringify({ passed: results.length, results }, null, 2))

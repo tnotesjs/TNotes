@@ -233,7 +233,9 @@ try {
   await slash.waitFor({ state: 'visible' })
   await slash.locator('li[data-index]').filter({ hasText: '提示块' }).click()
   await menu.waitFor({ state: 'detached' })
-  await pm.locator('[data-kind="raw-container"]').waitFor()
+  // 提示块 ≠ raw container：tip/info/warning/danger 按设计插入 deskCallout（结构化 callout
+  // 节点），只有非 callout 名的 `:::` 容器才投影成 [data-kind="raw-container"]。
+  await pm.locator('[data-type="desk-callout"][data-callout="tip"]').waitFor()
   console.log('✓ list items also support the add-below submenu')
 } catch (error) {
   const page = await app.firstWindow()

@@ -155,29 +155,38 @@ try {
   await beforeRaw.click()
   await page.keyboard.press('End')
   await page.keyboard.press('Shift+ArrowDown')
+  // 契约：Shift+方向键产出的是「块范围选择」（BlockRangeSelection），把整个 raw 块
+  // 标成 .desk-raw-block--range-selected；`ProseMirror-selectednode` 只属于 NodeSelection
+  // （无 Shift 的 ArrowDown / 鼠标点块，见本段末尾那条断言）。
   assert.equal(
-    await raw.evaluate((element) => element.classList.contains('ProseMirror-selectednode')),
+    await raw.evaluate((element) => element.classList.contains('desk-raw-block--range-selected')),
     true
   )
   await page.screenshot({ path: join(shots, '04-block-selected-down.png') })
-  console.log('✓ Shift+ArrowDown selects the complete raw block')
+  console.log('✓ Shift+ArrowDown covers the complete raw block with a block range')
 
   await afterRaw.click()
   await page.keyboard.press('Home')
   await page.keyboard.press('Shift+ArrowUp')
   assert.equal(
-    await raw.evaluate((element) => element.classList.contains('ProseMirror-selectednode')),
+    await raw.evaluate((element) => element.classList.contains('desk-raw-block--range-selected')),
     true
   )
-  console.log('✓ Shift+ArrowUp selects the complete raw block')
+  console.log('✓ Shift+ArrowUp covers the complete raw block with a block range')
 
   await afterRaw.click()
-  await raw.click({ position: { x: 12, y: 12 } })
+  // 鼠标选块的真实入口是块两侧的选中热区（`.desk-raw-block__boundary-hit`，aria-label
+  // 「选中块」→ rawBlockInteractions.selectSelectableBlock）。点块体（label/preview）不再
+  // 产生 NodeSelection：那两块区域要走原生交互，`stopEvent` 不把它们交给 PM 选中。
+  await raw
+    .locator('.desk-raw-block__boundary-hit[data-side="after"]')
+    .first()
+    .click({ force: true })
   assert.equal(
     await raw.evaluate((element) => element.classList.contains('ProseMirror-selectednode')),
     true
   )
-  console.log('✓ clicking the raw block creates a native node selection')
+  console.log('✓ clicking the raw block hit area creates a native node selection')
 
   // 0006: use the visible six-dot handle and real pointer movement.
   await raw.hover()
@@ -288,7 +297,7 @@ try {
   // 0007: mouse edge hits select the whole node; Delete/Backspace remove it; Undo restores.
   await raw.locator('.desk-raw-block__boundary-hit[data-side="before"]').click()
   await page.waitForFunction(() => {
-    const el = document.querySelector('[data-type="desk-raw-block"]')
+    const el = document.querySelector('[data-type="desk-raw-block"][data-kind="raw-component"]')
     return el?.classList.contains('ProseMirror-selectednode') === true
   })
   await page.screenshot({ path: join(shots, '06-block-selected-from-before-hit.png') })
@@ -300,7 +309,7 @@ try {
 
   await raw.locator('.desk-raw-block__boundary-hit[data-side="after"]').click()
   await page.waitForFunction(() => {
-    const el = document.querySelector('[data-type="desk-raw-block"]')
+    const el = document.querySelector('[data-type="desk-raw-block"][data-kind="raw-component"]')
     return el?.classList.contains('ProseMirror-selectednode') === true
   })
   await page.screenshot({ path: join(shots, '07-block-selected-from-after-hit.png') })
@@ -361,17 +370,17 @@ try {
   await page.screenshot({ path: join(shots, '09-add-below-submenu.png') })
   await menu.locator('li[data-index]').filter({ hasText: '提示块' }).click()
   await actionMenu.waitFor({ state: 'detached' })
-  const addedContainer = pm
-    .locator('[data-type="desk-raw-block"][data-kind="raw-container"]')
-    .last()
-  await addedContainer.waitFor()
-  const addedSource = await addedContainer.evaluate((element) => {
-    const encoded = element.getAttribute('data-source') ?? ''
-    const bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0))
-    return new TextDecoder().decode(bytes)
-  })
-  assert.equal(addedSource, '::: tip 💡 TIP\n\n:::\n')
-  await page.getByRole('button', { name: '完成', exact: true }).last().click()
+  const addedCallout = pm.locator('[data-type="desk-callout"][data-callout="tip"]').last()
+  await addedCallout.waitFor()
+  // 提示块插的是结构化 callout 节点（tip/info/warning/danger 不再投影成 raw container），
+  // 它没有 data-source；canonical Markdown 以磁盘写回为准来断言。
+  assert.equal(await addedCallout.getAttribute('data-title'), '💡 TIP')
+  assert.equal(await addedCallout.getAttribute('data-open-colons'), ':::')
+  await page.keyboard.press('ControlOrMeta+s')
+  await page.waitForTimeout(400)
+  assert.match(readFileSync(noteFile, 'utf8'), /::: tip 💡 TIP/)
+  const doneButton = page.getByRole('button', { name: '完成', exact: true })
+  if (await doneButton.count()) await doneButton.last().click()
   console.log('✓ add-below hover opens the real slash submenu and inserts after the block')
 
   await raw.hover()
@@ -408,9 +417,11 @@ try {
     const icons = [...element.querySelectorAll('svg')].map((icon) => getComputedStyle(icon).color)
     return { background, icons }
   })
-  assert.equal(darkActionStyles.background, 'rgb(25, 30, 37)')
+  // 期望值来自共享 token：暗色 --tn-c-bg-soft=#202127（--panel）、--tn-c-text=#dfdfd6
+  // （--editor-text，菜单 color: inherit、图标 currentColor）。见 packages/ui/src/styles/tokens.css:53-54。
+  assert.equal(darkActionStyles.background, 'rgb(32, 33, 39)')
   assert.equal(
-    darkActionStyles.icons.every((color) => color === 'rgb(229, 233, 239)'),
+    darkActionStyles.icons.every((color) => color === 'rgb(223, 223, 214)'),
     true
   )
   await page.screenshot({ path: join(shots, '10-dark-action-menu.png') })
@@ -426,7 +437,8 @@ try {
       stroke: getComputedStyle(icon).stroke
     }))
   }))
-  assert.equal(darkSlashStyles.background, 'rgb(25, 30, 37)')
+  // 同上：暗色 --tn-c-bg-soft=#202127（--panel）→ rgb(32, 33, 39)
+  assert.equal(darkSlashStyles.background, 'rgb(32, 33, 39)')
   assert.ok(darkSlashStyles.icons.length > 8)
   assert.equal(
     darkSlashStyles.icons.every(
@@ -463,10 +475,11 @@ try {
   }))
   assert.equal(darkCaret.virtualCursorEnabled, true)
   assert.equal(darkCaret.caret, 'rgba(0, 0, 0, 0)')
-  assert.equal(darkCaret.accent, '#8db1ff')
+  // 暗色 --tn-c-brand-strong=#a8b1ff（--accent-strong → 虚拟光标/插入光标）
+  assert.equal(darkCaret.accent, '#a8b1ff')
   assert.ok(darkCaret.virtualCursor)
   assert.equal(darkCaret.virtualCursor.display, 'block')
-  assert.equal(darkCaret.virtualCursor.borderLeftColor, 'rgb(141, 177, 255)')
+  assert.equal(darkCaret.virtualCursor.borderLeftColor, 'rgb(168, 177, 255)')
   assert.equal(darkCaret.virtualCursor.borderLeftWidth, '2px')
   await page.screenshot({ path: join(shots, '12-dark-caret.png') })
   console.log('✓ virtual caret is accented while the duplicate native caret stays transparent')
@@ -521,7 +534,7 @@ try {
     opacity: getComputedStyle(element).opacity,
     height: element.getBoundingClientRect().height
   }))
-  assert.equal(darkDropStyle.background, 'rgb(141, 177, 255)')
+  assert.equal(darkDropStyle.background, 'rgb(168, 177, 255)')
   assert.equal(darkDropStyle.opacity, '1')
   assert.ok(darkDropStyle.height >= 2)
   await page.screenshot({ path: join(shots, '13-dark-drop-cursor.png') })

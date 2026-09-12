@@ -1226,6 +1226,13 @@
   white-space: normal;
 }
 
+/* Callout 正文段落要保持 VitePress 的紧凑 16px/24px：`.ProseMirror p { 1.75 }` 会压过
+   上面继承来的 1.5，所以 p 级必须显式覆盖（与 `.desk-raw-block--container
+   .custom-block-body p` 同一契约，只是 `.desk-callout` 是真节点后少了这条）。 */
+.milkdown-markdown-editor :deep(.desk-callout .custom-block-body p) {
+  line-height: 1.5;
+}
+
 .milkdown-markdown-editor :deep(.desk-callout .custom-block-body > :first-child),
 .milkdown-markdown-editor :deep(.desk-raw-block--container .custom-block-body > :first-child) {
   margin-top: 0;

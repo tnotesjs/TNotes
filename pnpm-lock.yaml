@@ -9,6 +9,9 @@ overrides:
   '@electron/get@^3.0.0': 3.1.0
   mdast-util-to-markdown@^2.0.0: 2.1.0
 
+patchedDependencies:
+  '@milkdown/ctx@7.22.1': 66e6f5ebb66a4a70d4d8abe7869bc36df833a23e8f5b36783967d247eee02b0e
+
 importers:
 
   .:
@@ -8598,7 +8601,7 @@ snapshots:
       '@codemirror/view': 6.43.11
       '@floating-ui/dom': 1.8.0
       '@milkdown/core': 7.22.1
-      '@milkdown/ctx': 7.22.1
+      '@milkdown/ctx': 7.22.1(patch_hash=66e6f5ebb66a4a70d4d8abe7869bc36df833a23e8f5b36783967d247eee02b0e)
       '@milkdown/exception': 7.22.1
       '@milkdown/plugin-diff': 7.22.1
       '@milkdown/plugin-tooltip': 7.22.1
@@ -8620,7 +8623,7 @@ snapshots:
 
   '@milkdown/core@7.22.1':
     dependencies:
-      '@milkdown/ctx': 7.22.1
+      '@milkdown/ctx': 7.22.1(patch_hash=66e6f5ebb66a4a70d4d8abe7869bc36df833a23e8f5b36783967d247eee02b0e)
       '@milkdown/exception': 7.22.1
       '@milkdown/prose': 7.22.1
       '@milkdown/transformer': 7.22.1
@@ -8656,7 +8659,7 @@ snapshots:
       - supports-color
       - typescript
 
-  '@milkdown/ctx@7.22.1':
+  '@milkdown/ctx@7.22.1(patch_hash=66e6f5ebb66a4a70d4d8abe7869bc36df833a23e8f5b36783967d247eee02b0e)':
     dependencies:
       '@milkdown/exception': 7.22.1
 
@@ -8666,7 +8669,7 @@ snapshots:
     dependencies:
       '@milkdown/components': 7.22.1(@codemirror/language@6.12.4)(@codemirror/state@6.7.4)(@codemirror/view@6.43.11)(typescript@5.9.3)
       '@milkdown/core': 7.22.1
-      '@milkdown/ctx': 7.22.1
+      '@milkdown/ctx': 7.22.1(patch_hash=66e6f5ebb66a4a70d4d8abe7869bc36df833a23e8f5b36783967d247eee02b0e)
       '@milkdown/exception': 7.22.1
       '@milkdown/plugin-block': 7.22.1
       '@milkdown/plugin-clipboard': 7.22.1
@@ -8696,7 +8699,7 @@ snapshots:
     dependencies:
       '@floating-ui/dom': 1.8.0
       '@milkdown/core': 7.22.1
-      '@milkdown/ctx': 7.22.1
+      '@milkdown/ctx': 7.22.1(patch_hash=66e6f5ebb66a4a70d4d8abe7869bc36df833a23e8f5b36783967d247eee02b0e)
       '@milkdown/prose': 7.22.1
       '@milkdown/utils': 7.22.1
       '@types/lodash-es': 4.17.12
@@ -8707,7 +8710,7 @@ snapshots:
   '@milkdown/plugin-clipboard@7.22.1':
     dependencies:
       '@milkdown/core': 7.22.1
-      '@milkdown/ctx': 7.22.1
+      '@milkdown/ctx': 7.22.1(patch_hash=66e6f5ebb66a4a70d4d8abe7869bc36df833a23e8f5b36783967d247eee02b0e)
       '@milkdown/prose': 7.22.1
       '@milkdown/utils': 7.22.1
     transitivePeerDependencies:
@@ -8715,7 +8718,7 @@ snapshots:
 
   '@milkdown/plugin-cursor@7.22.1':
     dependencies:
-      '@milkdown/ctx': 7.22.1
+      '@milkdown/ctx': 7.22.1(patch_hash=66e6f5ebb66a4a70d4d8abe7869bc36df833a23e8f5b36783967d247eee02b0e)
       '@milkdown/prose': 7.22.1
       '@milkdown/utils': 7.22.1
       prosemirror-drop-indicator: 0.1.4
@@ -8725,7 +8728,7 @@ snapshots:
   '@milkdown/plugin-diff@7.22.1':
     dependencies:
       '@milkdown/core': 7.22.1
-      '@milkdown/ctx': 7.22.1
+      '@milkdown/ctx': 7.22.1(patch_hash=66e6f5ebb66a4a70d4d8abe7869bc36df833a23e8f5b36783967d247eee02b0e)
       '@milkdown/prose': 7.22.1
       '@milkdown/transformer': 7.22.1
       '@milkdown/utils': 7.22.1
@@ -8735,7 +8738,7 @@ snapshots:
   '@milkdown/plugin-history@7.22.1':
     dependencies:
       '@milkdown/core': 7.22.1
-      '@milkdown/ctx': 7.22.1
+      '@milkdown/ctx': 7.22.1(patch_hash=66e6f5ebb66a4a70d4d8abe7869bc36df833a23e8f5b36783967d247eee02b0e)
       '@milkdown/prose': 7.22.1
       '@milkdown/utils': 7.22.1
     transitivePeerDependencies:
@@ -8743,7 +8746,7 @@ snapshots:
 
   '@milkdown/plugin-indent@7.22.1':
     dependencies:
-      '@milkdown/ctx': 7.22.1
+      '@milkdown/ctx': 7.22.1(patch_hash=66e6f5ebb66a4a70d4d8abe7869bc36df833a23e8f5b36783967d247eee02b0e)
       '@milkdown/prose': 7.22.1
       '@milkdown/utils': 7.22.1
     transitivePeerDependencies:
@@ -8752,7 +8755,7 @@ snapshots:
   '@milkdown/plugin-listener@7.22.1':
     dependencies:
       '@milkdown/core': 7.22.1
-      '@milkdown/ctx': 7.22.1
+      '@milkdown/ctx': 7.22.1(patch_hash=66e6f5ebb66a4a70d4d8abe7869bc36df833a23e8f5b36783967d247eee02b0e)
       '@milkdown/prose': 7.22.1
       '@types/lodash-es': 4.17.12
       lodash-es: 4.18.1
@@ -8762,7 +8765,7 @@ snapshots:
   '@milkdown/plugin-slash@7.22.1':
     dependencies:
       '@floating-ui/dom': 1.8.0
-      '@milkdown/ctx': 7.22.1
+      '@milkdown/ctx': 7.22.1(patch_hash=66e6f5ebb66a4a70d4d8abe7869bc36df833a23e8f5b36783967d247eee02b0e)
       '@milkdown/prose': 7.22.1
       '@milkdown/utils': 7.22.1
       '@types/lodash-es': 4.17.12
@@ -8773,7 +8776,7 @@ snapshots:
   '@milkdown/plugin-streaming@7.22.1':
     dependencies:
       '@milkdown/core': 7.22.1
-      '@milkdown/ctx': 7.22.1
+      '@milkdown/ctx': 7.22.1(patch_hash=66e6f5ebb66a4a70d4d8abe7869bc36df833a23e8f5b36783967d247eee02b0e)
       '@milkdown/plugin-diff': 7.22.1
       '@milkdown/prose': 7.22.1
       '@milkdown/utils': 7.22.1
@@ -8783,7 +8786,7 @@ snapshots:
   '@milkdown/plugin-tooltip@7.22.1':
     dependencies:
       '@floating-ui/dom': 1.8.0
-      '@milkdown/ctx': 7.22.1
+      '@milkdown/ctx': 7.22.1(patch_hash=66e6f5ebb66a4a70d4d8abe7869bc36df833a23e8f5b36783967d247eee02b0e)
       '@milkdown/prose': 7.22.1
       '@milkdown/utils': 7.22.1
       '@types/lodash-es': 4.17.12
@@ -8793,7 +8796,7 @@ snapshots:
 
   '@milkdown/plugin-trailing@7.22.1':
     dependencies:
-      '@milkdown/ctx': 7.22.1
+      '@milkdown/ctx': 7.22.1(patch_hash=66e6f5ebb66a4a70d4d8abe7869bc36df833a23e8f5b36783967d247eee02b0e)
       '@milkdown/prose': 7.22.1
       '@milkdown/utils': 7.22.1
     transitivePeerDependencies:
@@ -8802,7 +8805,7 @@ snapshots:
   '@milkdown/plugin-upload@7.22.1':
     dependencies:
       '@milkdown/core': 7.22.1
-      '@milkdown/ctx': 7.22.1
+      '@milkdown/ctx': 7.22.1(patch_hash=66e6f5ebb66a4a70d4d8abe7869bc36df833a23e8f5b36783967d247eee02b0e)
       '@milkdown/exception': 7.22.1
       '@milkdown/prose': 7.22.1
       '@milkdown/utils': 7.22.1
@@ -8812,7 +8815,7 @@ snapshots:
   '@milkdown/preset-commonmark@7.22.1':
     dependencies:
       '@milkdown/core': 7.22.1
-      '@milkdown/ctx': 7.22.1
+      '@milkdown/ctx': 7.22.1(patch_hash=66e6f5ebb66a4a70d4d8abe7869bc36df833a23e8f5b36783967d247eee02b0e)
       '@milkdown/exception': 7.22.1
       '@milkdown/prose': 7.22.1
       '@milkdown/transformer': 7.22.1
@@ -8826,7 +8829,7 @@ snapshots:
   '@milkdown/preset-gfm@7.22.1':
     dependencies:
       '@milkdown/core': 7.22.1
-      '@milkdown/ctx': 7.22.1
+      '@milkdown/ctx': 7.22.1(patch_hash=66e6f5ebb66a4a70d4d8abe7869bc36df833a23e8f5b36783967d247eee02b0e)
       '@milkdown/exception': 7.22.1
       '@milkdown/preset-commonmark': 7.22.1
       '@milkdown/prose': 7.22.1
@@ -8866,7 +8869,7 @@ snapshots:
   '@milkdown/utils@7.22.1':
     dependencies:
       '@milkdown/core': 7.22.1
-      '@milkdown/ctx': 7.22.1
+      '@milkdown/ctx': 7.22.1(patch_hash=66e6f5ebb66a4a70d4d8abe7869bc36df833a23e8f5b36783967d247eee02b0e)
       '@milkdown/exception': 7.22.1
       '@milkdown/prose': 7.22.1
       '@milkdown/transformer': 7.22.1

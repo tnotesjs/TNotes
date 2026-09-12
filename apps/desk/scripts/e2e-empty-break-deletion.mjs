@@ -141,6 +141,10 @@ try {
   const boxAfter = await middleAfterElement.boundingBox()
   assert.ok(boxAfter)
   await page.mouse.click(boxAfter.x + boxAfter.width / 2, boxAfter.y + boxAfter.height / 2)
+  // 鼠标点击只同步了原生选区，ProseMirror 内部 selection 会稍后才跟上（切回可视化视图后
+  // 还停在 H1）。不等这一拍就按 Delete，删除命令作用在旧选区上，什么都不会删：实测点击后
+  // 不等待 5/5 失败，等 30/100/300ms 则 9/9 通过。这里给足余量。
+  await page.waitForTimeout(120)
   await page.keyboard.press('Delete')
   await page.waitForTimeout(200)
   await page.screenshot({ path: join(shots, '06-middle-line-deleted.png') })

@@ -1,0 +1,45 @@
+diff --git a/lib/index.js b/lib/index.js
+index b0ef69bc7c48c8bc0275ffe7d5b494e5ec0c68f5..a10a587655e4c4c7fe6064a62b3b0cec919d260f 100644
+--- a/lib/index.js
++++ b/lib/index.js
+@@ -252,9 +252,11 @@ var Timer = class {
+ 	#listener;
+ 	#eventUniqId;
+ 	#status;
++	#timeoutHandle;
+ 	constructor(clock, type) {
+ 		this.#promise = null;
+ 		this.#listener = null;
++		this.#timeoutHandle = null;
+ 		this.#status = "pending";
+ 		this.start = () => {
+ 			this.#promise ??= new Promise((resolve, reject) => {
+@@ -273,19 +275,24 @@ var Timer = class {
+ 					reject(/* @__PURE__ */ new Error(`Timing ${this.type.name} timeout.`));
+ 				});
+ 				this.#status = "pending";
+-				addEventListener(this.type.name, this.#listener);
++				globalThis.addEventListener?.(this.type.name, this.#listener);
+ 			});
+ 			return this.#promise;
+ 		};
+ 		this.done = () => {
+ 			const event = new CustomEvent(this.type.name, { detail: { id: this.#eventUniqId } });
+-			dispatchEvent(event);
++			globalThis.dispatchEvent?.(event);
+ 		};
+ 		this.#removeListener = () => {
+-			if (this.#listener) removeEventListener(this.type.name, this.#listener);
++			if (this.#timeoutHandle !== null) {
++				clearTimeout(this.#timeoutHandle);
++				this.#timeoutHandle = null;
++			}
++			if (this.#listener) globalThis.removeEventListener?.(this.type.name, this.#listener);
+ 		};
+ 		this.#waitTimeout = (ifTimeout) => {
+-			setTimeout(() => {
++			this.#timeoutHandle = setTimeout(() => {
++				this.#timeoutHandle = null;
+ 				ifTimeout();
+ 			}, this.type.timeout);
+ 		};
