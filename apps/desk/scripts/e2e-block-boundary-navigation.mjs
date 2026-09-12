@@ -126,7 +126,7 @@ try {
       }
     })
 
-  /** 边界光标相对目标块的水平位置：块头贴左、块尾贴右（对角线对称）。 */
+  /** 边界光标相对目标块的位置：块头在块左上外侧、块尾在块右下外侧（整根线不压内容）。 */
   const caretBox = () =>
     page.evaluate(() => {
       const editor = [...document.querySelectorAll('.ProseMirror')].find(
@@ -141,11 +141,37 @@ try {
       const blockRect = block.getBoundingClientRect()
       return {
         side: caret.dataset.side ?? null,
-        gapLeft: Math.round(caretRect.left - blockRect.left),
-        gapRight: Math.round(blockRect.right - caretRect.right),
-        blockWidth: Math.round(blockRect.width)
+        outsideLeft: Math.round(blockRect.left - caretRect.right),
+        outsideRight: Math.round(caretRect.left - blockRect.right),
+        topGap: Math.round(caretRect.top - blockRect.top),
+        bottomGap: Math.round(blockRect.bottom - caretRect.bottom),
+        blockWidth: Math.round(blockRect.width),
+        blockHeight: Math.round(blockRect.height),
+        caretColor: getComputedStyle(caret).backgroundColor,
+        caretHeight: Math.round(caretRect.height),
+        theme: document.documentElement.dataset.theme ?? '(none)'
       }
     })
+
+  /** 光标附近的近距离截图：验收「看得清、不压内容」用。 */
+  const caretCloseUp = async (file) => {
+    const clip = await page.evaluate(() => {
+      const editor = [...document.querySelectorAll('.ProseMirror')].find(
+        (el) => el.offsetParent !== null
+      )
+      const host = editor?.parentElement ?? document
+      const caret = host.querySelector('.desk-block-boundary-caret')
+      if (!caret) return null
+      const rect = caret.getBoundingClientRect()
+      return {
+        x: Math.max(0, Math.round(rect.left - 90)),
+        y: Math.max(0, Math.round(rect.top - 30)),
+        width: 220,
+        height: 110
+      }
+    })
+    if (clip) await page.screenshot({ path: join(shots, file), clip })
+  }
 
   const press = async (key, times = 1) => {
     for (let index = 0; index < times; index += 1) {
@@ -213,13 +239,16 @@ try {
     JSON.stringify({ side: current.side, parent: current.caretParent })
   )
 
+  await caretCloseUp('block-tail-caret.png')
   const afterBox = await caretBox()
   record(
-    '块尾光标贴块右下角（不是左下角）',
+    '块尾光标在块右下外侧（不压内容、底边对齐）',
     afterBox != null &&
-      afterBox.gapRight <= 3 &&
-      afterBox.gapLeft > afterBox.blockWidth / 2 &&
-      afterBox.blockWidth > 0,
+      afterBox.outsideRight >= 2 &&
+      afterBox.outsideRight <= 8 &&
+      afterBox.outsideLeft < 0 &&
+      afterBox.blockWidth > 0 &&
+      Math.abs(afterBox.bottomGap) <= 2,
     JSON.stringify(afterBox)
   )
 
@@ -257,11 +286,13 @@ try {
   )
   const beforeBox = await caretBox()
   record(
-    '块头光标贴块左上角',
+    '块头光标在块左上外侧（不压内容、顶边对齐）',
     beforeBox != null &&
-      beforeBox.gapLeft <= 1 &&
-      beforeBox.gapLeft < beforeBox.blockWidth / 2 &&
-      beforeBox.blockWidth > 0,
+      beforeBox.outsideLeft >= 2 &&
+      beforeBox.outsideLeft <= 8 &&
+      beforeBox.outsideRight < 0 &&
+      beforeBox.blockWidth > 0 &&
+      Math.abs(beforeBox.topGap) <= 2,
     JSON.stringify(beforeBox)
   )
 
@@ -387,10 +418,14 @@ try {
     current.side === 'before' && current.caretParent.includes('desk-standalone-image'),
     JSON.stringify({ side: current.side, parent: current.caretParent })
   )
+  await caretCloseUp('block-head-caret.png')
   const imageBox = await caretBox()
   record(
-    '图片块头光标贴图片块左上角',
-    imageBox != null && imageBox.side === 'before' && imageBox.gapLeft <= 1,
+    '图片块头光标在图片块左上外侧（不再压在图片上）',
+    imageBox != null &&
+      imageBox.side === 'before' &&
+      imageBox.outsideLeft >= 2 &&
+      imageBox.outsideLeft <= 8,
     JSON.stringify(imageBox)
   )
   await press('ArrowDown')

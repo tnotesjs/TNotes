@@ -882,6 +882,9 @@
   height: 1.3em;
   border-radius: 1px;
   background: var(--accent-strong, #3b82f6);
+  /* 1px 底色描边：光标正常画在正文留白里（不可见），但窄窗口 / 贴边块上
+     仍可能需要压在内容上，这层保险让它在任何背景前都看得清。 */
+  box-shadow: 0 0 0 1px var(--editor-bg, #141414);
   pointer-events: none;
   user-select: none;
   animation: desk-block-boundary-caret-blink 1s steps(2, start) infinite;

@@ -158,6 +158,9 @@ export function activeBlockBoundaryTarget(state: EditorState): BlockBoundaryTarg
 /* 可见光标：画在编辑区外的覆盖层里（不能塞进可编辑 DOM）              */
 /* ------------------------------------------------------------------ */
 
+/** 光标与块边缘的间距：整根线落在块外（写在正文容器的左右留白里）。 */
+const CARET_GUTTER = 4
+
 interface CaretElement {
   el: HTMLElement
   blockDom: HTMLElement
@@ -191,14 +194,19 @@ function positionCaretElement(layer: HTMLElement, caret: CaretElement): void {
   if (!root) return
   const blockRect = blockDom.getBoundingClientRect()
   const rootRect = root.getBoundingClientRect()
-  const width = el.offsetWidth || 2
-  const height = el.offsetHeight || 18
+  // 用真实渲染尺寸（offsetHeight 在刚 append 时可能还是 0 / 旧值）。
+  const own = el.getBoundingClientRect()
+  const width = own.width || 2
+  const height = own.height || 18
   let x = blockRect.left - rootRect.left + root.scrollLeft
   let y = blockRect.top - rootRect.top + root.scrollTop
   if (side === 'after') {
-    // 块尾贴右下角（块头贴左上角），对角线对称。
-    x += blockRect.width - width
+    // 块尾：块的右外侧、底边对齐（与块头左上外侧成对角线）。
+    x += blockRect.width + CARET_GUTTER
     y += blockRect.height - height
+  } else {
+    // 块头：块的左外侧、顶边对齐。整根线落在块外，避免压住图片 / 代码内容。
+    x -= width + CARET_GUTTER
   }
   el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`
 }
@@ -265,6 +273,23 @@ export function createBlockBoundaryCaretPlugin(): MilkdownPlugin {
           const doc = view.dom.ownerDocument
           doc.addEventListener('scroll', schedule, true)
           doc.defaultView?.addEventListener('resize', schedule)
+          // 布局变化（代码块滚动条出现、图片解码后撑高）会让块矩形晚一帧才稳定。
+          // 注意要盯**目标块本身**：`.milkdown` 有 min-height:100%，正文块高变化
+          // 不会改变它的尺寸，只盯 host 会漏掉这类 3px 级的高度回缩。
+          const resizeObserver =
+            typeof ResizeObserver === 'function' ? new ResizeObserver(() => schedule()) : null
+          resizeObserver?.observe(host)
+          let observedBlock: HTMLElement | null = null
+          const watchCaretBlock = (): void => {
+            if (!resizeObserver) return
+            const next = caret?.blockDom ?? null
+            if (next === observedBlock) return
+            if (observedBlock) resizeObserver.unobserve(observedBlock)
+            observedBlock = next
+            if (observedBlock) resizeObserver.observe(observedBlock)
+          }
+          watchCaretBlock()
+          schedule()
 
           return {
             update: (nextView, previousState) => {
@@ -274,14 +299,18 @@ export function createBlockBoundaryCaretPlugin(): MilkdownPlugin {
               if (!isActive) {
                 caret?.el.remove()
                 caret = null
+                watchCaretBlock()
                 return
               }
               caret = positionCaret(nextView, nextView.state, caret, layer)
+              watchCaretBlock()
+              schedule()
             },
             destroy: () => {
               if (frame >= 0) cancelAnimationFrame(frame)
               doc.removeEventListener('scroll', schedule, true)
               doc.defaultView?.removeEventListener('resize', schedule)
+              resizeObserver?.disconnect()
               caret?.el.remove()
               layer.remove()
             }
