@@ -365,6 +365,20 @@ async function main() {
   console.log(
     `最慢：${slowest.map((r) => `${r.name} ${formatDuration(r.durationMs)}`).join(' · ')}`
   )
+  // flaky 的首次失败日志要打出来：否则 CI 上只看到一个 ⚠，无从定位根因
+  for (const result of flaky) {
+    console.log(`\n⚠ ${result.name} 首次失败日志（重试后通过）：${result.firstFailureLogPath}`)
+    try {
+      const tail = execFileSync(
+        'tail',
+        ['-n', '20', relative(REPO_ROOT, result.firstFailureLogPath)],
+        { cwd: REPO_ROOT, encoding: 'utf8' }
+      )
+      console.log(tail.trimEnd())
+    } catch {
+      console.log('  （读取失败）')
+    }
+  }
   for (const result of failed) {
     console.log(`\n✗ ${result.name} ${result.timedOut ? '(超时)' : `(exit ${result.exitCode})`}`)
     try {
