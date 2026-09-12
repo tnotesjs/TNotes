@@ -314,12 +314,12 @@ export function isCaretEnteringCalloutTitle($head: ResolvedPos, direction: 'up' 
   if (!$head.parent.isTextblock) return false
   const calloutDepth = calloutDepthAt($head)
   if (calloutDepth < 0) return false
-  // 只看 callout 内部的祖先链：`index(depth)` 是「depth 层节点在父节点里的下标」，
-  // 原来写成 index(depth-1) 会连 callout 自己在文档里的下标一起要求为 0 ——
-  // 于是除了文档里的第一个 callout，其它 callout 的 ↑ 都进不了标题，落到
-  // gapcursor / virtual-cursor 库里把光标带到文档开头（实测）。
+  // 只看 callout 内部的祖先链，而且用绝对位置判断「是不是第一个子节点」：
+  // index(depth) 在段尾这种边界位置上会指到下一个孩子（实测段落末尾拿到 1），
+  // 老代码用 index(depth-1) 更是把 callout 自己在文档里的下标也要求为 0 ——
+  // 除第一个 callout 外全都判 false，↑ 就落到 gapcursor 手里跳到文档开头。
   for (let depth = $head.depth; depth > calloutDepth; depth -= 1) {
-    if ($head.index(depth) > 0) return false
+    if ($head.before(depth) !== $head.before(depth - 1) + 1) return false
   }
   if (direction === 'left') return $head.parentOffset === 0
   return !$head.parent.textBetween(0, $head.parentOffset, '\n', '\n').includes('\n')

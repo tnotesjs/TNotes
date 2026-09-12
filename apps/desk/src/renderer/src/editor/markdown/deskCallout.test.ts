@@ -248,6 +248,71 @@ describe('callout title keyboard from body', () => {
     })
   })
 
+  it('连着多个 callout 时，非第一个 callout 的 body ↑ 也能进自己的标题', async () => {
+    // 回归：isCaretEnteringCalloutTitle 原来用 index(depth-1) 判断「是不是第一个子节点」，
+    // 把 callout 自己在文档里的下标也算进去了 —— 只要 callout 不是文档第一块就恒 false，
+    // ↑ 于是落到 PM gapcursor / virtual-cursor 手里把光标带到文档开头。
+    const editor = await createNavEditor(
+      [
+        '## 提示块',
+        '',
+        '::: tip 💡 TIP',
+        '',
+        '提示块正文。',
+        '',
+        ':::',
+        '',
+        '::: warning ⚠️ WARNING',
+        '',
+        '警告块正文。',
+        '',
+        ':::',
+        '',
+        '::: danger ❌ ERROR',
+        '',
+        '错误块正文。',
+        '',
+        ':::',
+        ''
+      ].join('\n')
+    )
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      const callouts: Array<{ pos: number; bodyEnd: number; title: string }> = []
+      view.state.doc.descendants((node, position) => {
+        if (node.type.name !== 'deskCallout') return true
+        const title = String((node.attrs as { title?: string }).title ?? '')
+        let bodyEnd = position + 1
+        node.descendants((child, childPos) => {
+          if (child.type.name === 'paragraph') {
+            bodyEnd = position + 1 + childPos + 1 + child.content.size
+          }
+          return true
+        })
+        callouts.push({ pos: position, bodyEnd, title })
+        return false
+      })
+      expect(callouts).toHaveLength(3)
+      // 第三个 callout（ERROR）的 body 末尾按 ↑：必须聚焦它自己的标题，而不是跳走
+      view.dispatch(
+        view.state.tr.setSelection(TextSelection.create(view.state.doc, callouts[2]!.bodyEnd))
+      )
+      view.dom.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true })
+      )
+      const titles = [...view.dom.querySelectorAll('.desk-callout__title')]
+      expect(titles).toHaveLength(3)
+      expect(document.activeElement).toBe(titles[2])
+      expect((titles[2] as HTMLInputElement).value).toContain('ERROR')
+      // 从标题再按 ↑：回到上一个 callout 的 body（不越过前面的块）
+      ;(document.activeElement as HTMLInputElement).dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true })
+      )
+      expect(view.state.selection.from).toBeGreaterThan(callouts[1]!.pos)
+      expect(view.state.selection.from).toBeLessThanOrEqual(callouts[1]!.bodyEnd)
+    })
+  })
+
   it('ArrowUp from mid first body line focuses the title without selecting the previous fence', async () => {
     const editor = await createNavEditor(
       [
