@@ -142,7 +142,9 @@ function selectSuites(options) {
   const matches = (selector, suite) =>
     suite.name === selector ||
     suite.name.replace(/^e2e-/, '').replace(/\.mjs$/, '') === selector ||
-    suite.area === selector
+    suite.area === selector ||
+    // area 支持前缀：`--only block` 命中 block-editing / block-menu / block-range
+    suite.area.startsWith(`${selector}-`)
 
   let selected = SUITES.filter((suite) => options.includeManual || suite.tier === 'regression')
   const changed = options.since ? changedFiles(options.since) : null
@@ -315,7 +317,7 @@ const USAGE = `desk e2e runner
 开发循环（改完代码先在 apps/desk 下重建 out/，再挑最小集跑）：
   pnpm --filter desk build:out                  # 只构建（跳过 typecheck），比 build 快
   node scripts/e2e-block-menus.mjs              # 单套件直跑（2-20s，带逐条 PASS/FAIL + 截图）
-  pnpm --filter desk test:e2e --only blocks     # 按区域（area）跑
+  pnpm --filter desk test:e2e --only block      # 按区域（area，支持前缀）跑
   pnpm --filter desk test:e2e --since HEAD      # 受影响 + 冒烟核心集
   pnpm --filter desk test:e2e --since HEAD --since-exact   # 只跑受影响集
 全量 / 交付：
