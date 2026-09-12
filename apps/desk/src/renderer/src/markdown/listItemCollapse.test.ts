@@ -216,3 +216,101 @@ describe('list item collapse', () => {
     expect(collapsedListItemSet(view.state).size).toBe(0)
   })
 })
+
+/** 模拟在某个文档位置按回车。 */
+function pressEnter(view: EditorView, pos: number): void {
+  view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, pos)))
+  view.dom.dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+  )
+}
+
+/** 列表结构（按层级缩进）与折叠状态，便于断言。 */
+function listOutline(view: EditorView): { text: string; indent: number; collapsed: boolean }[] {
+  return listItems(view.state.doc).map((item) => {
+    const $pos = view.state.doc.resolve(item.pos + 1)
+    let lists = 0
+    for (let depth = $pos.depth; depth > 0; depth -= 1) {
+      if (/^(bullet|ordered)_list$/.test($pos.node(depth).type.name)) lists += 1
+    }
+    return {
+      text: item.own,
+      indent: lists - 1,
+      collapsed: collapsedListItemSet(view.state).has(item.pos)
+    }
+  })
+}
+
+describe('list item enter (折叠时的回车语义)', () => {
+  it('光标在尾部：新项插在整棵子树之后，子列表留在原项上', async () => {
+    const view = await setup('- B\n  - B1\n- C\n')
+    const [b] = listItems(view.state.doc)
+    view.dispatch(toggleListItemCollapsed(view.state, b!.pos)!)
+    const range = listItemChildRange(view.state.doc, b!.pos)!
+    pressEnter(view, range.from - 1)
+    expect(listOutline(view)).toEqual([
+      { text: 'B', indent: 0, collapsed: true },
+      { text: 'B1', indent: 1, collapsed: false },
+      { text: '', indent: 0, collapsed: false },
+      { text: 'C', indent: 0, collapsed: false }
+    ])
+    // 光标在新项里
+    expect(view.state.selection.from).toBe(listItems(view.state.doc)[2]!.pos + 2)
+    // 折叠状态没被破坏
+    expect(collapsedListItemSet(view.state).has(b!.pos)).toBe(true)
+  })
+
+  it('光标在开头：空项插在项之前，并展开这一项', async () => {
+    const view = await setup('- B\n  - B1\n- C\n')
+    const [b] = listItems(view.state.doc)
+    view.dispatch(toggleListItemCollapsed(view.state, b!.pos)!)
+    pressEnter(view, b!.pos + 2)
+    expect(listOutline(view)).toEqual([
+      { text: '', indent: 0, collapsed: false },
+      { text: 'B', indent: 0, collapsed: false },
+      { text: 'B1', indent: 1, collapsed: false },
+      { text: 'C', indent: 0, collapsed: false }
+    ])
+    expect(view.state.selection.from).toBe(listItems(view.state.doc)[0]!.pos + 2)
+    expect(collapsedListItemSet(view.state).size).toBe(0)
+  })
+
+  it('光标在中间：展开并按默认 split 拆成「前半 + 后半（带子列表）」', async () => {
+    const view = await setup('- AB\n  - B1\n- C\n')
+    const [b] = listItems(view.state.doc)
+    view.dispatch(toggleListItemCollapsed(view.state, b!.pos)!)
+    pressEnter(view, b!.pos + 3)
+    expect(listOutline(view)).toEqual([
+      { text: 'A', indent: 0, collapsed: false },
+      { text: 'B', indent: 0, collapsed: false },
+      { text: 'B1', indent: 1, collapsed: false },
+      { text: 'C', indent: 0, collapsed: false }
+    ])
+    expect(collapsedListItemSet(view.state).size).toBe(0)
+    // 光标在「后半」的开头
+    expect(view.state.selection.from).toBe(listItems(view.state.doc)[1]!.pos + 2)
+  })
+
+  it('没有子列表的项回车走默认行为（尾部新同级项、行首空项在前）', async () => {
+    const end = await setup('- A\n- B\n')
+    const [a] = listItems(end.state.doc)
+    pressEnter(end, a!.pos + 2 + 'A'.length)
+    expect(listItems(end.state.doc).map((item) => item.own)).toEqual(['A', '', 'B'])
+
+    const start = await setup('- A\n- B\n')
+    const [first] = listItems(start.state.doc)
+    pressEnter(start, first!.pos + 2)
+    expect(listItems(start.state.doc).map((item) => item.own)).toEqual(['', 'A', 'B'])
+  })
+
+  it('任务项回车得到未勾选的新项，子列表仍留在原项上', async () => {
+    const view = await setup('- [x] A\n  - [ ] A1\n- B\n')
+    const [a] = listItems(view.state.doc)
+    const range = listItemChildRange(view.state.doc, a!.pos)!
+    pressEnter(view, range.from - 1)
+    const outline = listOutline(view)
+    expect(outline.map((item) => item.text)).toEqual(['A', 'A1', '', 'B'])
+    const fresh = view.state.doc.nodeAt(listItems(view.state.doc)[2]!.pos)
+    expect(fresh?.attrs.checked).toBe(false)
+  })
+})

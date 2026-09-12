@@ -201,6 +201,56 @@ function skipCollapsedListItems(view: EditorView, direction: 1 | -1): boolean {
   return true
 }
 
+/**
+ * 列表项里按回车（只有「有子列表」的项需要特殊处理，语雀交互）：
+ * - 光标在**尾部**：在整棵子树之后插入一个空的同级项，子列表留在原项上，
+ *   折叠状态保持不变（折叠时新项出现在折叠项下方，不展开）；
+ * - 光标在**开头**：在项之前插入一个空的同级项（子列表仍留在原项上），并展开这一项；
+ * - 光标在**中间**：展开这一项后交给默认的 `splitListItem`：拆成「前半」+「后半（含子列表）」。
+ * 三种情况都不会把子列表挪到新建的空项里。
+ */
+function handleListItemEnter(view: EditorView): boolean {
+  const { state } = view
+  const { selection } = state
+  if (!selection.empty) return false
+  const itemPos = listItemPosAtCaret(state.doc, selection.head)
+  if (itemPos == null) return false
+  const range = listItemChildRange(state.doc, itemPos)
+  if (!range) return false
+  // 光标必须在这一项自己那段文字里（不在隐藏的子列表里）
+  if (selection.head > range.from - 1 || selection.head < itemPos + 2) return false
+
+  if (selection.head >= range.from - 1) {
+    insertEmptySibling(view, itemPos, 'after')
+    return true
+  }
+  if (selection.head <= itemPos + 2) {
+    insertEmptySibling(view, itemPos, 'before')
+    return true
+  }
+  if (collapsedListItemSet(state).has(itemPos)) {
+    view.dispatch(state.tr.setMeta(listItemCollapseKey, { unfold: itemPos }))
+  }
+  return false
+}
+
+function insertEmptySibling(view: EditorView, itemPos: number, side: 'before' | 'after'): void {
+  const { state } = view
+  const item = state.doc.nodeAt(itemPos)
+  const paragraph = item?.firstChild
+  if (!item || !paragraph) return
+  const attrs = { ...item.attrs }
+  // 任务列表里回车得到的是「未勾选」的新项，而不是继承勾选状态
+  if (typeof attrs.checked === 'boolean') attrs.checked = false
+  const sibling = item.type.create(attrs, paragraph.type.create())
+  const at = side === 'before' ? itemPos : itemPos + item.nodeSize
+  const tr = state.tr.insert(at, sibling)
+  // 行首回车要展开这一项；行尾回车保持折叠状态（新项在折叠项外面，本来就可见）
+  if (side === 'before') tr.setMeta(listItemCollapseKey, { unfold: itemPos })
+  tr.setSelection(TextSelection.near(tr.doc.resolve(at + 2), 1)).scrollIntoView()
+  view.dispatch(tr)
+}
+
 function toggleButton(pos: number, collapsed: boolean): HTMLButtonElement {
   const button = document.createElement('button')
   button.type = 'button'
@@ -261,11 +311,15 @@ export function createListItemCollapsePlugin(): MilkdownPlugin {
           apply(tr, value) {
             const collapsed = mapCollapsedPositions(tr.doc, value.collapsed, tr)
             const meta = tr.getMeta(listItemCollapseKey) as
-              { toggle?: number; set?: number[] } | undefined
+              { toggle?: number; set?: number[]; unfold?: number } | undefined
             if (typeof meta?.toggle === 'number') {
               const pos = tr.docChanged ? tr.mapping.map(meta.toggle, 1) : meta.toggle
               if (collapsed.has(pos)) collapsed.delete(pos)
               else if (listItemHasCollapsibleChild(tr.doc, pos)) collapsed.add(pos)
+            }
+            if (typeof meta?.unfold === 'number') {
+              const pos = tr.docChanged ? tr.mapping.map(meta.unfold, 1) : meta.unfold
+              collapsed.delete(pos)
             }
             if (Array.isArray(meta?.set)) {
               collapsed.clear()
@@ -280,6 +334,15 @@ export function createListItemCollapsePlugin(): MilkdownPlugin {
         props: {
           decorations: listItemFoldDecorations,
           handleKeyDown(view, event) {
+            if (
+              event.key === 'Enter' &&
+              !event.shiftKey &&
+              !event.metaKey &&
+              !event.ctrlKey &&
+              !event.altKey
+            ) {
+              return handleListItemEnter(view)
+            }
             if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return false
             if (event.shiftKey || event.metaKey || event.ctrlKey || event.altKey) return false
             return skipCollapsedListItems(view, event.key === 'ArrowDown' ? 1 : -1)
