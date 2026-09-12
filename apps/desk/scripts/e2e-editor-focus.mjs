@@ -147,7 +147,9 @@ const state = () =>
       pmFocused: pm?.classList.contains('ProseMirror-focused') ?? false,
       caretVisible,
       anchorText: selection?.anchorNode?.textContent?.slice(0, 12) ?? null,
-      anchorOffset: selection?.anchorOffset ?? null
+      anchorOffset: selection?.anchorOffset ?? null,
+      // 点在块边缘热区上是「块边界光标」，DOM 偏移不会变，用侧别判断按键效果。
+      boundarySide: pm?.getAttribute('data-boundary-caret') ?? null
     }
   })
 
@@ -211,12 +213,14 @@ try {
     const after = await state()
     return { before, after }
   })()
+  const leftMoved = (before, after) =>
+    after.anchorOffset !== before.anchorOffset || after.boundarySide !== before.boundarySide
   record(
     'F1 点正文下方空白 → 编辑器获得焦点且 ← 能移动光标',
     afterBottomClick.pmFocused &&
       afterBottomClick.active?.startsWith('DIV.ProseMirror') &&
-      movedLeft.after.anchorOffset !== movedLeft.before.anchorOffset,
-    `active=${afterBottomClick.active} offset ${movedLeft.before.anchorOffset}→${movedLeft.after.anchorOffset}`
+      leftMoved(movedLeft.before, movedLeft.after),
+    `active=${afterBottomClick.active} offset ${movedLeft.before.anchorOffset}→${movedLeft.after.anchorOffset} 边界=${movedLeft.before.boundarySide}→${movedLeft.after.boundarySide}`
   )
 
   // F2：宽屏下点正文列左侧留白（可编辑区之外）→ 焦点收回并就近落光标
@@ -231,8 +235,8 @@ try {
     const after = await state()
     record(
       'F2 点正文列左侧留白 → 焦点收回编辑器且 ← 能移动光标',
-      afterGutter.pmFocused && after.pmFocused && after.anchorOffset !== before,
-      `x=${Math.round(gutterX)} active=${afterGutter.active} offset ${before}→${after.anchorOffset}`
+      afterGutter.pmFocused && after.pmFocused && leftMoved(afterGutter, after),
+      `x=${Math.round(gutterX)} active=${afterGutter.active} offset ${before}→${after.anchorOffset} 边界=${afterGutter.boundarySide}→${after.boundarySide}`
     )
   } else {
     record(

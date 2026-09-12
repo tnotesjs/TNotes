@@ -118,14 +118,19 @@ try {
     await page.keyboard.press('ArrowRight')
     await expectHeadingCaret(offset + 1)
   }
+  // 新模型：方向键进入相邻特殊块时先落到「块前/块后光标」（不再整块选中）。
   await setHeadingCaret(0)
   await page.keyboard.press('ArrowLeft')
-  await pm.locator('.desk-generated-toc.ProseMirror-selectednode').waitFor()
+  await page.waitForFunction(
+    () => document.querySelector('.desk-block-boundary-caret')?.dataset.side === 'after'
+  )
   await page.keyboard.press('ArrowRight')
   await expectHeadingCaret(0)
   await setHeadingCaret(headingText.length)
   await page.keyboard.press('ArrowRight')
-  await pm.locator('[data-kind="raw-component"].ProseMirror-selectednode').waitFor()
+  await page.waitForFunction(
+    () => document.querySelector('.desk-block-boundary-caret')?.dataset.side === 'before'
+  )
   await page.keyboard.press('ArrowLeft')
   await expectHeadingCaret(headingText.length)
   await page.keyboard.press('Shift+ArrowLeft')

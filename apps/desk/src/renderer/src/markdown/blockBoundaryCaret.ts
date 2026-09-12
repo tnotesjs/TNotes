@@ -1,0 +1,237 @@
+/**
+ * 块边界光标（块前 / 块后）。
+ *
+ * 「整个块不可直接放光标」的位置一共有两个：块的紧前面、块的紧后面。浏览器和
+ * ProseMirror 都放不了普通光标：位置的一侧是普通段落（有合法文本位置），
+ * ProseMirror 官方的 `GapCursor` 也不行 —— `GapCursor.valid()` 要求两侧都「closed」，
+ * 而我们的位置永远不满足（`closedBefore` 见到段落就 false）。
+ *
+ * 所以这里自研一个 `Selection` 子类：
+ * - `visible = false` → PM 会加 `ProseMirror-hideselection`，原生光标隐藏；
+ *   同时 `prosemirror-virtual-cursor` 只为「空 TextSelection」画光标，也不会画；
+ * - 可见光标由我们自己的 DOM 元素画（挂在目标块上绝对定位，不占行、不改文档）；
+ * - 纯导航不产生任何事务；只有「在边界上打字 / 回车」才实体化空段落
+ *   （见 `blockBoundaryNavigation.ts`）。
+ */
+import type { MilkdownPlugin } from '@milkdown/kit/ctx'
+import type { Node as ProseMirrorNode, ResolvedPos } from '@milkdown/kit/prose/model'
+import { Selection, Plugin, PluginKey } from '@milkdown/kit/prose/state'
+import type { EditorState, Transaction } from '@milkdown/kit/prose/state'
+import type { EditorView } from '@milkdown/kit/prose/view'
+import { $prose } from '@milkdown/kit/utils'
+import { Slice } from '@milkdown/kit/prose/model'
+import { isStandaloneImageParagraph } from '../editor/markdown/standaloneImageParagraph'
+
+export type BlockBoundarySide = 'before' | 'after'
+
+export const blockBoundaryCaretKey = new PluginKey('desk-block-boundary-caret')
+
+/** 自带光标的类名（CSS 在 milkdownMarkdownEditor.scoped.css）。 */
+export const BOUNDARY_CARET_CLASS = 'desk-block-boundary-caret'
+
+export class BlockBoundaryCaret extends Selection {
+  /**
+   * 贴着哪一侧。位置相同但侧别不同是两种状态（表格块后 = 紧跟其后的块块前），
+   * 所以侧别必须存下来，不能从位置猜。
+   */
+  constructor(
+    $pos: ResolvedPos,
+    readonly side: BlockBoundarySide
+  ) {
+    super($pos, $pos)
+  }
+
+  map(doc: ProseMirrorNode, mapping: Transaction['mapping']): Selection {
+    const pos = mapping.map(this.head)
+    if (pos < 0 || pos > doc.content.size) return Selection.near(doc.resolve(0))
+    const $pos = doc.resolve(pos)
+    return blockBoundaryTargetAt(doc, pos, this.side)
+      ? new BlockBoundaryCaret($pos, this.side)
+      : Selection.near($pos)
+  }
+
+  content(): Slice {
+    return Slice.empty
+  }
+
+  eq(other: Selection): boolean {
+    return (
+      other instanceof BlockBoundaryCaret && other.head === this.head && other.side === this.side
+    )
+  }
+
+  toJSON(): { type: string; pos: number; side: BlockBoundarySide } {
+    return { type: 'deskBlockBoundaryCaret', pos: this.head, side: this.side }
+  }
+
+  static fromJSON(
+    doc: ProseMirrorNode,
+    json: { pos?: unknown; side?: unknown }
+  ): BlockBoundaryCaret {
+    if (typeof json.pos !== 'number') throw new RangeError('Invalid BlockBoundaryCaret JSON')
+    return new BlockBoundaryCaret(doc.resolve(json.pos), json.side === 'after' ? 'after' : 'before')
+  }
+}
+
+/** 隐藏原生选区，光标全部由我们画。 */
+BlockBoundaryCaret.prototype.visible = false
+Selection.jsonID('deskBlockBoundaryCaret', BlockBoundaryCaret)
+
+export function isBlockBoundaryCaret(selection: Selection | null | undefined): boolean {
+  return selection instanceof BlockBoundaryCaret
+}
+
+/**
+ * 哪些块两侧有「块前/块后光标」：
+ * - 隐藏块（frontmatter、生成目录）不算；
+ * - 代码块、表格、非隐藏的 raw block（组件/容器/图表/纯 HTML）算；
+ * - callout / 引用 / 列表这些「可直接放光标的文本流」不算。
+ */
+export function isBoundaryStopBlock(node: ProseMirrorNode | null | undefined): boolean {
+  if (!node) return false
+  if (node.type.name === 'code_block') return true
+  if (node.type.name === 'table') return true
+  // 独立成段的图片同样是「整块不可编辑」的元素（行内 atom 包在段落里）。
+  if (isStandaloneImageParagraph(node as Parameters<typeof isStandaloneImageParagraph>[0])) {
+    return true
+  }
+  return node.type.name === 'deskRawBlock' && node.attrs.hidden !== true
+}
+
+export interface BlockBoundaryTarget {
+  /** 目标块在父节点里的位置。 */
+  blockPos: number
+  node: ProseMirrorNode
+  side: BlockBoundarySide
+}
+
+/** 文档位置 `pos` 是否正好贴在某个可停靠块的前/后。 */
+export function boundarySideAt(doc: ProseMirrorNode, pos: number): BlockBoundarySide | null {
+  if (pos < 0 || pos > doc.content.size) return null
+  const $pos = doc.resolve(pos)
+  if (isBoundaryStopBlock($pos.nodeAfter)) return 'before'
+  if (isBoundaryStopBlock($pos.nodeBefore)) return 'after'
+  return null
+}
+
+/**
+ * `pos` 处贴着某个可停靠块的边界；`side` 指定时只认那一侧（相邻两个块共用同一个
+ * 文档位置时，靠它区分「前一个块的块后」和「后一个块的块前」）。
+ */
+export function blockBoundaryTargetAt(
+  doc: ProseMirrorNode,
+  pos: number,
+  side?: BlockBoundarySide
+): BlockBoundaryTarget | null {
+  if (pos < 0 || pos > doc.content.size) return null
+  const $pos = doc.resolve(pos)
+  for (const candidate of side ? [side] : (['before', 'after'] as const)) {
+    const node = candidate === 'before' ? $pos.nodeAfter : $pos.nodeBefore
+    if (!node || !isBoundaryStopBlock(node)) continue
+    return {
+      blockPos: candidate === 'before' ? pos : pos - node.nodeSize,
+      node,
+      side: candidate
+    }
+  }
+  return null
+}
+
+export function blockBoundaryCaretAt(
+  doc: ProseMirrorNode,
+  pos: number,
+  side?: BlockBoundarySide
+): BlockBoundaryCaret | null {
+  const target = blockBoundaryTargetAt(doc, pos, side)
+  return target ? new BlockBoundaryCaret(doc.resolve(pos), target.side) : null
+}
+
+/** 当前 boundary caret 贴着的块（没有则 null）。 */
+export function activeBlockBoundaryTarget(state: EditorState): BlockBoundaryTarget | null {
+  const { selection } = state
+  if (!(selection instanceof BlockBoundaryCaret)) return null
+  return blockBoundaryTargetAt(state.doc, selection.head, selection.side)
+}
+
+/* ------------------------------------------------------------------ */
+/* 可见光标：挂在目标块 DOM 上的一个绝对定位元素                        */
+/* ------------------------------------------------------------------ */
+
+interface CaretElement {
+  el: HTMLElement
+  blockDom: HTMLElement
+}
+
+function createCaretElement(side: BlockBoundarySide): HTMLElement {
+  const el = document.createElement('span')
+  el.className = `${BOUNDARY_CARET_CLASS} ${BOUNDARY_CARET_CLASS}--${side}`
+  el.setAttribute('aria-hidden', 'true')
+  el.dataset.side = side
+  el.contentEditable = 'false'
+  return el
+}
+
+function positionCaret(
+  view: EditorView,
+  state: EditorState,
+  caret: CaretElement | null
+): CaretElement | null {
+  const target = activeBlockBoundaryTarget(state)
+  if (!target) {
+    caret?.el.remove()
+    return null
+  }
+  const dom = view.nodeDOM(target.blockPos)
+  if (!(dom instanceof HTMLElement)) {
+    caret?.el.remove()
+    return null
+  }
+  if (caret && caret.blockDom === dom) {
+    if (caret.el.dataset.side !== target.side) {
+      caret.el.className = `${BOUNDARY_CARET_CLASS} ${BOUNDARY_CARET_CLASS}--${target.side}`
+      caret.el.dataset.side = target.side
+    }
+    if (!caret.el.isConnected) dom.append(caret.el)
+    return caret
+  }
+  caret?.el.remove()
+  if (getComputedStyle(dom).position === 'static') dom.style.position = 'relative'
+  const el = createCaretElement(target.side)
+  dom.append(el)
+  return { el, blockDom: dom }
+}
+
+export function createBlockBoundaryCaretPlugin(): MilkdownPlugin {
+  return $prose(
+    () =>
+      new Plugin({
+        key: blockBoundaryCaretKey,
+        props: {
+          attributes: (state): Record<string, string> => {
+            const target = activeBlockBoundaryTarget(state)
+            return target ? { 'data-boundary-caret': String(target.side) } : {}
+          }
+        },
+        view: (view) => {
+          let caret: CaretElement | null = positionCaret(view, view.state, null)
+          return {
+            update: (nextView, previousState) => {
+              const wasActive = previousState.selection instanceof BlockBoundaryCaret
+              const isActive = nextView.state.selection instanceof BlockBoundaryCaret
+              if (!isActive && !wasActive) return
+              if (!isActive) {
+                caret?.el.remove()
+                caret = null
+                return
+              }
+              caret = positionCaret(nextView, nextView.state, caret)
+            },
+            destroy: () => {
+              caret?.el.remove()
+              caret = null
+            }
+          }
+        }
+      })
+  )
+}

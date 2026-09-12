@@ -860,6 +860,42 @@
   bottom: 0;
 }
 
+/* 块边界光标（块前 / 块后）：贴着目标块画一根和文本光标同色同宽的竖线。
+   纯视图层元素，不占行、不改文档；原生光标由 PM 的 ProseMirror-hideselection 隐藏。 */
+.milkdown-markdown-editor :deep(.desk-block-boundary-caret) {
+  position: absolute;
+  z-index: 3;
+  width: 2px;
+  height: 1.3em;
+  border-radius: 1px;
+  background: var(--accent-strong, #3b82f6);
+  pointer-events: none;
+  user-select: none;
+  animation: desk-block-boundary-caret-blink 1s steps(2, start) infinite;
+}
+
+.milkdown-markdown-editor :deep(.desk-block-boundary-caret--before) {
+  top: 0;
+  left: 0;
+}
+
+.milkdown-markdown-editor :deep(.desk-block-boundary-caret--after) {
+  bottom: 0;
+  left: 0;
+}
+
+/* 焦点不在可编辑区、或焦点在块内部（CodeMirror）时，边界光标不画：同一时刻只有一根线。 */
+.milkdown-markdown-editor:not(:has(.ProseMirror-focused)) :deep(.desk-block-boundary-caret),
+.milkdown-markdown-editor:has(.cm-editor:focus-within) :deep(.desk-block-boundary-caret) {
+  display: none;
+}
+
+@keyframes desk-block-boundary-caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
 /* Keep hidden atoms in the box tree. `display: none` makes GapCursor stick to
    frontmatter after select-all + delete (underscore caret, no empty line). */
 .milkdown-markdown-editor :deep(.desk-raw-block--hidden) {

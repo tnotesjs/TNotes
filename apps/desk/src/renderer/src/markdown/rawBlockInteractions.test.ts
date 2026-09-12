@@ -15,6 +15,7 @@ import {
   projectRawBlocksForMilkdown,
   rawBlockProjectionPlugins
 } from '../editor/markdown/rawBlockProjection'
+import { BlockBoundaryCaret, activeBlockBoundaryTarget } from './blockBoundaryCaret'
 import {
   adjacentRawBlockSelectionPosition,
   codeBlockWholeSelectPosition,
@@ -143,14 +144,20 @@ describe('leaving embedded code at its final caret', () => {
       })
     })
     codeEditors.push(cm)
+    /**
+     * 真实交互里按键总是落在「当前持有焦点」的地方：CM 里编辑时目标是 .cm-content，
+     * 落到块边界光标后焦点回到 ProseMirror。这里照同样规则合成事件。
+     */
     const press = (key: string, modifiers: KeyboardEventInit = {}): KeyboardEvent => {
+      const boundaryActive = view.state.selection instanceof BlockBoundaryCaret
+      const target = boundaryActive ? view.dom : cm.contentDOM
       const event = new KeyboardEvent('keydown', {
         key,
         bubbles: true,
         cancelable: true,
         ...modifiers
       })
-      cm.contentDOM.dispatchEvent(event)
+      target.dispatchEvent(event)
       return event
     }
     return { view, cm, press, code, host }
@@ -159,11 +166,17 @@ describe('leaving embedded code at its final caret', () => {
   for (const kind of ['code', 'group'] as const) {
     for (const after of ['下方段落', '## 下方标题', '- 下方列表']) {
       it.each(['ArrowDown', 'ArrowRight'])(
-        `${kind} → ${after}: %s exits to text start`,
+        `${kind} → ${after}: %s exits to 块后光标，再进文本开头`,
         async (key) => {
           const { view, cm, press } = await setup(kind, after)
           const doc = view.state.doc
+          // 第一下：落到「块后光标」（块边界光标，不改文档）
           expect(press(key).defaultPrevented).toBe(true)
+          expect(view.state.selection).toBeInstanceOf(BlockBoundaryCaret)
+          expect(activeBlockBoundaryTarget(view.state)?.side).toBe('after')
+          expect(view.state.doc.eq(doc)).toBe(true)
+          // 第二下：进下一段开头
+          press(key)
           expect(view.state.selection).toBeInstanceOf(TextSelection)
           expect(view.state.selection.empty).toBe(true)
           expect(view.state.selection.$head.parentOffset).toBe(0)
@@ -176,10 +189,13 @@ describe('leaving embedded code at its final caret', () => {
     }
 
     it.each(['ArrowDown', 'ArrowRight'])(
-      `${kind}: %s creates one trailing paragraph at EOF`,
+      `${kind}: %s 先到块后光标，再按一次补一个可编辑尾段落`,
       async (key) => {
         const { view, press } = await setup(kind, '')
         const count = view.state.doc.childCount
+        press(key)
+        expect(view.state.selection).toBeInstanceOf(BlockBoundaryCaret)
+        expect(view.state.doc.childCount).toBe(count)
         press(key)
         expect(view.state.doc.childCount).toBe(count + 1)
         expect(view.state.doc.lastChild?.type.name).toBe('paragraph')
@@ -205,7 +221,7 @@ describe('leaving embedded code at its final caret', () => {
       })
       press('ArrowRight')
       expect(view.state.selection.eq(original)).toBe(true)
-      cm.dispatch({ selection: { anchor: code.length } })
+      cm.dispatch({ selection: { anchor: code.length - 1 } })
       for (const modifiers of [
         { shiftKey: true },
         { altKey: true },
@@ -216,11 +232,18 @@ describe('leaving embedded code at its final caret', () => {
         press('ArrowDown', modifiers)
         expect(view.state.selection.eq(original)).toBe(true)
       }
+      // 末尾行尾的 ↓（无修饰键）才交回 PM：落到块后光标
+      cm.dispatch({ selection: { anchor: code.length } })
+      press('ArrowDown')
+      expect(view.state.selection).toBeInstanceOf(BlockBoundaryCaret)
+      expect(activeBlockBoundaryTarget(view.state)?.side).toBe('after')
     })
   }
 
   it('does not skip the empty paragraph after a code group', async () => {
     const { view, press } = await setup('group', '<br />\n\n下方段落')
+    press('ArrowDown')
+    expect(view.state.selection).toBeInstanceOf(BlockBoundaryCaret)
     press('ArrowDown')
     expect(view.state.selection.$head.parent.type.name).toBe('paragraph')
     expect(view.state.selection.$head.parent.content.size).toBe(0)
@@ -286,24 +309,24 @@ describe('raw block keyboard selection', () => {
       const blockPosition = first.nodeSize
       const blockNode = view.state.doc.child(1)
       const afterStart = blockPosition + blockNode.nodeSize + 1
-      for (const [key, caret, expected] of [
-        ['ArrowRight', first.content.size, null],
-        ['ArrowRight', first.content.size + 1, blockPosition],
-        ['ArrowLeft', afterStart + 1, null],
-        ['ArrowLeft', afterStart, blockPosition]
+      const afterEnd = blockPosition + blockNode.nodeSize
+      for (const [key, caret, expected, side] of [
+        ['ArrowRight', first.content.size, null, null],
+        ['ArrowRight', first.content.size + 1, blockPosition, 'before'],
+        ['ArrowLeft', afterStart + 1, null, null],
+        ['ArrowLeft', afterStart, afterEnd, 'after']
       ] as const) {
         view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, caret)))
-        const direction = key === 'ArrowLeft' ? 'left' : 'right'
-        expect(adjacentRawBlockSelectionPosition(view.state, direction)).toBe(expected)
-        // Exercise the fallback without a DOM event / capture listener.
+        // 新模型：方向键进入相邻特殊块先落到块前/块后光标（不再整块选中）
         const event = new KeyboardEvent('keydown', { key, cancelable: true })
         view.someProp('handleKeyDown', (handle) => handle(view, event))
         if (expected === null) {
           expect(view.state.selection).toBeInstanceOf(TextSelection)
           expect(view.state.selection.head).toBe(caret)
         } else {
-          expect(view.state.selection).toBeInstanceOf(NodeSelection)
-          expect(view.state.selection.from).toBe(blockPosition)
+          expect(view.state.selection).toBeInstanceOf(BlockBoundaryCaret)
+          expect(view.state.selection.head).toBe(expected)
+          expect(activeBlockBoundaryTarget(view.state)?.side).toBe(side)
         }
       }
     })
@@ -351,6 +374,11 @@ describe('raw block keyboard selection', () => {
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, emptyStart)))
       expect(adjacentRawBlockSelectionPosition(view.state, 'down')).toBe(imagePos - 1)
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+      // 新模型：方向键先落到「块前光标」，Shift+方向键才整块选中
+      expect(view.state.selection).toBeInstanceOf(BlockBoundaryCaret)
+      view.dom.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, shiftKey: true })
+      )
       expect(view.state.selection).toBeInstanceOf(NodeSelection)
       expect((view.state.selection as NodeSelection).from).toBe(imagePos)
       expect((view.state.selection as NodeSelection).node.type.name).toBe('image')
@@ -398,6 +426,10 @@ describe('raw block keyboard selection', () => {
       expect(view.state.selection).toBeInstanceOf(TextSelection)
       expect(view.state.selection.from).toBe(emptyStart)
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }))
+      expect(view.state.selection).toBeInstanceOf(BlockBoundaryCaret)
+      view.dom.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, shiftKey: true })
+      )
       expect(view.state.selection).toBeInstanceOf(NodeSelection)
       expect((view.state.selection as NodeSelection).from).toBe(images[0])
     })
@@ -472,22 +504,21 @@ describe('raw block keyboard selection', () => {
     })
   })
 
-  it('ArrowDown selects the whole atom; Delete removes it', async () => {
+  it('ArrowDown 到块前光标后 Delete 删整块', async () => {
     const editor = await createEditor()
     const pos = positions(editor)
     editor.action((ctx) => {
       const view = ctx.get(editorViewCtx)
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, pos.beforeEnd)))
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
-      expect(view.state.selection).toBeInstanceOf(NodeSelection)
-      expect((view.state.selection as NodeSelection).from).toBe(pos.raw)
-      expect(view.dom.querySelector('.desk-raw-boundary-cursor')).toBeNull()
+      expect(view.state.selection).toBeInstanceOf(BlockBoundaryCaret)
+      expect(activeBlockBoundaryTarget(view.state)?.side).toBe('before')
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }))
       expect(view.state.doc.toString()).not.toContain('deskRawBlock')
     })
   })
 
-  it('ArrowUp selects the whole atom; Backspace removes it', async () => {
+  it('ArrowUp 到块后光标后 Backspace 删整块', async () => {
     const editor = await createEditor()
     const pos = positions(editor)
     editor.action((ctx) => {
@@ -496,9 +527,8 @@ describe('raw block keyboard selection', () => {
         view.state.tr.setSelection(TextSelection.create(view.state.doc, pos.afterStart))
       )
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }))
-      expect(view.state.selection).toBeInstanceOf(NodeSelection)
-      expect((view.state.selection as NodeSelection).from).toBe(pos.raw)
-      expect(view.dom.querySelector('.desk-raw-boundary-cursor')).toBeNull()
+      expect(view.state.selection).toBeInstanceOf(BlockBoundaryCaret)
+      expect(activeBlockBoundaryTarget(view.state)?.side).toBe('after')
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true }))
       expect(view.state.doc.toString()).not.toContain('deskRawBlock')
     })
@@ -511,6 +541,11 @@ describe('raw block keyboard selection', () => {
       const view = ctx.get(editorViewCtx)
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, pos.beforeEnd)))
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+      // 新模型：方向键先落到「块前光标」，Shift+方向键才整块选中
+      expect(view.state.selection).toBeInstanceOf(BlockBoundaryCaret)
+      view.dom.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, shiftKey: true })
+      )
       expect(view.state.selection).toBeInstanceOf(NodeSelection)
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true }))
       expect(view.state.doc.toString()).not.toContain('deskRawBlock')
@@ -523,7 +558,13 @@ describe('raw block keyboard selection', () => {
       view.dispatch(
         view.state.tr.setSelection(TextSelection.create(view.state.doc, pos2.beforeEnd))
       )
+      // 不可进入内部的原子：块前 → 块后 → 下一行文本，两个停靠点都在。
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+      expect(view.state.selection).toBeInstanceOf(BlockBoundaryCaret)
+      expect(activeBlockBoundaryTarget(view.state)?.side).toBe('before')
+      view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+      expect(view.state.selection).toBeInstanceOf(BlockBoundaryCaret)
+      expect(activeBlockBoundaryTarget(view.state)?.side).toBe('after')
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
       expect(view.state.selection).toBeInstanceOf(TextSelection)
       expect(view.state.selection.head).toBe(pos2.afterStart)
@@ -570,6 +611,11 @@ describe('raw block keyboard selection', () => {
       expect(emptyBefore).toBeGreaterThan(-1)
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, emptyBefore)))
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+      // 新模型：方向键先落到「块前光标」，Shift+方向键才整块选中
+      expect(view.state.selection).toBeInstanceOf(BlockBoundaryCaret)
+      view.dom.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, shiftKey: true })
+      )
       expect(view.state.selection).toBeInstanceOf(NodeSelection)
       expect((view.state.selection as NodeSelection).from).toBe(infoPos)
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
@@ -1005,6 +1051,11 @@ describe('code_block keyboard selection', () => {
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, pos.beforeEnd)))
       expect(adjacentRawBlockSelectionPosition(view.state, 'down')).toBe(pos.code)
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+      // 新模型：方向键先落到「块前光标」，Shift+方向键才整块选中
+      expect(view.state.selection).toBeInstanceOf(BlockBoundaryCaret)
+      view.dom.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, shiftKey: true })
+      )
       expect(view.state.selection).toBeInstanceOf(NodeSelection)
       expect((view.state.selection as NodeSelection).from).toBe(pos.code)
       expect(codeBlockWholeSelectPosition(view.state)).toBe(pos.code)
@@ -1027,6 +1078,11 @@ describe('code_block keyboard selection', () => {
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, midLastLine)))
       expect(adjacentRawBlockSelectionPosition(view.state, 'down')).toBe(pos.code)
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+      // 新模型：方向键先落到「块前光标」，Shift+方向键才整块选中
+      expect(view.state.selection).toBeInstanceOf(BlockBoundaryCaret)
+      view.dom.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, shiftKey: true })
+      )
       expect(view.state.selection).toBeInstanceOf(NodeSelection)
       expect((view.state.selection as NodeSelection).from).toBe(pos.code)
       expect(codeBlockWholeSelectPosition(view.state)).toBe(pos.code)
@@ -1068,6 +1124,10 @@ describe('code_block keyboard selection', () => {
       const view = ctx.get(editorViewCtx)
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, pos.beforeEnd)))
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+      // 新模型：↓ 先到块前光标，Shift+↓ 才整块选中（本用例验证选中后的 Enter 语义）
+      view.dom.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, shiftKey: true })
+      )
       expect(codeBlockWholeSelectPosition(view.state)).toBe(pos.code)
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
       expect(view.state.doc.toString()).not.toContain('code_block')
@@ -1083,6 +1143,10 @@ describe('code_block keyboard selection', () => {
       const view = ctx.get(editorViewCtx)
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, pos.beforeEnd)))
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+      // 新模型：↓ 先到块前光标，Shift+↓ 才整块选中（本用例验证选中后的删除语义）
+      view.dom.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, shiftKey: true })
+      )
       expect(codeBlockWholeSelectPosition(view.state)).toBe(pos.code)
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }))
       expect(view.state.doc.toString()).not.toContain('code_block')
@@ -1096,6 +1160,9 @@ describe('code_block keyboard selection', () => {
         view.state.tr.setSelection(TextSelection.create(view.state.doc, pos2.afterStart))
       )
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }))
+      view.dom.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, shiftKey: true })
+      )
       expect(codeBlockWholeSelectPosition(view.state)).toBe(pos2.code)
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true }))
       expect(view.state.doc.toString()).not.toContain('code_block')
@@ -1173,10 +1240,20 @@ describe('code_block keyboard selection', () => {
       const view = ctx.get(editorViewCtx)
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, beforeEnd)))
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+      // 新模型：方向键先落到「块前光标」，Shift+方向键才整块选中
+      expect(view.state.selection).toBeInstanceOf(BlockBoundaryCaret)
+      view.dom.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, shiftKey: true })
+      )
       expect(view.state.selection).toBeInstanceOf(NodeSelection)
       expect((view.state.selection as NodeSelection).from).toBe(codes[0])
       expect(codeBlockWholeSelectPosition(view.state)).toBe(codes[0])
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+      // 新模型：方向键先落到「块前光标」，Shift+方向键才整块选中
+      expect(view.state.selection).toBeInstanceOf(BlockBoundaryCaret)
+      view.dom.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, shiftKey: true })
+      )
       expect(view.state.selection).toBeInstanceOf(NodeSelection)
       expect((view.state.selection as NodeSelection).from).toBe(codes[1])
       expect(codeBlockWholeSelectPosition(view.state)).toBe(codes[1])
@@ -1193,6 +1270,10 @@ describe('code_block keyboard selection', () => {
         view.state.tr.setSelection(TextSelection.create(view.state.doc, pos.afterStart))
       )
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }))
+      expect(view.state.selection).toBeInstanceOf(BlockBoundaryCaret)
+      view.dom.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, shiftKey: true })
+      )
       expect(view.state.selection).toBeInstanceOf(NodeSelection)
       expect((view.state.selection as NodeSelection).from).toBe(pos.code)
       expect(view.state.selection.head).not.toBe(pos.afterStart)

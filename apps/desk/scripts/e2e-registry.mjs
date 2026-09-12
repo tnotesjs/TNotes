@@ -236,6 +236,21 @@ export const SUITES = [
     note: '行内 <br>（段落 + 表格单元格）渲染与磁盘保真（未编辑零 diff、编辑后不丢）'
   },
   {
+    name: 'e2e-block-boundary-navigation.mjs',
+    area: 'block-editing',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/renderer/src/markdown/blockBoundaryCaret.ts',
+      'apps/desk/src/renderer/src/markdown/blockBoundaryNavigation.ts',
+      'apps/desk/src/renderer/src/markdown/rawBlockInteractions.ts',
+      'apps/desk/src/renderer/src/markdown/verticalBlockSelection.ts',
+      'apps/desk/src/renderer/src/markdown/milkdownMarkdownEditor.scoped.css'
+    ],
+    serial: false,
+    smoke: false,
+    note: '块边界光标 + T1–T6 键盘导航：代码块/表格/只读块停靠、↓/→ 进内部与穿出、边界键位（打字/Enter/Del/Backspace）、纯导航零 diff'
+  },
+  {
     name: 'e2e-list-fold.mjs',
     area: 'block-editing',
     tier: 'regression',

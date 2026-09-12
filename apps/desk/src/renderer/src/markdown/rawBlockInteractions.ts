@@ -14,7 +14,18 @@ import {
 } from '../editor/markdown/deskCallout'
 import { isStandaloneImageParagraph } from '../editor/markdown/standaloneImageParagraph'
 import { createMarkVsBlockSelectionPlugin } from './selectionKind'
-import { BlockRangeSelection, createVerticalBlockSelectionPlugin } from './verticalBlockSelection'
+import {
+  handleBoundaryNavigationKeyDown,
+  moveFromBlockEdge,
+  placeBoundaryCaret,
+  type BlockBoundaryNavigationOptions
+} from './blockBoundaryNavigation'
+import { activeBlockBoundaryTarget } from './blockBoundaryCaret'
+import {
+  BlockRangeSelection,
+  createBlockRangeSelection,
+  createVerticalBlockSelectionPlugin
+} from './verticalBlockSelection'
 
 export type RawBlockArrowDirection = 'up' | 'down'
 
@@ -300,13 +311,18 @@ export function attachRawBlockBoundaryControls(
     control.dataset.side = side
     control.contentEditable = 'false'
     control.setAttribute('aria-label', '选中块')
+    // 上下边缘热区 = 放块前/块后光标（与键盘的 T1–T6 模型一致）。
     const select = (event: PointerEvent): void => {
       if (!options.view.editable) return
       const position = options.getPos()
       if (position == null) return
       event.preventDefault()
       event.stopPropagation()
-      selectSelectableBlock(options.view, position)
+      const node = options.view.state.doc.nodeAt(position)
+      const boundary = side === 'before' ? position : position + (node?.nodeSize ?? 0)
+      if (!placeBoundaryCaret(options.view, boundary, side)) {
+        selectSelectableBlock(options.view, position)
+      }
     }
     control.addEventListener('pointerdown', select)
     options.dom.append(control)
@@ -412,6 +428,17 @@ export function attachRawBlockPreviewSelection(
     dom.removeEventListener('mouseup', onMouseUp, true)
     dom.removeEventListener('dblclick', onDoubleClick, true)
   }
+}
+
+/** 整块范围选择（表格等没有 NodeSelection 形态的块）。 */
+function selectWholeBlockRange(view: EditorView, position: number): boolean {
+  const node = view.state.doc.nodeAt(position)
+  if (!node) return false
+  const selection = createBlockRangeSelection(view.state.doc, position, position + node.nodeSize)
+  if (!selection) return false
+  view.dispatch(view.state.tr.setSelection(selection).scrollIntoView())
+  view.focus()
+  return true
 }
 
 /** Clears block selection state when the editor crosses into readonly mode. */
@@ -640,7 +667,7 @@ export function moveFromBlockBoundary(
   return true
 }
 
-/** Leave a selected block: next selectable neighbor, else the immediate text. */
+/** Leave a selected block: 先退回块边界光标，再继续走（方向键不产生新的整块选中）。 */
 function moveFromSelectableBlock(
   view: EditorView,
   position: number,
@@ -648,6 +675,7 @@ function moveFromSelectableBlock(
   direction: RawBlockArrowDirection
 ): boolean {
   const boundary = direction === 'down' ? position + nodeSize : position
+  if (moveFromBlockEdge(view, boundary, direction)) return true
   return moveFromBlockBoundary(view, boundary, direction)
 }
 
@@ -795,8 +823,12 @@ function selectAdjacentBlockForArrow(view: EditorView, event: KeyboardEvent): bo
   return position != null && selectSelectableBlock(view, position)
 }
 
+export interface RawBlockSelectionPluginOptions extends BlockBoundaryNavigationOptions {}
+
 /** Keyboard and visual selection semantics for selectable block nodes. */
-export function createRawBlockSelectionPlugin(): MilkdownPlugin[] {
+export function createRawBlockSelectionPlugin(
+  pluginOptions: RawBlockSelectionPluginOptions = {}
+): MilkdownPlugin[] {
   // Capture-phase and ProseMirror handleKeyDown can both see the same key
   // event. Claiming it once prevents double-steps (e.g. code1→code3).
   let claimedKeyboardEvent: KeyboardEvent | null = null
@@ -840,6 +872,23 @@ export function createRawBlockSelectionPlugin(): MilkdownPlugin[] {
             // Nested mindmap canvas / outline owns arrows while the island is active.
             if (isMindmapIslandKeyboardOwner(target) || isActiveMindmapIslandSelection(view)) {
               return false
+            }
+            // 块边界光标上按 Shift+↑/↓：转成整块选中，交给范围选择通道继续扩展。
+            if (event.shiftKey && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+              const boundaryTarget = activeBlockBoundaryTarget(view.state)
+              if (
+                boundaryTarget &&
+                (selectSelectableBlock(view, boundaryTarget.blockPos) ||
+                  selectWholeBlockRange(view, boundaryTarget.blockPos))
+              ) {
+                claimEvent(event)
+                return true
+              }
+            }
+            // 块边界光标 / 块内部边界的键盘导航（T1–T6）。
+            if (handleBoundaryNavigationKeyDown(view, event, pluginOptions)) {
+              claimEvent(event)
+              return true
             }
             if (target?.closest('.cm-editor') && codeBlockWholeSelectPosition(view.state) == null) {
               const handled = exitCodeEditorAtEnd(view, event)
@@ -921,6 +970,33 @@ export function createRawBlockSelectionPlugin(): MilkdownPlugin[] {
             const inProseMirror =
               eventTarget instanceof Node &&
               (eventTarget === view.dom || view.dom.contains(eventTarget))
+
+            // 块边界光标上按 Shift+↑/↓：转成整块选中，交给范围选择通道继续扩展。
+            if (
+              inProseMirror &&
+              event.shiftKey &&
+              (event.key === 'ArrowDown' || event.key === 'ArrowUp')
+            ) {
+              const boundaryTarget = activeBlockBoundaryTarget(view.state)
+              if (
+                boundaryTarget &&
+                (selectSelectableBlock(view, boundaryTarget.blockPos) ||
+                  selectWholeBlockRange(view, boundaryTarget.blockPos))
+              ) {
+                claimEvent(event)
+                event.preventDefault()
+                event.stopImmediatePropagation()
+                return
+              }
+            }
+
+            // 块边界光标 / 块内部边界的键盘导航（T1–T6）；Shift 通道不在这里。
+            if (inProseMirror && handleBoundaryNavigationKeyDown(view, event, pluginOptions)) {
+              claimEvent(event)
+              event.preventDefault()
+              event.stopImmediatePropagation()
+              return
+            }
 
             // A raw code group's PM NodeSelection can remain set while its CM
             // caret is active. Only explicit whole-code selection may override

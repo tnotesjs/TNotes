@@ -105,6 +105,11 @@ import {
   createListItemCollapsePlugin,
   expandCollapsedListItemsContaining
 } from './listItemCollapse'
+import { createBlockBoundaryCaretPlugin } from './blockBoundaryCaret'
+import {
+  createBlockBoundaryNavigationPlugin,
+  type BlockBoundaryNavigationOptions
+} from './blockBoundaryNavigation'
 
 import type { NotePageWidth, NoteTocDisplay, NoteViewMode } from '../../../shared/contracts'
 
@@ -256,6 +261,23 @@ function readCodeBlockPlainText(block: Element): string {
     return Array.from(lines, (line) => line.textContent ?? '').join('\n')
   }
   return block.querySelector('pre, code')?.textContent ?? ''
+}
+
+/** 块边界光标上的 Mod+C / Mod+X：复制/剪切整块的 markdown 源码。 */
+const boundaryOptions: BlockBoundaryNavigationOptions = {
+  copyBlockAt: (view, position, cut) => {
+    if (!crepe) return false
+    const text = crepe.editor.action((ctx) =>
+      serializeBlockForClipboard(view.state, position, ctx.get(serializerCtx))
+    )
+    if (text === null || text === undefined) return false
+    void writeClipboard(text)
+    if (cut) {
+      const tr = createBlockDeleteTransaction(view.state, position)
+      if (tr) view.dispatch(tr)
+    }
+    return true
+  }
 }
 
 async function copyCurrentBlock(cut = false): Promise<boolean> {
@@ -1072,7 +1094,9 @@ onMounted(async () => {
     })
   )
   editor.editor.use(createDocumentSelectAllPlugin({ isPaneActive: () => props.active }))
-  editor.editor.use(createRawBlockSelectionPlugin())
+  editor.editor.use(createRawBlockSelectionPlugin(boundaryOptions))
+  editor.editor.use(createBlockBoundaryCaretPlugin())
+  editor.editor.use(createBlockBoundaryNavigationPlugin(boundaryOptions))
   editor.editor.use(createHeadingSectionCollapsePlugin())
   editor.editor.use(createListItemCollapsePlugin())
   editor.editor.use(

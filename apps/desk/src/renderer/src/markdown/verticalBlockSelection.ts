@@ -13,6 +13,7 @@ import { Decoration, DecorationSet } from '@milkdown/kit/prose/view'
 import type { EditorView } from '@milkdown/kit/prose/view'
 import { $prose } from '@milkdown/kit/utils'
 import { isIndependentBlock } from './independentBlock'
+import { BlockBoundaryCaret } from './blockBoundaryCaret'
 
 type Direction = -1 | 1
 
@@ -229,6 +230,13 @@ function controller(view: EditorView): {
         return false
       }
       const { selection, doc } = view.state
+      // 块边界光标（T1–T6）上的 Shift+↑/↓ 由 rawBlockInteractions 转成
+      // 「整块选中」（代码块/原子 → NodeSelection，表格 → BlockRangeSelection）。
+      // 这里先让路，否则本插件会把它当普通文本边缘扩成一个范围选区。
+      if (selection instanceof BlockBoundaryCaret) {
+        pending = null
+        return false
+      }
       if (!event.shiftKey && selection instanceof BlockRangeSelection) {
         if (event.key === 'Backspace' || event.key === 'Delete') {
           reset()

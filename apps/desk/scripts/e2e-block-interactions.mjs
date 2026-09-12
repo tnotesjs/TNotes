@@ -175,18 +175,22 @@ try {
   console.log('✓ Shift+ArrowUp covers the complete raw block with a block range')
 
   await afterRaw.click()
-  // 鼠标选块的真实入口是块两侧的选中热区（`.desk-raw-block__boundary-hit`，aria-label
-  // 「选中块」→ rawBlockInteractions.selectSelectableBlock）。点块体（label/preview）不再
-  // 产生 NodeSelection：那两块区域要走原生交互，`stopEvent` 不把它们交给 PM 选中。
+  // 鼠标选块的入口有两条：块上下边缘的边界热区（`.desk-raw-block__boundary-hit`）放
+  // 「块前 / 块后光标」，点块体（非交互的预览区）仍然是整块选中。
   await raw
     .locator('.desk-raw-block__boundary-hit[data-side="after"]')
     .first()
     .click({ force: true })
-  assert.equal(
-    await raw.evaluate((element) => element.classList.contains('ProseMirror-selectednode')),
-    true
+  await page.waitForFunction(
+    () => document.querySelector('.desk-block-boundary-caret')?.dataset.side === 'after'
   )
-  console.log('✓ clicking the raw block hit area creates a native node selection')
+  assert.equal(
+    await page.evaluate(
+      () => document.querySelector('.desk-block-boundary-caret')?.dataset.side ?? null
+    ),
+    'after'
+  )
+  console.log('✓ clicking the raw block edge hit area places the block-after caret')
 
   // 0006: use the visible six-dot handle and real pointer movement.
   await raw.hover()
@@ -296,12 +300,11 @@ try {
   assert.ok(savedOrder.indexOf('B') > savedOrder.indexOf('填充段落 2'))
   console.log('✓ six-dot pointer drag moves the complete raw block and clears drag state')
 
-  // 0007: mouse edge hits select the whole node; Delete/Backspace remove it; Undo restores.
+  // 0007: mouse edge hits place the boundary caret; Delete/Backspace remove the block; Undo restores.
   await raw.locator('.desk-raw-block__boundary-hit[data-side="before"]').click()
-  await page.waitForFunction(() => {
-    const el = document.querySelector('[data-type="desk-raw-block"][data-kind="raw-component"]')
-    return el?.classList.contains('ProseMirror-selectednode') === true
-  })
+  await page.waitForFunction(
+    () => document.querySelector('.desk-block-boundary-caret')?.dataset.side === 'before'
+  )
   await page.screenshot({ path: join(shots, '06-block-selected-from-before-hit.png') })
   await page.keyboard.press('Delete')
   assert.equal(await raw.count(), 0)
@@ -310,10 +313,9 @@ try {
   console.log('✓ mouse before-hit + Delete removes the whole block and Undo restores it')
 
   await raw.locator('.desk-raw-block__boundary-hit[data-side="after"]').click()
-  await page.waitForFunction(() => {
-    const el = document.querySelector('[data-type="desk-raw-block"][data-kind="raw-component"]')
-    return el?.classList.contains('ProseMirror-selectednode') === true
-  })
+  await page.waitForFunction(
+    () => document.querySelector('.desk-block-boundary-caret')?.dataset.side === 'after'
+  )
   await page.screenshot({ path: join(shots, '07-block-selected-from-after-hit.png') })
   await page.keyboard.press('Backspace')
   assert.equal(await raw.count(), 0)

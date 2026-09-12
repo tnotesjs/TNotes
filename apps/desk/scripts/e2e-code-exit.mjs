@@ -135,6 +135,14 @@ try {
     await settle()
     assert.equal(await content.evaluate((el) => el === document.activeElement), true)
   }
+  /** 新模型：从代码末尾出来先落到「块后光标」，再按一次才进下一段。 */
+  const assertBoundaryCaret = async (side) => {
+    await page.waitForFunction(
+      (expected) => document.querySelector('.desk-block-boundary-caret')?.dataset.side === expected,
+      side,
+      { timeout: 5000 }
+    )
+  }
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   const assertCaret = async (text) => {
     const actual = await page.evaluate(() => {
@@ -166,14 +174,20 @@ try {
       await enterEnd(block)
       await page.keyboard.press(key)
       await settle()
+      await assertBoundaryCaret('after')
+      await page.keyboard.press(key)
+      await settle()
       await assertCaret(text)
-      console.log(`✓ ${key}: code → ${text || 'empty paragraph'} start`)
+      console.log(`✓ ${key}: code → 块后光标 → ${text || 'empty paragraph'} start`)
     }
   }
   // The screenshot uses the second fenced tab inside a code group; test that tab too.
   await groups.nth(0).locator('.code-group-tab').filter({ hasText: 'included.js' }).click()
   for (const key of ['ArrowDown', 'ArrowRight']) {
     await enterEnd(groups.nth(0))
+    await page.keyboard.press(key)
+    await settle()
+    await assertBoundaryCaret('after')
     await page.keyboard.press(key)
     await settle()
     await assertCaret('GROUP-PARAGRAPH')
@@ -212,6 +226,9 @@ try {
   await page.keyboard.type(' // edited')
   await page.keyboard.press('ArrowRight')
   await settle()
+  await assertBoundaryCaret('after')
+  await page.keyboard.press('ArrowRight')
+  await settle()
   await assertCaret('GROUP-PARAGRAPH')
   await page.keyboard.type('BODY-')
   await settle()
@@ -224,6 +241,9 @@ try {
   console.log('✓ blur preserves code edits; subsequent typing edits the following paragraph')
 
   await enterEnd(groups.nth(3))
+  await page.keyboard.press('ArrowDown')
+  await settle()
+  await assertBoundaryCaret('after')
   await page.keyboard.press('ArrowDown')
   await settle()
   await assertCaret('')
