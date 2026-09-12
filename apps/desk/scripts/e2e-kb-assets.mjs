@@ -62,6 +62,16 @@ writeFileSync(
   })
 )
 
+async function waitFor(check, timeoutMs = 10000, intervalMs = 120) {
+  const deadline = Date.now() + timeoutMs
+  for (;;) {
+    const value = await check()
+    if (value) return value
+    if (Date.now() > deadline) return null
+    await new Promise((resolve) => setTimeout(resolve, intervalMs))
+  }
+}
+
 const app = await _electron.launch({
   executablePath: require('electron'),
   args: ['out/main/index.js', `--user-data-dir=${profile}`],
@@ -93,9 +103,21 @@ try {
   await page.locator('.kb-assets-dialog footer .save-button').click()
   await page.locator('.kb-assets-dialog').waitFor({ state: 'detached', timeout: 20000 })
   await page.locator('.file-row', { hasText: 'assets/renamed.png' }).waitFor({ timeout: 20000 })
-  assert.equal(existsSync(join(kb, 'assets', 'renamed.png')), true)
-  assert.equal(existsSync(join(kb, 'assets', 'used.png')), false)
-  const note = readFileSync(join(kb, 'notes', '0001. 图.md'), 'utf8')
+  // 面板是乐观更新：列表先换名，磁盘写入/引用补丁随后才落地（CI 上偶发差一拍）。
+  const renamedWritten = await waitFor(
+    () =>
+      existsSync(join(kb, 'assets', 'renamed.png')) && !existsSync(join(kb, 'assets', 'used.png')),
+    10000
+  )
+  assert.equal(Boolean(renamedWritten), true, '重命名应在磁盘上生效（新名在、旧名不在）')
+  const note = await waitFor(() => {
+    const text = readFileSync(join(kb, 'notes', '0001. 图.md'), 'utf8')
+    return /\.\.\/assets\/renamed\.png\) \{w=400px\}/.test(text) &&
+      /\.\/assets\/mindmap\.png/.test(text)
+      ? text
+      : null
+  }, 10000)
+  assert.ok(note, '笔记里的图片引用应同步改写（含 {w=400px} 与 mindmap 相对路径）')
   assert.match(note, /\.\.\/assets\/renamed\.png\) \{w=400px\}/)
   assert.match(note, /\.\/assets\/mindmap\.png/)
 
