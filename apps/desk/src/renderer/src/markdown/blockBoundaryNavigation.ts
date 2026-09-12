@@ -36,7 +36,11 @@ import {
   type BlockBoundaryTarget
 } from './blockBoundaryCaret'
 import { parseContainerSource } from '../editor/markdown/containerBody'
-import { isDeskCalloutNode } from '../editor/markdown/deskCallout'
+import {
+  calloutBodyExitPosition,
+  focusCalloutTitleInput,
+  isDeskCalloutNode
+} from '../editor/markdown/deskCallout'
 
 export type BoundaryArrow = 'up' | 'down' | 'left' | 'right'
 
@@ -727,13 +731,28 @@ export function handleBoundaryNavigationKeyDown(
   }
 
   if (plainArrow && view.state.selection instanceof TextSelection) {
+    const $head = view.state.selection.$head
+    // callout body 末尾的 ↓/→ 必须由我们接走：否则 PM 的 gapcursor 会接管，
+    // 把光标带到一个莫名其妙的 gap（实测直接跳到文档开头）。
+    if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+      const exit = calloutBodyExitPosition($head, event.key === 'ArrowDown' ? 'down' : 'right')
+      if (exit != null) return leaveCallout(view, exit)
+    }
     // callout body 与标题 input 是一套独立的键盘交互（↑ 进标题），
-    // 这里不能抢：交给 deskCalloutKeymapPlugin。
-    if (isInsideCalloutBody(view.state.selection.$head)) return false
+    // 其余方向键不抢：交给 deskCalloutKeymapPlugin。
+    if (isInsideCalloutBody($head)) return false
     const pos = adjacentBoundaryCaretPosition(view.state, ARROW_KEYS[event.key]!)
     if (pos != null) return placeBoundaryCaret(view, pos)
   }
   return false
+}
+
+/** 离开 callout：下一个兄弟还是 callout 就进它的标题 chrome，否则放到下一块开头。 */
+function leaveCallout(view: EditorView, exitPos: number): boolean {
+  const next = view.state.doc.resolve(exitPos).nodeAfter
+  if (!next) return growTrailingParagraph(view, exitPos)
+  if (isDeskCalloutNode(next)) return focusCalloutTitleInput(view, exitPos, 'end')
+  return placeText(view, exitPos + 1, 1)
 }
 
 /** 光标在 callout 的 body 内（callout 自己的 chrome 交互优先）。 */

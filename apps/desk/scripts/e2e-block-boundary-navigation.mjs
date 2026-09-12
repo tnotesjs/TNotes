@@ -89,6 +89,22 @@ const source = [
   ':::',
   '',
   '代码组结束段落',
+  '',
+  '## 提示块',
+  '',
+  '::: tip 💡 TIP',
+  '',
+  '提示块正文。',
+  '',
+  ':::',
+  '',
+  '::: info ℹ️ INFO',
+  '',
+  '信息块正文。',
+  '',
+  ':::',
+  '',
+  '提示块区结束段落',
   ''
 ].join('\n')
 writeFileSync(noteFile, source)
@@ -687,6 +703,57 @@ try {
     '代码组 ↓ 末行 → 块后光标',
     current.side === 'after' && current.caretParent.includes('desk-raw-block'),
     JSON.stringify({ side: current.side, parent: current.caretParent })
+  )
+
+  // 提示块（结构化 callout，带标题 chrome）：标题行 → 标题 → body → 下一个 callout 标题。
+  // 曾经 body 末尾的 ↓ 会被 PM 的 gapcursor 接走、直接跳到文档开头。
+  const titleFocus = () =>
+    page.evaluate(() => {
+      const active = document.activeElement
+      return active instanceof HTMLInputElement ? active.value.trim().slice(0, 12) : null
+    })
+  const canvasScroll = () =>
+    page.evaluate(() =>
+      Math.round(document.querySelector('.milkdown-markdown-editor__canvas')?.scrollTop ?? -1)
+    )
+
+  await clickHeading('提示块')
+  await page.keyboard.press('Home')
+  await page.waitForTimeout(150)
+  await press('ArrowDown')
+  record(
+    '提示块 ↓ → 第一个 callout 的标题输入框',
+    (await titleFocus()) === '💡 TIP',
+    JSON.stringify(await titleFocus())
+  )
+  await press('ArrowDown')
+  current = await state()
+  record(
+    '提示块 ↓ → TIP body 首行',
+    current.text?.includes('提示块正文') ?? false,
+    JSON.stringify(current.text)
+  )
+  await press('ArrowDown')
+  const nextTitle = await titleFocus()
+  const scrollAfterExit = await canvasScroll()
+  record(
+    '提示块 body 末尾 ↓ → 下一个 callout 的标题（不再跳到文档开头）',
+    nextTitle === 'ℹ️ INFO' && scrollAfterExit > 100,
+    JSON.stringify({ nextTitle, scrollAfterExit })
+  )
+  await press('ArrowDown')
+  current = await state()
+  record(
+    '提示块 ↓ → INFO body 首行',
+    current.text?.includes('信息块正文') ?? false,
+    JSON.stringify(current.text)
+  )
+  await press('ArrowDown')
+  current = await state()
+  record(
+    '提示块 最后一个 body 末尾 ↓ → 下一段文本',
+    current.text?.includes('提示块区结束段落') ?? false,
+    JSON.stringify(current.text)
   )
 
   // 未编辑：导航不产生任何 markdown 变更

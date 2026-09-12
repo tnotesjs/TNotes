@@ -321,12 +321,21 @@ export function isCaretEnteringCalloutTitle($head: ResolvedPos, direction: 'up' 
   return !$head.parent.textBetween(0, $head.parentOffset, '\n', '\n').includes('\n')
 }
 
-/** Position of the callout entered by ArrowDown / ArrowRight from the block above. */
-export function calloutPosEnteredFromAbove(
+/**
+ * Caret is at the very end of a callout body → the position right after that
+ * callout (so ArrowDown / ArrowRight can leave it). Returns null when the caret
+ * is elsewhere (inside the body but not at the end, or not in a callout at all).
+ *
+ * 注意别去检查 callout 之外的层级：callout 后面还有别的块是常态，一旦那样判断，
+ * 「从 body 末尾往下走」永远返回 null，按键就落到 PM 的 gapcursor 手里，
+ * 被带到一个莫名其妙的 gap（实测直接跳到文档开头）。
+ */
+export function calloutBodyExitPosition(
   $head: ResolvedPos,
   direction: 'down' | 'right'
 ): number | null {
-  if (!$head.parent.isTextblock) return null
+  const calloutDepth = calloutDepthAt($head)
+  if (calloutDepth < 1 || !$head.parent.isTextblock) return null
   if (direction === 'right') {
     if ($head.parentOffset !== $head.parent.content.size) return null
   } else if (
@@ -336,8 +345,29 @@ export function calloutPosEnteredFromAbove(
   ) {
     return null
   }
-  for (let depth = $head.depth; depth > 1; depth -= 1) {
-    if ($head.index(depth - 1) < $head.node(depth - 1).childCount - 1) return null
+  // 「当前文本块这个节点」必须正好结束在 callout 内容的末尾：
+  // 用绝对位置比较，别用 index() —— 段尾这种边界位置上 index(depth) 会指到下一个
+  // 孩子（实测第一段末尾拿到 1 而不是 0，判断直接失效）。
+  if ($head.after($head.depth) !== $head.end(calloutDepth)) return null
+  return $head.after(calloutDepth)
+}
+
+/** Position of the callout entered by ArrowDown / ArrowRight from the block above. */
+export function calloutPosEnteredFromAbove(
+  $head: ResolvedPos,
+  direction: 'down' | 'right'
+): number | null {
+  if (!$head.parent.isTextblock) return null
+  // 光标已经在某个 callout body 里：交给 calloutBodyExitPosition 判断是否到底。
+  if (calloutDepthAt($head) >= 1) return calloutBodyExitPosition($head, direction)
+  if (direction === 'right') {
+    if ($head.parentOffset !== $head.parent.content.size) return null
+  } else if (
+    $head.parent
+      .textBetween($head.parentOffset, $head.parent.content.size, '\n', '\n')
+      .includes('\n')
+  ) {
+    return null
   }
   const pos = $head.after(1)
   const next = $head.doc.resolve(pos).nodeAfter

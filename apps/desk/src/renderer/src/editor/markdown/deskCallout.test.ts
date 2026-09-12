@@ -8,6 +8,7 @@ import { gfm } from '@milkdown/kit/preset/gfm'
 import { getMarkdown } from '@milkdown/kit/utils'
 
 import {
+  calloutBodyExitPosition,
   calloutFenceForInner,
   serializeCalloutMarkdown,
   wrapProjectedCalloutBody
@@ -198,6 +199,54 @@ describe('callout title keyboard from body', () => {
     await editor.create()
     return editor
   }
+
+  it('callout body 末尾的 ↓/→ 给出 callout 之后的位置（不会被 gapcursor 抢走跳到文档开头）', async () => {
+    const editor = await createNavEditor(
+      [
+        '## 提示块',
+        '',
+        '::: tip 💡 TIP',
+        '',
+        '第一段。',
+        '',
+        '第二段。',
+        '',
+        ':::',
+        '',
+        '提示块区结束段落',
+        ''
+      ].join('\n')
+    )
+    editor.action((ctx) => {
+      const state = ctx.get(editorStateCtx)
+      let calloutPos = -1
+      let calloutEnd = -1
+      const paragraphs: number[] = []
+      state.doc.descendants((node, pos) => {
+        if (node.type.name !== 'deskCallout') return true
+        calloutPos = pos
+        calloutEnd = pos + node.nodeSize
+        node.descendants((child, childPos) => {
+          if (child.type.name === 'paragraph') {
+            paragraphs.push(pos + 1 + childPos + 1 + child.content.size)
+          }
+          return true
+        })
+        return false
+      })
+      expect(calloutPos).toBeGreaterThan(-1)
+      expect(paragraphs).toHaveLength(2)
+      // 第一段末尾：callout 里后面还有内容，不该往下走
+      expect(calloutBodyExitPosition(state.doc.resolve(paragraphs[0]!), 'down')).toBeNull()
+      // 最后一段末尾：给 callout 之后的位置（两种方向都算到底）
+      expect(calloutBodyExitPosition(state.doc.resolve(paragraphs[1]!), 'down')).toBe(calloutEnd)
+      expect(calloutBodyExitPosition(state.doc.resolve(paragraphs[1]!), 'right')).toBe(calloutEnd)
+      // 同一段中间：只有 → 要求到行尾，↓ 在最后一行任意位置都可以离开
+      expect(calloutBodyExitPosition(state.doc.resolve(paragraphs[1]! - 2), 'right')).toBeNull()
+      // 光标不在 callout 里
+      expect(calloutBodyExitPosition(state.doc.resolve(1), 'down')).toBeNull()
+    })
+  })
 
   it('ArrowUp from mid first body line focuses the title without selecting the previous fence', async () => {
     const editor = await createNavEditor(
