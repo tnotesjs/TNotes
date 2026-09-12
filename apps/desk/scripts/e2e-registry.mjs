@@ -222,6 +222,20 @@ export const SUITES = [
     note: 'slash/输入规则：mermaid、提示块、组件、行内代码与公式的 canonical 源码'
   },
   {
+    name: 'e2e-inline-break.mjs',
+    area: 'input',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/renderer/src/editor/markdown/htmlBreak.ts',
+      'apps/desk/src/renderer/src/editor/markdown/rawBlockProjection.ts',
+      'apps/desk/src/renderer/src/editor/markdown/sourcePreservation.ts',
+      'apps/desk/src/renderer/src/markdown/MilkdownMarkdownEditor.vue'
+    ],
+    serial: false,
+    smoke: false,
+    note: '行内 <br>（段落 + 表格单元格）渲染与磁盘保真（未编辑零 diff、编辑后不丢）'
+  },
+  {
     name: 'e2e-code-exit.mjs',
     area: 'code-block',
     tier: 'regression',

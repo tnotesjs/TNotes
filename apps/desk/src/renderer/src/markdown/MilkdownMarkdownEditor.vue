@@ -4,6 +4,7 @@ import { Crepe } from '@milkdown/crepe'
 import {
   editorViewCtx,
   commandsCtx,
+  remarkPluginsCtx,
   remarkStringifyOptionsCtx,
   serializerCtx
 } from '@milkdown/kit/core'
@@ -29,6 +30,7 @@ import {
 } from './markdownInputRules'
 import { clearRawBlockSelectionState, createRawBlockSelectionPlugin } from './rawBlockInteractions'
 import { createTableCaretPlugin } from './tableCaretVisibility'
+import { breakMarkdown, remarkHtmlBreakToBreak } from '../editor/markdown/htmlBreak'
 import { isEditorBlankTarget } from './editorFocusReclaim'
 import { createReadonlyTransactionGuard } from './readonlyGuard'
 import { clearLineStylesPlugin } from './clearLineStyles'
@@ -1131,6 +1133,11 @@ onMounted(async () => {
       filterNodes: (position, node) =>
         canShowBlockHandle(node) && current.filterNodes(position, node)
     }))
+    // 行内 <br>（含表格单元格）解析成硬换行，并记住原始拼写（见 htmlBreak.ts）。
+    ctx.update(remarkPluginsCtx, (plugins) => [
+      ...plugins,
+      { plugin: remarkHtmlBreakToBreak, options: {} }
+    ])
     // Prefer GitHub / TNotes style list markers (`-`) over remark's default `*`.
     ctx.update(remarkStringifyOptionsCtx, (current) => ({
       ...current,
@@ -1138,7 +1145,11 @@ onMounted(async () => {
       bulletOther: '*' as const,
       handlers: {
         ...current.handlers,
-        deskCallout: serializeDeskCalloutMdast
+        deskCallout: serializeDeskCalloutMdast,
+        // 来自行内 <br> 的硬换行写回原拼写；普通硬换行沿用 mdast-util-to-markdown 的默认行为。
+        // 逻辑在 htmlBreak.ts 的纯函数里（可单测），这里按上下文的 Handle 类型内联。
+        break: (node, _parent, state, info) =>
+          breakMarkdown(node?.data, state.stack, state.unsafe, info.before ?? '')
       }
     }))
     ctx.update(uploadConfig.key, (current) => ({

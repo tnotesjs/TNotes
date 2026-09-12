@@ -72,7 +72,8 @@ const BLOCKQUOTE = /^ {0,3}>/
 const LIST_ITEM = /^ {0,3}(?:[*+-]|\d{1,9}[.)])[ \t]+/
 const SETEXT_UNDERLINE = /^ {0,3}(?:=+|-+)[ \t]*$/
 const THEMATIC_BREAK = /^ {0,3}(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,})$/
-const TABLE_DELIMITER = /^ {0,3}\|?(?:[ \t]*:?-{3,}:?[ \t]*\|)+[ \t]*:?-{3,}:?[ \t]*\|?[ \t]*$/
+/** GFM 表格分隔行里的一个单元格：`---` / `:---` / `---:` / `:---:`。 */
+const TABLE_DELIMITER_CELL = /^:?-{3,}:?$/
 const COMPONENT_OPEN = /^ {0,3}<([A-Z][\w.-]*)(?=[\s/>])/
 const REFERENCE_DEFINITION = /^ {0,3}\[(?:\\.|[^\]\\])+\]:[ \t]*(?:\S.*)?$/
 const REFERENCE_TITLE_CONTINUATION =
@@ -216,8 +217,29 @@ function findGeneratedTocRegionEnd(lines: SourceLine[], start: number): number |
   return null
 }
 
+/** 按 GFM 规则数一行有几个单元格（去掉首尾管道后按 `|` 切分）。 */
+function countTableCells(text: string): number {
+  return text.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').length
+}
+
+function isTableDelimiter(text: string): boolean {
+  const inner = text.trim().replace(/^\|/, '').replace(/\|$/, '')
+  return inner.split('|').every((cell) => TABLE_DELIMITER_CELL.test(cell.trim()))
+}
+
+/**
+ * GFM 表格起始判定：表头含 `|`，下一行是分隔行，且**两者单元格数一致**。
+ * 旧实现用一个要求「至少两个单元格」的正则，于是单列表格（`| a |` + `| --- |`、
+ * 或 `| a |` + `---`）识别不出来 → 这类块不会被当作 table 处理，含 HTML 时也就
+ * 不会被隔离，内联 HTML 会被静默丢弃。单元格数一致这条同时排除了
+ * 「段落里带管道 + 分隔线」（如 `some | text` + `---`）。
+ */
 function isTableStart(lines: SourceLine[], index: number): boolean {
-  return lines[index].text.includes('|') && TABLE_DELIMITER.test(lines[index + 1]?.text ?? '')
+  const header = lines[index]?.text ?? ''
+  if (!header.includes('|')) return false
+  const delimiter = lines[index + 1]?.text ?? ''
+  if (!isTableDelimiter(delimiter)) return false
+  return countTableCells(header) === countTableCells(delimiter)
 }
 
 function isSetextStart(lines: SourceLine[], index: number): boolean {

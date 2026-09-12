@@ -303,17 +303,38 @@ describe('Milkdown raw block projection', () => {
     })
   })
 
-  it('projects a table containing inline HTML but keeps a plain table editable', () => {
-    const htmlTable = ['| Name | Value |', '| --- | --- |', '| first<br>second | 1 |'].join('\n')
+  it('只有「除 <br> 家族外还含 HTML」的表格才隔离成 raw block', () => {
+    // 行内 <br> 现在由 htmlBreak.ts 映射成硬换行，表格保持可编辑（单元格里能看到换行）
+    const breakTable = ['| Name | Value |', '| --- | --- |', '| first<br>second | 1 |'].join('\n')
     const plainTable = ['| Name | Value |', '| --- | --- |', '| first | 1 |'].join('\n')
-    const projectedHtml = projectRawBlocksForMilkdown(htmlTable)
+    const spanTable = ['| Name | Value |', '| --- | --- |', '| first<span>x</span> | 1 |'].join(
+      '\n'
+    )
 
-    expect(readProjectedRawBlockMarker(projectedHtml)).toEqual({
+    expect(projectRawBlocksForMilkdown(breakTable)).toBe(breakTable)
+    expect(projectRawBlocksForMilkdown(plainTable)).toBe(plainTable)
+    expect(readProjectedRawBlockMarker(projectRawBlocksForMilkdown(spanTable))).toEqual({
       kind: 'table',
-      source: htmlTable,
+      source: spanTable,
       hidden: false
     })
-    expect(projectRawBlocksForMilkdown(plainTable)).toBe(plainTable)
+  })
+
+  it('单列表格同样按 GFM 识别（含其它 HTML 要隔离，只有 <br> 时保持可编辑）', () => {
+    const singleSpan = ['| 其它内联 HTML 的表格 |', '| --- |', '| a<span>b</span> |'].join('\n')
+    const singleBreak = ['| 表 |', '| --- |', '| a<br/>b |'].join('\n')
+    const singleBreakNoOuterPipes = ['| 表 |', '---', '| a<br/>b |'].join('\n')
+    // 段落里带管道 + 分隔线不是表格（单元格数不一致）
+    const paragraphThenRule = ['some | text', '---', 'next'].join('\n')
+
+    expect(readProjectedRawBlockMarker(projectRawBlocksForMilkdown(singleSpan))).toEqual({
+      kind: 'table',
+      source: singleSpan,
+      hidden: false
+    })
+    expect(projectRawBlocksForMilkdown(singleBreak)).toBe(singleBreak)
+    expect(projectRawBlocksForMilkdown(singleBreakNoOuterPipes)).toBe(singleBreakNoOuterPipes)
+    expect(projectRawBlocksForMilkdown(paragraphThenRule)).toBe(paragraphThenRule)
   })
 
   it('parses projected constructs into block atoms and serializes their exact source', async () => {
@@ -329,8 +350,9 @@ describe('Milkdown raw block projection', () => {
       { kind: 'html', source: '<!-- ordinary comment -->', hidden: true },
       { kind: 'html', source: '<aside data-x="1">raw</aside>', hidden: false },
       {
+        // 用非 <br> 的内联 HTML：这类表格仍必须隔离并原样序列化（<br> 表格已改为可编辑）
         kind: 'table',
-        source: '| A | B |\n| --- | --- |\n| first<br>second | value |',
+        source: '| A | B |\n| --- | --- |\n| first<span>second</span> | value |',
         hidden: false
       }
     ]

@@ -68,6 +68,8 @@ const MARKER =
   /^<!--desk-raw-block:v1:(raw-frontmatter|raw-container|raw-component|raw-reference-definition|raw-generated-title|raw-generated-toc|raw-diagram|table|html):([01]):([A-Za-z0-9+/]*={0,2})-->$/
 const REGION_COMMENT = /^ {0,3}<!--\s*(?:end)?region(?::[\s\S]*?)?\s*-->\s*$/i
 const HTML_TAG = /<\/?[A-Za-z][\w.-]*(?=[\s/>])/
+/** 行内 <br> 家族：已由 htmlBreak.ts 映射成硬换行，不算「表格里的 HTML 标签」。 */
+const HTML_BREAK_TAG = /<br\s*\/?>/gi
 /** Standalone HTML breaks stay in the source for Milkdown's remark-preserve-empty-line. */
 const STANDALONE_BREAK = /^ {0,3}<br\s*\/?>(?:[ \t]*)$/i
 const DIAGRAM_LANGUAGES = new Set(['mermaid', 'mindmap'])
@@ -117,7 +119,13 @@ function shouldProjectBlock(block: MarkdownSourceBlock): block is MarkdownSource
   kind: SourceProjectedKind
 } {
   if (!isProjectedKind(block.kind)) return false
-  return block.kind !== 'table' || HTML_TAG.test(block.source)
+  // 表格只有在「除 <br> 家族外还含 HTML 标签」时才隔离成 raw block：只有换行的表格
+  // 现在能保持原生 Milkdown 表格（单元格里的 <br> 由 htmlBreak.ts 映射成硬换行）。
+  return block.kind !== 'table' || hasNonBreakHtml(block.source)
+}
+
+function hasNonBreakHtml(source: string): boolean {
+  return HTML_TAG.test(source.replace(HTML_BREAK_TAG, ''))
 }
 
 function isRegionComment(block: MarkdownSourceBlock): boolean {
