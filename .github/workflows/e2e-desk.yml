@@ -69,7 +69,10 @@ jobs:
         run: node apps/desk/scripts/run-e2e.mjs ${{ steps.selection.outputs.args }} --dry-run
 
       - name: Run e2e
-        run: node apps/desk/scripts/run-e2e.mjs ${{ steps.selection.outputs.args }} --retries 1 --json /tmp/e2e-report.json
+        # CI runner 核数少：并发 4 会让多个 Electron 抢 CPU/焦点（实测 flaky 在不同套件间轮转），
+        # 这里压到 2；本地（核多）默认仍是 4。retries 1 吸收残余抖动，重试过的会标 ⚠ 并打印
+        # 首次失败日志，不静默。
+        run: node apps/desk/scripts/run-e2e.mjs ${{ steps.selection.outputs.args }} --concurrency 2 --retries 1 --json /tmp/e2e-report.json
 
       - name: Upload e2e artifacts
         if: failure()
