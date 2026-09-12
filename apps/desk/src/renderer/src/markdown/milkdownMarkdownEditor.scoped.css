@@ -874,14 +874,15 @@
   animation: desk-block-boundary-caret-blink 1s steps(2, start) infinite;
 }
 
+/* 块头贴左上角、块尾贴右下角：对角线对称，一眼看出现在停在哪一侧。 */
 .milkdown-markdown-editor :deep(.desk-block-boundary-caret--before) {
   top: 0;
   left: 0;
 }
 
 .milkdown-markdown-editor :deep(.desk-block-boundary-caret--after) {
+  right: 0;
   bottom: 0;
-  left: 0;
 }
 
 /* 焦点不在可编辑区、或焦点在块内部（CodeMirror）时，边界光标不画：同一时刻只有一根线。 */

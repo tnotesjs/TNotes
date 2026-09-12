@@ -110,6 +110,25 @@ try {
       }
     })
 
+  /** 边界光标相对目标块的水平位置：块头贴左、块尾贴右（对角线对称）。 */
+  const caretBox = () =>
+    page.evaluate(() => {
+      const editor = [...document.querySelectorAll('.ProseMirror')].find(
+        (el) => el.offsetParent !== null
+      )
+      const caret = editor?.querySelector('.desk-block-boundary-caret')
+      const block = caret?.parentElement
+      if (!caret || !block) return null
+      const caretRect = caret.getBoundingClientRect()
+      const blockRect = block.getBoundingClientRect()
+      return {
+        side: caret.dataset.side ?? null,
+        gapLeft: Math.round(caretRect.left - blockRect.left),
+        gapRight: Math.round(blockRect.right - caretRect.right),
+        blockWidth: Math.round(blockRect.width)
+      }
+    })
+
   const press = async (key, times = 1) => {
     for (let index = 0; index < times; index += 1) {
       await page.keyboard.press(key)
@@ -167,6 +186,16 @@ try {
     JSON.stringify({ side: current.side, parent: current.caretParent })
   )
 
+  const afterBox = await caretBox()
+  record(
+    '块尾光标贴块右下角（不是左下角）',
+    afterBox != null &&
+      afterBox.gapRight <= 3 &&
+      afterBox.gapLeft > afterBox.blockWidth / 2 &&
+      afterBox.blockWidth > 0,
+    JSON.stringify(afterBox)
+  )
+
   // T5 → T6：↓ 进下一段
   await press('ArrowDown')
   current = await state()
@@ -199,6 +228,16 @@ try {
     current.side === 'before' && current.caretParent.startsWith('milkdown-code-block'),
     JSON.stringify({ side: current.side, parent: current.caretParent })
   )
+  const beforeBox = await caretBox()
+  record(
+    '块头光标贴块左上角',
+    beforeBox != null &&
+      beforeBox.gapLeft <= 1 &&
+      beforeBox.gapLeft < beforeBox.blockWidth / 2 &&
+      beforeBox.blockWidth > 0,
+    JSON.stringify(beforeBox)
+  )
+
   await press('ArrowDown')
   await press('ArrowLeft')
   current = await state()
