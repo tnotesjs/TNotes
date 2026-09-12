@@ -17,7 +17,6 @@ import {
 } from '../editor/markdown/rawBlockProjection'
 import { BlockBoundaryCaret, activeBlockBoundaryTarget } from './blockBoundaryCaret'
 import {
-  adjacentRawBlockSelectionPosition,
   codeBlockWholeSelectPosition,
   createRawBlockSelectionPlugin,
   isRawBlockPreviewInteractive
@@ -335,6 +334,7 @@ describe('raw block keyboard selection', () => {
   it('keeps horizontal movement between list items inside the list', async () => {
     const editor = await createEditor('<B />\n\n- 第一项\n- 第二项\n\n<B />\n')
     editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
       const state = ctx.get(editorStateCtx)
       const paragraphs: Array<{ start: number; end: number }> = []
       state.doc.descendants((node, position) => {
@@ -342,14 +342,19 @@ describe('raw block keyboard selection', () => {
           paragraphs.push({ start: position + 1, end: position + 1 + node.content.size })
         }
       })
-      const firstEnd = state.apply(
-        state.tr.setSelection(TextSelection.create(state.doc, paragraphs[0].end))
+      // 列表项内部还有兄弟节点：横向移动不出块，也不该落块边界光标。
+      view.dispatch(
+        view.state.tr.setSelection(TextSelection.create(view.state.doc, paragraphs[0].end))
       )
-      const secondStart = state.apply(
-        state.tr.setSelection(TextSelection.create(state.doc, paragraphs[1].start))
+      view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }))
+      expect(view.state.selection).not.toBeInstanceOf(BlockBoundaryCaret)
+      expect(view.state.selection.from).toBe(paragraphs[0].end)
+      view.dispatch(
+        view.state.tr.setSelection(TextSelection.create(view.state.doc, paragraphs[1].start))
       )
-      expect(adjacentRawBlockSelectionPosition(firstEnd, 'right')).toBeNull()
-      expect(adjacentRawBlockSelectionPosition(secondStart, 'left')).toBeNull()
+      view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }))
+      expect(view.state.selection).not.toBeInstanceOf(BlockBoundaryCaret)
+      expect(view.state.selection.from).toBe(paragraphs[1].start)
     })
   })
 
@@ -372,7 +377,6 @@ describe('raw block keyboard selection', () => {
       expect(emptyStart).toBeGreaterThan(-1)
       expect(imagePos).toBeGreaterThan(-1)
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, emptyStart)))
-      expect(adjacentRawBlockSelectionPosition(view.state, 'down')).toBe(imagePos - 1)
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
       // 新模型：方向键先落到「块前光标」，Shift+方向键才整块选中
       expect(view.state.selection).toBeInstanceOf(BlockBoundaryCaret)
@@ -651,7 +655,6 @@ describe('raw block keyboard selection', () => {
     editor.action((ctx) => {
       const view = ctx.get(editorViewCtx)
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, pos.beforeEnd)))
-      expect(adjacentRawBlockSelectionPosition(view.state, 'down')).toBe(pos.raw)
       view.dom.dispatchEvent(
         new KeyboardEvent('keydown', { key: 'ArrowDown', shiftKey: true, bubbles: true })
       )
@@ -791,7 +794,6 @@ describe('raw block keyboard selection', () => {
       view.dispatch(
         view.state.tr.setSelection(TextSelection.create(view.state.doc, pos.afterStart))
       )
-      expect(adjacentRawBlockSelectionPosition(view.state, 'up')).toBe(pos.raw)
       view.dom.dispatchEvent(
         new KeyboardEvent('keydown', { key: 'ArrowUp', shiftKey: true, bubbles: true })
       )
@@ -813,10 +815,12 @@ describe('raw block keyboard selection', () => {
       '第一行\n第二行还在段内\n\n<B id="selection" />\n\n下方段落\n'
     )
     editor.action((ctx) => {
-      const state = ctx.get(editorStateCtx)
+      const view = ctx.get(editorViewCtx)
       // Caret after first character of a multi-line paragraph (still on first line).
-      const next = state.apply(state.tr.setSelection(TextSelection.create(state.doc, 2)))
-      expect(adjacentRawBlockSelectionPosition(next, 'down')).toBeNull()
+      view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 2)))
+      view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+      expect(view.state.selection).not.toBeInstanceOf(BlockBoundaryCaret)
+      expect(view.state.selection.from).toBe(2)
     })
   })
 
@@ -1049,7 +1053,6 @@ describe('code_block keyboard selection', () => {
     editor.action((ctx) => {
       const view = ctx.get(editorViewCtx)
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, pos.beforeEnd)))
-      expect(adjacentRawBlockSelectionPosition(view.state, 'down')).toBe(pos.code)
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
       // 新模型：方向键先落到「块前光标」，Shift+方向键才整块选中
       expect(view.state.selection).toBeInstanceOf(BlockBoundaryCaret)
@@ -1076,7 +1079,6 @@ describe('code_block keyboard selection', () => {
       // Not at absolute end — one character before the end of the single-line paragraph.
       const midLastLine = pos.beforeEnd - 1
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, midLastLine)))
-      expect(adjacentRawBlockSelectionPosition(view.state, 'down')).toBe(pos.code)
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
       // 新模型：方向键先落到「块前光标」，Shift+方向键才整块选中
       expect(view.state.selection).toBeInstanceOf(BlockBoundaryCaret)
@@ -1110,10 +1112,16 @@ describe('code_block keyboard selection', () => {
       expect(emptyPos).toBeGreaterThan(-1)
       expect(codePos).toBeGreaterThan(-1)
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, textEnd)))
-      // Immediate neighbor is the blank line — leave ArrowDown to ProseMirror.
-      expect(adjacentRawBlockSelectionPosition(view.state, 'down')).toBeNull()
+      // 紧邻的是空行：↓ 交给 ProseMirror，不落块边界光标（不跳过空行）。
+      view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+      expect(view.state.selection).not.toBeInstanceOf(BlockBoundaryCaret)
+      expect(view.state.selection.from).toBe(textEnd)
+      // 空行上的 ↓ 才落到代码块的「块前光标」。
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, emptyPos + 1)))
-      expect(adjacentRawBlockSelectionPosition(view.state, 'down')).toBe(codePos)
+      view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+      expect(view.state.selection).toBeInstanceOf(BlockBoundaryCaret)
+      expect(activeBlockBoundaryTarget(view.state)?.blockPos).toBe(codePos)
+      expect(activeBlockBoundaryTarget(view.state)?.side).toBe('before')
     })
   })
 
@@ -1312,14 +1320,12 @@ describe('code_block keyboard selection', () => {
       expect(bodyMid).toBeGreaterThan(bodyStart)
 
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, bodyMid)))
-      expect(adjacentRawBlockSelectionPosition(view.state, 'up')).toBeNull()
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }))
       expect(codeBlockWholeSelectPosition(view.state)).toBeNull()
       expect(view.state.selection).not.toBeInstanceOf(NodeSelection)
       expect(view.state.selection.from).not.toBe(codePos)
 
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, bodyStart)))
-      expect(adjacentRawBlockSelectionPosition(view.state, 'left')).toBeNull()
       view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }))
       expect(codeBlockWholeSelectPosition(view.state)).toBeNull()
       expect(view.state.selection.from).not.toBe(codePos)

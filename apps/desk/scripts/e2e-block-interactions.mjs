@@ -590,8 +590,20 @@ try {
   console.log('✓ 整块选中后回车 = 打开源码编辑')
 
   await app.evaluate(({ clipboard }) => clipboard.writeText('<<desk-e2e-clipboard>>'))
+  // 先把光标放回正文开头，清掉上一段留下的整块选中：否则 PM 的旧选区会在
+  // ⌘C 时抢走复制，而且滚回旧选区会把预览挪出鼠标拖选的范围。
+  await page.keyboard.press('ControlOrMeta+Home')
+  await footprints.scrollIntoViewIfNeeded()
+  await page.waitForTimeout(300)
   const previewBox = await footprints.getByText('足迹正文第一段。').first().boundingBox()
   assert.ok(previewBox)
+  // 拖选整行文字：断言头部仍在足迹预览内，避免量到别处的行。
+  const footprintBox = await footprints.boundingBox()
+  assert.ok(footprintBox)
+  assert.ok(
+    previewBox.y >= footprintBox.y - 1 &&
+      previewBox.y + previewBox.height <= footprintBox.y + footprintBox.height + 1
+  )
   await page.mouse.move(previewBox.x + 2, previewBox.y + previewBox.height / 2)
   await page.mouse.down()
   await page.mouse.move(previewBox.x + previewBox.width - 2, previewBox.y + previewBox.height / 2, {

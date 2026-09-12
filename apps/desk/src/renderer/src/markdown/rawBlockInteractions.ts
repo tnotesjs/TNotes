@@ -1,5 +1,4 @@
 import type { MilkdownPlugin } from '@milkdown/kit/ctx'
-import { GapCursor } from '@milkdown/kit/prose/gapcursor'
 import { NodeSelection, Plugin, PluginKey, TextSelection } from '@milkdown/kit/prose/state'
 import type { EditorState } from '@milkdown/kit/prose/state'
 import type { EditorView } from '@milkdown/kit/prose/view'
@@ -7,11 +6,7 @@ import { Decoration, DecorationSet } from '@milkdown/kit/prose/view'
 import { $prose } from '@milkdown/kit/utils'
 import { isEditingKeyEvent } from './editorFocusReclaim'
 import { EditorView as CodeMirrorView } from '@codemirror/view'
-import {
-  focusCalloutTitleInput,
-  isCaretEnteringCalloutTitle,
-  isDeskCalloutNode
-} from '../editor/markdown/deskCallout'
+import { focusCalloutTitleInput, isDeskCalloutNode } from '../editor/markdown/deskCallout'
 import { isStandaloneImageParagraph } from '../editor/markdown/standaloneImageParagraph'
 import { createMarkVsBlockSelectionPlugin } from './selectionKind'
 import {
@@ -98,24 +93,7 @@ export function codeBlockWholeSelectPosition(state: EditorState): number | null 
   return codeBlockWholeSelectKey.getState(state) ?? null
 }
 
-function textBetweenInParent(
-  $head: EditorState['selection']['$head'],
-  from: number,
-  to: number
-): string {
-  return $head.parent.textBetween(from, to, '\n', '\n')
-}
-
-/** True when the caret is on the last visual line of its textblock (ArrowDown leaves the block). */
-function isOnLastLineOfTextblock($head: EditorState['selection']['$head']): boolean {
-  return !textBetweenInParent($head, $head.parentOffset, $head.parent.content.size).includes('\n')
-}
-
-/** True when the caret is on the first visual line of its textblock (ArrowUp leaves the block). */
-function isOnFirstLineOfTextblock($head: EditorState['selection']['$head']): boolean {
-  return !textBetweenInParent($head, 0, $head.parentOffset).includes('\n')
-}
-
+/** 紧贴 `boundary` 的相邻块如果是可选块，返回它的位置（整块选中 / callout 标题出口用）。 */
 function neighborSelectableBlockPosition(
   state: EditorState,
   boundary: number,
@@ -125,65 +103,6 @@ function neighborSelectableBlockPosition(
   const neighbor = direction === 'down' ? resolved.nodeAfter : resolved.nodeBefore
   if (!neighbor || !isSelectableBlockNode(neighbor)) return null
   return direction === 'down' ? boundary : boundary - neighbor.nodeSize
-}
-
-/**
- * Finds the position of a selectable block immediately above/below the caret's
- * top-level block. Nested list/table carets only match when the caret is already
- * at that top-level block's outer edge, so intra-list arrow movement stays with PM.
- *
- * ArrowDown/Up match the last/first visual line (not only absolute offset 0/end),
- * so a mid-line caret on a single-line paragraph still whole-selects the next code.
- * ArrowRight/Left must instead be at the absolute textblock end/start; moving
- * within a line belongs to the browser (including grapheme/IME handling).
- *
- * Empty paragraphs between the caret and a block are NOT skipped — ProseMirror
- * should move into the blank line first.
- */
-export function adjacentRawBlockSelectionPosition(
-  state: EditorState,
-  direction: RawBlockArrowDirection | 'left' | 'right'
-): number | null {
-  const { selection } = state
-  const forward = direction === 'down' || direction === 'right'
-
-  if (selection instanceof GapCursor) {
-    const $pos = selection.$head
-    if (forward) {
-      const next = $pos.nodeAfter
-      return next && isSelectableBlockNode(next) ? $pos.pos : null
-    }
-    const previous = $pos.nodeBefore
-    return previous && isSelectableBlockNode(previous) ? $pos.pos - previous.nodeSize : null
-  }
-
-  if (!(selection instanceof TextSelection) || !selection.empty) return null
-  const { $head } = selection
-  if ($head.depth < 1 || !$head.parent.isTextblock) return null
-  // Caret already inside a code fence: leaving is handled by Crepe CM / whole-select.
-  if (isCodeBlock($head.parent)) return null
-
-  if (forward) {
-    if (
-      direction === 'right'
-        ? $head.parentOffset !== $head.parent.content.size
-        : !isOnLastLineOfTextblock($head)
-    )
-      return null
-    for (let depth = $head.depth; depth > 1; depth -= 1) {
-      if ($head.index(depth - 1) < $head.node(depth - 1).childCount - 1) return null
-    }
-    return neighborSelectableBlockPosition(state, $head.after(1), 'down')
-  }
-
-  if (direction === 'left' ? $head.parentOffset !== 0 : !isOnFirstLineOfTextblock($head))
-    return null
-  // Callout title is outside contentDOM; the first body line is not a fence edge.
-  if (isCaretEnteringCalloutTitle($head, direction === 'left' ? 'left' : 'up')) return null
-  for (let depth = $head.depth; depth > 1; depth -= 1) {
-    if ($head.index(depth - 1) > 0) return null
-  }
-  return neighborSelectableBlockPosition(state, $head.before(1), 'up')
 }
 
 /** 当前是否有「整块选中的 deskRawBlock」（组件卡片选中态）。 */
@@ -797,32 +716,6 @@ function handleWholeSelectKeys(view: EditorView, event: KeyboardEvent): boolean 
   return handleCodeBlockWholeSelect(view, event) || handleSelectedSelectableBlock(view, event)
 }
 
-function isBlockArrowEvent(event: KeyboardEvent): boolean {
-  return (
-    !event.shiftKey &&
-    !event.altKey &&
-    !event.ctrlKey &&
-    !event.metaKey &&
-    !event.isComposing &&
-    ['ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft'].includes(event.key) &&
-    !isNativeEditorField(event.target) &&
-    !(event.target instanceof Element && event.target.closest('.cm-editor'))
-  )
-}
-
-/** Shared by DOM capture and PM's fallback so horizontal boundaries cannot drift. */
-function selectAdjacentBlockForArrow(view: EditorView, event: KeyboardEvent): boolean {
-  if (!isBlockArrowEvent(event)) return false
-  const directions: Record<string, RawBlockArrowDirection | 'left' | 'right'> = {
-    ArrowUp: 'up',
-    ArrowDown: 'down',
-    ArrowLeft: 'left',
-    ArrowRight: 'right'
-  }
-  const position = adjacentRawBlockSelectionPosition(view.state, directions[event.key])
-  return position != null && selectSelectableBlock(view, position)
-}
-
 export interface RawBlockSelectionPluginOptions extends BlockBoundaryNavigationOptions {}
 
 /** Keyboard and visual selection semantics for selectable block nodes. */
@@ -905,11 +798,6 @@ export function createRawBlockSelectionPlugin(
               return true
             }
             if (target?.closest('.cm-editor')) return false
-
-            if (selectAdjacentBlockForArrow(view, event)) {
-              claimEvent(event)
-              return true
-            }
 
             return false
           }
@@ -1051,13 +939,6 @@ export function createRawBlockSelectionPlugin(
               return
             }
             if (inCodeMirror) return
-
-            if (selectAdjacentBlockForArrow(view, event)) {
-              claimEvent(event)
-              event.preventDefault()
-              event.stopImmediatePropagation()
-              return
-            }
           }
           view.dom.ownerDocument.addEventListener('keydown', keydown, true)
           return {
