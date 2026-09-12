@@ -895,9 +895,13 @@
   animation-delay: 0.5s;
 }
 
-/* 焦点不在可编辑区、或焦点在块内部（CodeMirror）时，边界光标不画：同一时刻只有一根线。 */
-.milkdown-markdown-editor:not(:has(.ProseMirror-focused)) :deep(.desk-block-boundary-caret),
-.milkdown-markdown-editor:has(.cm-editor:focus-within) :deep(.desk-block-boundary-caret) {
+/* 只在两种情况隐藏：当前没有边界光标（兜底，元素本由插件按需创建），
+   或整个编辑器已经失焦（窗口切走 / 点了别的面板）。
+   不要用 :has(.cm-editor:focus-within) 藏它：相邻代码块之间 DOM 焦点会被浏览器
+   留在 .cm-content 里，边界停靠点若不可见，连续几次 ↓ 就看不出光标在动。 */
+.milkdown-markdown-editor:not(:has(.ProseMirror[data-boundary-caret]))
+  :deep(.desk-block-boundary-caret),
+.milkdown-markdown-editor:not(:focus-within) :deep(.desk-block-boundary-caret) {
   display: none;
 }
 

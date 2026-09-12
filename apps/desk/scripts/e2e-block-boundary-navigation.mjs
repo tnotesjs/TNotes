@@ -451,7 +451,6 @@ try {
       if (value < min) min = value
       if (value > 0.15 && value < 0.85) between += 1
       if (max >= 0.95 && min <= 0.05 && between >= 2) break
-      // eslint-disable-next-line no-await-in-loop
       await new Promise((resolve) => setTimeout(resolve, 40))
     }
     return {
@@ -504,6 +503,16 @@ try {
   // 相邻代码块（中间没有空行）：↓ 进得去，↑ 也必须原路回来。
   const firstFence = pm.locator(':scope > .milkdown-code-block', { hasText: 'const first = 1' })
   const secondFence = pm.locator(':scope > .milkdown-code-block', { hasText: 'color: red' })
+  /** 边界光标是否真的画出来了（display 不为 none 且有尺寸）。 */
+  const caretVisible = () =>
+    page.evaluate(() => {
+      const caret = document.querySelector('.desk-block-boundary-caret')
+      if (!caret) return false
+      const style = getComputedStyle(caret)
+      const rect = caret.getBoundingClientRect()
+      return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0
+    })
+
   /** 连按方向键直到落到指定侧的边界光标（CM 末尾是否有空行会让 ↓ 次数差一次）。 */
   const pressUntilCaret = async (key, side, max = 4) => {
     let current = await state()
@@ -528,16 +537,22 @@ try {
 
   await enterCodeEnd(firstFence)
   current = await pressUntilCaret('ArrowDown', 'after')
+  const afterVisible = await caretVisible()
   record(
-    '相邻块 ↓：第一块末行 → 第一块块后光标',
-    current.side === 'after' && current.caretParent.startsWith('milkdown-code-block'),
-    JSON.stringify({ side: current.side, parent: current.caretParent })
+    '相邻块 ↓：第一块末行 → 第一块块后光标（CM 有焦点时也要可见）',
+    current.side === 'after' &&
+      current.caretParent.startsWith('milkdown-code-block') &&
+      afterVisible,
+    JSON.stringify({ side: current.side, parent: current.caretParent, visible: afterVisible })
   )
   current = await pressUntilCaret('ArrowDown', 'before')
+  const beforeVisible = await caretVisible()
   record(
-    '相邻块 ↓：→ 第二块块前光标',
-    current.side === 'before' && current.caretParent.startsWith('milkdown-code-block'),
-    JSON.stringify({ side: current.side, parent: current.caretParent })
+    '相邻块 ↓：→ 第二块块前光标（同样可见）',
+    current.side === 'before' &&
+      current.caretParent.startsWith('milkdown-code-block') &&
+      beforeVisible,
+    JSON.stringify({ side: current.side, parent: current.caretParent, visible: beforeVisible })
   )
   await press('ArrowDown')
   current = await state()
