@@ -58,8 +58,9 @@ jobs:
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            git fetch --no-tags origin "${{ github.base_ref }}"
-            echo "args=--since origin/${{ github.base_ref }}" >> "$GITHUB_OUTPUT"
+            # base.sha 一定在 fetch-depth: 0 的克隆里，不必再 fetch 分支名；
+            # 据此只跑「受影响套件 + 冒烟核心集」，非 PR（main / 手动）跑全量。
+            echo "args=--since ${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
           else
             echo "args=" >> "$GITHUB_OUTPUT"
           fi
