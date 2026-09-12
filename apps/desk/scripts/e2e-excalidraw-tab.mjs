@@ -238,7 +238,9 @@ try {
     Boolean(drawn),
     `elements=${countAt()}`
   )
-  record('状态条显示已自动保存', (await paneStatus()).includes('已自动保存'))
+  // 磁盘已经写完了，状态条文案可能还停在「待写入…」：等它变成已保存再断言（CI 上偶发差一拍）
+  const savedStatus = await waitFor(async () => (await paneStatus()).includes('已自动保存'), 8000)
+  record('状态条显示已自动保存', Boolean(savedStatus), `状态=${JSON.stringify(await paneStatus())}`)
   await page.screenshot({ path: join(shots, 'drawn.png') })
 
   // 4) 关闭再打开：重开后继续画 → 3 个元素，说明旧内容被正确载入

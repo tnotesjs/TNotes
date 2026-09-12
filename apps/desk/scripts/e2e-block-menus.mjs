@@ -241,6 +241,10 @@ try {
     '✓ delete/cut target the selected ordinary block; adjacent blocks survive and undo restores'
   )
 
+  // 上一步的撤销会留下文本选区 → Crepe 的格式工具条浮在块上，正好拦截 hover（CI 上实测
+  // 一路重试到超时）。先点一下目标块把选区收起来，再走 openMenu。
+  await item('Item two').click()
+  await page.waitForTimeout(150)
   await openMenu(item('Item two'))
   await menu.getByRole('menuitem', { name: /在下方添加/ }).hover()
   const slash = page.locator('.milkdown-slash-menu')
