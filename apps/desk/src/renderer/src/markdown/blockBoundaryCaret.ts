@@ -159,7 +159,7 @@ export function activeBlockBoundaryTarget(state: EditorState): BlockBoundaryTarg
 /* ------------------------------------------------------------------ */
 
 /** 光标与块边缘的间距：整根线落在块外（写在正文容器的左右留白里）。 */
-const CARET_GUTTER = 4
+const CARET_GUTTER = 2
 
 interface CaretElement {
   el: HTMLElement
