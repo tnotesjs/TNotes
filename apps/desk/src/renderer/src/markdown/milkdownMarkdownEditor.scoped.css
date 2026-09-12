@@ -887,7 +887,12 @@
   box-shadow: 0 0 0 1px var(--editor-bg, #141414);
   pointer-events: none;
   user-select: none;
-  animation: desk-block-boundary-caret-blink 1s steps(2, start) infinite;
+  /* 与编辑器里的文本光标同一套呼吸曲线（prosemirror-virtual-cursor-blink：
+     1s 线性淡出淡入 + 落位后 0.5s 实心），两种光标看起来一致，不再是硬切换。
+     只动 opacity、走合成层，没有兼容性问题。 */
+  will-change: opacity;
+  animation: desk-block-boundary-caret-breathe 1s linear infinite;
+  animation-delay: 0.5s;
 }
 
 /* 焦点不在可编辑区、或焦点在块内部（CodeMirror）时，边界光标不画：同一时刻只有一根线。 */
@@ -896,9 +901,24 @@
   display: none;
 }
 
-@keyframes desk-block-boundary-caret-blink {
+@keyframes desk-block-boundary-caret-breathe {
+  0% {
+    opacity: 1;
+  }
+
   50% {
     opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+/* 开了「减弱动态效果」就退化成常亮，不做闪烁。 */
+@media (prefers-reduced-motion: reduce) {
+  .milkdown-markdown-editor :deep(.desk-block-boundary-caret) {
+    animation: none;
   }
 }
 

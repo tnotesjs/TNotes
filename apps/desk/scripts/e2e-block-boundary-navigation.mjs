@@ -419,6 +419,41 @@ try {
     JSON.stringify({ side: current.side, parent: current.caretParent })
   )
   await caretCloseUp('block-head-caret.png')
+  // 闪烁曲线：VSCode 那种「呼吸」——亮 → 淡出 → 熄灭 → 循环点亮。
+  // 采样一轮动画，必须同时出现接近全亮、接近全灭和中间过渡值；
+  // 硬切换（steps）会因为采不到中间值而失败。
+  const breathe = await page.evaluate(async () => {
+    const caret = document.querySelector('.desk-block-boundary-caret')
+    if (!caret) return null
+    const style = getComputedStyle(caret)
+    const samples = []
+    for (let index = 0; index < 22; index += 1) {
+      samples.push(Number(getComputedStyle(caret).opacity))
+      await new Promise((resolve) => setTimeout(resolve, 60))
+    }
+    return {
+      name: style.animationName,
+      timing: style.animationTimingFunction,
+      delay: style.animationDelay,
+      iterations: style.animationIterationCount,
+      max: Math.max(...samples),
+      min: Math.min(...samples),
+      between: samples.filter((value) => value > 0.15 && value < 0.85).length
+    }
+  })
+  record(
+    '边界光标与文本光标同一套呼吸曲线（1s 线性、落位后 0.5s 实心、有中间过渡）',
+    breathe != null &&
+      // Vue scoped CSS 会给 keyframes 加哈希后缀，只断言前缀。
+      breathe.name.startsWith('desk-block-boundary-caret-breathe') &&
+      breathe.timing === 'linear' &&
+      breathe.delay === '0.5s' &&
+      breathe.iterations === 'infinite' &&
+      breathe.max >= 0.95 &&
+      breathe.min <= 0.05 &&
+      breathe.between >= 2,
+    JSON.stringify(breathe)
+  )
   const imageBox = await caretBox()
   record(
     '图片块头光标在图片块左上外侧（不再压在图片上）',
