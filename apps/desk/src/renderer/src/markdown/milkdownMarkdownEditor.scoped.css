@@ -33,6 +33,16 @@
 }
 
 .milkdown-markdown-editor :deep(.milkdown) {
+  /* `.ProseMirror { min-height: 100% }` only resolves against a parent with a
+     definite height. With `height: auto` the editable box shrank to its
+     content, leaving a non-editable dead zone inside `.milkdown` — clicking it
+     blurred the editor while the virtual cursor kept painting a frozen caret.
+     A flex column stretches the editable box to the pane instead of giving
+     `.milkdown` a definite height: that keeps `.milkdown` from becoming a
+     second (non-scrollable) overflow box, so the canvas stays the only
+     scroll container and long documents still scroll/restore normally. */
+  display: flex;
+  flex-direction: column;
   min-height: 100%;
   color: var(--editor-text);
   --crepe-base-font-size: 16px;
@@ -277,6 +287,9 @@
   box-sizing: border-box;
   width: min(100%, 940px);
   min-height: 100%;
+  /* Fill the flex column above (see `.milkdown`) so the editable area reaches
+     the bottom of the pane instead of stopping at the last block. */
+  flex: 1 1 auto;
   margin: 0 auto;
   /* Preserve the writing-column inset and room for the single 32px block
      handle with its 16px floating offset. */
@@ -380,6 +393,18 @@
 .milkdown-markdown-editor
   :deep(.ProseMirror[data-inline-code-caret='outside-start'] .prosemirror-virtual-cursor) {
   left: var(--desk-inline-code-caret-left) !important;
+}
+
+/*
+ * 焦点不在编辑器里就不要留虚拟光标（计划 D1）。
+ *
+ * `prosemirror-virtual-cursor` 是 DOM 元素，DOM 焦点离开后可编辑区之后它仍会按旧的
+ * TextSelection 继续画：看起来有光标，其实任何键都不响应（实测：点正文列外的空白 →
+ * activeElement=BODY，光标仍画在原处且不闪烁）。这里把「没焦点就不画」作为兜底，
+ * 下面那批按岛枚举的规则是该集合的子集，保留是为了表达「谁拥有焦点」的语义。
+ */
+.milkdown-markdown-editor:not(:has(.ProseMirror-focused)) :deep(.prosemirror-virtual-cursor) {
+  display: none;
 }
 
 /*

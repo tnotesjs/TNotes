@@ -28,6 +28,7 @@ import {
   replaceCurrentParagraphWithItem
 } from './markdownInputRules'
 import { clearRawBlockSelectionState, createRawBlockSelectionPlugin } from './rawBlockInteractions'
+import { isEditorBlankTarget } from './editorFocusReclaim'
 import { createReadonlyTransactionGuard } from './readonlyGuard'
 import { clearLineStylesPlugin } from './clearLineStyles'
 import { createInlineCodeInteractionPlugin, toggleDeskInlineCode } from './inlineCodeInteractions'
@@ -835,6 +836,28 @@ function handleClick(event: MouseEvent): void {
   emit('openLink', href)
 }
 
+/**
+ * 点击编辑器面板里的空白区（可编辑区之外：正文列左右留白、上下 padding）时，
+ * 浏览器会把焦点交给 `BODY` 并留下一个不响应的旧选区。这里主动把焦点收回编辑器，
+ * 并把光标放到点击位置最近的文档位置——与「点正文空白继续写」的常规手感一致。
+ */
+function handleCanvasMousedown(event: MouseEvent): void {
+  if (isEffectivelyReadOnly()) return
+  const root = host.value
+  if (!root || !(event.target instanceof Element)) return
+  if (!isEditorBlankTarget(event.target, root)) return
+  const view = editorView()
+  if (!view || !view.editable) return
+  event.preventDefault()
+  const coords = view.posAtCoords({ left: event.clientX, top: event.clientY })
+  const doc = view.state.doc
+  const pos = coords ? Math.max(0, Math.min(coords.pos, doc.content.size)) : doc.content.size
+  const bias = coords && pos < doc.content.size ? 1 : -1
+  view.dispatch(view.state.tr.setSelection(TextSelection.near(doc.resolve(pos), bias)))
+  closeBlockActionMenu(false)
+  view.focus()
+}
+
 function handleKeydown(event: KeyboardEvent): void {
   if (event.key !== 'Escape' || event.defaultPrevented) return
   const root = host.value
@@ -1257,6 +1280,7 @@ onBeforeUnmount(() => {
       class="milkdown-markdown-editor__canvas"
       v-once
       @click.capture="handleClick"
+      @mousedown="handleCanvasMousedown"
       @scroll.passive="syncOutlineActive"
     />
     <NoteOutline

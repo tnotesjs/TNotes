@@ -363,13 +363,21 @@ try {
   await waitFor(async () => (await canvasTabs().count()) === 0)
   await openCanvasTab()
 
-  // 8) 资源面板对画布源文件保持保护：重命名/回收都被明确拒绝，而不是悄悄移动文件，
-  //    让已经打开的标签指向一个不存在的路径
+  // 8) 资源面板对画布源文件保持保护：重命名入口直接置灰（不再让人填完表单才被拒），
+  //    回收仍走计划并在预览里明确拒绝，两条路都不会悄悄移动文件、让已打开的标签指向
+  //    一个不存在的路径
   await activateTab('资源')
   await selectCanvasRow()
-  await page.getByRole('button', { name: '重命名', exact: true }).click()
-  await page.locator('.rename-dest').fill('assets/0004-drawing-moved.excalidraw')
-  await page.getByRole('button', { name: '预览', exact: true }).click()
+  const renameState = await page.locator('[data-asset-rename-state]').innerText()
+  const renameReason = (await page.locator('[data-asset-rename]').getAttribute('title')) ?? ''
+  const renameDisabled = await page.locator('[data-asset-rename]').isDisabled()
+  record(
+    '资源面板保护画布真相源：重命名入口置灰且说明原因',
+    renameDisabled && renameState.includes('已阻止') && renameReason.includes('归属编号'),
+    `禁用=${renameDisabled} 状态=${JSON.stringify(renameState.trim().slice(0, 40))} 原因=${JSON.stringify(renameReason.slice(0, 40))}`
+  )
+  await page.getByRole('button', { name: '移入回收区', exact: true }).click()
+  // 回收对话框打开即已在主进程生成计划（没有单独的「预览」按钮），拒绝原因直接列出
   const blockedText = await page
     .locator('.kb-assets-dialog .blocked')
     .innerText({ timeout: 15000 })
@@ -381,8 +389,8 @@ try {
     .catch(() => true)
   await page.getByRole('button', { name: '关闭', exact: true }).first().click()
   record(
-    '资源面板保护画布真相源：重命名被明确拒绝（不会移动文件）',
-    blockedText.includes('Excalidraw') && applyDisabled,
+    '资源面板保护画布真相源：回收被明确拒绝（不会移动文件）',
+    blockedText.includes('Excalidraw 真相源') && applyDisabled,
     `blocked=${JSON.stringify(blockedText.slice(0, 60))} 执行禁用=${applyDisabled}`
   )
   await page.locator('.kb-assets-dialog').waitFor({ state: 'detached', timeout: 10000 })

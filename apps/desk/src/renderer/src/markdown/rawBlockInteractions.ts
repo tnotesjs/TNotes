@@ -5,6 +5,7 @@ import type { EditorState } from '@milkdown/kit/prose/state'
 import type { EditorView } from '@milkdown/kit/prose/view'
 import { Decoration, DecorationSet } from '@milkdown/kit/prose/view'
 import { $prose } from '@milkdown/kit/utils'
+import { isEditingKeyEvent } from './editorFocusReclaim'
 import { EditorView as CodeMirrorView } from '@codemirror/view'
 import {
   focusCalloutTitleInput,
@@ -689,6 +690,11 @@ export function createRawBlockSelectionPlugin(): MilkdownPlugin[] {
   // event. Claiming it once prevents double-steps (e.g. code1→code3).
   let claimedKeyboardEvent: KeyboardEvent | null = null
   const evaluatedKeydowns = new WeakSet<KeyboardEvent>()
+  /**
+   * 最近真正持有过焦点的编辑器。焦点掉到 `BODY`（点面板空白、点非聚焦 chrome）时，
+   * 只有这个编辑器会收回编辑键，多编辑器/多标签场景下不会抢错目标。
+   */
+  let lastFocusedView: EditorView | null = null
 
   const claimEvent = (event: KeyboardEvent): void => {
     claimedKeyboardEvent = event
@@ -746,6 +752,11 @@ export function createRawBlockSelectionPlugin(): MilkdownPlugin[] {
         },
         view: (view) => {
           let wasWholeSelect = false
+          const markFocused = (): void => {
+            lastFocusedView = view
+          }
+          view.dom.addEventListener('focus', markFocused, true)
+          view.dom.addEventListener('focusin', markFocused, true)
           const hasWholeSelectSelection = (): boolean => {
             if (codeBlockWholeSelectKey.getState(view.state) != null) return true
             const { selection } = view.state
@@ -770,6 +781,20 @@ export function createRawBlockSelectionPlugin(): MilkdownPlugin[] {
 
             const eventTarget = event.target
             if (isNativeEditorField(eventTarget)) return
+
+            // 焦点掉到 body（点面板空白、点非聚焦 chrome）时，把编辑键收回来：
+            // 否则用户会看到「光标还在、按键全没反应」。不 preventDefault，
+            // 让按键作用在恢复后的选区上（点空白那条路径已由 mousedown 兜底）。
+            if (
+              eventTarget === view.dom.ownerDocument.body &&
+              lastFocusedView === view &&
+              view.dom.isConnected &&
+              view.dom.getClientRects().length > 0 &&
+              isEditingKeyEvent(event)
+            ) {
+              view.focus()
+              return
+            }
             // Mindmap island: do not steal Arrow/Delete from .mm-editor (capture runs first).
             if (
               isMindmapIslandKeyboardOwner(eventTarget) ||
@@ -865,7 +890,12 @@ export function createRawBlockSelectionPlugin(): MilkdownPlugin[] {
               if (!entering && !focusOutsidePm) return
               view.focus()
             },
-            destroy: () => view.dom.ownerDocument.removeEventListener('keydown', keydown, true)
+            destroy: () => {
+              view.dom.ownerDocument.removeEventListener('keydown', keydown, true)
+              view.dom.removeEventListener('focus', markFocused, true)
+              view.dom.removeEventListener('focusin', markFocused, true)
+              if (lastFocusedView === view) lastFocusedView = null
+            }
           }
         }
       })
