@@ -10,6 +10,7 @@ import { mountMermaidPreview, mountMindmapPreview } from '../../editor/markdown/
 import { resolveMarkdownImageUrl } from '../markdownAssetUrl'
 import { attachRawSourceEditor } from '../attachRawSourceEditor'
 import type { DeskRawBlockMountContext } from './types'
+import { clearRawBlockBody } from './clearBody'
 
 export function mountRawDiagram(ctx: DeskRawBlockMountContext): void {
   const { block, dom, view, getPos, cleanupTasks, deps } = ctx
@@ -19,7 +20,7 @@ export function mountRawDiagram(ctx: DeskRawBlockMountContext): void {
     // Drop --diagram chrome (always-on border/panel); shared Mermaid owns hover frame.
     dom.classList.remove('desk-raw-block--diagram')
     dom.classList.add('desk-raw-block--mermaid')
-    dom.replaceChildren()
+    clearRawBlockBody(dom)
     const previewHost = document.createElement('div')
     previewHost.className = 'desk-raw-block__component-preview'
     dom.append(previewHost)
@@ -102,7 +103,7 @@ export function mountRawDiagram(ctx: DeskRawBlockMountContext): void {
     if (!deps.isEffectivelyReadOnly()) {
       dom.classList.add('desk-raw-block--mindmap-editable')
     }
-    dom.replaceChildren()
+    clearRawBlockBody(dom)
     const previewHost = document.createElement('div')
     previewHost.className = 'desk-raw-block__component-preview'
     dom.append(previewHost)

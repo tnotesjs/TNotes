@@ -15,6 +15,7 @@ import {
 } from '../../editor/markdown/componentPreview'
 import { attachRawSourceEditor } from '../attachRawSourceEditor'
 import type { DeskRawBlockMountContext } from './types'
+import { clearRawBlockBody } from './clearBody'
 
 export function mountRawComponent(ctx: DeskRawBlockMountContext): void {
   const { block, dom, view, getPos, cleanupTasks, deps } = ctx
@@ -26,7 +27,7 @@ export function mountRawComponent(ctx: DeskRawBlockMountContext): void {
 
   if (isBilibiliVideoSource(block.source)) {
     dom.classList.add('desk-raw-block--component', 'desk-raw-block--bilibili-video')
-    dom.replaceChildren()
+    clearRawBlockBody(dom)
     const previewHost = document.createElement('div')
     previewHost.className = 'desk-raw-block__component-preview'
     dom.append(previewHost)
@@ -60,7 +61,7 @@ export function mountRawComponent(ctx: DeskRawBlockMountContext): void {
     )
   } else if (isWordListSource(block.source)) {
     dom.classList.add('desk-raw-block--component', 'desk-raw-block--word-list')
-    dom.replaceChildren()
+    clearRawBlockBody(dom)
     const previewHost = document.createElement('div')
     previewHost.className = 'desk-raw-block__component-preview'
     dom.append(previewHost)
@@ -92,7 +93,7 @@ export function mountRawComponent(ctx: DeskRawBlockMountContext): void {
     )
   } else if (isNotesTableSource(block.source)) {
     dom.classList.add('desk-raw-block--component', 'desk-raw-block--notes-table')
-    dom.replaceChildren()
+    clearRawBlockBody(dom)
     const previewHost = document.createElement('div')
     previewHost.className = 'desk-raw-block__component-preview'
     dom.append(previewHost)

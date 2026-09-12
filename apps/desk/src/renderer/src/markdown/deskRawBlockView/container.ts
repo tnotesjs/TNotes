@@ -37,6 +37,7 @@ import { showEditorContextMenu } from '../editorContextMenu'
 import { deleteDeskRawBlockAt } from '../../editor/markdown/rawBlockEmpty'
 import { deferUntilVisible } from './deferUntilVisible'
 import type { DeskRawBlockMountContext } from './types'
+import { clearRawBlockBody } from './clearBody'
 
 export function mountRawContainer(ctx: DeskRawBlockMountContext): void {
   const { block, dom, view, getPos, cleanupTasks, resolveImage, deps } = ctx
@@ -44,7 +45,7 @@ export function mountRawContainer(ctx: DeskRawBlockMountContext): void {
   const container = parseContainerSource(block.source)
   if (container.name === 'footprints') {
     dom.classList.add('desk-raw-block--footprints')
-    dom.replaceChildren()
+    clearRawBlockBody(dom)
     const previewHost = document.createElement('div')
     previewHost.className = 'desk-raw-block__component-preview'
     dom.append(previewHost)
