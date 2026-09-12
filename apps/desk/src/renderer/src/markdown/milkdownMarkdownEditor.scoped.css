@@ -167,6 +167,19 @@
   background: var(--tn-c-bg-soft);
 }
 
+/* 引用块以站点（prose.css）为准：Crepe 默认是 4px 主题色圆角竖条（::before）+ 40px
+   缩进 + 4px 上下间距，站点是 2px 分隔线 + 16px 缩进 + 16px 上下间距。这里退回站点
+   的几何（边框与文字色本来就直接来自 prose.css），只把竖条去掉。 */
+.milkdown-markdown-editor :deep(.milkdown .ProseMirror blockquote) {
+  box-sizing: border-box;
+  margin: 16px 0;
+  padding: 0 0 0 16px;
+}
+
+.milkdown-markdown-editor :deep(.milkdown .ProseMirror blockquote)::before {
+  content: none;
+}
+
 /* Keep Crepe's add action wired for the block menu, but show only the drag grip. */
 .milkdown-markdown-editor :deep(.milkdown .milkdown-block-handle .operation-item:first-child) {
   display: none;

@@ -68,6 +68,9 @@ const markdown = [
   '| Cell A | Cell B |',
   '',
   '链接浮层配色：[示例链接](https://example.com/deep/path/to/page) 只是用来悬停。',
+  '',
+  '> 引用块第一行。',
+  '> 引用块第二行。',
   ''
 ].join('\n')
 const source = `---\nid: 10000000-0000-4000-8000-000000000072\n---\n\n${markdown}`
@@ -198,7 +201,6 @@ try {
     await page.getByRole('button', { name: mode, exact: true }).click()
     await pm.waitFor()
     const styles = await pm.evaluate((element) => {
-      // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
       const read = (selector) => {
         const el = element.querySelector(selector)
         const css = getComputedStyle(el)
@@ -286,6 +288,40 @@ try {
       for (const callout of markers.callout) {
         assert.equal(callout.marker, callout.text, `${label}: callout bullet must match its text`)
       }
+      // 引用块必须与站点（prose.css 的 `.vp-doc` 规则）逐项一致：Crepe 默认给的是 4px
+      // 主题色圆角竖条 + 40px 缩进 + 4px 间距，站点是 2px 分隔线 + 16px 缩进 + 16px 间距。
+      // 这里把同一份 prose.css 的站点规则套在一个离屏 `.vp-doc` 上直接比计算样式。
+      const quote = await pm.evaluate((element) => {
+        const host = document.createElement('div')
+        host.className = 'vp-doc'
+        host.style.cssText = 'position:absolute;left:-10000px;top:0;width:600px'
+        host.innerHTML = '<blockquote><p>引用块第一行。</p></blockquote>'
+        document.body.append(host)
+        const read = (node) => {
+          const css = getComputedStyle(node)
+          const before = getComputedStyle(node, '::before')
+          const text = getComputedStyle(node.querySelector('p'))
+          return {
+            borderLeft: `${css.borderLeftWidth} ${css.borderLeftStyle} ${css.borderLeftColor}`,
+            padding: `${css.paddingTop} ${css.paddingRight} ${css.paddingBottom} ${css.paddingLeft}`,
+            margin: `${css.marginTop} ${css.marginRight} ${css.marginBottom} ${css.marginLeft}`,
+            boxSizing: css.boxSizing,
+            before:
+              before.content === 'none' ? 'none' : `${before.width} ${before.backgroundColor}`,
+            // 段落自身的 padding 是编辑器刻意的命中区（Crepe 4px），只比文字指标。
+            textColor: text.color,
+            textFontSize: text.fontSize,
+            textLineHeight: text.lineHeight
+          }
+        }
+        const result = {
+          editor: read(element.querySelector('blockquote')),
+          site: read(host.querySelector('blockquote'))
+        }
+        host.remove()
+        return result
+      })
+      assert.deepEqual(quote.editor, quote.site, `${label}: 可视化编辑器的引用块样式必须与站点一致`)
       // 链接浮层的图标曾用 Crepe 的 outline 令牌（Desk 把它映射成品色边框），浅色/暗色下
       // 都几乎与浮层底色相同。这里用对比度守住「看得见」。
       if (mode === '可视化编辑') {
