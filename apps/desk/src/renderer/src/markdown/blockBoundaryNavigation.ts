@@ -171,8 +171,19 @@ function isInsideCodeBlock(selection: Selection): boolean {
   return false
 }
 
+/**
+ * 键盘归属同时打到编辑区 DOM 上（`data-code-keyboard`），CSS 靠它决定画哪根光标：
+ * 代码编辑器握键盘时藏我们的边界光标、放 CM 自己的光标；反之藏 CM 光标。
+ * 只改属性、不发事务，所以焦点/选区的时序不会再来抢。
+ */
+function setCodeKeyboardOwner(view: EditorView, owns: boolean): void {
+  if (owns) view.dom.dataset.codeKeyboard = 'true'
+  else delete view.dom.dataset.codeKeyboard
+}
+
 function focusProseMirror(view: EditorView): void {
   keyboardOwner.set(view, 'boundary')
+  setCodeKeyboardOwner(view, false)
   view.focus()
 }
 
@@ -325,6 +336,7 @@ function focusCodeMirror(view: EditorView, blockDom: HTMLElement, forward: boole
       const next = visibleCodeMirror(blockDom)
       if (!next) return
       keyboardOwner.set(view, 'code')
+      setCodeKeyboardOwner(view, true)
       next.focus()
       next.dispatch({
         selection: EditorSelection.cursor(forward ? 0 : next.state.doc.length),
@@ -334,6 +346,7 @@ function focusCodeMirror(view: EditorView, blockDom: HTMLElement, forward: boole
     return true
   }
   keyboardOwner.set(view, 'code')
+  setCodeKeyboardOwner(view, true)
   cm.focus()
   cm.dispatch({
     selection: EditorSelection.cursor(forward ? 0 : cm.state.doc.length),
@@ -786,14 +799,20 @@ export function createBlockBoundaryNavigationPlugin(
           const onPointerDown = (event: Event): void => {
             const target = event.target
             if (!(target instanceof Element)) return
-            if (target.closest('.cm-editor')) keyboardOwner.set(view, 'code')
-            else keyboardOwner.delete(view)
+            if (target.closest('.cm-editor')) {
+              keyboardOwner.set(view, 'code')
+              setCodeKeyboardOwner(view, true)
+            } else {
+              keyboardOwner.delete(view)
+              setCodeKeyboardOwner(view, false)
+            }
           }
           const doc = view.dom.ownerDocument
           doc.addEventListener('pointerdown', onPointerDown, true)
           return {
             destroy: () => {
               doc.removeEventListener('pointerdown', onPointerDown, true)
+              delete view.dom.dataset.codeKeyboard
               if (currentView === view) currentView = null
             }
           }

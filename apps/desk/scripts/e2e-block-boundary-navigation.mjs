@@ -77,6 +77,18 @@ const source = [
   '```',
   '',
   '相邻代码块结束段落',
+  '',
+  '## 代码组',
+  '',
+  '::: code-group',
+  '',
+  '```js [1]',
+  "console.log('tab 1')",
+  '```',
+  '',
+  ':::',
+  '',
+  '代码组结束段落',
   ''
 ].join('\n')
 writeFileSync(noteFile, source)
@@ -611,6 +623,71 @@ try {
   await press('ArrowUp')
   current = await state()
   record('相邻块 ↑：→ 回到第一块 CM', current.cmFocus === true, JSON.stringify(current.text))
+
+  // 代码组（raw block 包着 CodeMirror 标签页）：进块后 PM 选区会一直停在
+  // 块边界光标上，曾经出现「边界光标钉在块左上角不动、CM 里看不到光标」的假死感。
+  await clickHeading('代码组')
+  await page.keyboard.press('End')
+  await press('ArrowDown')
+  current = await state()
+  const groupBeforeCursors = await codeMirrorCursors()
+  const groupBeforeAttr = await page.evaluate(() => {
+    const editor = document.querySelector('.ProseMirror')
+    return {
+      boundary: editor?.getAttribute('data-boundary-caret') ?? null,
+      codeKeyboard: editor?.hasAttribute('data-code-keyboard') ?? null
+    }
+  })
+  record(
+    '代码组 ↓ → 块前光标（此时藏起 CM 的光标）',
+    current.side === 'before' &&
+      current.caretParent.includes('desk-raw-block') &&
+      groupBeforeCursors.visibleCursors === 0 &&
+      groupBeforeAttr.boundary === 'before' &&
+      groupBeforeAttr.codeKeyboard === false,
+    JSON.stringify({
+      side: current.side,
+      parent: current.caretParent,
+      ...groupBeforeAttr,
+      ...groupBeforeCursors
+    })
+  )
+
+  await press('ArrowDown')
+  current = await state()
+  const groupEnteredCursors = await codeMirrorCursors()
+  const groupEnteredState = await page.evaluate(() => {
+    const caret = document.querySelector('.desk-block-boundary-caret')
+    const editor = document.querySelector('.ProseMirror')
+    return {
+      boundaryHidden: !caret || getComputedStyle(caret).display === 'none',
+      codeKeyboard: editor?.hasAttribute('data-code-keyboard') ?? null
+    }
+  })
+  record(
+    '代码组 进 CM：CM 自己的光标可见、边界光标隐藏',
+    current.cmFocus === true &&
+      groupEnteredCursors.visibleCursors > 0 &&
+      groupEnteredState.boundaryHidden &&
+      groupEnteredState.codeKeyboard === true,
+    JSON.stringify({ text: current.text, ...groupEnteredState, ...groupEnteredCursors })
+  )
+
+  const groupEntryText = current.text
+  await press('ArrowDown')
+  current = await state()
+  record(
+    '代码组 CM 内 ↓ → 光标在代码里后移（不会钉在块边界上）',
+    current.cmFocus === true && current.text !== groupEntryText && !/@0$/.test(current.text ?? ''),
+    JSON.stringify({ before: groupEntryText, after: current.text })
+  )
+
+  current = await pressUntilCaret('ArrowDown', 'after')
+  record(
+    '代码组 ↓ 末行 → 块后光标',
+    current.side === 'after' && current.caretParent.includes('desk-raw-block'),
+    JSON.stringify({ side: current.side, parent: current.caretParent })
+  )
 
   // 未编辑：导航不产生任何 markdown 变更
   await page.keyboard.press('ControlOrMeta+s')

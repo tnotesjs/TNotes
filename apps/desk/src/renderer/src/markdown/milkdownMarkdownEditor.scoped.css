@@ -895,15 +895,24 @@
   animation-delay: 0.5s;
 }
 
-/* 边界光标握着键盘时，代码块里的 CodeMirror 可能仍被浏览器当成聚焦态、并画出
-   自己的光标（PM 把边界光标的 DOM 选区写进了它的 contentDOM）。同一时刻只留一根线。
-   真进代码块编辑时 PM 选区是文本光标，下面的属性/类都不再匹配，光标自然回来。 */
-.milkdown-markdown-editor:has(.ProseMirror[data-boundary-caret]) :deep(.cm-editor) {
+/* 边界光标握着键盘时（还没进代码编辑器），代码块里的 CodeMirror 仍可能被浏览器当成
+   聚焦态、并画自己的光标（PM 把边界光标的 DOM 选区写进了它的 contentDOM）：
+   这时藏 CM 的光标，同一时刻只留一根线。 */
+.milkdown-markdown-editor:has(.ProseMirror[data-boundary-caret]:not([data-code-keyboard]))
+  :deep(.cm-editor) {
   caret-color: transparent;
 }
 
-.milkdown-markdown-editor:has(.ProseMirror[data-boundary-caret]) :deep(.cm-editor .cm-cursor) {
+.milkdown-markdown-editor:has(.ProseMirror[data-boundary-caret]:not([data-code-keyboard]))
+  :deep(.cm-editor .cm-cursor) {
   visibility: hidden;
+}
+
+/* 反过来：键盘已经在代码编辑器里（↓/→ 进块、或用户点进代码块）时，藏掉我们的
+   边界光标。代码组这类 raw block 的 PM 选区会一直停在块边界光标上，不藏的话
+   会出现「光标钉在块左上角不动、CM 里却看不到光标」的假死感。 */
+.milkdown-markdown-editor:has(.ProseMirror[data-code-keyboard]) :deep(.desk-block-boundary-caret) {
+  display: none;
 }
 
 /* 只在两种情况隐藏：当前没有边界光标（兜底，元素本由插件按需创建），
