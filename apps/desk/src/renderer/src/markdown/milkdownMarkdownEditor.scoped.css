@@ -861,9 +861,22 @@
 }
 
 /* 块边界光标（块前 / 块后）：贴着目标块画一根和文本光标同色同宽的竖线。
-   纯视图层元素，不占行、不改文档；原生光标由 PM 的 ProseMirror-hideselection 隐藏。 */
+   纯视图层元素，不占行、不改文档；原生光标由 PM 的 ProseMirror-hideselection 隐藏。
+   光标画在编辑区外的覆盖层里 —— 塞进可编辑 DOM 会被 PM 的 DOMObserver 当成内容变更，
+   触发 readDOMChange 把选区重置回文本光标（独立图片段落曾因此「按 ↓ 没反应」）。 */
+.milkdown-markdown-editor :deep(.desk-block-boundary-caret-layer) {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: visible;
+  pointer-events: none;
+  user-select: none;
+}
+
 .milkdown-markdown-editor :deep(.desk-block-boundary-caret) {
   position: absolute;
+  top: 0;
+  left: 0;
   z-index: 3;
   width: 2px;
   height: 1.3em;
@@ -872,17 +885,6 @@
   pointer-events: none;
   user-select: none;
   animation: desk-block-boundary-caret-blink 1s steps(2, start) infinite;
-}
-
-/* 块头贴左上角、块尾贴右下角：对角线对称，一眼看出现在停在哪一侧。 */
-.milkdown-markdown-editor :deep(.desk-block-boundary-caret--before) {
-  top: 0;
-  left: 0;
-}
-
-.milkdown-markdown-editor :deep(.desk-block-boundary-caret--after) {
-  right: 0;
-  bottom: 0;
 }
 
 /* 焦点不在可编辑区、或焦点在块内部（CodeMirror）时，边界光标不画：同一时刻只有一根线。 */

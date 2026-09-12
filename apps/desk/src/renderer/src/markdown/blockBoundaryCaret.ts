@@ -28,6 +28,7 @@ export const blockBoundaryCaretKey = new PluginKey('desk-block-boundary-caret')
 
 /** 自带光标的类名（CSS 在 milkdownMarkdownEditor.scoped.css）。 */
 export const BOUNDARY_CARET_CLASS = 'desk-block-boundary-caret'
+export const BOUNDARY_CARET_LAYER_CLASS = 'desk-block-boundary-caret-layer'
 
 export class BlockBoundaryCaret extends Selection {
   /**
@@ -154,12 +155,13 @@ export function activeBlockBoundaryTarget(state: EditorState): BlockBoundaryTarg
 }
 
 /* ------------------------------------------------------------------ */
-/* 可见光标：挂在目标块 DOM 上的一个绝对定位元素                        */
+/* 可见光标：画在编辑区外的覆盖层里（不能塞进可编辑 DOM）              */
 /* ------------------------------------------------------------------ */
 
 interface CaretElement {
   el: HTMLElement
   blockDom: HTMLElement
+  side: BlockBoundarySide
 }
 
 function createCaretElement(side: BlockBoundarySide): HTMLElement {
@@ -171,10 +173,41 @@ function createCaretElement(side: BlockBoundarySide): HTMLElement {
   return el
 }
 
+/**
+ * 光标元素必须挂在 ProseMirror 的**可编辑 DOM 之外**。
+ *
+ * 早先的实现把 <span> 直接 append 到目标块里：对代码块 / 表格 / raw block 这类
+ * 自带 node view 的块没问题，但「独立成段的图片」只是一个普通 paragraph——它的
+ * contentDOM 就是 <p> 本身，PM 的 DOMObserver 会把多出来的子节点当成 DOM 变更，
+ * `readDOMChange` 于是重读 DOM 并把选区重置回文本光标（光标元素同时被抹掉），
+ * 表现就是「按 ↓ 没反应」。
+ *
+ * 所以改成：块 DOM 上只读它的 getBoundingClientRect，光标画在 .milkdown 下的一层
+ * 覆盖层里（position: absolute + transform），滚动 / 缩放时重算。
+ */
+function positionCaretElement(layer: HTMLElement, caret: CaretElement): void {
+  const { el, blockDom, side } = caret
+  const root = layer.offsetParent instanceof HTMLElement ? layer.offsetParent : layer.parentElement
+  if (!root) return
+  const blockRect = blockDom.getBoundingClientRect()
+  const rootRect = root.getBoundingClientRect()
+  const width = el.offsetWidth || 2
+  const height = el.offsetHeight || 18
+  let x = blockRect.left - rootRect.left + root.scrollLeft
+  let y = blockRect.top - rootRect.top + root.scrollTop
+  if (side === 'after') {
+    // 块尾贴右下角（块头贴左上角），对角线对称。
+    x += blockRect.width - width
+    y += blockRect.height - height
+  }
+  el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`
+}
+
 function positionCaret(
   view: EditorView,
   state: EditorState,
-  caret: CaretElement | null
+  caret: CaretElement | null,
+  layer: HTMLElement
 ): CaretElement | null {
   const target = activeBlockBoundaryTarget(state)
   if (!target) {
@@ -186,19 +219,19 @@ function positionCaret(
     caret?.el.remove()
     return null
   }
-  if (caret && caret.blockDom === dom) {
-    if (caret.el.dataset.side !== target.side) {
-      caret.el.className = `${BOUNDARY_CARET_CLASS} ${BOUNDARY_CARET_CLASS}--${target.side}`
-      caret.el.dataset.side = target.side
-    }
-    if (!caret.el.isConnected) dom.append(caret.el)
+  if (caret && caret.blockDom === dom && caret.side === target.side) {
+    if (!caret.el.isConnected) layer.append(caret.el)
+    positionCaretElement(layer, caret)
     return caret
   }
   caret?.el.remove()
-  if (getComputedStyle(dom).position === 'static') dom.style.position = 'relative'
   const el = createCaretElement(target.side)
-  dom.append(el)
-  return { el, blockDom: dom }
+  // 诊断 / e2e 用：当前停靠的是哪个块。
+  el.dataset.boundaryBlock = dom.className
+  layer.append(el)
+  const next: CaretElement = { el, blockDom: dom, side: target.side }
+  positionCaretElement(layer, next)
+  return next
 }
 
 export function createBlockBoundaryCaretPlugin(): MilkdownPlugin {
@@ -213,7 +246,26 @@ export function createBlockBoundaryCaretPlugin(): MilkdownPlugin {
           }
         },
         view: (view) => {
-          let caret: CaretElement | null = positionCaret(view, view.state, null)
+          const host = view.dom.parentElement ?? view.dom
+          if (getComputedStyle(host).position === 'static') host.style.position = 'relative'
+          const layer = document.createElement('div')
+          layer.className = BOUNDARY_CARET_LAYER_CLASS
+          layer.setAttribute('aria-hidden', 'true')
+          host.append(layer)
+
+          let caret: CaretElement | null = positionCaret(view, view.state, null, layer)
+          let frame = -1
+          const schedule = (): void => {
+            if (frame >= 0) return
+            frame = requestAnimationFrame(() => {
+              frame = -1
+              if (caret) positionCaretElement(layer, caret)
+            })
+          }
+          const doc = view.dom.ownerDocument
+          doc.addEventListener('scroll', schedule, true)
+          doc.defaultView?.addEventListener('resize', schedule)
+
           return {
             update: (nextView, previousState) => {
               const wasActive = previousState.selection instanceof BlockBoundaryCaret
@@ -224,11 +276,14 @@ export function createBlockBoundaryCaretPlugin(): MilkdownPlugin {
                 caret = null
                 return
               }
-              caret = positionCaret(nextView, nextView.state, caret)
+              caret = positionCaret(nextView, nextView.state, caret, layer)
             },
             destroy: () => {
+              if (frame >= 0) cancelAnimationFrame(frame)
+              doc.removeEventListener('scroll', schedule, true)
+              doc.defaultView?.removeEventListener('resize', schedule)
               caret?.el.remove()
-              caret = null
+              layer.remove()
             }
           }
         }

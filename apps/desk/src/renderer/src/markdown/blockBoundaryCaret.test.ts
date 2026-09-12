@@ -60,7 +60,8 @@ function childPositions(doc: ProseMirrorNode): { pos: number; node: ProseMirrorN
 }
 
 function caretSides(view: EditorView): string[] {
-  return [...view.dom.querySelectorAll('.desk-block-boundary-caret')].map(
+  const host = view.dom.parentElement ?? view.dom.ownerDocument
+  return [...host.querySelectorAll('.desk-block-boundary-caret')].map(
     (element) => element.getAttribute('data-side') ?? ''
   )
 }
@@ -111,6 +112,41 @@ describe('block boundary caret', () => {
     // 删掉块：状态里的位置不再贴着可停靠块，map 回退成文本光标
     view.dispatch(view.state.tr.delete(raw.pos, raw.pos + raw.node.nodeSize))
     expect(view.state.selection).not.toBeInstanceOf(BlockBoundaryCaret)
+  })
+
+  it('独立图片段落：光标画在可编辑 DOM 之外，不会被 PM 的 DOMObserver 重置', async () => {
+    // 回归：之前把光标 <span> append 进目标块 DOM。独立图片段落只是普通 paragraph，
+    // 它的 contentDOM 就是 <p>，PM 会把多出来的子节点当成 DOM 变更，readDOMChange
+    // 立刻把选区重置回文本光标并抹掉光标元素——真实浏览器里表现成「按 ↓ 没反应」。
+    const view = await setup('## 标题\n\n![图](../assets/a.png)\n\n尾段\n')
+    const children = childPositions(view.state.doc)
+    const heading = children[0]!
+    const imageParagraph = children[1]!
+    expect(heading.node.type.name).toBe('heading')
+    expect(imageParagraph.node.firstChild?.type.name).toBe('image')
+
+    view.dispatch(
+      view.state.tr.setSelection(
+        TextSelection.create(view.state.doc, heading.pos + 1 + heading.node.content.size)
+      )
+    )
+    const pos = adjacentBoundaryCaretPosition(view.state, 'down')
+    expect(pos).toBe(imageParagraph.pos)
+    expect(placeBoundaryCaret(view, pos!)).toBe(true)
+    expect(view.state.selection).toBeInstanceOf(BlockBoundaryCaret)
+
+    const host = view.dom.parentElement!
+    const caret = host.querySelector('.desk-block-boundary-caret')
+    expect(caret).toBeTruthy()
+    expect(caret?.getAttribute('data-side')).toBe('before')
+    expect(activeBlockBoundaryTarget(view.state)?.node.firstChild?.type.name).toBe('image')
+    // 关键契约：可编辑 DOM 里不能有光标元素。
+    expect(view.dom.contains(caret)).toBe(false)
+    expect(host.contains(caret)).toBe(true)
+
+    await new Promise((resolve) => requestAnimationFrame(resolve))
+    expect(view.state.selection).toBeInstanceOf(BlockBoundaryCaret)
+    expect(host.querySelector('.desk-block-boundary-caret')).toBe(caret)
   })
 
   it('renders exactly one visible caret element', async () => {

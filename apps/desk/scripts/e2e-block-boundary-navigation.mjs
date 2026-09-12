@@ -16,6 +16,15 @@ const kb = join(workspace, 'TNotes.boundary-nav')
 const noteFile = join(kb, 'notes', '0001. boundary.md')
 const shots = join(deskDir, 'scripts', 'shots', 'boundary-nav')
 mkdirSync(join(kb, 'notes'), { recursive: true })
+mkdirSync(join(kb, 'assets'), { recursive: true })
+// 1x1 透明 PNG：独立图片段落要有真实图片文件
+writeFileSync(
+  join(kb, 'assets', '0002-big.png'),
+  Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8AARAAH/wEKzM3sAAAAAElFTkSuQmCC',
+    'base64'
+  )
+)
 mkdirSync(profile, { recursive: true })
 mkdirSync(shots, { recursive: true })
 writeFileSync(join(kb, 'tnotes.json'), JSON.stringify({ title: 'boundary-nav' }))
@@ -49,6 +58,12 @@ const source = [
   ':::',
   '',
   '尾段',
+  '',
+  '## 图片区',
+  '',
+  '![独立图片](../assets/0002-big.png) {w=400px}',
+  '',
+  '图片后段落',
   ''
 ].join('\n')
 writeFileSync(noteFile, source)
@@ -92,13 +107,14 @@ try {
       const editor = [...document.querySelectorAll('.ProseMirror')].find(
         (el) => el.offsetParent !== null
       )
-      const caret = editor?.querySelector('.desk-block-boundary-caret')
+      const host = editor?.parentElement ?? document
+      const caret = host.querySelector('.desk-block-boundary-caret')
       const selection = window.getSelection()
       const node = selection?.anchorNode
       const element = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement
       return {
         side: caret?.dataset.side ?? null,
-        caretParent: (caret?.parentElement?.className ?? '').slice(0, 30),
+        caretParent: (caret?.dataset.boundaryBlock ?? '').slice(0, 30),
         text: element
           ? `${element.tagName}:${(element.textContent ?? '').replace(/\s+/g, ' ').slice(0, 12)}@${selection.anchorOffset}`
           : null,
@@ -116,8 +132,10 @@ try {
       const editor = [...document.querySelectorAll('.ProseMirror')].find(
         (el) => el.offsetParent !== null
       )
-      const caret = editor?.querySelector('.desk-block-boundary-caret')
-      const block = caret?.parentElement
+      const host = editor?.parentElement ?? document
+      const caret = host.querySelector('.desk-block-boundary-caret')
+      const blockClass = (caret?.dataset.boundaryBlock ?? '').split(/\s+/)[0]
+      const block = blockClass ? editor?.querySelector(`.${blockClass}`) : null
       if (!caret || !block) return null
       const caretRect = caret.getBoundingClientRect()
       const blockRect = block.getBoundingClientRect()
@@ -134,6 +152,15 @@ try {
       await page.keyboard.press(key)
       await page.waitForTimeout(220)
     }
+  }
+  const clickHeading = async (text) => {
+    await page
+      .locator('.ProseMirror h1:visible, .ProseMirror h2:visible, .ProseMirror h3:visible', {
+        hasText: text
+      })
+      .first()
+      .click()
+    await page.waitForTimeout(150)
   }
   const clickParagraph = async (text) => {
     await page.locator('.ProseMirror p:visible', { hasText: text }).first().click()
@@ -336,6 +363,48 @@ try {
   record(
     '足迹块后 ↓ → 尾段开头',
     current.side === null && (current.text?.includes('尾段') ?? false),
+    JSON.stringify(current.text)
+  )
+
+  // 回归：标题 ↓ → 独立图片段落的块前光标。
+  // 曾把光标元素 append 进可编辑 DOM：独立图片段落是普通 paragraph，PM 的
+  // DOMObserver 把多出来的子节点当成 DOM 变更，readDOMChange 立刻把选区重置回
+  // 文本光标并抹掉光标元素 —— 表现就是「按 ↓ 没反应」。
+  await clickHeading('图片区')
+  await page.keyboard.press('End')
+  await page.waitForTimeout(150)
+  await press('ArrowDown')
+  current = await state()
+  record(
+    '标题 ↓ → 独立图片段落块前光标',
+    current.side === 'before' && current.caretParent.includes('desk-standalone-image'),
+    JSON.stringify({ side: current.side, parent: current.caretParent })
+  )
+  await page.waitForTimeout(400)
+  current = await state()
+  record(
+    '块前光标在图片段落上稳定存在（没被 PM 重置）',
+    current.side === 'before' && current.caretParent.includes('desk-standalone-image'),
+    JSON.stringify({ side: current.side, parent: current.caretParent })
+  )
+  const imageBox = await caretBox()
+  record(
+    '图片块头光标贴图片块左上角',
+    imageBox != null && imageBox.side === 'before' && imageBox.gapLeft <= 1,
+    JSON.stringify(imageBox)
+  )
+  await press('ArrowDown')
+  current = await state()
+  record(
+    '图片块前 ↓ → 块后光标（图片不可进内部）',
+    current.side === 'after' && current.caretParent.includes('desk-standalone-image'),
+    JSON.stringify({ side: current.side, parent: current.caretParent })
+  )
+  await press('ArrowDown')
+  current = await state()
+  record(
+    '图片块后 ↓ → 图片后段落开头',
+    current.side === null && (current.text?.includes('图片后段落') ?? false),
     JSON.stringify(current.text)
   )
 
