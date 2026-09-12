@@ -74,13 +74,87 @@
 }
 
 /* List markers use the body foreground, not Crepe's outline (our
-   border). Ordered numbers inherit this; checkbox SVGs keep Crepe's fill. */
+   border). Ordered numbers inherit this. */
 .milkdown-markdown-editor :deep(.milkdown .milkdown-list-item-block .label-wrapper) {
   color: var(--editor-text);
 }
 
 .milkdown-markdown-editor :deep(.milkdown .milkdown-list-item-block .label.bullet svg) {
   fill: currentColor;
+}
+
+/* 列表 marker → 文字间距对齐站点：站点用 `ul/ol { padding-left: 1.5rem }` + outside
+   marker，文字紧贴 24px 缩进，marker 的 ink 离文字约 13.5px（•）/ 6px（编号）。
+   Crepe 是「24px label 列 + `li gap: 10px`」，比站点宽约 5px；这里把编号/复选框右对齐
+   到列尾（bullet 的 24px 图标本来就占满整列），再把行间距收到 5px：• 的 ink 离文字
+   14px、编号 6px，与站点一致。 */
+.milkdown-markdown-editor :deep(.milkdown .milkdown-list-item-block li.list-item) {
+  gap: 5px;
+}
+
+.milkdown-markdown-editor :deep(.milkdown .milkdown-list-item-block .label-wrapper .label.ordered),
+.milkdown-markdown-editor
+  :deep(.milkdown .milkdown-list-item-block .label-wrapper .label.unchecked),
+.milkdown-markdown-editor :deep(.milkdown .milkdown-list-item-block .label-wrapper .label.checked) {
+  justify-content: flex-end;
+}
+
+/* 复选框按语雀的 8px 间距（站点是 `margin-right: 4px` + 源码里的空格 ≈ 8.4px）；
+   16px 方框贴到 24px label 列的右边，行间距即方框到文字的间距。 */
+.milkdown-markdown-editor
+  :deep(.milkdown .milkdown-list-item-block li.list-item:has(.label.unchecked)),
+.milkdown-markdown-editor
+  :deep(.milkdown .milkdown-list-item-block li.list-item:has(.label.checked)) {
+  gap: 8px;
+}
+
+.milkdown-markdown-editor
+  :deep(.milkdown .milkdown-list-item-block li.list-item:has(.label.unchecked) .label-wrapper),
+.milkdown-markdown-editor
+  :deep(.milkdown .milkdown-list-item-block li.list-item:has(.label.checked) .label-wrapper) {
+  justify-content: flex-end;
+}
+
+/* 任务列表复选框：不用 Crepe 自带的 24px 方框图标（填充色是品色边框、几乎看不见），
+   改成与站点 prose.css 同一套语雀风格方框：16px / 圆角 4px / 选中填充品牌绿 + 白色
+   对勾 / `transition: all .3s`。图标 SVG 隐藏，方框由 `.label` 自绘；对勾与站点一样
+   用 data-URI（`input` 与 `span` 都能用同一张图，保证两边一致）。 */
+.milkdown-markdown-editor
+  :deep(.milkdown .milkdown-list-item-block .label-wrapper .label.unchecked),
+.milkdown-markdown-editor :deep(.milkdown .milkdown-list-item-block .label-wrapper .label.checked) {
+  box-sizing: border-box;
+  position: relative;
+  /* 与站点 `.task-list-item-checkbox` 一样用 `top: .2em` 对齐文字基线附近 */
+  top: 0.2em;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid var(--tn-c-task-check-border);
+  border-radius: 4px;
+  background-color: var(--tn-c-task-check-bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.3 6.35 4.85 8.9 9.7 3.1' fill='none' stroke='%23fff' stroke-width='2'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 0 0;
+  transition: all 0.3s;
+}
+
+.milkdown-markdown-editor
+  :deep(.milkdown .milkdown-list-item-block .label-wrapper .label.unchecked svg),
+.milkdown-markdown-editor
+  :deep(.milkdown .milkdown-list-item-block .label-wrapper .label.checked svg) {
+  display: none;
+}
+
+.milkdown-markdown-editor
+  :deep(.milkdown .milkdown-list-item-block .label-wrapper .label.unchecked:hover) {
+  border-color: var(--tn-c-task-check);
+}
+
+.milkdown-markdown-editor :deep(.milkdown .milkdown-list-item-block .label-wrapper .label.checked) {
+  border-color: var(--tn-c-task-check);
+  background-color: var(--tn-c-task-check);
+  background-size: 12px 12px;
 }
 
 .milkdown-markdown-editor :deep(.milkdown .milkdown-toolbar) {
@@ -1636,8 +1710,8 @@
   position: relative;
   box-sizing: border-box;
   margin: 0;
-  /* 24px label + 10px gap — same as Crepe .label-wrapper + gap */
-  padding: 0 0 0 34px;
+  /* 24px label + 5px gap — 与站点 prose.css 的 marker→文字间距一致 */
+  padding: 0 0 0 29px;
   line-height: 1.5;
 }
 

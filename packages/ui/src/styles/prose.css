@@ -70,6 +70,41 @@
 :is(.tn-prose, .vp-doc) :where(li > ul, li > ol) {
   margin: 0;
 }
+/* 任务列表复选框：对齐语雀的方框（16px / 圆角 4px / 选中填充品牌绿 + 白色对勾 /
+   `transition: all .3s`）。markdown-it-task-lists 只输出原生 `input`，这里用
+   `appearance: none` 自绘；同时去掉 `.task-list-item` 的项目符号，避免出现
+   「◦ ☐ 文本」两层符号。对勾用 data-URI 而不是 `::after`：`input` 是替换元素，
+   Firefox 不生成伪元素。 */
+:is(.tn-prose, .vp-doc) :where(.task-list-item) {
+  list-style: none;
+}
+:is(.tn-prose, .vp-doc) :where(.task-list-item-checkbox) {
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  position: relative;
+  top: 0.2em;
+  width: 16px;
+  height: 16px;
+  margin: 0 4px 0 0;
+  border: 1px solid var(--tn-c-task-check-border);
+  border-radius: 4px;
+  background-color: var(--tn-c-task-check-bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.3 6.35 4.85 8.9 9.7 3.1' fill='none' stroke='%23fff' stroke-width='2'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 0 0;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+:is(.tn-prose, .vp-doc) :where(.task-list-item-checkbox:hover) {
+  border-color: var(--tn-c-task-check);
+}
+:is(.tn-prose, .vp-doc) :where(.task-list-item-checkbox:checked) {
+  border-color: var(--tn-c-task-check);
+  background-color: var(--tn-c-task-check);
+  background-size: 12px 12px;
+}
 :is(.tn-prose, .vp-doc) :where(:not(pre) > code) {
   color: var(--tn-c-brand);
   background: var(--tn-c-default-soft);

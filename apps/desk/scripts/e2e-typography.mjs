@@ -71,6 +71,11 @@ const markdown = [
   '',
   '> 引用块第一行。',
   '> 引用块第二行。',
+  '',
+  '1. 有序列表项',
+  '',
+  '- [ ] 未完成任务',
+  '- [x] 已完成任务',
   ''
 ].join('\n')
 const source = `---\nid: 10000000-0000-4000-8000-000000000072\n---\n\n${markdown}`
@@ -251,6 +256,9 @@ try {
       await page.evaluate((theme) => {
         document.documentElement.dataset.theme = theme
       }, theme)
+      // 复选框有 `transition: all .3s`：切换主题后要等过渡结束再读计算样式，
+      // 否则拿到的是上一套主题的中间态。
+      await page.waitForTimeout(400)
       const markers = await pm.evaluate((element) => ({
         body: getComputedStyle(element.querySelector(':scope > p')).color,
         bullets: Array.from(element.querySelectorAll('.label.bullet svg'))
@@ -322,6 +330,89 @@ try {
         return result
       })
       assert.deepEqual(quote.editor, quote.site, `${label}: 可视化编辑器的引用块样式必须与站点一致`)
+      // 列表：marker → 文字的 ink 间距必须与站点一致。站点是 outside marker + 24px 缩进，
+      // 量得 • 的 ink 离文字 13.5px、编号 6px；Crepe 默认是 24px label 列 + `li gap: 10px`
+      // （宽约 5px），所以这里量编辑器的 marker ink 右边缘到文字 ink 左边缘。
+      const listGaps = await pm.evaluate((element) => {
+        const inkRight = (labelNode) => {
+          const shape = labelNode.querySelector('circle, path, rect')
+          if (labelNode.classList.contains('bullet') && shape) {
+            return shape.getBoundingClientRect().right
+          }
+          return labelNode.getBoundingClientRect().right
+        }
+        const textLeft = (item) => {
+          const range = document.createRange()
+          range.selectNodeContents(item.querySelector('.children p').firstChild)
+          return range.getBoundingClientRect().left
+        }
+        const gaps = {}
+        for (const item of element.querySelectorAll('.milkdown-list-item-block li.list-item')) {
+          const marker = item.querySelector('.label-wrapper .label')
+          const kind =
+            marker.classList.contains('unchecked') || marker.classList.contains('checked')
+              ? 'checkbox'
+              : marker.classList.contains('bullet')
+                ? 'bullet'
+                : 'ordered'
+          if (gaps[kind] === undefined) gaps[kind] = Math.round(textLeft(item) - inkRight(marker))
+        }
+        return gaps
+      })
+      // 站点量到的值（像素扫描，见提交说明）；容差 1px 覆盖字形边距与取整。
+      for (const [kind, expected] of Object.entries({ bullet: 13.5, ordered: 6, checkbox: 8.4 })) {
+        const actual = listGaps[kind]
+        assert.ok(
+          Math.abs(actual - expected) <= 1,
+          `${label}: ${kind} 的 marker→文字间距 ${actual}px 与站点 ${expected}px 不一致`
+        )
+      }
+      // 复选框：与站点 `prose.css` 的 `.task-list-item-checkbox` 逐项一致（16px / 圆角 4px /
+      // 品牌绿 #00b96b / 白色对勾 / `all .3s` / `top: .2em`），未选中与选中都比。
+      const checkbox = await pm.evaluate((element) => {
+        const host = document.createElement('div')
+        host.className = 'vp-doc'
+        host.style.cssText = 'position:absolute;left:-10000px;top:0;width:600px'
+        host.innerHTML =
+          '<ul class="contains-task-list"><li class="task-list-item enabled"><label><input class="task-list-item-checkbox" type="checkbox"> 未完成任务</label></li>' +
+          '<li class="task-list-item enabled"><label><input class="task-list-item-checkbox" type="checkbox" checked> 已完成任务</label></li></ul>'
+        document.body.append(host)
+        const read = (node) => {
+          const css = getComputedStyle(node)
+          return {
+            size: `${css.width} ${css.height}`,
+            radius: css.borderRadius,
+            border: `${css.borderTopWidth} ${css.borderTopStyle} ${css.borderTopColor}`,
+            background: css.backgroundColor,
+            backgroundSize: css.backgroundSize,
+            transition: `${css.transitionProperty} ${css.transitionDuration}`,
+            top: css.top
+          }
+        }
+        const result = {
+          editorUnchecked: read(element.querySelector('.label-wrapper .label.unchecked')),
+          siteUnchecked: read(host.querySelectorAll('input')[0]),
+          editorChecked: read(element.querySelector('.label-wrapper .label.checked')),
+          siteChecked: read(host.querySelectorAll('input')[1]),
+          siteListStyle: getComputedStyle(host.querySelector('.task-list-item')).listStyleType,
+          editorSvg: getComputedStyle(element.querySelector('.label-wrapper .label.unchecked svg'))
+            .display
+        }
+        host.remove()
+        return result
+      })
+      assert.deepEqual(
+        checkbox.editorUnchecked,
+        checkbox.siteUnchecked,
+        `${label}: 未选中复选框样式必须与站点一致`
+      )
+      assert.deepEqual(
+        checkbox.editorChecked,
+        checkbox.siteChecked,
+        `${label}: 选中复选框样式必须与站点一致`
+      )
+      assert.equal(checkbox.siteListStyle, 'none', `${label}: 站点任务项不应再显示项目符号`)
+      assert.equal(checkbox.editorSvg, 'none', `${label}: 编辑器不再使用 Crepe 的方框图标`)
       // 链接浮层的图标曾用 Crepe 的 outline 令牌（Desk 把它映射成品色边框），浅色/暗色下
       // 都几乎与浮层底色相同。这里用对比度守住「看得见」。
       if (mode === '可视化编辑') {
