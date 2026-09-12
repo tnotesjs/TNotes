@@ -106,6 +106,20 @@ const source = [
   '',
   '提示块区结束段落',
   '',
+  '## 嵌套代码块',
+  '',
+  '::: tip 💡 TIP',
+  '',
+  '容器里的代码块：',
+  '',
+  '```js',
+  "console.log('nested')",
+  '```',
+  '',
+  ':::',
+  '',
+  '嵌套结束段落',
+  '',
   '## 块级公式',
   '',
   '$$',
@@ -113,6 +127,14 @@ const source = [
   '$$',
   '',
   '公式区结束段落',
+  '',
+  '## 下行落点',
+  '',
+  '下行段落文字',
+  '',
+  '# 下行标题',
+  '',
+  '下行结束段落',
   ''
 ].join('\n')
 writeFileSync(noteFile, source)
@@ -794,6 +816,59 @@ try {
     '块级公式 块后 ↓ → 下一段',
     current.text?.includes('公式区结束段落') ?? false,
     JSON.stringify(current.text)
+  )
+
+  // 普通文本块之间：↓ 必须落到「下一块」，不能吸附回本行行尾
+  // （坐标探测点落在两块之间的空白时，posAtCoords 会吸附到最近的文本位置 ——
+  //   常常就是本行行尾，表现为 ↓ 之后光标横着跳到行尾）
+  await clickParagraph('下行段落文字')
+  await page.keyboard.press('Home')
+  await page.waitForTimeout(150)
+  // 用「内容坐标」（视口 y + 滚动量），这样落点触发的滚动不会干扰比较：
+  // 横着跳到本行行尾时 y 不变，真的往下走时 y 会多出一行。
+  const caretY = () =>
+    page.evaluate(() => {
+      const scroller = document.querySelector('.milkdown-markdown-editor__canvas')
+      const scrollTop = scroller?.scrollTop ?? 0
+      const selection = window.getSelection()
+      const range = selection?.rangeCount ? selection.getRangeAt(0) : null
+      const rect = range?.getBoundingClientRect()
+      if (rect && rect.height > 0) return Math.round(rect.top + scrollTop)
+      const cursor = document.querySelector('.prosemirror-virtual-cursor')
+      return cursor ? Math.round(cursor.getBoundingClientRect().top + scrollTop) : -1
+    })
+  const yBefore = await caretY()
+  await press('ArrowDown')
+  const yAfter = await caretY()
+  current = await state()
+  record(
+    '段落起点 ↓ → 落到下一块、且真的往下走（不是横着跳到本行行尾）',
+    (current.text?.includes('下行标题') ?? false) && yAfter > yBefore + 8,
+    JSON.stringify({ text: current.text, offset: current.offset, yBefore, yAfter })
+  )
+
+  // callout 里嵌代码块：body 最后一行 ↓ → 嵌套代码块的块前光标 → 进 CM → 出到块后
+  await clickParagraph('容器里的代码块：')
+  await page.keyboard.press('End')
+  await page.waitForTimeout(150)
+  await press('ArrowDown')
+  current = await state()
+  record(
+    'callout body 末行 ↓ → 嵌套代码块块前光标',
+    current.side === 'before' && current.caretParent.startsWith('milkdown-code-block'),
+    JSON.stringify({ side: current.side, parent: current.caretParent })
+  )
+  current = await pressUntilCaret('ArrowDown', 'cm', 3)
+  record(
+    'callout 嵌套代码块 ↓ → 进 CM',
+    current.cmFocus === true,
+    JSON.stringify({ cm: current.cmFocus, text: current.text })
+  )
+  current = await pressUntilCaret('ArrowDown', 'after', 5)
+  record(
+    'callout 嵌套代码块末行 ↓ → 块后光标',
+    current.side === 'after' && current.caretParent.startsWith('milkdown-code-block'),
+    JSON.stringify({ side: current.side, parent: current.caretParent })
   )
 
   // 未编辑：导航不产生任何 markdown 变更

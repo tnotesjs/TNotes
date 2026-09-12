@@ -779,6 +779,14 @@ export function handleBoundaryNavigationKeyDown(
     if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
       const exit = calloutBodyExitPosition($head, event.key === 'ArrowDown' ? 'down' : 'right')
       if (exit != null) return leaveCallout(view, exit)
+      // body 里还有东西（例如嵌套代码块）时：光标在最后一行 → 停到那个块的块前光标。
+      // 不接的话按键会落到 virtual-cursor 的 selectVertically 手里，实测只右移一个字符。
+      if (isInsideCalloutBody($head) && atTextblockVerticalEdge(view.state, 'down')) {
+        const sibling = siblingBlock(view.state.doc, $head.before($head.depth), $head.parent, 1)
+        if (sibling && isBoundaryStopBlock(sibling.node)) {
+          return placeBoundaryCaret(view, sibling.pos, 'before')
+        }
+      }
     }
     // callout body 首行的 ↑/← = 进标题 chrome。这一步必须在捕获阶段自己做：
     // 交给后面的 PM keymap 时，gapcursor / virtual-cursor 的 selectVertically
@@ -896,7 +904,12 @@ function moveVerticallyByCoords(view: EditorView, forward: boolean): boolean {
   if (probeTop < top + 1 || probeTop > bottom - 1) return false
   const probe = view.posAtCoords({ left: coords.left, top: probeTop })
   if (!probe) return false
-  // 再兜一层：目标必须落在相邻块里（同一块或前后各一块），否则宁可走相邻块路径。
+  // 再兜两层：
+  // 1) 目标必须越过当前块 —— 探测点落在两个块之间的空白时，posAtCoords 会吸附到
+  //    最近的文本位置（常常就是本行行尾），↓ 就变成横着跳到行尾（实测复现）；
+  // 2) 目标必须落在相邻块里（同一块或前后各一块）。
+  const $head = selection.$head
+  if (forward ? probe.pos <= $head.after(1) : probe.pos >= $head.before(1)) return false
   if (!isNearbyBlockTarget(view.state, probe.pos, selection.head)) return false
   const $target = view.state.doc.resolve(probe.pos)
   // 目标落在代码块里时不在这里处理（那是 CM / 边界分支的事）
@@ -1042,6 +1055,14 @@ function installDebugProbe(view: EditorView): void {
         : null,
       cell,
       title: active instanceof HTMLInputElement ? active.value.trim().slice(0, 16) : null,
+      y: (() => {
+        const scroller = view.dom.closest('.milkdown-markdown-editor__canvas') as HTMLElement | null
+        try {
+          return Math.round(view.coordsAtPos(selection.head).top + (scroller?.scrollTop ?? 0))
+        } catch {
+          return -1
+        }
+      })(),
       scroll: Math.round(
         (view.dom.closest('.milkdown-markdown-editor__canvas') as HTMLElement | null)?.scrollTop ??
           -1
