@@ -150,27 +150,50 @@ try {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function openMenu(target) {
     await target.scrollIntoViewIfNeeded()
-    // Crepe 的格式工具条（.milkdown-toolbar[data-show=true]）浮在选区上方，会拦截块左上角
-    // 的 hover：本地看不出，CI 上偶发一路重试到 50s 超时。先收起它再 hover。
+    // Crepe 的格式工具条（.milkdown-toolbar[data-show=true]）浮在选区上方，会拦截 hover：
+    // 本地看不出，CI 上实测会一直 `data-show=true`（Escape/点击都清不掉），一路重试到超时。
+    // 所以别跟它硬碰：先尝试收起，然后从「不被工具条矩形覆盖」的候选点里挑一个 hover。
     await page.keyboard.press('Escape')
     await page
       .waitForFunction(
         () => document.querySelector('.milkdown-toolbar[data-show="true"]') === null,
         undefined,
-        { timeout: 5000 }
+        { timeout: 3000 }
       )
       .catch(() => undefined)
     const box = await target.boundingBox()
-    const hoverPoint = { x: Math.min(10, box.width / 2), y: Math.min(10, box.height / 2) }
-    await target.hover({ position: hoverPoint })
-    // BlockProvider throttles mousemove and animates the handle position.
-    await page.waitForTimeout(450)
-    if ((await handle.getAttribute('data-show')) !== 'true') {
-      // 节流可能刚好吞掉第一次 mousemove，再hover一次（比直接失败更接近真实用户动作）
-      await target.hover({ position: hoverPoint })
-      await page.waitForTimeout(450)
+    const toolbar = page.locator('.milkdown-toolbar[data-show="true"]')
+    const toolbarBox = (await toolbar.count()) > 0 ? await toolbar.boundingBox() : null
+    const covered = (point) => {
+      if (!toolbarBox) return false
+      const x = box.x + point.x
+      const y = box.y + point.y
+      return (
+        x >= toolbarBox.x &&
+        x <= toolbarBox.x + toolbarBox.width &&
+        y >= toolbarBox.y &&
+        y <= toolbarBox.y + toolbarBox.height
+      )
     }
-    assert.equal(await handle.getAttribute('data-show'), 'true')
+    const candidates = [
+      { x: Math.min(10, box.width / 2), y: Math.min(10, box.height / 2) },
+      { x: Math.min(10, box.width / 2), y: Math.max(box.height - 6, 1) },
+      { x: box.width / 2, y: box.height / 2 }
+    ].filter((point) => !covered(point))
+    if (candidates.length === 0) {
+      throw new Error('块整体被格式工具条覆盖，找不到可 hover 的点')
+    }
+    let shown = false
+    for (const position of candidates) {
+      await target.hover({ position })
+      // BlockProvider throttles mousemove and animates the handle position.
+      await page.waitForTimeout(450)
+      if ((await handle.getAttribute('data-show')) === 'true') {
+        shown = true
+        break
+      }
+    }
+    assert.equal(shown, true, 'hover 后块手柄应显示')
     assert.equal(await handle.locator('.operation-item:visible').count(), 1)
     await handle.locator('.operation-item:last-child').click()
     await menu.waitFor({ timeout: 5000 })

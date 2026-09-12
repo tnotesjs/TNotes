@@ -156,6 +156,15 @@ try {
     secondFiles.length === 2 && new Set(secondFiles).size === 2,
     `files=${JSON.stringify(secondFiles)}`
   )
+  // 第二张卡片同样会进入编辑态，但「完成」按钮只在编辑态可见：先等它真的进编辑态
+  // （CI 上偶发比组件挂载慢，直接点会 30s 超时）。
+  const secondEditing = await waitFor(
+    async () =>
+      (await page.locator('.desk-excalidraw:visible .excalidraw__canvas.interactive').count()) ===
+      1,
+    30000
+  )
+  record('第二张画布也直接进入编辑状态', Boolean(secondEditing))
   await doneButton().click()
   await page.waitForTimeout(800)
 
