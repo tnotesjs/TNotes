@@ -86,6 +86,7 @@ import {
 } from '../editor/markdown/rawBlockProjection'
 import { serializeDeskCalloutMdast } from '../editor/markdown/deskCallout'
 import { reconcileMarkdownSource } from '../editor/markdown/sourcePreservation'
+import { findAbsorbedBlocks } from '../editor/markdown/projectionFidelity'
 import { renumberHeadings, stripHeadingNumbers } from '../editor/markdown/headingNumbering'
 import { clampViewPosition } from '../editor/markdown/noteViewPosition'
 import { flushPendingEdits } from '../editor/markdown/pendingEdits'
@@ -899,6 +900,14 @@ function flushCurrentContent(editor = crepe): void {
   if (!editor || !ready || synchronizing || destroyed) return
   const markdown = editor.getMarkdown()
   const preserved = reconcileMarkdownSource(originalSource, baselineCanonical, markdown)
+  // 保存守卫：原文里某段内容被并进了别的块（吞并）—— 这是会丢数据的结构，坚决不写盘。
+  // 用户的编辑仍在文档里；切到源码视图可以直接改，或把那段内容改回独立块再保存。
+  const absorbed = findAbsorbedBlocks(originalSource, preserved)
+  if (absorbed.length > 0) {
+    console.error('[desk] 保存被拦截：检测到原文内容被并入其它块', absorbed)
+    useWorkspaceStore().status = `检测到 ${absorbed.length} 处内容会被写坏，已暂停保存；你的文件没有被修改（可切到源码视图检查）`
+    return
+  }
   if (preserved === props.content || preserved === lastEmitted) return
   lastEmitted = preserved
   emit('change', preserved)
