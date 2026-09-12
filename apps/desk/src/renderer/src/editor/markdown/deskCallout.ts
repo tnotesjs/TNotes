@@ -83,7 +83,10 @@ export function wrapProjectedCalloutBody(
 ): string {
   const start = createDeskCalloutStartMarker(marker)
   const body = innerProjected.replace(/^\n+|\n+$/g, '')
-  return body ? `${start}\n\n${body}\n${CALLOUT_END}` : `${start}\n\n${CALLOUT_END}`
+  // 结束标记前必须留一个空行：body 末行若是 <br /> 这类独立 HTML 标签，它会开一个
+  // 「遇到空行才结束」的 HTML 块，把紧随其后的结束标记一起吞掉 —— 于是结束标记失效、
+  // 高亮块把后面的块全吃进来，保存时那些块无人认领被静默丢弃（222 丢失的那个 bug）。
+  return body ? `${start}\n\n${body}\n\n${CALLOUT_END}` : `${start}\n\n${CALLOUT_END}`
 }
 
 interface CalloutMarkdownNode extends MarkdownNode {

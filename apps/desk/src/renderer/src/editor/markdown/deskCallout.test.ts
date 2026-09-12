@@ -150,6 +150,28 @@ describe('visual callout editor round-trip', () => {
     expect(reconciled).not.toBe(source)
   })
 
+  it('callout body 末尾是 <br /> 时不再吞掉后面的段落', async () => {
+    // 回归（222 丢失）：<br /> 会开一个「遇到空行才结束」的 HTML 块，投影拼结束标记时
+    // 若不留空行，结束标记会被一起吞掉 → 高亮块把后面的段落吃进来，保存时该段落无人认领被丢弃。
+    const source = ['::: warning ⚠️ W', '', '111', '', '<br />', '', ':::', '', '222', ''].join(
+      '\n'
+    )
+    const editor = await createEditor(source)
+    editor.action((ctx) => {
+      const doc = ctx.get(editorStateCtx).doc
+      const top: Array<{ type: string; text: string }> = []
+      doc.forEach((node) => top.push({ type: node.type.name, text: node.textContent }))
+      expect(top).toEqual([
+        { type: 'deskCallout', text: '111' },
+        { type: 'paragraph', text: '222' }
+      ])
+    })
+    const baseline = editor.action(getMarkdown())
+    expect(baseline).not.toContain('desk-callout')
+    expect(baseline).toContain('222')
+    expect(reconcileMarkdownSource(source, baseline, baseline)).toBe(source)
+  })
+
   it('serializes a nested code-group with a longer outer fence', async () => {
     const source = [
       ':::: tip Nested',
