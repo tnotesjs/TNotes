@@ -265,14 +265,9 @@ async function main() {
 
   // 5) 真实 Chromium：岛的 SVG 渲染出来、外部请求 0
   const { chromium } = await import('playwright-core')
-  const cachedChromium = [
-    '/Users/huyouda/Library/Caches/ms-playwright/chromium-1187/chrome-mac/Chromium.app/Contents/MacOS/Chromium',
-    '/Users/huyouda/Library/Caches/ms-playwright/chromium_headless_shell-1187/chrome-headless-shell-mac-arm64/chrome-headless-shell'
-  ].find((candidate) => existsSync(candidate))
-  const browser = await chromium.launch({
-    args: ['--no-sandbox'],
-    ...(cachedChromium ? { executablePath: cachedChromium } : {})
-  })
+  // 不要写死本机缓存路径：playwright-core 自己知道该用哪个 revision，写死旧 revision
+  // 会在 CI 上没有对应文件时回落（实测 headless shell 1243 缺失导致 CI 红）。
+  const browser = await chromium.launch({ args: ['--no-sandbox'] })
   const { server, port } = await startServer(distRoot)
   const pageErrors = []
   const externalRequests = []

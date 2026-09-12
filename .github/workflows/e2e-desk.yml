@@ -48,6 +48,11 @@ jobs:
       - name: Build
         run: pnpm build
 
+      # SSG/资源验收套件要用真 Chromium 渲染产物；版本由 playwright-core 决定，
+      # 不要写死路径（脚本里已改成让它自己解析）。
+      - name: Install Playwright Chromium
+        run: pnpm --filter desk exec playwright-core install chromium
+
       - name: Resolve e2e selection
         id: selection
         run: |

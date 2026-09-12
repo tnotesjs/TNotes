@@ -909,15 +909,9 @@ try {
         .catch(() => false)
       assert(ready, '静态服务器未就绪')
       const { chromium } = await import('playwright-core')
-      // 本机缓存的 Chromium 版本与 playwright-core 期望的不一致，显式指定可执行文件
-      const cachedChromium = [
-        '/Users/huyouda/Library/Caches/ms-playwright/chromium-1187/chrome-mac/Chromium.app/Contents/MacOS/Chromium',
-        '/Users/huyouda/Library/Caches/ms-playwright/chromium_headless_shell-1187/chrome-headless-shell-mac-arm64/chrome-headless-shell'
-      ].find((candidate) => existsSync(candidate))
-      const browser = await chromium.launch({
-        args: ['--no-sandbox'],
-        ...(cachedChromium ? { executablePath: cachedChromium } : {})
-      })
+      // 不要写死本机缓存路径：交给 playwright-core 解析版本匹配的浏览器，否则本地用旧
+      // revision、CI 上文件不存在直接红（需要先 `playwright-core install chromium`）。
+      const browser = await chromium.launch({ args: ['--no-sandbox'] })
       try {
         const sitePage = await browser.newPage()
         const failedResponses = []
