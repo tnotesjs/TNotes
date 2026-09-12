@@ -215,50 +215,52 @@ try {
   )
   if (!movedAfterTarget) {
     // Chromium occasionally never promotes an automated mouse move to native
-    // HTML-DnD. Retry the exact browser drag event chain at the same six-dot
-    // handle and target; this still exercises Milkdown's runtime DataTransfer,
-    // slice, drop and dragend handlers.
-    await raw.hover()
-    await blockHandle.waitFor()
-    const handleElement = await blockHandle.elementHandle()
-    const dropElement = await dragTarget.elementHandle()
-    assert.ok(handleElement)
-    assert.ok(dropElement)
-    await page.evaluate(
-      ({ handle, target }) => {
-        const dataTransfer = new DataTransfer()
-        const handleRect = handle.getBoundingClientRect()
-        const targetRect = target.getBoundingClientRect()
-        const common = {
-          bubbles: true,
-          cancelable: true,
-          clientX: targetRect.left + targetRect.width / 2,
-          clientY: targetRect.bottom - 1,
-          dataTransfer
-        }
-        handle.dispatchEvent(
-          new MouseEvent('mousedown', {
+    // HTML-DnD（并发跑时 CPU 竞争会让这个概率变高）。重试同一条浏览器拖拽事件链，
+    // 它仍然走 Milkdown 真实的 DataTransfer/slice/drop/dragend 处理；失败就再等一拍重来。
+    for (let attempt = 1; attempt <= 3 && !movedAfterTarget; attempt += 1) {
+      await page.waitForTimeout(150)
+      await raw.hover()
+      await blockHandle.waitFor()
+      const handleElement = await blockHandle.elementHandle()
+      const dropElement = await dragTarget.elementHandle()
+      assert.ok(handleElement)
+      assert.ok(dropElement)
+      await page.evaluate(
+        ({ handle, target }) => {
+          const dataTransfer = new DataTransfer()
+          const handleRect = handle.getBoundingClientRect()
+          const targetRect = target.getBoundingClientRect()
+          const common = {
             bubbles: true,
-            clientX: handleRect.left + handleRect.width / 2,
-            clientY: handleRect.top + handleRect.height / 2
-          })
-        )
-        handle.dispatchEvent(new DragEvent('dragstart', common))
-        target.dispatchEvent(new DragEvent('dragenter', common))
-        target.dispatchEvent(new DragEvent('dragover', common))
-        target.dispatchEvent(new DragEvent('drop', common))
-        handle.dispatchEvent(new DragEvent('dragend', common))
-      },
-      { handle: handleElement, target: dropElement }
-    )
-    await page.waitForTimeout(180)
-    movedAfterTarget = await raw.evaluate(
-      (element, target) =>
-        Boolean(target.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING),
-      originalAfterElement
-    )
+            cancelable: true,
+            clientX: targetRect.left + targetRect.width / 2,
+            clientY: targetRect.bottom - 1,
+            dataTransfer
+          }
+          handle.dispatchEvent(
+            new MouseEvent('mousedown', {
+              bubbles: true,
+              clientX: handleRect.left + handleRect.width / 2,
+              clientY: handleRect.top + handleRect.height / 2
+            })
+          )
+          handle.dispatchEvent(new DragEvent('dragstart', common))
+          target.dispatchEvent(new DragEvent('dragenter', common))
+          target.dispatchEvent(new DragEvent('dragover', common))
+          target.dispatchEvent(new DragEvent('drop', common))
+          handle.dispatchEvent(new DragEvent('dragend', common))
+        },
+        { handle: handleElement, target: dropElement }
+      )
+      await page.waitForTimeout(180)
+      movedAfterTarget = await raw.evaluate(
+        (element, target) =>
+          Boolean(target.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING),
+        originalAfterElement
+      )
+    }
   }
-  assert.equal(movedAfterTarget, true)
+  assert.equal(movedAfterTarget, true, '六点手柄拖拽后块应落到目标之后')
   assert.equal(await pm.getAttribute('data-dragging'), 'false')
   await page.screenshot({ path: join(shots, '05-block-dragged.png') })
   await page.waitForTimeout(400)

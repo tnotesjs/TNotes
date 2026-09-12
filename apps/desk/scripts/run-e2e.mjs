@@ -45,6 +45,10 @@ function parseArgs(argv) {
   }
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i]
+    if (arg === '--help' || arg === '-h') {
+      options.help = true
+      continue
+    }
     const next = () => {
       i += 1
       if (i >= argv.length) throw new Error(`${arg} 需要一个值`)
@@ -259,27 +263,73 @@ async function runSuite(suite, options, logDir) {
   }
 }
 
-async function pool(items, limit, worker) {
-  const results = []
-  let cursor = 0
-  const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    for (;;) {
-      const index = cursor
-      cursor += 1
-      if (index >= items.length) return
-      results[index] = await worker(items[index])
-    }
-  })
-  await Promise.all(runners)
-  return results
-}
-
 function formatDuration(ms) {
   return `${(ms / 1000).toFixed(1)}s`
 }
 
+/**
+ * 资源感知的并发池：`locks` 里声明的外部资源（目前只有 `clipboard`：OS 粘贴板全局共享，
+ * 复制/粘贴类断言会互相覆盖）同一时刻只能被一个套件持有；不冲突的套件照常并发。
+ * 这比 `serial`（整机独占）宽松得多——4 个剪贴板套件可以和其他 20 个套件重叠跑。
+ */
+function runLockedPool(suites, options, logDir) {
+  const concurrency = Math.max(1, options.concurrency)
+  const pending = [...suites]
+  const results = []
+  const inUse = new Set()
+  const active = new Map()
+  return new Promise((resolve) => {
+    const settle = () => {
+      if (pending.length === 0 && active.size === 0) {
+        resolve(results.sort((a, b) => a.name.localeCompare(b.name)))
+      }
+    }
+    const startNext = () => {
+      while (active.size < concurrency) {
+        const index = pending.findIndex((suite) =>
+          (suite.locks ?? []).every((lock) => !inUse.has(lock))
+        )
+        if (index === -1) break
+        const [suite] = pending.splice(index, 1)
+        for (const lock of suite.locks ?? []) inUse.add(lock)
+        let promise
+        promise = runSuite(suite, options, logDir).then((result) => {
+          for (const lock of suite.locks ?? []) inUse.delete(lock)
+          active.delete(promise)
+          results.push(result)
+          console.log(
+            `  ${result.ok ? (result.flaky ? '⚠' : '✓') : '✗'} ${suite.name} ${formatDuration(result.durationMs)}`
+          )
+          startNext()
+        })
+        active.set(promise, suite)
+      }
+      settle()
+    }
+    startNext()
+  })
+}
+
+const USAGE = `desk e2e runner
+
+开发循环（改完代码先在 apps/desk 下重建 out/，再挑最小集跑）：
+  pnpm --filter desk build:out                  # 只构建（跳过 typecheck），比 build 快
+  node scripts/e2e-block-menus.mjs              # 单套件直跑（2-20s，带逐条 PASS/FAIL + 截图）
+  pnpm --filter desk test:e2e --only blocks     # 按区域（area）跑
+  pnpm --filter desk test:e2e --since HEAD      # 受影响 + 冒烟核心集
+  pnpm --filter desk test:e2e --since HEAD --since-exact   # 只跑受影响集
+全量 / 交付：
+  pnpm --filter desk test:e2e                   # 全部 regression 套件
+  pnpm --filter desk test:e2e --concurrency 6   # 核多的机器可以再压
+其它：--smoke --shard 1/2 --list --dry-run --json <path> --retries N --include-manual
+调度：serial 套件整机独占；locks:['clipboard'|'focus'] 只做资源互斥，可与无关套件并行。`
+
 async function main() {
   const options = parseArgs(process.argv.slice(2))
+  if (options.help) {
+    console.log(USAGE)
+    return
+  }
   const selected = selectSuites(options)
 
   if (options.list) {
@@ -287,6 +337,7 @@ async function main() {
       const flags = [
         suite.tier === 'manual' ? 'manual' : '',
         suite.serial ? 'serial' : '',
+        ...(suite.locks ?? []).map((lock) => `lock:${lock}`),
         suite.smoke ? 'smoke' : ''
       ]
         .filter(Boolean)
@@ -315,6 +366,7 @@ async function main() {
       const reason = options.hits?.get(suite.name)
       console.log(
         `  ${suite.name}${suite.serial ? ' [serial]' : ''}` +
+          `${(suite.locks ?? []).length ? ` [lock:${(suite.locks ?? []).join(',')}]` : ''}` +
           `${reason ? `  ← ${reason.slice(0, 3).join(', ')}` : ''}`
       )
     }
@@ -342,14 +394,7 @@ async function main() {
     )
   }
   if (parallelSuites.length) {
-    const parallel = await pool(parallelSuites, options.concurrency, async (suite) => {
-      const result = await runSuite(suite, options, logDir)
-      console.log(
-        `  ${result.ok ? (result.flaky ? '⚠' : '✓') : '✗'} ${suite.name} ${formatDuration(result.durationMs)}`
-      )
-      return result
-    })
-    results.push(...parallel)
+    results.push(...(await runLockedPool(parallelSuites, options, logDir)))
   }
 
   const totalMs = Date.now() - startedAt

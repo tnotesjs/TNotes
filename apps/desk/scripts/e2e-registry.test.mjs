@@ -43,21 +43,33 @@ describe('e2e registry', () => {
     expect(manual.sort()).toEqual(['e2e-excalidraw-e0.mjs', 'e2e-mindmap.mjs'])
   })
 
-  it('对 Electron 实例敏感、必须独占跑的套件保持 serial', () => {
-    const serial = SUITES.filter((suite) => suite.serial).map((suite) => suite.name)
-    for (const name of [
-      'e2e-assets-acceptance.mjs', // 固定端口 8123 + osascript 系统剪贴板
-      'e2e-block-interactions.mjs', // 系统剪贴板 + 真实拖拽
-      'e2e-block-ranges.mjs', // 真实 Cmd+C/X
-      'e2e-delete-dialog.mjs', // 原生菜单 + Git 时序
-      'e2e-editor-focus.mjs', // 焦点 + 1800×1100 大窗口
-      'e2e-image-chrome.mjs', // 真实拖拽 + hover
-      'e2e-history-preview.mjs', // 原生菜单 + 窗口焦点
-      'e2e-numbered-tabs.mjs', // 原生 before-input-event
-      'e2e-quit-flush.mjs', // 会真的退出应用
-      'e2e-tab-drag.mjs' // sendInputEvent 需窗口聚焦
-    ]) {
-      expect(serial, `${name} 应为 serial`).toContain(name)
+  it('资源约束按 locks 声明：clipboard / focus 各成一组，回归集不再整机独占', () => {
+    const byLock = (lock) =>
+      SUITES.filter((suite) => (suite.locks ?? []).includes(lock))
+        .map((suite) => suite.name)
+        .sort()
+    // OS 粘贴板是全局共享：这些套件复制/粘贴时会互相覆盖，必须互斥
+    expect(byLock('clipboard')).toEqual(
+      [
+        'e2e-assets-acceptance.mjs',
+        'e2e-block-interactions.mjs',
+        'e2e-block-ranges.mjs',
+        'e2e-excalidraw-copy.mjs',
+        'e2e-image-chrome.mjs'
+      ].sort()
+    )
+    // 依赖 OS 窗口焦点（sendInputEvent / 大窗口焦点断言）：彼此互斥即可，不必整机独占
+    expect(byLock('focus')).toEqual(
+      ['e2e-editor-focus.mjs', 'e2e-numbered-tabs.mjs', 'e2e-tab-drag.mjs'].sort()
+    )
+    // serial（整机独占）只剩两个 manual 套件：默认不参与回归
+    expect(
+      SUITES.filter((suite) => suite.serial)
+        .map((suite) => suite.name)
+        .sort()
+    ).toEqual(['e2e-excalidraw-e0.mjs', 'e2e-mindmap.mjs'])
+    for (const suite of SUITES) {
+      if (suite.serial) expect(suite.locks ?? [], suite.name).toEqual([])
     }
   })
 })

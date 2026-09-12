@@ -37,7 +37,8 @@ export const SUITES = [
       'packages/ssg/**',
       'packages/ui/src/markdown/**'
     ],
-    serial: true,
+    serial: false,
+    locks: ['clipboard'],
     smoke: false,
     note: '资源验收：盘点/合并/压缩/转格式/断链 + SSG 产物资源完整性（sharp/oxipng、系统剪贴板、固定端口 8123）'
   },
@@ -66,7 +67,8 @@ export const SUITES = [
       'packages/ui/src/markdown/image.ts',
       'apps/desk/src/renderer/src/markdown/MilkdownMarkdownEditor.vue'
     ],
-    serial: true,
+    serial: false,
+    locks: ['clipboard'],
     smoke: false,
     note: '图片选中浮层几何 + 真实拖拽缩放（2px 容差，跨 DPI 易碎）'
   },
@@ -82,7 +84,7 @@ export const SUITES = [
       'packages/ui/src/components/Mermaid/**',
       'packages/ui/src/excalidraw/**'
     ],
-    serial: true,
+    serial: false,
     smoke: false,
     note: '历史标签页只读预览 + 恢复写回（自定义协议、真实 Git、原生菜单）'
   },
@@ -98,7 +100,7 @@ export const SUITES = [
       'apps/desk/src/main/contextMenus.ts',
       'apps/desk/src/renderer/src/App.vue'
     ],
-    serial: true,
+    serial: false,
     smoke: true,
     note: '删除对话框：按 Git 状态说明后果 + 可选「先记录当前版本」（原生菜单 + Git 时序）'
   },
@@ -145,7 +147,8 @@ export const SUITES = [
       'apps/desk/src/renderer/src/markdown/milkdownMarkdownEditor.scoped.css',
       'packages/ui/src/styles/tokens.css'
     ],
-    serial: true,
+    serial: false,
+    locks: ['clipboard'],
     smoke: false,
     note: '块级交互：整块/范围选择、六点菜单、拖拽、复制剪切删除、暗色对比（体检建议拆 3：选块/拖拽菜单/剪贴板暗色）'
   },
@@ -179,7 +182,8 @@ export const SUITES = [
       'apps/desk/src/renderer/src/markdown/milkdownMarkdownEditor.scoped.css',
       'apps/desk/src/renderer/src/editor/markdown/rawBlockProjection.ts'
     ],
-    serial: true,
+    serial: false,
+    locks: ['clipboard'],
     smoke: true,
     note: '块范围选择权威用例：Shift+↑↓ 整块一步一选、真实软换行视觉行、OS 剪贴板字节'
   },
@@ -252,6 +256,7 @@ export const SUITES = [
     name: 'e2e-excalidraw-copy.mjs',
     area: 'excalidraw',
     tier: 'regression',
+    locks: ['clipboard'],
     globs: [
       'apps/desk/src/renderer/src/editor/markdown/excalidrawClipboard.ts',
       'apps/desk/src/renderer/src/markdown/excalidrawClipboardPlugin.ts',
@@ -368,7 +373,8 @@ export const SUITES = [
       'apps/desk/src/renderer/src/editor-groups/NoteTabPane.vue',
       'apps/desk/src/renderer/src/editor-groups/FormatOverflowBar.vue'
     ],
-    serial: true,
+    serial: false,
+    locks: ['focus'],
     smoke: true,
     note: '死光标回归：可编辑区铺满、空白点击收回焦点、失焦不留虚拟光标（1800×1100 大窗口）'
   },
@@ -415,7 +421,8 @@ export const SUITES = [
       'apps/desk/src/renderer/src/editor-groups/EditorGroup.vue',
       'apps/desk/src/renderer/src/editor-groups/WebTabPane.vue'
     ],
-    serial: true,
+    serial: false,
+    locks: ['focus'],
     smoke: true,
     note: 'Cmd/Ctrl+数字切「当前分屏组」标签（原生 before-input-event，CDP 无法替代）'
   },
@@ -430,7 +437,7 @@ export const SUITES = [
       'apps/desk/src/renderer/src/App.vue',
       'apps/desk/src/renderer/src/stores/workspace/**'
     ],
-    serial: true,
+    serial: false,
     smoke: true,
     note: '关窗/退出前先 flush 未保存内容（会真的退出应用）'
   },
@@ -443,7 +450,8 @@ export const SUITES = [
       'apps/desk/src/renderer/src/editor-groups/EditorGroup.vue',
       'apps/desk/src/renderer/src/editor-groups/layoutModel.ts'
     ],
-    serial: true,
+    serial: false,
+    locks: ['focus'],
     smoke: true,
     note: '标签真实拖拽：半区预览、拆分搬原标签、跨组合并'
   },
