@@ -445,6 +445,10 @@ export function degradableBlockIndexes(source: string, canonical: string): numbe
   const sourceBlockCount = report.sourceBlockCount
   const picked = new Set<number>()
   for (const item of report.problematic) {
+    // 只对**结构性问题**降级：同块内的字节差异（例如序列化把行尾空格吃掉）不动显示 ——
+    // 未编辑的块在保存时本来就逐字取原文（reconcile 的原文复用），不会丢内容，
+    // 没必要因此把正常内容变成"按原文显示"。
+    if (item.reason === 'content-changed') continue
     if (item.reason === 'extra') {
       picked.add(Math.max(0, sourceBlockCount - 1))
       continue
@@ -456,4 +460,33 @@ export function degradableBlockIndexes(source: string, canonical: string): numbe
     }
   }
   return [...picked].sort((a, b) => a - b)
+}
+
+/**
+ * 降级集合的迭代扩张：一次降级后若仍不忠实，把新报出来的块（以及它前一块，
+ * 用来覆盖分隔符错位）并入集合。调用方拿它循环，直到忠实或不再增长。
+ */
+export function extendDegradationIndexes(
+  source: string,
+  canonical: string,
+  current: readonly number[]
+): number[] {
+  const report = classifyProjectionFidelity(source, canonical)
+  const next = new Set(current)
+  for (const item of report.problematic) {
+    if (item.reason === 'extra') {
+      next.add(Math.max(0, report.sourceBlockCount - 1))
+      continue
+    }
+    next.add(item.index)
+    next.add(Math.max(0, item.index - 1))
+    if (item.againstIndex != null) {
+      next.add(Math.min(item.againstIndex, Math.max(0, report.sourceBlockCount - 1)))
+    }
+  }
+  // 仍不忠实 → 区域向左扩一块：结构错位的根因往往在上游（容器/分隔符）那一块
+  if (!report.ok && current.length > 0) {
+    next.add(Math.max(0, Math.min(...current) - 1))
+  }
+  return [...next].sort((a, b) => a - b)
 }

@@ -6,7 +6,11 @@ import { commonmark } from '@milkdown/kit/preset/commonmark'
 import { gfm } from '@milkdown/kit/preset/gfm'
 import { getMarkdown } from '@milkdown/kit/utils'
 
-import { projectRawBlocksForMilkdown, rawBlockProjectionPlugins } from './rawBlockProjection'
+import {
+  projectRawBlocksForMilkdown,
+  rawBlockProjectionPlugins,
+  renderDeskRawBlockElement
+} from './rawBlockProjection'
 import {
   FIDELITY_CASES,
   FIDELITY_CASE_D3,
@@ -16,6 +20,7 @@ import {
   canonicalizeMarkdown,
   classifyProjectionFidelity,
   degradableBlockIndexes,
+  extendDegradationIndexes,
   findAbsorbedBlocks
 } from './projectionFidelity'
 
@@ -158,5 +163,64 @@ describe('projectionFidelity · 降级计划', () => {
     // 标题块没有被降级，仍然走正常投影
     const titleMarker = projectRawBlocksForMilkdown(source)
     expect(titleMarker).not.toContain('unparsed')
+  })
+})
+
+async function canonicalFromVirtual(virtual: string): Promise<string> {
+  const root = document.createElement('div')
+  document.body.append(root)
+  const editor = Editor.make()
+    .config((ctx) => {
+      ctx.set(rootCtx, root)
+      ctx.set(defaultValueCtx, virtual)
+    })
+    .use(commonmark)
+    .use(gfm)
+    .use(rawBlockProjectionPlugins)
+  editors.push(editor)
+  await editor.create()
+  return editor.action(getMarkdown())
+}
+
+describe('projectionFidelity · 降级之后的文档', () => {
+  it('降级重建后的文档判为忠实', async () => {
+    const source = `${FIDELITY_CASE_FRONTMATTER}::: tip T\n\n外层\n\n::: info I\n\n内层\n\n:::\n\n:::\n\n222\n`
+    const before = await projectToCanonical(source)
+    const indexes = degradableBlockIndexes(source, before)
+    expect(indexes.length).toBeGreaterThan(0)
+
+    // 迭代扩张直到忠实（与编辑器里的循环同一策略）
+    let plan = indexes
+    for (let round = 0; round < 8; round += 1) {
+      const degraded = projectRawBlocksForMilkdown(source, {
+        forceRawBlockIndexes: new Set(plan)
+      })
+      const rebuilt = await canonicalFromVirtual(degraded)
+      if (classifyProjectionFidelity(source, rebuilt).ok) break
+      plan = extendDegradationIndexes(source, rebuilt, plan)
+    }
+    const degraded = projectRawBlocksForMilkdown(source, {
+      forceRawBlockIndexes: new Set(plan)
+    })
+    const after = await canonicalFromVirtual(degraded)
+    const report = classifyProjectionFidelity(source, after)
+    expect(report.ok, `降级后仍不忠实 → ${report.problematic.map((i) => i.reason).join(',')}`).toBe(
+      true
+    )
+    // 未被降级的块照常渲染：段落 222 还在
+    expect(after).toContain('222')
+  })
+
+  it('unparsed 块按「正文文字」渲染（带区分用的类名）', () => {
+    const element = renderDeskRawBlockElement({
+      kind: 'unparsed',
+      source: '::: tip T\n\n原文\n',
+      hidden: false
+    })
+    expect(element.dataset.kind).toBe('unparsed')
+    expect(element.className).toContain('desk-raw-block--unparsed')
+    expect(element.querySelector('.desk-raw-block__unparsed-text')?.textContent).toBe(
+      '::: tip T\n\n原文'
+    )
   })
 })

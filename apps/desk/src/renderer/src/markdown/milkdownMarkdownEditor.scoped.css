@@ -1024,6 +1024,24 @@
   opacity: 1;
 }
 
+.milkdown-markdown-editor :deep(.desk-raw-block--unparsed) {
+  /* 「按原文显示」：外观接近正文，只留一条很淡的左边线做区分 */
+  margin: 0.5em 0;
+  padding: 0.1em 0 0.1em 0.75em;
+  border-left: 2px solid color-mix(in srgb, var(--border) 70%, transparent);
+  background: transparent;
+  border-radius: 0;
+}
+
+.milkdown-markdown-editor :deep(.desk-raw-block--unparsed .desk-raw-block__unparsed-text) {
+  font: inherit;
+  line-height: inherit;
+  color: inherit;
+  white-space: pre-wrap;
+  word-break: break-word;
+  opacity: 0.86;
+}
+
 .milkdown-markdown-editor :deep(.desk-raw-block__label) {
   flex: none;
   font-size: 12px;

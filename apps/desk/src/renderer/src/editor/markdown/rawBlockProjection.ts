@@ -614,6 +614,23 @@ export function renderDeskRawBlockElement(
     rendered.dataset.hidden = 'false'
     return rendered
   }
+  // 渲染忠实性机制：判为「不能忠实渲染」的块按原文显示 —— 外观就是正文文字（带一条
+  // 很淡的左边线做区分），内容逐字来自原文，不经过 markdown 重新序列化。
+  if (block.kind === 'unparsed' && !block.hidden) {
+    const wrapper = document.createElement('div')
+    wrapper.dataset.type = 'desk-raw-block'
+    wrapper.dataset.kind = 'unparsed'
+    wrapper.dataset.source = encodeBase64(block.source)
+    wrapper.dataset.hidden = 'false'
+    wrapper.contentEditable = 'false'
+    wrapper.className = 'desk-raw-block desk-raw-block--unparsed'
+    wrapper.title = '这段内容暂时不能安全排版，已按原文显示（可切到源码视图编辑）'
+    const text = document.createElement('div')
+    text.className = 'desk-raw-block__unparsed-text'
+    text.textContent = block.source.replace(/\n$/, '')
+    wrapper.append(text)
+    return wrapper
+  }
   const element = document.createElement('div')
   element.dataset.type = 'desk-raw-block'
   element.dataset.kind = block.kind

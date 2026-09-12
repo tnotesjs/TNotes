@@ -86,7 +86,12 @@ import {
 } from '../editor/markdown/rawBlockProjection'
 import { serializeDeskCalloutMdast } from '../editor/markdown/deskCallout'
 import { reconcileMarkdownSource } from '../editor/markdown/sourcePreservation'
-import { findAbsorbedBlocks } from '../editor/markdown/projectionFidelity'
+import {
+  classifyProjectionFidelity,
+  degradableBlockIndexes,
+  extendDegradationIndexes,
+  findAbsorbedBlocks
+} from '../editor/markdown/projectionFidelity'
 import { renumberHeadings, stripHeadingNumbers } from '../editor/markdown/headingNumbering'
 import { clampViewPosition } from '../editor/markdown/noteViewPosition'
 import { flushPendingEdits } from '../editor/markdown/pendingEdits'
@@ -896,6 +901,60 @@ function handleKeydown(event: KeyboardEvent): void {
   exitCodeBlockFullscreen(root)
 }
 
+let fidelityScheduled = false
+
+/**
+ * 空闲时检查渲染忠实性：结构性不忠实的块退化成「按原文显示」（unparsed 原始块），
+ * 并把 baseline 同步成新文档 —— 未编辑的块在保存时仍然逐字取原文。
+ * 只在空闲做，不拖慢打开；判定/重建的成本只在真有问题的笔记上付一次。
+ */
+function scheduleFidelityCheck(): void {
+  if (fidelityScheduled || destroyed) return
+  fidelityScheduled = true
+  const run = (): void => {
+    fidelityScheduled = false
+    if (destroyed || !ready || !crepe || synchronizing) return
+    let plan = degradableBlockIndexes(originalSource, crepe.getMarkdown())
+    if (plan.length === 0) return
+    let remaining = 0
+    for (let round = 0; round < 8; round += 1) {
+      synchronizing = true
+      try {
+        crepe.editor.action(
+          replaceAll(
+            projectRawBlocksForMilkdown(originalSource, {
+              forceRawBlockIndexes: new Set(plan)
+            }),
+            true
+          )
+        )
+        baselineCanonical = crepe.getMarkdown()
+        applyGeneratedTocDisplay()
+        refreshOutline()
+      } finally {
+        synchronizing = false
+      }
+      const report = classifyProjectionFidelity(originalSource, crepe.getMarkdown())
+      if (report.ok) {
+        remaining = 0
+        break
+      }
+      remaining = report.problematic.length
+      const next = extendDegradationIndexes(originalSource, crepe.getMarkdown(), plan)
+      if (next.length === plan.length) break
+      plan = next
+    }
+    useWorkspaceStore().status =
+      remaining === 0
+        ? `有 ${plan.length} 处内容暂时不能安全排版，已按原文显示`
+        : `有内容暂时不能安全排版，已按原文显示（仍有 ${remaining} 处结构差异）`
+  }
+  const idle = (window as unknown as { requestIdleCallback?: (cb: () => void) => number })
+    .requestIdleCallback
+  if (typeof idle === 'function') idle(run)
+  else window.setTimeout(run, 300)
+}
+
 function flushCurrentContent(editor = crepe): void {
   if (!editor || !ready || synchronizing || destroyed) return
   const markdown = editor.getMarkdown()
@@ -993,6 +1052,7 @@ async function syncExternalContent(content: string): Promise<void> {
     baselineCanonical = crepe.getMarkdown()
     applyGeneratedTocDisplay()
     refreshOutline()
+    scheduleFidelityCheck()
     const view = editorView()
     if (view) {
       const restored = clampViewPosition(
@@ -1230,6 +1290,7 @@ onMounted(async () => {
     }
     baselineCanonical = editor.getMarkdown()
     ready = true
+    scheduleFidelityCheck()
     applyReadonlyState()
     applyGeneratedTocDisplay()
     if (host.value) {
