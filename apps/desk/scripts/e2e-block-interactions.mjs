@@ -26,7 +26,7 @@ writeFileSync(join(kb, 'tnotes.json'), `${JSON.stringify({ title: 'block-e2e' },
 writeFileSync(join(kb, 'TOC.md'), '- [ ] 0001. blocks\n')
 writeFileSync(
   noteFile,
-  `---\nid: 10000000-0000-4000-8000-000000000012\n---\n\n# Block interactions\n\n顶部段落\n\n组件上方\n\n<B id="selection-e2e" />\n\n组件下方\n\n${Array.from({ length: 28 }, (_, i) => `填充段落 ${i + 1}`).join('\n\n')}\n\n底部段落\n\n<br />\n\n<br />\n\n<br />\n`
+  `---\nid: 10000000-0000-4000-8000-000000000012\n---\n\n# Block interactions\n\n顶部段落\n\n组件上方\n\n<B id="selection-e2e" />\n\n组件下方\n\n${Array.from({ length: 28 }, (_, i) => `填充段落 ${i + 1}`).join('\n\n')}\n\n底部段落\n\n<br />\n\n<br />\n\n<br />\n\n::: footprints 2025-01-01 12:00\n\n足迹正文第一段。\n\n:::\n`
 )
 writeFileSync(
   join(profile, 'workspace.v1.json'),
@@ -548,6 +548,66 @@ try {
     delete window.__deskE2EDragDataTransfer
   }, dragHandleElement)
   console.log('✓ dark drag indicator uses an opaque high-contrast accent line')
+
+  // 组件预览区（unhappy path：预览是 contenteditable=false，但浏览器仍会把 DOM 光标放进去，
+  // 之后按键全被丢弃）。现在的规则：单击=整块选中；拖选=保留原生选区（照样能复制）；
+  // 双击 / 选中后回车=打开源码编辑；整块选中时敲字不会替换组件。
+  const footprints = page.locator('.desk-raw-block--footprints').first()
+  await footprints.scrollIntoViewIfNeeded()
+  await page.waitForTimeout(300)
+  await footprints.getByText('足迹正文第一段。').first().click()
+  await page.waitForTimeout(300)
+  const previewClick = await page.evaluate(() => {
+    const block = document.querySelector('.desk-raw-block--footprints')
+    const selection = window.getSelection()
+    const node = selection?.anchorNode
+    const element = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement
+    return {
+      selected: block?.classList.contains('ProseMirror-selectednode') ?? false,
+      caretInPreview: Boolean(element?.closest('.desk-raw-block__component-preview'))
+    }
+  })
+  assert.deepEqual(previewClick, { selected: true, caretInPreview: false })
+  console.log('✓ 单击组件预览 = 整块选中，光标不再落进不可编辑的预览')
+
+  await page.keyboard.type('X')
+  await page.waitForTimeout(200)
+  const afterTyping = await footprints.evaluate((element) => ({
+    blocks: document.querySelectorAll('.desk-raw-block--footprints').length,
+    text: element.textContent ?? ''
+  }))
+  assert.equal(afterTyping.blocks, 1)
+  assert.ok(afterTyping.text.includes('足迹正文第一段。'))
+  console.log('✓ 组件整块选中时输入被忽略，不会把组件替换掉')
+
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(400)
+  assert.equal(await footprints.locator('.desk-raw-block__editor').isVisible(), true)
+  await footprints.locator('.desk-raw-block__editor-done').first().click({ force: true })
+  await page.waitForTimeout(300)
+  console.log('✓ 整块选中后回车 = 打开源码编辑')
+
+  await app.evaluate(({ clipboard }) => clipboard.writeText('<<desk-e2e-clipboard>>'))
+  const previewBox = await footprints.getByText('足迹正文第一段。').first().boundingBox()
+  assert.ok(previewBox)
+  await page.mouse.move(previewBox.x + 2, previewBox.y + previewBox.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(previewBox.x + previewBox.width - 2, previewBox.y + previewBox.height / 2, {
+    steps: 8
+  })
+  await page.mouse.up()
+  await page.waitForTimeout(200)
+  await page.keyboard.press('ControlOrMeta+c')
+  await page.waitForTimeout(300)
+  assert.equal(await app.evaluate(({ clipboard }) => clipboard.readText()), '足迹正文第一段。')
+  console.log('✓ 拖选组件预览里的文字仍然可以复制（原生选区没被抢）')
+
+  await footprints.getByText('足迹正文第一段。').first().dblclick()
+  await page.waitForTimeout(400)
+  assert.equal(await footprints.locator('.desk-raw-block__editor').isVisible(), true)
+  await footprints.locator('.desk-raw-block__editor-done').first().click({ force: true })
+  await page.waitForTimeout(300)
+  console.log('✓ 双击组件预览 = 打开源码编辑')
 } finally {
   await app.evaluate(({ clipboard }, text) => clipboard.writeText(text), originalClipboard)
   await app.close()

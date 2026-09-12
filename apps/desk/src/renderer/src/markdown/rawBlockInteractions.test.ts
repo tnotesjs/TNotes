@@ -18,7 +18,8 @@ import {
 import {
   adjacentRawBlockSelectionPosition,
   codeBlockWholeSelectPosition,
-  createRawBlockSelectionPlugin
+  createRawBlockSelectionPlugin,
+  isRawBlockPreviewInteractive
 } from './rawBlockInteractions'
 
 const editors: Editor[] = []
@@ -1267,6 +1268,76 @@ describe('code_block keyboard selection', () => {
       expect(view.state.selection).toBeInstanceOf(NodeSelection)
       expect((view.state.selection as NodeSelection).from).toBe(pos.raw)
       expect(document.activeElement).toBe(canvas)
+    })
+  })
+})
+
+describe('组件预览区的光标与输入守卫', () => {
+  it('预览里的链接/按钮算交互，正文与 ProseMirror 根都算可点击', () => {
+    const preview = document.createElement('div')
+    preview.className = 'desk-raw-block__component-preview'
+    preview.innerHTML = '<p>正文</p><a href="https://example.com">链接</a><button>按钮</button>'
+    const paragraph = preview.querySelector('p')
+    const link = preview.querySelector('a')
+    const button = preview.querySelector('button')
+    // `.ProseMirror` 是 contenteditable=true 的祖先：以前把它当「交互元素」会导致
+    // 预览里任何点击都判定为交互，整块选中永远不生效（这次修掉的坑）。
+    const proseMirror = document.createElement('div')
+    proseMirror.className = 'ProseMirror'
+    proseMirror.contentEditable = 'true'
+    proseMirror.append(preview)
+
+    expect(isRawBlockPreviewInteractive(paragraph)).toBe(false)
+    expect(isRawBlockPreviewInteractive(preview)).toBe(false)
+    expect(isRawBlockPreviewInteractive(proseMirror)).toBe(false)
+    expect(isRawBlockPreviewInteractive(link)).toBe(true)
+    expect(isRawBlockPreviewInteractive(button)).toBe(true)
+    expect(isRawBlockPreviewInteractive(null)).toBe(false)
+  })
+
+  it('整块选中后回车打开源码编辑，而不是把组件替换成空行', async () => {
+    const editor = await createEditor('上方段落\n\n<B id="selection" />\n\n下方段落\n')
+    const { raw } = positions(editor)
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      const dom = view.nodeDOM(raw) as HTMLElement | null
+      expect(dom).toBeTruthy()
+      const pill = document.createElement('button')
+      pill.className = 'desk-raw-block__edit'
+      let clicks = 0
+      pill.addEventListener('click', () => {
+        clicks += 1
+      })
+      dom?.append(pill)
+
+      view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, raw)))
+      view.dom.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+      )
+
+      expect(clicks).toBe(1)
+      let rawLeft = 0
+      view.state.doc.descendants((node) => {
+        if (node.type.name === 'deskRawBlock') rawLeft += 1
+      })
+      expect(rawLeft).toBe(1)
+      expect(view.state.doc.textContent).toContain('下方段落')
+    })
+  })
+
+  it('整块选中组件时吞掉打字与粘贴，普通文本选区不吞', async () => {
+    const editor = await createEditor('上方段落\n\n<B id="selection" />\n\n下方段落\n')
+    const { raw, beforeEnd } = positions(editor)
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, raw)))
+      expect(view.someProp('handleTextInput', (handle) => handle(view, raw, raw, 'X'))).toBe(true)
+      expect(view.someProp('handlePaste', (handle) => handle(view, raw, raw))).toBe(true)
+
+      view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, beforeEnd)))
+      expect(
+        view.someProp('handleTextInput', (handle) => handle(view, beforeEnd, beforeEnd, 'X'))
+      ).toBeFalsy()
     })
   })
 })

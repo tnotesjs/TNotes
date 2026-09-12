@@ -7,7 +7,10 @@ import {
   renderDeskRawBlockElement
 } from '../editor/markdown/rawBlockProjection'
 import type { ProjectedRawBlockKind } from '../editor/markdown/rawBlockProjection'
-import { attachRawBlockBoundaryControls } from './rawBlockInteractions'
+import {
+  attachRawBlockBoundaryControls,
+  attachRawBlockPreviewSelection
+} from './rawBlockInteractions'
 import { resolveMarkdownImageUrl } from './markdownAssetUrl'
 import { mountRawContainer } from './deskRawBlockView/container'
 import { mountRawComponent } from './deskRawBlockView/component'
@@ -33,6 +36,7 @@ export function createDeskRawBlockView(deps: DeskRawBlockViewDeps) {
       let currentRawNode = node
       if (!block.hidden) {
         cleanupTasks.push(attachRawBlockBoundaryControls({ dom, view, getPos }))
+        cleanupTasks.push(attachRawBlockPreviewSelection({ dom, view, getPos }))
       }
 
       const ctx = {

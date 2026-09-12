@@ -175,6 +175,12 @@ export function adjacentRawBlockSelectionPosition(
   return neighborSelectableBlockPosition(state, $head.before(1), 'up')
 }
 
+/** 当前是否有「整块选中的 deskRawBlock」（组件卡片选中态）。 */
+function isRawBlockWholeSelected(state: EditorState): boolean {
+  const { selection } = state
+  return selection instanceof NodeSelection && selection.node.type.name === 'deskRawBlock'
+}
+
 function selectedRawBlockDecorations(state: EditorState): DecorationSet | null {
   const { selection } = state
   const decorations: Decoration[] = []
@@ -314,6 +320,100 @@ export function attachRawBlockBoundaryControls(
   }
 }
 
+/**
+ * 预览区里自己带交互的元素：点到这些不要把整块抢成选中。
+ * （源码编辑器、代码 tab、画布/脑图岛、链接、表单控件、菜单、块级热区…）
+ */
+const PREVIEW_INTERACTIVE_SELECTOR = [
+  '.desk-raw-block__editor',
+  '.desk-raw-block__editor-done',
+  '.desk-raw-block__edit',
+  '.desk-raw-block__include-cm',
+  '.desk-raw-block__boundary-hit',
+  '.desk-code-tab',
+  '.desk-excalidraw',
+  '.mindmap-preview',
+  '[data-view-tab]',
+  '.cm-editor',
+  '.cm-content',
+  'a[href]',
+  'button',
+  'input',
+  'select',
+  'textarea',
+  'summary',
+  'video',
+  'audio',
+  'iframe',
+  '[role="menu"]',
+  '[role="dialog"]'
+].join(', ')
+
+export function isRawBlockPreviewInteractive(target: Element | null): boolean {
+  return Boolean(target?.closest(PREVIEW_INTERACTIVE_SELECTOR))
+}
+
+/** 点击与拖选的判定阈值（px）：超过就算拖选。 */
+const RAW_BLOCK_CLICK_SLOP = 4
+
+/**
+ * 组件预览里的正文是 `contenteditable=false`，但浏览器仍然会把 DOM 光标放进去，
+ * 之后按键全被丢弃（输入毫无反应）——实测足迹/单词表等所有「文字型预览」都这样。
+ *
+ * 这里补两条鼠标规则（`attachRawBlockBoundaryControls` 同一个挂载层）：
+ * - **点击**（没有拖动）→ 整块选中（NodeSelection），光标不再落进预览；
+ * - **拖选** → 不干预，保留原生选区，预览里的文字照旧可以复制；
+ * - **双击** → 打开源码编辑器（等价于点「编辑源码」胶囊）。
+ */
+export function attachRawBlockPreviewSelection(
+  options: RawBlockBoundaryControlsOptions
+): () => void {
+  const { dom, view, getPos } = options
+  let pressedAt: { x: number; y: number } | null = null
+
+  const interactiveTarget = (event: MouseEvent): boolean => {
+    const target = event.target instanceof Element ? event.target : null
+    return !target || isRawBlockPreviewInteractive(target)
+  }
+
+  const onMouseDown = (event: MouseEvent): void => {
+    pressedAt = null
+    if (!view.editable || event.button !== 0) return
+    if (interactiveTarget(event)) return
+    // 不 preventDefault：拖选文字还要靠原生选区（复制不受影响）。
+    pressedAt = { x: event.clientX, y: event.clientY }
+  }
+
+  const onMouseUp = (event: MouseEvent): void => {
+    const start = pressedAt
+    pressedAt = null
+    if (!start || !view.editable || event.button !== 0) return
+    if (interactiveTarget(event)) return
+    const moved = Math.hypot(event.clientX - start.x, event.clientY - start.y)
+    if (moved > RAW_BLOCK_CLICK_SLOP) return
+    const position = getPos()
+    if (position == null) return
+    if (selectSelectableBlock(view, position)) event.preventDefault()
+  }
+
+  const onDoubleClick = (event: MouseEvent): void => {
+    if (!view.editable || interactiveTarget(event)) return
+    const pill = dom.querySelector<HTMLButtonElement>('.desk-raw-block__edit')
+    if (!pill || pill.disabled) return
+    event.preventDefault()
+    pill.click()
+  }
+
+  dom.addEventListener('mousedown', onMouseDown, true)
+  dom.addEventListener('mouseup', onMouseUp, true)
+  dom.addEventListener('dblclick', onDoubleClick, true)
+  return () => {
+    dom.removeEventListener('mousedown', onMouseDown, true)
+    dom.removeEventListener('mouseup', onMouseUp, true)
+    dom.removeEventListener('dblclick', onDoubleClick, true)
+  }
+}
+
 /** Clears block selection state when the editor crosses into readonly mode. */
 export function clearRawBlockSelectionState(view: EditorView): void {
   const { selection } = view.state
@@ -425,6 +525,17 @@ function handleEnterReplacingSelection(view: EditorView, event: KeyboardEvent): 
   }
 
   const { selection } = view.state
+  // 组件/容器是「卡片」：整块选中后回车应该是**打开源码编辑**，
+  // 而不是像代码块那样把整块替换成空行（那会悄悄删掉组件）。
+  if (selection instanceof NodeSelection && selection.node.type.name === 'deskRawBlock') {
+    const nodeDom = view.nodeDOM(selection.from)
+    const pill =
+      nodeDom instanceof HTMLElement
+        ? nodeDom.querySelector<HTMLButtonElement>('.desk-raw-block__edit')
+        : null
+    if (pill && !pill.disabled) pill.click()
+    return true
+  }
   if (selection instanceof NodeSelection && isSelectableBlockNode(selection.node)) {
     const outer = outerSelectableRange(view.state.doc, selection.from, selection.node)
     return replaceRangeWithEmptyLine(view, outer.from, outer.from + outer.size)
@@ -715,6 +826,10 @@ export function createRawBlockSelectionPlugin(): MilkdownPlugin[] {
         },
         props: {
           decorations: selectedRawBlockDecorations,
+          // 组件整块选中时，直接敲字/粘贴会把组件替换掉（ProseMirror 默认行为）。
+          // 点一下卡片就毁掉组件太危险，这里吞掉输入；要编辑请回车或双击打开源码。
+          handleTextInput: (view) => isRawBlockWholeSelected(view.state),
+          handlePaste: (view) => isRawBlockWholeSelected(view.state),
           handleKeyDown: (view, event) => {
             if (!view.editable) return false
             if (isNativeEditorField(event.target)) return false
