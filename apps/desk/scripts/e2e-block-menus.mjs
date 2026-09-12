@@ -150,12 +150,26 @@ try {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function openMenu(target) {
     await target.scrollIntoViewIfNeeded()
+    // Crepe 的格式工具条（.milkdown-toolbar[data-show=true]）浮在选区上方，会拦截块左上角
+    // 的 hover：本地看不出，CI 上偶发一路重试到 50s 超时。先收起它再 hover。
+    await page.keyboard.press('Escape')
+    await page
+      .waitForFunction(
+        () => document.querySelector('.milkdown-toolbar[data-show="true"]') === null,
+        undefined,
+        { timeout: 5000 }
+      )
+      .catch(() => undefined)
     const box = await target.boundingBox()
-    await target.hover({
-      position: { x: Math.min(10, box.width / 2), y: Math.min(10, box.height / 2) }
-    })
+    const hoverPoint = { x: Math.min(10, box.width / 2), y: Math.min(10, box.height / 2) }
+    await target.hover({ position: hoverPoint })
     // BlockProvider throttles mousemove and animates the handle position.
     await page.waitForTimeout(450)
+    if ((await handle.getAttribute('data-show')) !== 'true') {
+      // 节流可能刚好吞掉第一次 mousemove，再hover一次（比直接失败更接近真实用户动作）
+      await target.hover({ position: hoverPoint })
+      await page.waitForTimeout(450)
+    }
     assert.equal(await handle.getAttribute('data-show'), 'true')
     assert.equal(await handle.locator('.operation-item:visible').count(), 1)
     await handle.locator('.operation-item:last-child').click()
