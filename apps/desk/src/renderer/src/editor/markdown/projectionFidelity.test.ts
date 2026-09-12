@@ -15,6 +15,7 @@ import {
 import {
   canonicalizeMarkdown,
   classifyProjectionFidelity,
+  degradableBlockIndexes,
   findAbsorbedBlocks
 } from './projectionFidelity'
 
@@ -126,5 +127,36 @@ describe('projectionFidelity · 用例集（真实投影链路）', () => {
     } else {
       expect(report.ok, `${item.id} 已变成忠实，请更新用例期望`).toBe(false)
     }
+  })
+})
+
+describe('projectionFidelity · 降级计划', () => {
+  it('忠实的笔记不需要降级', async () => {
+    const source = `${FIDELITY_CASE_FRONTMATTER}# 标题\n\n段落\n`
+    const canonical = await projectToCanonical(source)
+    expect(degradableBlockIndexes(source, canonical)).toEqual([])
+  })
+
+  it('被吞并时把整个涉及区域标成降级', () => {
+    const source = '::: tip T\n\n111\n\n:::\n\n222\n'
+    const canonical = '::: tip T\n\n111\n222\n\n:::'
+    const indexes = degradableBlockIndexes(source, canonical)
+    expect(indexes.length).toBeGreaterThan(0)
+    expect(indexes).toContain(indexes[indexes.length - 1])
+  })
+
+  it('降级的块在投影里变成 unparsed 原始块，其余块照常', async () => {
+    const source = `${FIDELITY_CASE_FRONTMATTER}# 标题\n\n::: tip T\n\n外层\n\n::: info I\n\n内层\n\n:::\n\n:::\n\n222\n`
+    const canonical = await projectToCanonical(source)
+    const indexes = degradableBlockIndexes(source, canonical)
+    expect(indexes.length).toBeGreaterThan(0)
+    const projected = projectRawBlocksForMilkdown(source, {
+      forceRawBlockIndexes: new Set(indexes)
+    })
+    // 被降级的块写成 unparsed 原始块标记
+    expect(projected).toContain('<!--desk-raw-block:v1:unparsed:0:')
+    // 标题块没有被降级，仍然走正常投影
+    const titleMarker = projectRawBlocksForMilkdown(source)
+    expect(titleMarker).not.toContain('unparsed')
   })
 })

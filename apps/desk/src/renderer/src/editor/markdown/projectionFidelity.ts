@@ -431,3 +431,29 @@ export function findAbsorbedBlocks(
   })
   return findings
 }
+
+/**
+ * 降级计划：算出「哪些顶层块要退化成按原文保留」。
+ *
+ * 策略是**区域降级**：把每个问题的源码块下标与它被并进/错位到的对端下标取成一个
+ * 闭区间，区间内全部降级。原因是我们只做保全、不做猜测 —— 结构一旦错位，
+ * 单独保住某一块往往留不住正确的分块，整段按原文保留才是安全的。
+ * 多出来的块（extra）在源码侧没有对应块，就把它前面那一块一起降级。
+ */
+export function degradableBlockIndexes(source: string, canonical: string): number[] {
+  const report = classifyProjectionFidelity(source, canonical)
+  const sourceBlockCount = report.sourceBlockCount
+  const picked = new Set<number>()
+  for (const item of report.problematic) {
+    if (item.reason === 'extra') {
+      picked.add(Math.max(0, sourceBlockCount - 1))
+      continue
+    }
+    const from = Math.min(item.index, item.againstIndex ?? item.index)
+    const to = Math.max(item.index, item.againstIndex ?? item.index)
+    for (let index = Math.max(0, from); index <= Math.min(to, sourceBlockCount - 1); index += 1) {
+      picked.add(index)
+    }
+  }
+  return [...picked].sort((a, b) => a - b)
+}

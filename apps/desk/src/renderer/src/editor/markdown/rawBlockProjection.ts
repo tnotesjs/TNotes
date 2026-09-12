@@ -44,7 +44,7 @@ type SourceProjectedKind = Extract<
   | 'html'
 >
 
-export type ProjectedRawBlockKind = SourceProjectedKind | 'raw-diagram'
+export type ProjectedRawBlockKind = SourceProjectedKind | 'raw-diagram' | 'unparsed'
 
 export interface ProjectedRawBlock {
   kind: ProjectedRawBlockKind
@@ -61,11 +61,12 @@ const PROJECTED_KINDS = new Set<ProjectedRawBlockKind>([
   'raw-generated-toc',
   'raw-diagram',
   'table',
-  'html'
+  'html',
+  'unparsed'
 ])
 
 const MARKER =
-  /^<!--desk-raw-block:v1:(raw-frontmatter|raw-container|raw-component|raw-reference-definition|raw-generated-title|raw-generated-toc|raw-diagram|table|html):([01]):([A-Za-z0-9+/]*={0,2})-->$/
+  /^<!--desk-raw-block:v1:(raw-frontmatter|raw-container|raw-component|raw-reference-definition|raw-generated-title|raw-generated-toc|raw-diagram|table|html|unparsed):([01]):([A-Za-z0-9+/]*={0,2})-->$/
 const REGION_COMMENT = /^ {0,3}<!--\s*(?:end)?region(?::[\s\S]*?)?\s*-->\s*$/i
 const HTML_TAG = /<\/?[A-Za-z][\w.-]*(?=[\s/>])/
 /** 行内 <br> 家族：已由 htmlBreak.ts 映射成硬换行，不算「表格里的 HTML 标签」。 */
@@ -337,11 +338,22 @@ export function readProjectedRawBlockMarker(value: string): ProjectedRawBlock | 
  * Replaces only syntax that CommonMark cannot safely model with internal markers.
  * Fenced code is deliberately excluded so Crepe's normal code editor remains available.
  */
-export function projectRawBlocksForMilkdown(source: string): string {
+export function projectRawBlocksForMilkdown(
+  source: string,
+  options: { forceRawBlockIndexes?: ReadonlySet<number> } = {}
+): string {
   const document = parseMarkdownSource(source)
   const replacements = new Map<string, string>()
 
-  document.blocks.forEach((block) => {
+  document.blocks.forEach((block, blockIndex) => {
+    // 渲染忠实性机制：判为「不能忠实渲染」的块直接按原文保留（外观按正文文字呈现）。
+    if (options.forceRawBlockIndexes?.has(blockIndex)) {
+      replacements.set(
+        block.id,
+        createProjectedRawBlockMarker({ kind: 'unparsed', source: block.source, hidden: false })
+      )
+      return
+    }
     if (isDiagramFence(block)) {
       replacements.set(
         block.id,
