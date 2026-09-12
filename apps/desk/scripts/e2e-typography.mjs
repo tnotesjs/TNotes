@@ -66,10 +66,29 @@ const markdown = [
   '| Column A | Column B |',
   '| --- | --- |',
   '| Cell A | Cell B |',
+  '',
+  '链接浮层配色：[示例链接](https://example.com/deep/path/to/page) 只是用来悬停。',
   ''
 ].join('\n')
 const source = `---\nid: 10000000-0000-4000-8000-000000000072\n---\n\n${markdown}`
 writeFileSync(noteFile, source)
+
+/** WCAG 相对对比度：用来证明浮层图标不是「几乎看不见」。 */
+function contrastRatio(foreground, background) {
+  const luminance = (color) => {
+    const [r, g, b] = color
+      .match(/\d+/g)
+      .slice(0, 3)
+      .map(Number)
+      .map((value) => {
+        const channel = value / 255
+        return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
+      })
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+  }
+  const [lighter, darker] = [luminance(foreground), luminance(background)].sort((a, b) => b - a)
+  return (lighter + 0.05) / (darker + 0.05)
+}
 writeFileSync(join(profile, 'workspace.v1.json'), JSON.stringify({ path: workspace }))
 writeFileSync(
   join(profile, '.tn-desk-config.json'),
@@ -266,6 +285,41 @@ try {
       assert.equal(markers.callout.length, 2)
       for (const callout of markers.callout) {
         assert.equal(callout.marker, callout.text, `${label}: callout bullet must match its text`)
+      }
+      // 链接浮层的图标曾用 Crepe 的 outline 令牌（Desk 把它映射成品色边框），浅色/暗色下
+      // 都几乎与浮层底色相同。这里用对比度守住「看得见」。
+      if (mode === '可视化编辑') {
+        const link = page.locator('.ProseMirror a', { hasText: '示例链接' }).first()
+        const preview = page.locator('.milkdown-link-preview[data-show="true"]')
+        // Crepe 的 tooltip 只在编辑器有 DOM 焦点时才出现（`if (!view.hasFocus()) return`），
+        // 而上面刚点过模式按钮；悬停偶尔也不触发（鼠标已在同一位置时没有新的 mousemove）。
+        for (let attempt = 0; ; attempt += 1) {
+          await pm.locator(':scope > p').first().click()
+          await link.hover()
+          try {
+            await preview.waitFor({ timeout: 3000 })
+            break
+          } catch (error) {
+            if (attempt >= 2) throw error
+            await page.mouse.move(0, 0)
+            await page.waitForTimeout(300)
+          }
+        }
+        const tooltip = await preview.evaluate((root) => ({
+          background: getComputedStyle(root.querySelector('.link-preview')).backgroundColor,
+          icons: Array.from(root.querySelectorAll('svg')).map((svg) => ({
+            cls: svg.parentElement?.className ?? '',
+            color: getComputedStyle(svg).color
+          }))
+        }))
+        assert.equal(tooltip.icons.length, 3, `${label}: copy / edit / remove icons`)
+        for (const icon of tooltip.icons) {
+          const ratio = contrastRatio(icon.color, tooltip.background)
+          assert.ok(
+            ratio >= 3,
+            `${label}: 链接浮层图标 ${icon.cls} 颜色 ${icon.color} 对浮层 ${tooltip.background} 对比度仅 ${ratio.toFixed(2)}`
+          )
+        }
       }
       await pm.locator('.label.bullet').first().scrollIntoViewIfNeeded()
       await page.screenshot({

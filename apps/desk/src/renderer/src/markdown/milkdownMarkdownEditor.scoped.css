@@ -109,6 +109,16 @@
   fill: var(--accent-strong);
 }
 
+/* Crepe 的链接浮层（悬停链接出现的复制/编辑/删除气泡）图标用的是
+   `--crepe-color-outline`，而 Desk 把这个令牌映射成品色边框（浅色 #e2e2e3 /
+   暗色 #2e2e32），于是图标几乎与浮层底色同色、看不见。与其它 Crepe 控件一样改用
+   次级前景色（接近 playground 的描边灰）。 */
+.milkdown-markdown-editor :deep(.milkdown .milkdown-link-preview .button svg),
+.milkdown-markdown-editor :deep(.milkdown .milkdown-link-edit .button svg) {
+  color: var(--muted);
+  fill: var(--muted);
+}
+
 /* Crepe's table controls use its outline color for icons. Desk maps that token
    to a subtle border, so keep controls on foreground colors in both themes. */
 .milkdown-markdown-editor :deep(.milkdown .milkdown-table-block .handle) {
