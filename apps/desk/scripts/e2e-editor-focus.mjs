@@ -55,7 +55,11 @@ writeFileSync(
     ':::',
     '',
     '',
-    '12'
+    '12',
+    '',
+    '| 列 A | 列 B |',
+    '| --- | --- |',
+    '| A1 | B1 |'
   ].join('\n') + '\n'
 )
 writeFileSync(
@@ -360,6 +364,53 @@ try {
     Boolean(selected) && boldApplied.strong > 0,
     `选中「${selected ?? ''}」，strong=${boldApplied.strong}`
   )
+
+  // F9：表格里必须有一个看得见的光标。
+  // `prosemirror-virtual-cursor` 只在空 TextSelection 下挂唯一 widget，进表格那一步实测会
+  // 没重定位/高度为 0；而 .virtual-cursor-enabled 把原生 caret 设成透明 → 「光标消失」
+  // （此时按键其实已落在单元格里）。约定：表格内用原生 caret 并隐藏虚拟光标。
+  const tableCell = page.locator('.ProseMirror td, .ProseMirror th').first()
+  if ((await tableCell.count()) > 0) {
+    await tableCell.scrollIntoViewIfNeeded()
+    await tableCell.click()
+    await page.waitForTimeout(300)
+    const inTable = await page.evaluate(() => {
+      const root = document.querySelector('.ProseMirror')
+      const cell = document.querySelector('.ProseMirror td, .ProseMirror th')
+      const cursor = document.querySelector('.prosemirror-virtual-cursor')
+      return {
+        attr: root.hasAttribute('data-table-caret'),
+        cellCaret: cell ? getComputedStyle(cell).caretColor : null,
+        cursorDisplay: cursor ? getComputedStyle(cursor).display : 'absent'
+      }
+    })
+    // 点单元格时 PM 可能给出 CellSelection（插件只在空 TextSelection 下挂 widget），
+    // 所以「虚拟光标不存在」和「被 display:none 隐藏」都算没有可见虚拟光标。
+    const noVisibleVirtualCursor =
+      inTable.cursorDisplay === 'none' || inTable.cursorDisplay === 'absent'
+    record(
+      'F9 表格内改用原生光标（可见，且没有可见的虚拟光标）',
+      inTable.attr && noVisibleVirtualCursor && inTable.cellCaret !== 'rgba(0, 0, 0, 0)',
+      `data-table-caret=${inTable.attr} caret=${inTable.cellCaret} 虚拟光标=${inTable.cursorDisplay}`
+    )
+    await page.locator('.ProseMirror p', { hasText: '哈哈哈' }).first().click()
+    await page.waitForTimeout(300)
+    const outTable = await page.evaluate(() => {
+      const root = document.querySelector('.ProseMirror')
+      const cursor = document.querySelector('.prosemirror-virtual-cursor')
+      return {
+        attr: root.hasAttribute('data-table-caret'),
+        cursorDisplay: cursor ? getComputedStyle(cursor).display : 'absent'
+      }
+    })
+    record(
+      'F9b 出表格后恢复虚拟光标',
+      !outTable.attr && outTable.cursorDisplay === 'block',
+      `data-table-caret=${outTable.attr} 虚拟光标=${outTable.cursorDisplay}`
+    )
+  } else {
+    record('F9 表格内改用原生光标（可见且虚拟光标隐藏）', false, 'fixture 里没有表格')
+  }
 
   record('F8 渲染过程没有未捕获异常', pageErrors.length === 0, pageErrors.join(' | ').slice(0, 300))
   await page.screenshot({ path: join(shots, '02-final.png') })

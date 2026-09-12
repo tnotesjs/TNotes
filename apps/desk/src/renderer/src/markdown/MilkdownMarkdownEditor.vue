@@ -28,6 +28,7 @@ import {
   replaceCurrentParagraphWithItem
 } from './markdownInputRules'
 import { clearRawBlockSelectionState, createRawBlockSelectionPlugin } from './rawBlockInteractions'
+import { createTableCaretPlugin } from './tableCaretVisibility'
 import { isEditorBlankTarget } from './editorFocusReclaim'
 import { createReadonlyTransactionGuard } from './readonlyGuard'
 import { clearLineStylesPlugin } from './clearLineStyles'
@@ -1057,6 +1058,7 @@ onMounted(async () => {
   editor.editor.use(codeBlockHighlights.plugin)
   editor.editor.use(createMarkdownShortcutInputRules())
   editor.editor.use(createInlineCodeInteractionPlugin())
+  editor.editor.use(createTableCaretPlugin())
   editor.editor.use(clearLineStylesPlugin)
   editor.editor.use(
     createBlockShortcutPlugin({

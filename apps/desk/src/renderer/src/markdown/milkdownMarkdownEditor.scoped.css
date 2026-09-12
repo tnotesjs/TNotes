@@ -1114,6 +1114,18 @@
   caret-color: var(--accent-strong, #3b82f6) !important;
 }
 
+/* 表格里改用原生光标（见 tableCaretVisibility.ts）。
+   虚拟光标只在空 TextSelection 下挂唯一 widget，位置来自 DOM 选区 rect / coordsAtPos；
+   进表格那一步会没重定位/高度为 0，而原生 caret 又是透明的 → 「光标消失」。
+   `data-table-caret` 由 ProseMirror state 直接派生，不受 DOM 时序影响。 */
+.milkdown-markdown-editor :deep(.ProseMirror[data-table-caret]) {
+  caret-color: var(--accent-strong, #3b82f6) !important;
+}
+
+.milkdown-markdown-editor :deep(.ProseMirror[data-table-caret] .prosemirror-virtual-cursor) {
+  display: none;
+}
+
 .milkdown-markdown-editor :deep(.desk-raw-block--mindmap .mm-selection-box) {
   border: 1px solid color-mix(in srgb, var(--accent-strong, #3b82f6) 88%, white);
   border-radius: 3px;
