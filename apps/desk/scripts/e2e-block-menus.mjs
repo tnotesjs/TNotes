@@ -150,17 +150,25 @@ try {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function openMenu(target) {
     await target.scrollIntoViewIfNeeded()
-    // Crepe 的格式工具条（.milkdown-toolbar[data-show=true]）浮在选区上方，会拦截 hover：
-    // 本地看不出，CI 上实测会一直 `data-show=true`（Escape/点击都清不掉），一路重试到超时。
-    // 所以别跟它硬碰：先尝试收起，然后从「不被工具条矩形覆盖」的候选点里挑一个 hover。
-    await page.keyboard.press('Escape')
-    await page
+    // 文本选区会让 Crepe 的格式工具条（.milkdown-toolbar[data-show=true]）浮在块上并拦截指针
+    // 事件。实测（/tmp 探针）：Escape 与移开鼠标都收不掉，清掉 DOM 选区或点段落才会隐藏；
+    // 而直接点目标块可能被代码块行手柄等浮层挡住，所以先清选区，必要时退回到点画布留白。
+    await page.evaluate(() => window.getSelection()?.removeAllRanges())
+    const toolbarHidden = await page
       .waitForFunction(
         () => document.querySelector('.milkdown-toolbar[data-show="true"]') === null,
         undefined,
-        { timeout: 3000 }
+        { timeout: 2000 }
       )
-      .catch(() => undefined)
+      .then(() => true)
+      .catch(() => false)
+    if (!toolbarHidden) {
+      await page
+        .locator('.milkdown-markdown-editor__canvas')
+        .click({ position: { x: 10, y: 10 } })
+        .catch(() => undefined)
+      await page.waitForTimeout(150)
+    }
     const box = await target.boundingBox()
     const toolbar = page.locator('.milkdown-toolbar[data-show="true"]')
     const toolbarBox = (await toolbar.count()) > 0 ? await toolbar.boundingBox() : null
@@ -264,10 +272,6 @@ try {
     '✓ delete/cut target the selected ordinary block; adjacent blocks survive and undo restores'
   )
 
-  // 上一步的撤销会留下文本选区 → Crepe 的格式工具条浮在块上，正好拦截 hover（CI 上实测
-  // 一路重试到超时）。先点一下目标块把选区收起来，再走 openMenu。
-  await item('Item two').click()
-  await page.waitForTimeout(150)
   await openMenu(item('Item two'))
   await menu.getByRole('menuitem', { name: /在下方添加/ }).hover()
   const slash = page.locator('.milkdown-slash-menu')
