@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Crepe } from '@milkdown/crepe'
+import { parserCtx } from '@milkdown/kit/core'
 import {
   editorViewCtx,
   commandsCtx,
@@ -90,6 +91,7 @@ import {
   type ReconcileOptions
 } from '../editor/markdown/sourcePreservation'
 import { literalRegionSourceFor } from '../editor/markdown/literalProjection'
+import { createContainerUpgradePlugin } from '../editor/markdown/containerUpgrade'
 import {
   actionableProblems,
   classifyProjectionFidelity,
@@ -913,6 +915,9 @@ function handleKeydown(event: KeyboardEvent): void {
  */
 let degradedRegionIndexes = new Set<number>()
 
+/** 被「懒升级」重投影过的段落文本：这些块从文本变成容器属于用户预期内的形状变化 */
+const upgradedParagraphTexts = new Set<string>()
+
 function literalRegionOptions(): ReconcileOptions {
   if (degradedRegionIndexes.size === 0) return {}
   return {
@@ -1003,7 +1008,9 @@ function flushCurrentContent(editor = crepe): void {
   )
   // 保存守卫：原文里某段内容被并进了别的块（吞并）—— 这是会丢数据的结构，坚决不写盘。
   // 用户的编辑仍在文档里；切到源码视图可以直接改，或把那段内容改回独立块再保存。
-  const absorbed = findAbsorbedBlocks(originalSource, preserved)
+  const absorbed = findAbsorbedBlocks(originalSource, preserved).filter(
+    (item) => !upgradedParagraphTexts.has(item.source.trim())
+  )
   if (absorbed.length > 0) {
     console.error('[desk] 保存被拦截：检测到原文内容被并入其它块', absorbed)
     useWorkspaceStore().status = `检测到 ${absorbed.length} 处内容会被写坏，已暂停保存；你的文件没有被修改（可切到源码视图检查）`
@@ -1099,6 +1106,7 @@ async function syncExternalContent(content: string): Promise<void> {
   synchronizing = true
   originalSource = content
   lastEmitted = null
+  upgradedParagraphTexts.clear()
   try {
     crepe.editor.action(replaceAll(projectRawBlocksForMilkdown(content), true))
     baselineCanonical = crepe.getMarkdown()
@@ -1215,6 +1223,19 @@ onMounted(async () => {
     })
   )
   editor.editor.use(createDocumentSelectAllPlugin({ isPaneActive: () => props.active }))
+  editor.editor.use(
+    $prose(() =>
+      createContainerUpgradePlugin({
+        parser: () => {
+          const parse = editor.editor.ctx.get(parserCtx)
+          return (markdown: string) => parse(projectRawBlocksForMilkdown(markdown))
+        },
+        onUpgraded: (result) => {
+          for (const line of result.lines) upgradedParagraphTexts.add(line.trim())
+        }
+      })
+    )
+  )
   editor.editor.use(createRawBlockSelectionPlugin(boundaryOptions))
   editor.editor.use(createBlockBoundaryCaretPlugin())
   editor.editor.use(createBlockBoundaryNavigationPlugin(boundaryOptions))

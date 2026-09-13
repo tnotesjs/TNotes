@@ -16,7 +16,7 @@ const noteFile = join(kb, 'notes', '0001. fidelity.md')
 mkdirSync(join(kb, 'notes'), { recursive: true })
 mkdirSync(profile, { recursive: true })
 writeFileSync(join(kb, 'tnotes.json'), JSON.stringify({ title: 'fidelity' }))
-writeFileSync(join(kb, 'TOC.md'), '- [ ] 0001. fidelity\n')
+writeFileSync(join(kb, 'TOC.md'), '- [ ] 0001. fidelity\n- [ ] 0002. upgrade\n')
 
 // 嵌套容器是已知的「结构性不忠实」：这段要按普通正文暴露（看得见 ::: 符号）。
 // 后面的 222 段落与正常提示块都与它无关，必须照常渲染 —— 验证「只处理出问题的区域」。
@@ -47,6 +47,8 @@ const markdown = [
   ''
 ].join('\n')
 writeFileSync(noteFile, markdown)
+const upgradeFile = join(kb, 'notes', '0002. upgrade.md')
+writeFileSync(upgradeFile, '开头段落。\n\n后面还有一段。\n')
 writeFileSync(
   join(profile, 'workspace.v1.json'),
   `${JSON.stringify({ path: workspace }, null, 2)}\n`
@@ -165,6 +167,70 @@ try {
     `literal=${reloaded.literal} callouts=${reloaded.callouts}`
   )
   await page.screenshot({ path: join(deskDir, 'scripts', 'shots', 'fidelity-after-edit.png') })
+
+  // ---- 懒升级：手写容器语法，光标离开后要变成真正的提示块 ----
+  await page.locator('.toc-row', { hasText: '0002' }).first().locator('.node-label').click()
+  await page.waitForTimeout(2500)
+  const paragraph = page.locator('.ProseMirror p').filter({ hasText: '开头段落。' }).first()
+  await paragraph.click()
+  await page.keyboard.press('End')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('::: tip 我的标题')
+  await page.waitForTimeout(200)
+  const typedText = await page.evaluate(() => {
+    const editor = [...document.querySelectorAll('.ProseMirror')].find(
+      (el) => el.offsetParent !== null
+    )
+    return [...editor.querySelectorAll('p')].map((el) => el.textContent ?? '').join('|')
+  })
+  check(
+    '可视化视图里能正常打出容器语法（当普通文字）',
+    typedText.includes('::: tip 我的标题'),
+    typedText.slice(0, 60)
+  )
+  await page.keyboard.press('Enter')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('正文内容')
+  await page.keyboard.press('Enter')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type(':::')
+  await page.waitForTimeout(300)
+
+  // 光标离开这一段（点下面的段落）→ 触发懒升级
+  await page.locator('.ProseMirror p').filter({ hasText: '后面还有一段。' }).first().click()
+  await page.waitForTimeout(1500)
+  const upgraded = await page.evaluate(() => {
+    const editor = [...document.querySelectorAll('.ProseMirror')].find(
+      (el) => el.offsetParent !== null
+    )
+    const callouts = [...editor.querySelectorAll('.desk-callout')]
+    return {
+      callouts: callouts.length,
+      title: callouts[0]?.querySelector('.desk-callout__title')?.value ?? ''
+    }
+  })
+  check(
+    '光标离开后手写的容器语法升级成提示块',
+    upgraded.callouts >= 1 && String(upgraded.title).includes('我的标题'),
+    `callouts=${upgraded.callouts} title=${JSON.stringify(upgraded.title)}`
+  )
+  const upgradeStatus = await page.evaluate(
+    () => document.querySelector('[role="status"]')?.textContent ?? ''
+  )
+  check(
+    '升级没有被保存守卫拦住',
+    !upgradeStatus.includes('会被写坏'),
+    JSON.stringify(upgradeStatus.slice(0, 40))
+  )
+  await page.getByRole('button', { name: '源码视图', exact: true }).click()
+  await page.waitForTimeout(1500)
+  const upgradedFile = readFileSync(upgradeFile, 'utf8')
+  check(
+    '升级后的内容写进了文件（容器形态）',
+    upgradedFile.includes('::: tip 我的标题') && upgradedFile.includes('正文内容'),
+    JSON.stringify(upgradedFile.slice(0, 60))
+  )
+  await page.screenshot({ path: join(deskDir, 'scripts', 'shots', 'fidelity-upgrade.png') })
 
   console.log(failures === 0 ? '\nfidelity e2e: 全部通过' : `\nfidelity e2e: ${failures} 项失败`)
   if (failures > 0) process.exitCode = 1
