@@ -7,9 +7,10 @@ pnpm-lock.yaml
 **/*.min.css
 apps/desk/playground
 apps/desk/scripts/shots
-# 从 @milkdown/crepe（MIT）移植的源码与样式：刻意与上游逐字一致，便于 diff 与重新移植。
+# 从 @milkdown/crepe（MIT）移植的源码与样式：按上游格式保留整目录，便于 diff 与重新移植。
 # 这里必须写一份 —— prettier 只读「运行目录」下的 .prettierignore，apps/desk 里那份只在
 # `--filter desk` 时生效；而 CI 跑的是根目录的 `pnpm format:check`。
+# 只管格式：eslint 侧只豁免与上游逐字节相同的 30 个文件，见 apps/desk/eslint.config.mjs。
 apps/desk/src/renderer/src/markdown/crepePort
 # E0 可行性验证的构建产物（已在 packages/ui/.gitignore 里忽略）
 **/.e0-dist

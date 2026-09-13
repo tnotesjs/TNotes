@@ -4,6 +4,8 @@ pnpm-lock.yaml
 LICENSE.md
 tsconfig.json
 tsconfig.*.json
-# 从 @milkdown/crepe（MIT）移植的源码：保持与上游逐字一致，便于 diff / 重新移植。
-# 同样原因它也不进 eslint（见 eslint.config.mjs）。
+# 从 @milkdown/crepe（MIT）移植的源码与样式：按上游格式保留整目录（含已改写的文件），
+# 改成本仓风格会让「本地改动 vs 上游」的 diff 变难读，不利于重新移植。
+# 注意这只管格式 —— eslint 的范围窄得多，只豁免与上游逐字节相同的那 30 个文件，
+# 见 eslint.config.mjs 与 crepePort/README.md。
 src/renderer/src/markdown/crepePort
