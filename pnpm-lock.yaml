@@ -82,6 +82,9 @@ importers:
       '@uiw/codemirror-theme-github':
         specifier: 4.25.11
         version: 4.25.11(@codemirror/language@6.12.4)(@codemirror/state@6.7.4)(@codemirror/view@6.43.11)
+      codemirror:
+        specifier: ^6.0.2
+        version: 6.0.2
       dompurify:
         specifier: ^3.4.14
         version: 3.4.15
@@ -112,6 +115,12 @@ importers:
       prettier:
         specifier: ^3.9.6
         version: 3.9.6
+      prosemirror-virtual-cursor:
+        specifier: ^0.4.2
+        version: 0.4.2(prosemirror-model@1.25.11)(prosemirror-state@1.4.4)(prosemirror-view@1.42.3)
+      remark-math:
+        specifier: ^6.0.0
+        version: 6.0.0
       sharp:
         specifier: ^0.35.4
         version: 0.35.4(@types/node@22.20.1)
@@ -13557,7 +13566,7 @@ snapshots:
       '@types/mdast': 4.0.4
       mdast-util-from-markdown: 2.0.3
       micromark-util-types: 2.0.0
-      unified: 11.0.3
+      unified: 11.0.0
     transitivePeerDependencies:
       - supports-color
 
@@ -13565,14 +13574,14 @@ snapshots:
     dependencies:
       '@types/mdast': 4.0.4
       mdast-util-to-markdown: 2.1.0
-      unified: 11.0.3
+      unified: 11.0.0
 
   remark@15.0.1:
     dependencies:
       '@types/mdast': 4.0.4
       remark-parse: 11.0.0
       remark-stringify: 11.0.0
-      unified: 11.0.3
+      unified: 11.0.0
     transitivePeerDependencies:
       - supports-color
 

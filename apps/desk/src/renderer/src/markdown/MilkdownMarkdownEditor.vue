@@ -2,15 +2,7 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Crepe } from '@milkdown/crepe'
 import { parserCtx } from '@milkdown/kit/core'
-import {
-  editorViewCtx,
-  commandsCtx,
-  remarkPluginsCtx,
-  remarkStringifyOptionsCtx,
-  serializerCtx
-} from '@milkdown/kit/core'
-import { uploadConfig } from '@milkdown/kit/plugin/upload'
-import { blockConfig } from '@milkdown/kit/plugin/block'
+import { editorViewCtx, commandsCtx, serializerCtx } from '@milkdown/kit/core'
 import { Plugin, TextSelection } from '@milkdown/kit/prose/state'
 import type { EditorView } from '@milkdown/kit/prose/view'
 import {
@@ -31,7 +23,6 @@ import {
 } from './markdownInputRules'
 import { clearRawBlockSelectionState, createRawBlockSelectionPlugin } from './rawBlockInteractions'
 import { createTableCaretPlugin } from './tableCaretVisibility'
-import { breakMarkdown, remarkHtmlBreakToBreak } from '../editor/markdown/htmlBreak'
 import { isEditorBlankTarget } from './editorFocusReclaim'
 import { createReadonlyTransactionGuard } from './readonlyGuard'
 import { clearLineStylesPlugin } from './clearLineStyles'
@@ -51,7 +42,7 @@ import {
   wrapInOrderedListCommand,
   clearTextInCurrentBlockCommand
 } from '@milkdown/kit/preset/commonmark'
-import { strikethroughKeymap, toggleStrikethroughCommand } from '@milkdown/kit/preset/gfm'
+import { toggleStrikethroughCommand } from '@milkdown/kit/preset/gfm'
 import { $prose, callCommand, insert, insertPos, replaceAll } from '@milkdown/kit/utils'
 import GithubSlugger from 'github-slugger'
 
@@ -65,13 +56,13 @@ import {
 } from './noteOutline'
 import type { BlockAction } from './BlockActionMenu.vue'
 import {
-  canShowBlockHandle,
   createBlockDeleteTransaction,
   installBlockHandleClickController,
   resolveBlockActionTarget,
   serializeBlockForClipboard,
   type BlockHandleClickTarget
 } from './blockActionMenu'
+import { applyDeskEditorConfigs } from './deskEditorConfigs'
 import { createDocumentSelectAllPlugin } from './documentSelection'
 import { createCodeBlockTitlePlugin } from './codeBlockTitlePlugin'
 import { createCodeBlockLatexPreviewPlugin } from './codeBlockLatexPreview'
@@ -85,7 +76,6 @@ import {
   projectRawBlocksForMilkdown,
   rawBlockProjectionPlugins
 } from '../editor/markdown/rawBlockProjection'
-import { serializeDeskCalloutMdast } from '../editor/markdown/deskCallout'
 import {
   reconcileMarkdownSource,
   type ReconcileOptions
@@ -106,7 +96,6 @@ import { createDeskRawBlockView } from './createDeskRawBlockView'
 import { createDeskCalloutView, deskCalloutKeymapPlugin } from './deskCalloutView'
 import { imageAttrPlugins } from '../editor/markdown/imageAttrs'
 import { createDeskImageView } from '../editor/markdown/deskImageView'
-import { resolvePastedImageWidth } from '../editor/markdown/pasteImageWidth'
 import { standaloneImageParagraphPlugin } from '../editor/markdown/standaloneImageParagraph'
 import {
   applyHeadingFoldCommand,
@@ -1296,62 +1285,9 @@ onMounted(async () => {
         })
     )
   )
-  editor.editor.config((ctx) => {
-    // Match the source editor and the shortcut shown in Desk's toolbar/settings.
-    // Keep Milkdown's original binding available for existing users as well.
-    ctx.update(strikethroughKeymap.key, (current) => ({
-      ...current,
-      ToggleStrikethrough: {
-        ...current.ToggleStrikethrough,
-        shortcuts: ['Mod-Shift-x', 'Mod-Alt-x']
-      }
-    }))
-    ctx.update(blockConfig.key, (current) => ({
-      ...current,
-      filterNodes: (position, node) =>
-        canShowBlockHandle(node) && current.filterNodes(position, node)
-    }))
-    // 行内 <br>（含表格单元格）解析成硬换行，并记住原始拼写（见 htmlBreak.ts）。
-    ctx.update(remarkPluginsCtx, (plugins) => [
-      ...plugins,
-      { plugin: remarkHtmlBreakToBreak, options: {} }
-    ])
-    // Prefer GitHub / TNotes style list markers (`-`) over remark's default `*`.
-    ctx.update(remarkStringifyOptionsCtx, (current) => ({
-      ...current,
-      bullet: '-' as const,
-      bulletOther: '*' as const,
-      handlers: {
-        ...current.handlers,
-        deskCallout: serializeDeskCalloutMdast,
-        // 来自行内 <br> 的硬换行写回原拼写；普通硬换行沿用 mdast-util-to-markdown 的默认行为。
-        // 逻辑在 htmlBreak.ts 的纯函数里（可单测），这里按上下文的 Handle 类型内联。
-        break: (node, _parent, state, info) =>
-          breakMarkdown(node?.data, state.stack, state.unsafe, info.before ?? '')
-      }
-    }))
-    ctx.update(uploadConfig.key, (current) => ({
-      ...current,
-      enableHtmlFileUploader: true,
-      // Milkdown's upload plugin keeps a mapped placeholder in the document,
-      // so edits made while the image uploads cannot stale the insertion point.
-      uploader: async (files, schema) => {
-        if (isEffectivelyReadOnly()) return []
-        const imageType = schema.nodes.image
-        if (!imageType) return []
-        const images = [...files].filter((file) => file.type.startsWith('image/'))
-        return Promise.all(
-          images.map(async (file) => {
-            const uploaded = await props.uploadImage(file)
-            return imageType.create({
-              src: uploaded.src,
-              alt: '',
-              width: await resolvePastedImageWidth(file)
-            })
-          })
-        )
-      }
-    }))
+  applyDeskEditorConfigs(editor.editor, {
+    isReadOnly: isEffectivelyReadOnly,
+    uploadImage: (file) => props.uploadImage(file)
   })
   editor.setReadonly(isEffectivelyReadOnly())
   crepe = editor
