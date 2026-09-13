@@ -85,7 +85,11 @@ import {
   rawBlockProjectionPlugins
 } from '../editor/markdown/rawBlockProjection'
 import { serializeDeskCalloutMdast } from '../editor/markdown/deskCallout'
-import { reconcileMarkdownSource } from '../editor/markdown/sourcePreservation'
+import {
+  reconcileMarkdownSource,
+  type ReconcileOptions
+} from '../editor/markdown/sourcePreservation'
+import { literalRegionSourceFor } from '../editor/markdown/literalProjection'
 import {
   actionableProblems,
   classifyProjectionFidelity,
@@ -902,7 +906,30 @@ function handleKeydown(event: KeyboardEvent): void {
   exitCodeBlockFullscreen(root)
 }
 
+/**
+ * 「按原文暴露」的区域（降级产生的普通正文）在基线里的块下标。
+ * 写盘时用它告诉 reconcile：这些块被编辑过就用我们渲染的「转义逐行原文」，
+ * 不要交给通用序列化器（否则会出现 `\` 断行、转义丢失，重新加载又会变回容器）。
+ */
+let degradedRegionIndexes = new Set<number>()
+
+function literalRegionOptions(): ReconcileOptions {
+  if (degradedRegionIndexes.size === 0) return {}
+  return {
+    literalRegions: {
+      baselineIndexes: degradedRegionIndexes,
+      render: (currentIndex: number) => {
+        const node = editorView()?.state.doc.child(currentIndex)
+        if (!node) return null
+        return literalRegionSourceFor(node)
+      }
+    }
+  }
+}
+
 let fidelityScheduled = false
+/** 已经判定并降级过的内容快照；同一份内容不再重复判定（否则会拿降级后的结果反过来污染判定） */
+let fidelityCheckedFor: string | null = null
 
 /**
  * 空闲时检查渲染忠实性：结构性不忠实的块退化成「按原文显示」（unparsed 原始块），
@@ -915,7 +942,13 @@ function scheduleFidelityCheck(): void {
   const run = (): void => {
     fidelityScheduled = false
     if (destroyed || !ready || !crepe || synchronizing) return
+    // 同一份内容只判定一次：降级会把文档换成"退化形态"，再判定就会基于退化结果
+    // 算出更小的计划（实测把真正被降级的块挤出记录，写盘覆盖因此失效）。
+    if (fidelityCheckedFor === originalSource) return
+    fidelityCheckedFor = originalSource
     let plan = degradableBlockIndexes(originalSource, crepe.getMarkdown())
+    // 计划为空 = 这篇笔记现在没有任何「按原文暴露」的区域，清掉记录
+    degradedRegionIndexes = new Set(plan)
     if (plan.length === 0) return
     let remaining = 0
     for (let round = 0; round < 8; round += 1) {
@@ -962,7 +995,12 @@ function scheduleFidelityCheck(): void {
 function flushCurrentContent(editor = crepe): void {
   if (!editor || !ready || synchronizing || destroyed) return
   const markdown = editor.getMarkdown()
-  const preserved = reconcileMarkdownSource(originalSource, baselineCanonical, markdown)
+  const preserved = reconcileMarkdownSource(
+    originalSource,
+    baselineCanonical,
+    markdown,
+    literalRegionOptions()
+  )
   // 保存守卫：原文里某段内容被并进了别的块（吞并）—— 这是会丢数据的结构，坚决不写盘。
   // 用户的编辑仍在文档里；切到源码视图可以直接改，或把那段内容改回独立块再保存。
   const absorbed = findAbsorbedBlocks(originalSource, preserved)
@@ -989,7 +1027,12 @@ function flush(): void {
 function addHeadingNumbers(maxDepth: number): void {
   if (!crepe || !ready || isEffectivelyReadOnly()) return
   flushPendingEdits(props.knowledgeBaseId, props.noteUuid, { requireClean: false })
-  const preserved = reconcileMarkdownSource(originalSource, baselineCanonical, crepe.getMarkdown())
+  const preserved = reconcileMarkdownSource(
+    originalSource,
+    baselineCanonical,
+    crepe.getMarkdown(),
+    literalRegionOptions()
+  )
   const result = renumberHeadings(preserved, maxDepth)
   if (!result.changed) return
   crepe.editor.action(replaceAll(projectRawBlocksForMilkdown(result.text), true))
@@ -1004,7 +1047,12 @@ function addHeadingNumbers(maxDepth: number): void {
 function removeHeadingNumbers(): void {
   if (!crepe || !ready || isEffectivelyReadOnly()) return
   flushPendingEdits(props.knowledgeBaseId, props.noteUuid, { requireClean: false })
-  const preserved = reconcileMarkdownSource(originalSource, baselineCanonical, crepe.getMarkdown())
+  const preserved = reconcileMarkdownSource(
+    originalSource,
+    baselineCanonical,
+    crepe.getMarkdown(),
+    literalRegionOptions()
+  )
   const result = stripHeadingNumbers(preserved)
   if (!result.changed) return
   crepe.editor.action(replaceAll(projectRawBlocksForMilkdown(result.text), true))

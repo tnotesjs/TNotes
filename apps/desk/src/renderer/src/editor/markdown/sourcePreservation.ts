@@ -822,10 +822,30 @@ function tryLinearSingleChangeMatch(
   )
 }
 
+/**
+ * 「按原文暴露」的区域（渲染忠实性降级）在写盘时的特殊处理。
+ *
+ * 这些区域在文档里是普通正文（可编辑），但通用 markdown 序列化器会把它们写成自己的
+ * 形态：行内硬换行变成 `\` + 换行、我们注入的转义（`\:::`）被吃掉 —— 重新加载时
+ * 又会变回容器。所以：**未被编辑 → 逐字复用原块字节；被编辑过 → 用 render 给出的
+ * 「转义逐行原文」形态写**，由我们而不是序列化器决定这段长什么样。
+ */
+export interface ReconcileLiteralRegions {
+  /** 基线里哪些顶层块下标是「按原文暴露」的区域（降级后块数守恒，下标与源码一致） */
+  baselineIndexes: ReadonlySet<number>
+  /** 给定当前文档里的块下标（与 currentCanonical 的顶层块一一对应），返回要写的原文形态 */
+  render: (currentIndex: number) => string | null
+}
+
+export interface ReconcileOptions {
+  literalRegions?: ReconcileLiteralRegions
+}
+
 export function reconcileMarkdownSource(
   originalSource: string,
   baselineCanonical: string,
-  currentCanonical: string
+  currentCanonical: string,
+  options: ReconcileOptions = {}
 ): string {
   if (baselineCanonical === currentCanonical) return originalSource
 
@@ -848,7 +868,7 @@ export function reconcileMarkdownSource(
       originalBlock && match && canReuseLeading(currentIndex, match, matches)
         ? originalBlock.leading
         : currentBlock.leading
-    const source =
+    let source =
       originalBlock && match?.relation !== 'changed'
         ? originalBlock.source
         : originalBlock && match
@@ -858,6 +878,14 @@ export function reconcileMarkdownSource(
               currentBlock
             ) ?? currentBlock.source)
           : currentBlock.source
+    // 被编辑过的「按原文暴露」区域：形态由我们定（转义逐行原文），不交给序列化器
+    const regions = options.literalRegions
+    if (regions && match && match.relation === 'changed') {
+      if (regions.baselineIndexes.has(match.baselineIndex)) {
+        const rendered = regions.render(currentIndex)
+        if (rendered != null) source = rendered
+      }
+    }
     result += leading + source
   })
 

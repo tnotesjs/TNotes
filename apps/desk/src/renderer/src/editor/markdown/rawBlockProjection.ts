@@ -13,7 +13,7 @@ import {
   type VisualCalloutType
 } from './containerBody'
 import { deskCalloutRemark, deskCalloutSchema, wrapProjectedCalloutBody } from './deskCallout'
-import { escapeBlockSourceForLiteral } from './literalProjection'
+import { literalParagraphSourceFor } from './literalProjection'
 import { parseFencedCode } from './diagramRenderer'
 import { parseFenceTitleFromMeta } from './fenceInfo'
 import {
@@ -346,10 +346,11 @@ export function projectRawBlocksForMilkdown(
   const replacements = new Map<string, string>()
 
   document.blocks.forEach((block, blockIndex) => {
-    // 渲染忠实性机制：判为「不能忠实渲染」的块**按普通正文暴露**（行首块级记号加反斜杠），
-    // 于是它在可视化视图里就是可选中/可编辑/可删除的普通内容，而不会被重新解析成容器。
+    // 渲染忠实性机制：判为「不能忠实渲染」的块**按普通正文暴露** —— 整段做成**一个段落**
+    // （行首块级记号加反斜杠 + 行间 <br />），于是它既能选中/编辑/删除，又保持
+    // 「1 个原块 ↔ 1 个块」的对应，写盘时的原文复用不会被破坏。
     if (options.literalBlockIndexes?.has(blockIndex)) {
-      replacements.set(block.id, escapeBlockSourceForLiteral(block.source))
+      replacements.set(block.id, literalParagraphSourceFor(block.source))
       return
     }
     if (isDiagramFence(block)) {

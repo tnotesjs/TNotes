@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import { afterEach, describe, expect, it } from 'vitest'
-import { Editor, defaultValueCtx, rootCtx } from '@milkdown/kit/core'
+import { Editor, defaultValueCtx, editorViewCtx, rootCtx } from '@milkdown/kit/core'
 import { commonmark } from '@milkdown/kit/preset/commonmark'
 import { gfm } from '@milkdown/kit/preset/gfm'
 import { getMarkdown } from '@milkdown/kit/utils'
@@ -12,8 +12,8 @@ import {
   FIDELITY_CASE_D3,
   FIDELITY_CASE_FRONTMATTER
 } from './projectionFidelity.cases'
-import { parseMarkdownSource } from './sourcePreservation'
-import { escapeBlockSourceForLiteral } from './literalProjection'
+import { parseMarkdownSource, reconcileMarkdownSource } from './sourcePreservation'
+import { escapeBlockSourceForLiteral, literalRegionSourceFor } from './literalProjection'
 import {
   actionableProblems,
   canonicalizeMarkdown,
@@ -327,5 +327,173 @@ describe('projectionFidelity · 降级不吞无关内容', () => {
       expect(plan, `plan=${JSON.stringify(plan)} 不该包含内容块 ${index}`).not.toContain(index)
     }
     expect(plan.length).toBeGreaterThan(0)
+  })
+})
+
+describe('projectionFidelity · 降级后的保存路径（A1：单块承载）', () => {
+  const source = [
+    '---',
+    'id: x',
+    '---',
+    '',
+    '# 标题',
+    '',
+    '普通段落。',
+    '',
+    '::: tip 外层',
+    '外层提示块正文',
+    '',
+    '::: info 内层',
+    '内层提示块正文',
+    '',
+    ':::',
+    '',
+    ':::',
+    '',
+    '222',
+    ''
+  ].join('\n')
+
+  it('多行块降级后块数守恒；整段删除后保存不再被判为会写坏（A1）', async () => {
+    // 明确把**多行的容器块**列为降级目标：这是 A1 要保的性质 —— 无论降级多少行，
+    // 顶层块数量都不变，reconcile 的身份映射才成立（否则原块字节会被拼进别的块，
+    // 保存守卫会判定"内容会被写坏"，用户就存不了盘）。
+    const blocks = parseMarkdownSource(source).blocks
+    const containerIndex = blocks.findIndex((block) => block.source.startsWith('::: tip 外层'))
+    expect(containerIndex).toBeGreaterThan(0)
+    const target = blocks[containerIndex]!.source
+    expect(target.split('\n').length).toBeGreaterThan(3)
+
+    const virtual = projectRawBlocksForMilkdown(source, {
+      literalBlockIndexes: new Set([containerIndex])
+    })
+    const baseline = await canonicalFromVirtual(virtual)
+    expect(parseMarkdownSource(baseline).blocks.length).toBe(blocks.length)
+    expect(reconcileMarkdownSource(source, baseline, baseline)).toBe(source)
+
+    const root = document.createElement('div')
+    document.body.append(root)
+    const editor = Editor.make()
+      .config((ctx) => {
+        ctx.set(rootCtx, root)
+        ctx.set(defaultValueCtx, virtual)
+      })
+      .use(commonmark)
+      .use(gfm)
+      .use(rawBlockProjectionPlugins)
+    editors.push(editor)
+    await editor.create()
+
+    // 用户把降级出来的那一段整段删掉 → 保存必须被允许（旧的"拆成多段落"实现会被守卫拦住）
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      let range: { from: number; to: number } | null = null
+      view.state.doc.descendants((node, pos) => {
+        if (range) return false
+        if (node.type.name === 'paragraph' && node.textContent.includes('外层提示块正文')) {
+          range = { from: pos, to: pos + node.nodeSize }
+        }
+        return true
+      })
+      expect(range).not.toBeNull()
+      view.dispatch(view.state.tr.delete(range!.from, range!.to))
+    })
+    const current = editor.action(getMarkdown())
+    const preserved = reconcileMarkdownSource(source, baseline, current)
+    expect(findAbsorbedBlocks(source, preserved)).toEqual([])
+    // 用户删除的那段内容确实从写盘结果里消失了
+    expect(preserved).not.toContain('外层提示块正文')
+  })
+})
+
+describe('projectionFidelity · A2：写盘形态由我们决定', () => {
+  const source = [
+    '---',
+    'id: x',
+    '---',
+    '',
+    '# 标题',
+    '',
+    '普通段落。',
+    '',
+    '::: tip 外层',
+    '外层提示块正文',
+    '',
+    '::: info 内层',
+    '内层提示块正文',
+    '',
+    ':::',
+    '',
+    ':::',
+    '',
+    '222',
+    ''
+  ].join('\n')
+
+  it('编辑降级区域后写成转义逐行原文；其它块逐字保留；重新加载仍是文字', async () => {
+    const blocks = parseMarkdownSource(source).blocks
+    const containerIndex = blocks.findIndex((block) => block.source.startsWith('::: tip 外层'))
+    expect(containerIndex).toBeGreaterThan(0)
+    const virtual = projectRawBlocksForMilkdown(source, {
+      literalBlockIndexes: new Set([containerIndex])
+    })
+    const root = document.createElement('div')
+    document.body.append(root)
+    const editor = Editor.make()
+      .config((ctx) => {
+        ctx.set(rootCtx, root)
+        ctx.set(defaultValueCtx, virtual)
+      })
+      .use(commonmark)
+      .use(gfm)
+      .use(rawBlockProjectionPlugins)
+    editors.push(editor)
+    await editor.create()
+    const baseline = editor.action(getMarkdown())
+
+    // 在降级区域里改一个字（模拟用户编辑）
+    let regionPos = -1
+    let innerOffset = -1
+    editor.action((ctx) => {
+      ctx.get(editorViewCtx).state.doc.forEach((node, offset) => {
+        const text = node.textContent
+        const at = text.indexOf('外层提示块正文')
+        if (at >= 0) {
+          regionPos = offset
+          innerOffset = at + '外层提示块正文'.length
+        }
+      })
+    })
+    expect(regionPos).toBeGreaterThanOrEqual(0)
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      view.dispatch(view.state.tr.insertText('X', regionPos + 1 + innerOffset))
+    })
+    const current = editor.action(getMarkdown())
+    expect(current).not.toBe(baseline)
+
+    const written = reconcileMarkdownSource(source, baseline, current, {
+      literalRegions: {
+        baselineIndexes: new Set([containerIndex]),
+        render: (currentIndex: number) => {
+          const node = editor.ctx.get(editorViewCtx).state.doc.child(currentIndex)
+          return node ? literalRegionSourceFor(node) : null
+        }
+      }
+    })
+
+    // 1) 转义保留（首行仍是转义后的 `\:::`）+ 用户的编辑在里面
+    expect(written).toContain('\\::: tip 外层')
+    expect(written).toContain('外层提示块正文X')
+    // 2) 没有序列化器那种 `\` 断行产物
+    expect(written).not.toMatch(/[^\\]\\\\\n/)
+    // 3) 其它块仍然逐字来自原文
+    expect(written).toContain('普通段落。')
+    expect(written).toContain('222')
+    // 4) 写出的内容重新加载后仍是文字
+    const kinds = parseMarkdownSource(written).blocks.map((block) => block.kind)
+    expect(kinds).not.toContain('raw-container')
+    const canonical = await canonicalFromVirtual(projectRawBlocksForMilkdown(written))
+    expect(actionableProblems(classifyProjectionFidelity(written, canonical))).toEqual([])
   })
 })

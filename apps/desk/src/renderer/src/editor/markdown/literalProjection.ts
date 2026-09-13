@@ -50,3 +50,61 @@ export function escapeBlockSourceForLiteral(source: string): string {
     .map((line) => (line.trim() === '' ? line : escapeLineForLiteral(line)))
     .join('\n')
 }
+
+/**
+ * 把整段降级内容做成**一个段落**：逐行转义后，用行内 `<br />` 连接。
+ *
+ * 为什么必须是一个块：写盘走 `reconcileMarkdownSource`，它靠「块数 + 块形」一一对应
+ * 来回用原文字节。如果把这段拆成 N 个段落，原文 1 个块就会对不上 N 个段落，
+ * 匹配退化后原块字节会被拼进别的块 → 保存守卫判定"内容会被写坏"→ 用户存不了盘
+ * （实测：选中删除后提示无法保存）。一个块对回原来的块，映射就干净了。
+ *
+ * 空行也变成一个多余的 `<br />`（视觉上仍是空一行），因为它们不能真的留空 ——
+ * 空行会把段落切断，就又不是一个块了。
+ */
+export function literalParagraphSourceFor(source: string): string {
+  const lines = source.split('\n')
+  while (lines.length > 0 && lines[lines.length - 1]!.trim() === '') lines.pop()
+  return lines
+    .map((line) => (line.trim() === '' ? '' : escapeLineForLiteral(line)))
+    .join('<br />\n')
+}
+
+/**
+ * 把文档节点还原成「带换行的文本」：硬换行算一个换行，图片还原成 markdown。
+ * 供写盘时重建"转义逐行原文"用。
+ */
+export function literalTextFromNode(node: LiteralWalkableNode): string {
+  let out = ''
+  node.descendants((child) => {
+    if (child.isText) {
+      out += child.text ?? ''
+      return false
+    }
+    if (child.type.name === 'hardbreak' || child.type.name === 'hard_break') {
+      out += '\n'
+      return false
+    }
+    if (child.type.name === 'image') {
+      out += `![${String(child.attrs?.alt ?? '')}](${String(child.attrs?.src ?? '')})`
+      return false
+    }
+    return true
+  })
+  return out
+}
+
+/** 结构化最小接口：只要能把节点树走一遍就够了（避免把 ProseMirror 类型引进来） */
+export interface LiteralWalkableNode {
+  isText: boolean
+  text?: string | null
+  type: { name: string }
+  attrs?: Record<string, unknown>
+  descendants: (fn: (node: LiteralWalkableNode) => boolean | void) => void
+}
+
+/** 把文档节点渲染成写盘要用的「转义逐行原文」；空内容返回 null（交给原逻辑） */
+export function literalRegionSourceFor(node: LiteralWalkableNode): string | null {
+  const text = literalTextFromNode(node)
+  return text.trim() === '' ? null : escapeBlockSourceForLiteral(text)
+}

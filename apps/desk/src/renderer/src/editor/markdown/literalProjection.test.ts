@@ -2,7 +2,11 @@
 
 import { describe, expect, it } from 'vitest'
 
-import { escapeBlockSourceForLiteral, escapeLineForLiteral } from './literalProjection'
+import {
+  escapeBlockSourceForLiteral,
+  escapeLineForLiteral,
+  literalParagraphSourceFor
+} from './literalProjection'
 
 describe('literalProjection · 行转义', () => {
   it('块级构造的行首记号被转义，正文行不动', () => {
@@ -35,5 +39,19 @@ describe('literalProjection · 行转义', () => {
       '',
       '\\:::'
     ])
+  })
+})
+
+describe('literalProjection · 整段做成一个段落', () => {
+  it('逐行转义后用行内 <br /> 连接，不留空行', () => {
+    const source = '::: tip 外层\n外层正文\n\n::: info 内层\n内层正文\n\n:::'
+    const paragraph = literalParagraphSourceFor(source)
+    expect(paragraph.split('\n').filter((line) => line.trim() === '')).toEqual([])
+    expect(paragraph.startsWith('\\::: tip 外层<br />')).toBe(true)
+    expect(paragraph).toContain('外层正文<br />')
+    expect(paragraph).toContain('\\::: info 内层')
+    expect(paragraph.endsWith('\\:::')).toBe(true)
+    // 空行变成一个多余的 <br />
+    expect(paragraph).toContain('<br />\n<br />')
   })
 })
