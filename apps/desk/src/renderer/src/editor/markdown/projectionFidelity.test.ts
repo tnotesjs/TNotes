@@ -6,17 +6,14 @@ import { commonmark } from '@milkdown/kit/preset/commonmark'
 import { gfm } from '@milkdown/kit/preset/gfm'
 import { getMarkdown } from '@milkdown/kit/utils'
 
-import {
-  projectRawBlocksForMilkdown,
-  rawBlockProjectionPlugins,
-  renderDeskRawBlockElement
-} from './rawBlockProjection'
+import { projectRawBlocksForMilkdown, rawBlockProjectionPlugins } from './rawBlockProjection'
 import {
   FIDELITY_CASES,
   FIDELITY_CASE_D3,
   FIDELITY_CASE_FRONTMATTER
 } from './projectionFidelity.cases'
 import { parseMarkdownSource } from './sourcePreservation'
+import { escapeBlockSourceForLiteral } from './literalProjection'
 import {
   actionableProblems,
   canonicalizeMarkdown,
@@ -152,19 +149,26 @@ describe('projectionFidelity · 降级计划', () => {
     expect(indexes).toContain(indexes[indexes.length - 1])
   })
 
-  it('降级的块在投影里变成 unparsed 原始块，其余块照常', async () => {
+  it('降级的块在投影里变成转义后的普通正文，其余块照常', async () => {
     const source = `${FIDELITY_CASE_FRONTMATTER}# 标题\n\n::: tip T\n\n外层\n\n::: info I\n\n内层\n\n:::\n\n:::\n\n222\n`
-    const canonical = await projectToCanonical(source)
-    const indexes = degradableBlockIndexes(source, canonical)
+    const blocks = parseMarkdownSource(source).blocks
+    const indexes = degradableBlockIndexes(source, await projectToCanonical(source))
     expect(indexes.length).toBeGreaterThan(0)
     const projected = projectRawBlocksForMilkdown(source, {
-      forceRawBlockIndexes: new Set(indexes)
+      literalBlockIndexes: new Set(indexes)
     })
-    // 被降级的块写成 unparsed 原始块标记
-    expect(projected).toContain('<!--desk-raw-block:v1:unparsed:0:')
-    // 标题块没有被降级，仍然走正常投影
-    const titleMarker = projectRawBlocksForMilkdown(source)
-    expect(titleMarker).not.toContain('unparsed')
+    // 计划里每个块的原文，都以「转义后的普通正文」形式出现在投影里
+    for (const index of indexes) {
+      const escaped = escapeBlockSourceForLiteral(blocks[index]!.source).split('\n')[0]!
+      expect(projected, `plan=${JSON.stringify(indexes)}`).toContain(escaped)
+    }
+    expect(projected).not.toContain('desk-raw-block:v1:unparsed')
+    // 没降级时不会有这些转义
+    const untouched = projectRawBlocksForMilkdown(source)
+    for (const index of indexes) {
+      const escaped = escapeBlockSourceForLiteral(blocks[index]!.source).split('\n')[0]!
+      expect(untouched).not.toContain(escaped)
+    }
   })
 })
 
@@ -195,14 +199,14 @@ describe('projectionFidelity · 降级之后的文档', () => {
     let plan = indexes
     for (let round = 0; round < 8; round += 1) {
       const degraded = projectRawBlocksForMilkdown(source, {
-        forceRawBlockIndexes: new Set(plan)
+        literalBlockIndexes: new Set(plan)
       })
       const rebuilt = await canonicalFromVirtual(degraded)
       if (classifyProjectionFidelity(source, rebuilt).ok) break
       plan = extendDegradationIndexes(source, rebuilt, plan)
     }
     const degraded = projectRawBlocksForMilkdown(source, {
-      forceRawBlockIndexes: new Set(plan)
+      literalBlockIndexes: new Set(plan)
     })
     const after = await canonicalFromVirtual(degraded)
     const report = classifyProjectionFidelity(source, after)
@@ -211,19 +215,6 @@ describe('projectionFidelity · 降级之后的文档', () => {
     )
     // 未被降级的块照常渲染：段落 222 还在
     expect(after).toContain('222')
-  })
-
-  it('unparsed 块按「正文文字」渲染（带区分用的类名）', () => {
-    const element = renderDeskRawBlockElement({
-      kind: 'unparsed',
-      source: '::: tip T\n\n原文\n',
-      hidden: false
-    })
-    expect(element.dataset.kind).toBe('unparsed')
-    expect(element.className).toContain('desk-raw-block--unparsed')
-    expect(element.querySelector('.desk-raw-block__unparsed-text')?.textContent).toBe(
-      '::: tip T\n\n原文'
-    )
   })
 })
 
@@ -263,15 +254,16 @@ describe('projectionFidelity · 降级最小性', () => {
     let plan = degradableBlockIndexes(source, await projectToCanonical(source))
     for (let round = 0; round < 6; round += 1) {
       const rebuilt = await canonicalFromVirtual(
-        projectRawBlocksForMilkdown(source, { forceRawBlockIndexes: new Set(plan) })
+        projectRawBlocksForMilkdown(source, { literalBlockIndexes: new Set(plan) })
       )
       if (classifyProjectionFidelity(source, rebuilt).ok) break
       plan = extendDegradationIndexes(source, rebuilt, plan)
     }
     expect(plan, `plan=${JSON.stringify(plan)} plainIndex=${plainIndex}`).not.toContain(plainIndex)
     const rebuilt = await canonicalFromVirtual(
-      projectRawBlocksForMilkdown(source, { forceRawBlockIndexes: new Set(plan) })
+      projectRawBlocksForMilkdown(source, { literalBlockIndexes: new Set(plan) })
     )
+    // 转义后的正文与原文在「转义等价」白名单下对账通过
     expect(classifyProjectionFidelity(source, rebuilt).ok).toBe(true)
     expect(rebuilt).toContain('222')
   })
@@ -323,7 +315,7 @@ describe('projectionFidelity · 降级不吞无关内容', () => {
     let plan = degradableBlockIndexes(source, await projectToCanonical(source))
     for (let round = 0; round < 8; round += 1) {
       const rebuilt = await canonicalFromVirtual(
-        projectRawBlocksForMilkdown(source, { forceRawBlockIndexes: new Set(plan) })
+        projectRawBlocksForMilkdown(source, { literalBlockIndexes: new Set(plan) })
       )
       const report = classifyProjectionFidelity(source, rebuilt)
       if (actionableProblems(report).length === 0) break

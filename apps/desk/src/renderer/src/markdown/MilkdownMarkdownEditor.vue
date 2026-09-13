@@ -924,7 +924,7 @@ function scheduleFidelityCheck(): void {
         crepe.editor.action(
           replaceAll(
             projectRawBlocksForMilkdown(originalSource, {
-              forceRawBlockIndexes: new Set(plan)
+              literalBlockIndexes: new Set(plan)
             }),
             true
           )
@@ -950,8 +950,8 @@ function scheduleFidelityCheck(): void {
     }
     useWorkspaceStore().status =
       remaining === 0
-        ? `有 ${plan.length} 处内容暂时不能安全排版，已按原文显示`
-        : `有内容暂时不能安全排版，已按原文显示（仍有 ${remaining} 处结构差异）`
+        ? `有 ${plan.length} 处内容暂时不能安全排版，已按原文作为普通文字显示`
+        : `有内容暂时不能安全排版，已按原文作为普通文字显示（仍有 ${remaining} 处结构差异）`
   }
   const idle = (window as unknown as { requestIdleCallback?: (cb: () => void) => number })
     .requestIdleCallback

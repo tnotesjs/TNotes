@@ -1024,30 +1024,6 @@
   opacity: 1;
 }
 
-.milkdown-markdown-editor :deep(.desk-raw-block--unparsed) {
-  /* 「按原文显示」：就是正文文字，只有一条很淡的左边线做区分。
-     基底 .desk-raw-block 是卡片（整圈边框 / 面板底色 / 最小高度 / flex 布局），
-     这里必须逐条盖掉，否则看起来还是个框。 */
-  display: block;
-  min-height: 0;
-  margin: 0.45em 0;
-  padding: 0 0 0 0.75em;
-  border: 0;
-  border-left: 2px solid color-mix(in srgb, var(--border) 55%, transparent);
-  border-radius: 0;
-  background: transparent;
-  color: inherit;
-  overflow: visible;
-}
-
-.milkdown-markdown-editor :deep(.desk-raw-block--unparsed .desk-raw-block__unparsed-text) {
-  font: inherit;
-  line-height: inherit;
-  color: inherit;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
 .milkdown-markdown-editor :deep(.desk-raw-block__label) {
   flex: none;
   font-size: 12px;

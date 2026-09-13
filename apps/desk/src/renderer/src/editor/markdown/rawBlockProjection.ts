@@ -13,6 +13,7 @@ import {
   type VisualCalloutType
 } from './containerBody'
 import { deskCalloutRemark, deskCalloutSchema, wrapProjectedCalloutBody } from './deskCallout'
+import { escapeBlockSourceForLiteral } from './literalProjection'
 import { parseFencedCode } from './diagramRenderer'
 import { parseFenceTitleFromMeta } from './fenceInfo'
 import {
@@ -44,7 +45,7 @@ type SourceProjectedKind = Extract<
   | 'html'
 >
 
-export type ProjectedRawBlockKind = SourceProjectedKind | 'raw-diagram' | 'unparsed'
+export type ProjectedRawBlockKind = SourceProjectedKind | 'raw-diagram'
 
 export interface ProjectedRawBlock {
   kind: ProjectedRawBlockKind
@@ -61,12 +62,11 @@ const PROJECTED_KINDS = new Set<ProjectedRawBlockKind>([
   'raw-generated-toc',
   'raw-diagram',
   'table',
-  'html',
-  'unparsed'
+  'html'
 ])
 
 const MARKER =
-  /^<!--desk-raw-block:v1:(raw-frontmatter|raw-container|raw-component|raw-reference-definition|raw-generated-title|raw-generated-toc|raw-diagram|table|html|unparsed):([01]):([A-Za-z0-9+/]*={0,2})-->$/
+  /^<!--desk-raw-block:v1:(raw-frontmatter|raw-container|raw-component|raw-reference-definition|raw-generated-title|raw-generated-toc|raw-diagram|table|html):([01]):([A-Za-z0-9+/]*={0,2})-->$/
 const REGION_COMMENT = /^ {0,3}<!--\s*(?:end)?region(?::[\s\S]*?)?\s*-->\s*$/i
 const HTML_TAG = /<\/?[A-Za-z][\w.-]*(?=[\s/>])/
 /** 行内 <br> 家族：已由 htmlBreak.ts 映射成硬换行，不算「表格里的 HTML 标签」。 */
@@ -340,18 +340,16 @@ export function readProjectedRawBlockMarker(value: string): ProjectedRawBlock | 
  */
 export function projectRawBlocksForMilkdown(
   source: string,
-  options: { forceRawBlockIndexes?: ReadonlySet<number> } = {}
+  options: { literalBlockIndexes?: ReadonlySet<number> } = {}
 ): string {
   const document = parseMarkdownSource(source)
   const replacements = new Map<string, string>()
 
   document.blocks.forEach((block, blockIndex) => {
-    // 渲染忠实性机制：判为「不能忠实渲染」的块直接按原文保留（外观按正文文字呈现）。
-    if (options.forceRawBlockIndexes?.has(blockIndex)) {
-      replacements.set(
-        block.id,
-        createProjectedRawBlockMarker({ kind: 'unparsed', source: block.source, hidden: false })
-      )
+    // 渲染忠实性机制：判为「不能忠实渲染」的块**按普通正文暴露**（行首块级记号加反斜杠），
+    // 于是它在可视化视图里就是可选中/可编辑/可删除的普通内容，而不会被重新解析成容器。
+    if (options.literalBlockIndexes?.has(blockIndex)) {
+      replacements.set(block.id, escapeBlockSourceForLiteral(block.source))
       return
     }
     if (isDiagramFence(block)) {
@@ -613,23 +611,6 @@ export function renderDeskRawBlockElement(
     rendered.dataset.source = encodeBase64(block.source)
     rendered.dataset.hidden = 'false'
     return rendered
-  }
-  // 渲染忠实性机制：判为「不能忠实渲染」的块按原文显示 —— 外观就是正文文字（带一条
-  // 很淡的左边线做区分），内容逐字来自原文，不经过 markdown 重新序列化。
-  if (block.kind === 'unparsed' && !block.hidden) {
-    const wrapper = document.createElement('div')
-    wrapper.dataset.type = 'desk-raw-block'
-    wrapper.dataset.kind = 'unparsed'
-    wrapper.dataset.source = encodeBase64(block.source)
-    wrapper.dataset.hidden = 'false'
-    wrapper.contentEditable = 'false'
-    wrapper.className = 'desk-raw-block desk-raw-block--unparsed'
-    wrapper.title = '这段内容暂时不能安全排版，已按原文显示（可切到源码视图编辑）'
-    const text = document.createElement('div')
-    text.className = 'desk-raw-block__unparsed-text'
-    text.textContent = block.source.replace(/\n$/, '')
-    wrapper.append(text)
-    return wrapper
   }
   const element = document.createElement('div')
   element.dataset.type = 'desk-raw-block'
