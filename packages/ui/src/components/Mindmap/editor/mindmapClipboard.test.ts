@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { MindmapSession } from '@tnotesjs/mindmap-core'
-import { pasteCanvasOutline } from './canvasClipboard'
+import { pasteCanvasOutline } from './mindmapClipboard'
 
 describe('pasteCanvasOutline', () => {
   it('把 Markdown 列表作为当前主题后的同级子树插入', () => {

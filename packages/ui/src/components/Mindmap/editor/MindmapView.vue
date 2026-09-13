@@ -13,7 +13,15 @@ import LinkPopover from './LinkPopover.vue'
 import SelectionToolbar from './SelectionToolbar.vue'
 import { pasteCanvasOutline, readMindmapClipboard, writeMindmapClipboard } from './mindmapClipboard'
 
-const props = defineProps<{ session: MindmapSession; resolveImageSrc?: (src: string) => string }>()
+const props = defineProps<{
+  session: MindmapSession
+  resolveImageSrc?: (src: string) => string
+  /**
+   * 浮层挂载点，透传给 `CanvasContextMenu` / `LinkPopover`。
+   * 默认 `undefined` = 就地渲染（嵌在笔记里的 Desk / SSG）；整页宿主传 `'body'`。
+   */
+  teleportTo?: string
+}>()
 
 const emit = defineEmits<{
   ready: [editor: CanvasEditor]
@@ -209,6 +217,7 @@ onBeforeUnmount(() => {
       v-if="linkEditor"
       :url="linkEditor.url"
       :position="linkEditor.position"
+      :teleport-to="teleportTo"
       @save="saveLink"
       @remove="removeLink"
       @keep="keepLinkPopover"
@@ -227,6 +236,7 @@ onBeforeUnmount(() => {
       :can-delete-tree="contextMenu.canDeleteTree"
       :can-toggle-siblings="contextMenu.canToggleSiblings"
       :can-focus="contextMenu.canFocus"
+      :teleport-to="teleportTo"
       @insert-sibling="insertSibling"
       @insert-child="insertChild"
       @insert-parent="insertParent"

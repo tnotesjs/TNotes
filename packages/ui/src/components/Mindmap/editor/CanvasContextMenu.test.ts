@@ -84,4 +84,23 @@ describe('CanvasContextMenu', () => {
     }
     app.unmount()
   })
+
+  // teleportTo 是给宿主的公开开关：默认就地渲染（嵌在笔记里的 Desk / SSG），
+  // 整页宿主（Web / VS Code webview）传 'body'。
+  it('默认不 teleport：浮层留在宿主容器内', async () => {
+    const app = mountMenu()
+    await nextTick()
+    const menu = document.querySelector('[aria-label="主题右键菜单"]')!
+    expect(host!.contains(menu)).toBe(true)
+    app.unmount()
+  })
+
+  it('teleportTo=body：浮层挂到 body，不在宿主容器内', async () => {
+    const app = mountMenu(false, { teleportTo: 'body' })
+    await nextTick()
+    const menu = document.querySelector('[aria-label="主题右键菜单"]')!
+    expect(host!.contains(menu)).toBe(false)
+    expect(document.body.contains(menu)).toBe(true)
+    app.unmount()
+  })
 })

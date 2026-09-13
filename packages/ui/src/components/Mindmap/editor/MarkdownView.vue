@@ -37,12 +37,14 @@ function onInput(e: Event) {
   }, 300)
 }
 
-function flushDraft() {
-  if (!typing) return
+/** 有未提交的防抖输入时立即回流，返回被 flush 的草稿；没有则返回 `null`。 */
+function flushDraft(): string | null {
+  if (!typing) return null
   if (timer) clearTimeout(timer)
   timer = null
   typing = false
   emit('update:modelValue', draft.value)
+  return draft.value
 }
 
 function goToDiagnostic(item: MarkdownDiagnostic) {
@@ -63,7 +65,7 @@ function selectAllFromHost(): void {
   input.setSelectionRange(0, input.value.length)
 }
 
-defineExpose({ selectAllFromHost })
+defineExpose({ selectAllFromHost, flushDraft })
 
 function onPaste(e: ClipboardEvent) {
   const image = [...(e.clipboardData?.items ?? [])]

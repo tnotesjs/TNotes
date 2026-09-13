@@ -17,7 +17,7 @@ const props = withDefaults(
     placement?: 'fixed' | 'canvas-bottom'
     activeFormats?: Partial<Record<InlineFormat, boolean>>
   }>(),
-  { placement: 'fixed' }
+  { placement: 'fixed', position: undefined, activeFormats: undefined }
 )
 
 const emit = defineEmits<{

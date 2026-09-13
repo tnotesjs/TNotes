@@ -4,8 +4,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp, defineComponent, h, nextTick } from 'vue'
 import type { MindmapSession } from '@tnotesjs/mindmap-core'
 
-vi.mock('./ui/MindmapView.vue', () => ({
-  default: defineComponent({
+// 同一个 specifier 只能有一个 mock：四个视图桩必须合并成一次 barrel mock，
+// 其余导出（图标 / 平台快捷键 / 剪贴板工具等）沿用真实实现。
+vi.mock('@tnotesjs/ui/mindmap-editor', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@tnotesjs/ui/mindmap-editor')>()),
+  MindmapView: defineComponent({
     name: 'MindmapViewStub',
     props: { session: { type: Object, required: true } },
     emits: ['requestSearch'],
@@ -34,11 +37,8 @@ vi.mock('./ui/MindmapView.vue', () => ({
           h('button', { 'data-focus-deepest': '', onClick: focusDeepest }, '进入深层主题')
         ])
     }
-  })
-}))
-
-vi.mock('./ui/OutlineView.vue', () => ({
-  default: defineComponent({
+  }),
+  OutlineView: defineComponent({
     name: 'OutlineViewStub',
     emits: ['requestSearch'],
     setup(_props, { emit }) {
@@ -52,18 +52,12 @@ vi.mock('./ui/OutlineView.vue', () => ({
           '大纲内搜索'
         )
     }
-  })
-}))
-
-vi.mock('./ui/MarkdownView.vue', () => ({
-  default: defineComponent({
+  }),
+  MarkdownView: defineComponent({
     name: 'MarkdownViewStub',
     setup: () => () => h('div', { 'data-view': 'source' })
-  })
-}))
-
-vi.mock('./ui/SearchBar.vue', () => ({
-  default: defineComponent({
+  }),
+  SearchBar: defineComponent({
     name: 'SearchBarStub',
     props: { visible: Boolean },
     setup(props) {

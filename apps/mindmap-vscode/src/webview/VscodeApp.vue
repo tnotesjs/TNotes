@@ -2,16 +2,18 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { MindmapSession } from '@tnotesjs/mindmap-core'
 import type { CanvasEditor, MarkdownDiagnostic } from '@tnotesjs/mindmap-core'
-import { insertImageIntoSource } from '../app/imagePaste'
-import AppIcon from '../ui/AppIcon.vue'
-import CollapseMenu from '../ui/CollapseMenu.vue'
-import FocusBreadcrumbs from '@tnotesjs/ui/FocusBreadcrumbs.vue'
-import IconButton from '../ui/IconButton.vue'
-import MarkdownView from '../ui/MarkdownView.vue'
-import MindmapView from '../ui/MindmapView.vue'
-import OutlineView from '../ui/OutlineView.vue'
-import SearchBar from '../ui/SearchBar.vue'
-import { primaryShortcut } from '../ui/platform'
+import {
+  AppIcon,
+  CollapseMenu,
+  FocusBreadcrumbs,
+  IconButton,
+  insertImageIntoSource,
+  MarkdownView,
+  MindmapView,
+  OutlineView,
+  primaryShortcut,
+  SearchBar
+} from '@tnotesjs/ui/mindmap-editor'
 import {
   PROTOCOL_VERSION,
   type DocumentSnapshot,
@@ -401,6 +403,7 @@ const viewTabs: Array<{ id: ViewId; label: string }> = [
         v-if="view === 'map'"
         :session="session"
         :resolve-image-src="resolveImageSrc"
+        teleport-to="body"
         @ready="(editor) => (canvasEditorRef = editor)"
         @request-search="openSearch"
         @image-preview="(src) => (imagePreviewSrc = src)"

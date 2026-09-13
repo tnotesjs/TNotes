@@ -5,6 +5,12 @@ import { isApplePlatform, primaryShortcut } from './platform'
 const props = withDefaults(
   defineProps<{
     position: { left: number; top: number }
+    /**
+     * 浮层挂载点。默认 `undefined` = 就地渲染，供嵌在笔记里的宿主（Desk / SSG）
+     * 使用——菜单是 `position: fixed`，teleport 到 body 会脱离笔记的层叠上下文。
+     * 自带整页外壳的宿主（Web / VS Code webview）传 `'body'`。
+     */
+    teleportTo?: string
     multiple?: boolean
     canInsertSibling?: boolean
     canInsertParent?: boolean
@@ -16,6 +22,7 @@ const props = withDefaults(
     canFocus?: boolean
   }>(),
   {
+    teleportTo: undefined,
     multiple: false,
     canInsertSibling: true,
     canInsertParent: true,
@@ -96,85 +103,87 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div
-    ref="menu"
-    class="canvas-context-menu"
-    :style="style"
-    role="menu"
-    :aria-label="multiple ? '多主题右键菜单' : '主题右键菜单'"
-    @contextmenu.prevent
-  >
-    <template v-if="!multiple">
+  <Teleport :to="teleportTo" :disabled="!teleportTo">
+    <div
+      ref="menu"
+      class="canvas-context-menu"
+      :style="style"
+      role="menu"
+      :aria-label="multiple ? '多主题右键菜单' : '主题右键菜单'"
+      @contextmenu.prevent
+    >
+      <template v-if="!multiple">
+        <button
+          type="button"
+          role="menuitem"
+          :disabled="!canInsertSibling"
+          @click="act('insertSibling')"
+        >
+          <span>插入同级主题</span><kbd>Enter</kbd>
+        </button>
+        <button type="button" role="menuitem" @click="act('insertChild')">
+          <span>插入下级主题</span><kbd>Tab</kbd>
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          :disabled="!canInsertParent"
+          @click="act('insertParent')"
+        >
+          <span>插入上级主题</span><kbd>{{ shiftTab }}</kbd>
+        </button>
+        <span class="context-divider" />
+      </template>
+
+      <button type="button" role="menuitem" @click="act('copy')">
+        <span>复制</span><kbd>{{ primaryShortcut('C') }}</kbd>
+      </button>
+      <button type="button" role="menuitem" :disabled="!canCut" @click="act('cut')">
+        <span>剪切</span><kbd>{{ primaryShortcut('X') }}</kbd>
+      </button>
+
+      <template v-if="!multiple">
+        <button type="button" role="menuitem" @click="act('paste')">
+          <span>粘贴</span><kbd>{{ primaryShortcut('V') }}</kbd>
+        </button>
+        <button type="button" role="menuitem" :disabled="!canDuplicate" @click="act('duplicate')">
+          <span>创建副本</span><kbd>{{ primaryShortcut('D') }}</kbd>
+        </button>
+        <button type="button" role="menuitem" :disabled="!canDeleteOnly" @click="act('deleteOnly')">
+          <span>仅删除当前主题</span>
+        </button>
+      </template>
+
       <button
         type="button"
         role="menuitem"
-        :disabled="!canInsertSibling"
-        @click="act('insertSibling')"
+        class="danger"
+        :disabled="!canDeleteTree"
+        @click="act('deleteTree')"
       >
-        <span>插入同级主题</span><kbd>Enter</kbd>
-      </button>
-      <button type="button" role="menuitem" @click="act('insertChild')">
-        <span>插入下级主题</span><kbd>Tab</kbd>
-      </button>
-      <button
-        type="button"
-        role="menuitem"
-        :disabled="!canInsertParent"
-        @click="act('insertParent')"
-      >
-        <span>插入上级主题</span><kbd>{{ shiftTab }}</kbd>
+        <span>{{ multiple ? '删除所选主题及下级主题' : '删除当前主题及下级主题' }}</span
+        ><kbd>Delete</kbd>
       </button>
       <span class="context-divider" />
-    </template>
-
-    <button type="button" role="menuitem" @click="act('copy')">
-      <span>复制</span><kbd>{{ primaryShortcut('C') }}</kbd>
-    </button>
-    <button type="button" role="menuitem" :disabled="!canCut" @click="act('cut')">
-      <span>剪切</span><kbd>{{ primaryShortcut('X') }}</kbd>
-    </button>
-
-    <template v-if="!multiple">
-      <button type="button" role="menuitem" @click="act('paste')">
-        <span>粘贴</span><kbd>{{ primaryShortcut('V') }}</kbd>
+      <button
+        type="button"
+        role="menuitem"
+        :disabled="!canToggleSiblings"
+        @click="act('toggleSiblings')"
+      >
+        <span>展开/折叠同级主题</span><kbd>{{ primaryShortcut('.', { shift: true }) }}</kbd>
       </button>
-      <button type="button" role="menuitem" :disabled="!canDuplicate" @click="act('duplicate')">
-        <span>创建副本</span><kbd>{{ primaryShortcut('D') }}</kbd>
+      <button
+        v-if="!multiple"
+        type="button"
+        role="menuitem"
+        :disabled="!canFocus"
+        @click="act('focus')"
+      >
+        <span>进入此主题</span><kbd>{{ primaryShortcut(']') }}</kbd>
       </button>
-      <button type="button" role="menuitem" :disabled="!canDeleteOnly" @click="act('deleteOnly')">
-        <span>仅删除当前主题</span>
-      </button>
-    </template>
-
-    <button
-      type="button"
-      role="menuitem"
-      class="danger"
-      :disabled="!canDeleteTree"
-      @click="act('deleteTree')"
-    >
-      <span>{{ multiple ? '删除所选主题及下级主题' : '删除当前主题及下级主题' }}</span
-      ><kbd>Delete</kbd>
-    </button>
-    <span class="context-divider" />
-    <button
-      type="button"
-      role="menuitem"
-      :disabled="!canToggleSiblings"
-      @click="act('toggleSiblings')"
-    >
-      <span>展开/折叠同级主题</span><kbd>{{ primaryShortcut('.', { shift: true }) }}</kbd>
-    </button>
-    <button
-      v-if="!multiple"
-      type="button"
-      role="menuitem"
-      :disabled="!canFocus"
-      @click="act('focus')"
-    >
-      <span>进入此主题</span><kbd>{{ primaryShortcut(']') }}</kbd>
-    </button>
-  </div>
+    </div>
+  </Teleport>
 </template>
 
 <style scoped>

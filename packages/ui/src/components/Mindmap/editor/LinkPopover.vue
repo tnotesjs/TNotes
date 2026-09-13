@@ -7,8 +7,10 @@ const props = withDefaults(
     url: string
     position: { left: number; top: number }
     startEditing?: boolean
+    /** 见 `CanvasContextMenu`：默认就地渲染，整页宿主传 `'body'`。 */
+    teleportTo?: string
   }>(),
-  { startEditing: false }
+  { startEditing: false, teleportTo: undefined }
 )
 const emit = defineEmits<{ save: [url: string]; remove: []; keep: []; leave: []; close: [] }>()
 const draft = ref(props.url)
@@ -50,52 +52,54 @@ defineExpose({ focusInput })
 </script>
 
 <template>
-  <div
-    class="link-popover"
-    :style="{ left: `${position.left}px`, top: `${position.top}px` }"
-    @mouseenter="emit('keep')"
-    @mouseleave="emit('leave')"
-  >
-    <input
-      ref="input"
-      v-model="draft"
-      class="link-input"
-      :class="{ readonly: !editing }"
-      :readonly="!editing"
-      aria-label="链接地址"
-      @dblclick="beginEdit"
-      @keydown="onKeydown"
-    />
-    <button
-      v-if="editing"
-      type="button"
-      class="link-action primary"
-      title="更新链接 (Enter)"
-      aria-label="更新链接"
-      @click="submit"
+  <Teleport :to="teleportTo" :disabled="!teleportTo">
+    <div
+      class="link-popover"
+      :style="{ left: `${position.left}px`, top: `${position.top}px` }"
+      @mouseenter="emit('keep')"
+      @mouseleave="emit('leave')"
     >
-      更新
-    </button>
-    <button
-      v-else
-      type="button"
-      class="icon-action"
-      title="编辑链接地址"
-      aria-label="编辑链接地址"
-      @click="beginEdit"
-    >
-      <AppIcon name="edit" :size="18" />
-    </button>
-    <button
-      type="button"
-      class="icon-action"
-      title="移除链接，保留文案"
-      aria-label="移除链接"
-      @click="emit('remove')"
-    >
-      <AppIcon name="removeLink" :size="18" />
-    </button>
-  </div>
+      <input
+        ref="input"
+        v-model="draft"
+        class="link-input"
+        :class="{ readonly: !editing }"
+        :readonly="!editing"
+        aria-label="链接地址"
+        @dblclick="beginEdit"
+        @keydown="onKeydown"
+      />
+      <button
+        v-if="editing"
+        type="button"
+        class="link-action primary"
+        title="更新链接 (Enter)"
+        aria-label="更新链接"
+        @click="submit"
+      >
+        更新
+      </button>
+      <button
+        v-else
+        type="button"
+        class="icon-action"
+        title="编辑链接地址"
+        aria-label="编辑链接地址"
+        @click="beginEdit"
+      >
+        <AppIcon name="edit" :size="18" />
+      </button>
+      <button
+        type="button"
+        class="icon-action"
+        title="移除链接，保留文案"
+        aria-label="移除链接"
+        @click="emit('remove')"
+      >
+        <AppIcon name="removeLink" :size="18" />
+      </button>
+    </div>
+  </Teleport>
 </template>
 
 <style scoped>

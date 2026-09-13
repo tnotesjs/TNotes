@@ -6,7 +6,7 @@ import LinkPopover from './LinkPopover.vue'
 
 const mountedApps: App[] = []
 
-function mountPopover(startEditing = false) {
+function mountPopover(startEditing = false, teleportTo?: string) {
   const events = {
     save: vi.fn(),
     remove: vi.fn(),
@@ -22,6 +22,7 @@ function mountPopover(startEditing = false) {
         url: 'https://old.example',
         position: { left: 240, top: 160 },
         startEditing,
+        teleportTo,
         onSave: events.save,
         onRemove: events.remove,
         onKeep: events.keep,
@@ -83,5 +84,22 @@ describe('脑图链接编辑浮层', () => {
     expect(events.leave).toHaveBeenCalledTimes(1)
     expect(events.remove).toHaveBeenCalledTimes(1)
     expect(events.close).toHaveBeenCalledTimes(1)
+  })
+
+  // 与 CanvasContextMenu 同款宿主开关：默认就地渲染，整页宿主传 'body'。
+  it('teleportTo=body 时浮层挂到 body；默认留在宿主容器内', async () => {
+    mountPopover(false, 'body')
+    await nextTick()
+    const teleported = document.body.querySelector<HTMLElement>('.link-popover')!
+    expect(document.body.contains(teleported)).toBe(true)
+    // 直挂 body：父节点就是 body，而不是某个宿主 div
+    expect(teleported.parentElement).toBe(document.body)
+  })
+
+  it('不传 teleportTo 时浮层留在原位（不给 body 追加游离节点）', async () => {
+    mountPopover()
+    await nextTick()
+    const popover = document.body.querySelector<HTMLElement>('.link-popover')!
+    expect(popover.parentElement).not.toBe(document.body)
   })
 })

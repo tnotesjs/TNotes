@@ -14,7 +14,7 @@
   - ![图|300](https://example.com/a.png)
 ```
 
-落盘后创建 `<作品名>/<作品名>.tn-mindmap.md` 与 `assets/`。图片写文件、Markdown 只存相对路径。引擎在 `@tnotesjs/mindmap-core`。
+落盘后创建 `<作品名>/<作品名>.tn-mindmap.md` 与 `assets/`。图片写文件、Markdown 只存相对路径。引擎在 `@tnotesjs/mindmap-core`，公共 UI 在 `@tnotesjs/ui/mindmap-editor`（本包只保留宿主适配：File System Access 落盘、`assets/` 写入、页面外壳与 `--mm-*` 主题变量）。
 
 ```bash
 pnpm --filter @tnotesjs/mindmap-web dev
