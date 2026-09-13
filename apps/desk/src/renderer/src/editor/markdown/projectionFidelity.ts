@@ -186,6 +186,24 @@ export const PROJECTION_CANONICALIZATIONS: Canonicalization[] = [
     apply: (markdown) => `${markdown.replace(/[\s\n]+$/, '')}\n`
   },
   {
+    id: 'standalone-break',
+    lossy: false,
+    note: '独立一行的 <br /> 与空行等价（Desk 约定：独占一行的 <br /> 表示一个空段落），对账时忽略',
+    apply: (markdown) => {
+      const lines = markdown.split('\n')
+      const kept = lines.filter((text, index) => {
+        if (!/^ {0,3}<br\s*\/?>\s*$/i.test(text)) return true
+        const previous = lines[index - 1]
+        const next = lines[index + 1]
+        const standalone =
+          (previous === undefined || previous.trim() === '') &&
+          (next === undefined || next.trim() === '')
+        return !standalone
+      })
+      return kept.join('\n')
+    }
+  },
+  {
     id: 'blank-runs',
     lossy: true,
     note: '连续空行塌成一个（围栏内不算）',
