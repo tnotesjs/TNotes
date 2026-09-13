@@ -1,17 +1,14 @@
 /**
- * src/renderer/src/markdown/slashMenu.ts
+ * TNotes 斜杠菜单项清单（0005 规格）。
  *
- * 扩展 Crepe 斜杠菜单，加入 TNotes 容器语法与 UI 组件。
+ * - 菜单本体在 `crepePort/blockEdit`（我们自己的实现），支持 `keywords` / `shortcut`
+ *   一等过滤，所以这里**只提供数据**：展示名、图标、插入串、搜索别名与快捷词。
+ *   （迁移前为了凑 Crepe 的 `label.includes()`，别名被拼进 label 再用 DOM 观察器抠掉；
+ *   菜单源码归我们之后那两处 hack 已删除。）
+ * - tip/info/warning/danger 插成 deskCallout；其余容器 / 导图 / 组件插成 deskRawBlock 并
+ *   打开「编辑源码」；普通代码块交给调用方决定走代码块组件。
  *
- * - 只扩展 Crepe 现有的 BlockEdit 斜杠菜单（`buildMenu`），不另做右键。
- * - 每项：展示名 + 搜索词（多对一）+ 插入用的 insert 字符串。
- * - 搜索词拼进 Crepe 的内部 label，供默认 includes 过滤命中；DOM 展示层
- *   再移除分隔符后的别名，避免菜单把搜索元数据显示给用户。
- * - tip/info/warning/danger 插成 deskCallout；其余容器 / 导图 / 组件插成
- *   deskRawBlock 并打开「编辑源码」（由调用方 onInsert 执行）；普通代码块
- *   交给调用方决定走 Crepe 代码块。
- *
- * 该清单同时被 0006（块级快捷输入）复用。
+ * 该清单同时被 0006（块级快捷输入）与设置面板的快捷键页复用。
  */
 
 import { formatIconSvg } from '../components/formatIcons'
@@ -162,22 +159,6 @@ export const TN_NOTES_SLASH_ITEMS: SlashMenuItem[] = [
   }
 ]
 
-/**
- * Crepe only exposes `label` to its filter, so aliases have to live in it.
- * The invisible separator lets the presentation observer remove search-only
- * metadata from the rendered row without changing Crepe's reactive item data.
- */
-export const SLASH_MENU_ALIAS_SEPARATOR = '\u2063'
-
-export function menuLabelFor(item: SlashMenuItem): string {
-  // Padding keeps Crepe's literal includes filter useful when the query has a
-  // leading/trailing space (`/ mmd `), matching the task's trimmed-q behavior.
-  return `${item.label}${SLASH_MENU_ALIAS_SEPARATOR} ${item.keywords.join(' ')} ${SLASH_MENU_ALIAS_SEPARATOR}${item.shortcut}`
-}
-
-/** Metadata separator for a shortcut hint; it is never rendered verbatim. */
-export const SLASH_MENU_SHORTCUT_SEPARATOR = SLASH_MENU_ALIAS_SEPARATOR
-
 type IconBody = string
 
 function linearIcon(body: IconBody): string {
@@ -205,290 +186,6 @@ export function menuIconFor(kind: SlashItemKind): string {
   return linearIcon(TNOTES_ICON_BODIES[kind])
 }
 
-/**
- * Crepe has no separate search keywords field or custom filter hook. Keep the
- * full label in its Vue model for filtering, but present only the user-facing
- * part in the DOM. A subtree observer also cleans rows created by later query
- * changes. This deliberately touches text only; item keys and event handlers
- * remain owned by Crepe.
- */
-const SLASH_MENU_VIEWPORT_GAP = 8
-const SLASH_MENU_DEFAULT_GROUP_HEIGHT = 420
-const SLASH_MENU_MIN_GROUP_HEIGHT = 112
-
-interface RectLike {
-  top: number
-  right: number
-  bottom: number
-  left: number
-  width: number
-  height: number
-}
-
-export interface SlashMenuViewportAdjustment {
-  maxGroupHeight: number
-  deltaX: number
-  deltaY: number
-}
-
-/**
- * Pure geometry used by the runtime presenter and unit tests. `menuRect` must
- * already reflect `maxGroupHeight`; callers can therefore measure once, apply
- * the height, then measure again before asking for the final coordinate delta.
- */
-export function computeSlashMenuViewportAdjustment(
-  menuRect: RectLike,
-  boundary: RectLike,
-  chromeHeight: number
-): SlashMenuViewportAdjustment {
-  const usableHeight = Math.max(0, boundary.height - SLASH_MENU_VIEWPORT_GAP * 2)
-  const maxGroupHeight = Math.max(
-    SLASH_MENU_MIN_GROUP_HEIGHT,
-    Math.min(SLASH_MENU_DEFAULT_GROUP_HEIGHT, usableHeight - chromeHeight)
-  )
-  const minTop = boundary.top + SLASH_MENU_VIEWPORT_GAP
-  const maxBottom = boundary.bottom - SLASH_MENU_VIEWPORT_GAP
-  const minLeft = boundary.left + SLASH_MENU_VIEWPORT_GAP
-  const maxRight = boundary.right - SLASH_MENU_VIEWPORT_GAP
-
-  let deltaY = 0
-  if (menuRect.top < minTop) deltaY = minTop - menuRect.top
-  else if (menuRect.bottom > maxBottom) deltaY = maxBottom - menuRect.bottom
-
-  let deltaX = 0
-  if (menuRect.left < minLeft) deltaX = minLeft - menuRect.left
-  else if (menuRect.right > maxRight) deltaX = maxRight - menuRect.right
-
-  return { maxGroupHeight, deltaX, deltaY }
-}
-
-function visibleBoundary(root: HTMLElement): RectLike {
-  const rootRect = root.getBoundingClientRect()
-  const top = Math.max(0, rootRect.top)
-  // Vertically, the menu must remain inside the scrollable editor. A narrow
-  // editor pane can be smaller than the menu itself, so horizontally allow it
-  // to use the whole application viewport (while still preventing window
-  // overflow).
-  const left = 0
-  const right = window.innerWidth
-  const bottom = Math.min(window.innerHeight, rootRect.bottom)
-  return {
-    top,
-    right,
-    bottom,
-    left,
-    width: Math.max(0, right - left),
-    height: Math.max(0, bottom - top)
-  }
-}
-
-function restoreProviderPosition(menu: HTMLElement): void {
-  const appliedTop = menu.dataset.deskAppliedTop
-  const appliedLeft = menu.dataset.deskAppliedLeft
-  if (appliedTop && menu.style.top === appliedTop && menu.dataset.deskProviderTop) {
-    menu.style.top = menu.dataset.deskProviderTop
-  } else if (menu.style.top) {
-    menu.dataset.deskProviderTop = menu.style.top
-  }
-  if (appliedLeft && menu.style.left === appliedLeft && menu.dataset.deskProviderLeft) {
-    menu.style.left = menu.dataset.deskProviderLeft
-  } else if (menu.style.left) {
-    menu.dataset.deskProviderLeft = menu.style.left
-  }
-  delete menu.dataset.deskAppliedTop
-  delete menu.dataset.deskAppliedLeft
-}
-
-function constrainSlashMenu(menu: HTMLElement, boundary: RectLike): void {
-  if (menu.dataset.show !== 'true') return
-  const groups = menu.querySelector<HTMLElement>('.menu-groups')
-  if (!groups) return
-
-  restoreProviderPosition(menu)
-  groups.style.maxHeight = `${SLASH_MENU_DEFAULT_GROUP_HEIGHT}px`
-  const chromeHeight = Math.max(0, menu.offsetHeight - groups.offsetHeight)
-  const first = computeSlashMenuViewportAdjustment(
-    menu.getBoundingClientRect(),
-    boundary,
-    chromeHeight
-  )
-  groups.style.maxHeight = `${first.maxGroupHeight}px`
-
-  // Applying max-height can shrink the floating element. Measure the actual
-  // box before adjusting its provider-owned absolute coordinates.
-  const adjusted = computeSlashMenuViewportAdjustment(
-    menu.getBoundingClientRect(),
-    boundary,
-    chromeHeight
-  )
-  const menuRect = menu.getBoundingClientRect()
-  const actionMenu = document.querySelector<HTMLElement>('.desk-block-action-menu')
-  const actionRect = actionMenu?.getBoundingClientRect()
-  let obstacleDeltaX = 0
-  if (
-    actionRect &&
-    menuRect.left < actionRect.right &&
-    menuRect.right > actionRect.left &&
-    menuRect.top < actionRect.bottom &&
-    menuRect.bottom > actionRect.top
-  ) {
-    const right = actionRect.right + SLASH_MENU_VIEWPORT_GAP
-    const left = actionRect.left - menuRect.width - SLASH_MENU_VIEWPORT_GAP
-    if (right + menuRect.width <= boundary.right - SLASH_MENU_VIEWPORT_GAP) {
-      obstacleDeltaX = right - menuRect.left
-    } else if (left >= boundary.left + SLASH_MENU_VIEWPORT_GAP) {
-      obstacleDeltaX = left - menuRect.left
-    }
-  }
-  const currentTop = Number.parseFloat(menu.style.top)
-  if (Number.isFinite(currentTop) && adjusted.deltaY !== 0) {
-    const next = `${currentTop + adjusted.deltaY}px`
-    menu.style.top = next
-    menu.dataset.deskAppliedTop = next
-  }
-  const currentLeft = Number.parseFloat(menu.style.left)
-  if (Number.isFinite(currentLeft) && (adjusted.deltaX !== 0 || obstacleDeltaX !== 0)) {
-    const next = `${currentLeft + adjusted.deltaX + obstacleDeltaX}px`
-    menu.style.left = next
-    menu.dataset.deskAppliedLeft = next
-  }
-}
-
-/**
- * Presentation layer shared by slash-triggered and programmatic (+ / add
- * below) menus. It keeps search aliases out of the visible label and constrains
- * every open menu to the editor's actually visible viewport.
- */
-export function installSlashMenuPresentation(root: HTMLElement): () => void {
-  let frame = 0
-  const present = (): void => {
-    root
-      .querySelectorAll<HTMLElement>(
-        '.milkdown-slash-menu .menu-group li > span:not(.milkdown-icon)'
-      )
-      .forEach((label) => {
-        const text = label.textContent ?? ''
-        const separator = text.indexOf(SLASH_MENU_ALIAS_SEPARATOR)
-        if (separator < 0) return
-        const metadata = text.slice(separator + SLASH_MENU_ALIAS_SEPARATOR.length)
-        const shortcutSeparator = metadata.lastIndexOf(SLASH_MENU_SHORTCUT_SEPARATOR)
-        const shortcut =
-          shortcutSeparator >= 0
-            ? metadata.slice(shortcutSeparator + SLASH_MENU_SHORTCUT_SEPARATOR.length).trim()
-            : ''
-        label.textContent = text.slice(0, separator)
-        const item = label.parentElement
-        if (!item) return
-        item.dataset.shortcut = shortcut
-        item.querySelector('.desk-slash-menu__shortcut')?.remove()
-        if (!shortcut) return
-        const hint = document.createElement('span')
-        hint.className = 'desk-slash-menu__shortcut'
-        hint.textContent = shortcut
-        hint.setAttribute('aria-label', `快捷方式 ${shortcut}`)
-        item.append(hint)
-      })
-    root.querySelectorAll<HTMLElement>('.milkdown-slash-menu .menu-group').forEach((group) => {
-      group.dataset.layout = 'compact-grid'
-    })
-    const boundary = visibleBoundary(root)
-    root
-      .querySelectorAll<HTMLElement>('.milkdown-slash-menu')
-      .forEach((menu) => constrainSlashMenu(menu, boundary))
-  }
-
-  const schedule = (): void => {
-    if (frame) cancelAnimationFrame(frame)
-    frame = requestAnimationFrame(() => {
-      frame = 0
-      present()
-    })
-  }
-
-  const observer = new MutationObserver(schedule)
-  observer.observe(root, {
-    childList: true,
-    subtree: true,
-    characterData: true,
-    attributes: true,
-    attributeFilter: ['data-show']
-  })
-  root.addEventListener('scroll', schedule, { passive: true })
-  window.addEventListener('resize', schedule, { passive: true })
-  const onKeydown = (event: KeyboardEvent): void => {
-    if (!['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight'].includes(event.key)) return
-    const menu = root.querySelector<HTMLElement>('.milkdown-slash-menu[data-show="true"]')
-    if (!menu) return
-    const items = [...menu.querySelectorAll<HTMLElement>('li[data-index]')]
-    if (!items.length) return
-    const current = Math.max(
-      0,
-      items.findIndex((item) => item.classList.contains('hover'))
-    )
-    const currentItem = items[current]
-    const currentGroup = currentItem?.closest<HTMLElement>('.menu-group')
-    const groupItems = currentGroup
-      ? [...currentGroup.querySelectorAll<HTMLElement>('li[data-index]')]
-      : []
-    const localIndex = Math.max(0, groupItems.indexOf(currentItem))
-    const columns = 2
-    let nextItem: HTMLElement | undefined
-    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      const offset = event.key === 'ArrowDown' ? columns : -columns
-      nextItem = groupItems[localIndex + offset]
-      if (!nextItem) {
-        const groups = [...menu.querySelectorAll<HTMLElement>('.menu-group')]
-        const groupIndex = currentGroup ? groups.indexOf(currentGroup) : -1
-        const adjacent = groups[groupIndex + (event.key === 'ArrowDown' ? 1 : -1)]
-        const adjacentItems = adjacent
-          ? [...adjacent.querySelectorAll<HTMLElement>('li[data-index]')]
-          : []
-        nextItem = adjacentItems[event.key === 'ArrowDown' ? 0 : adjacentItems.length - 1]
-      }
-    } else {
-      const offset = event.key === 'ArrowRight' ? 1 : -1
-      nextItem = groupItems[localIndex + offset]
-      if (
-        !nextItem ||
-        Math.floor((localIndex + offset) / columns) !== Math.floor(localIndex / columns)
-      ) {
-        const groups = [...menu.querySelectorAll<HTMLElement>('.menu-group')]
-        const groupIndex = currentGroup ? groups.indexOf(currentGroup) : -1
-        const adjacent = groups[groupIndex + (event.key === 'ArrowRight' ? 1 : -1)]
-        const adjacentItems = adjacent
-          ? [...adjacent.querySelectorAll<HTMLElement>('li[data-index]')]
-          : []
-        nextItem = adjacentItems[event.key === 'ArrowRight' ? 0 : adjacentItems.length - 1]
-      }
-    }
-    const next = nextItem ? items.indexOf(nextItem) : current
-    if (next === current) return
-    event.preventDefault()
-    event.stopImmediatePropagation()
-    items[next].dispatchEvent(
-      new PointerEvent('pointerenter', {
-        bubbles: false,
-        clientX: next + 1,
-        clientY: next + 1
-      })
-    )
-    items[next].scrollIntoView({ block: 'nearest' })
-  }
-  window.addEventListener('keydown', onKeydown, { capture: true })
-  present()
-  schedule()
-  return () => {
-    observer.disconnect()
-    root.removeEventListener('scroll', schedule)
-    window.removeEventListener('resize', schedule)
-    window.removeEventListener('keydown', onKeydown, { capture: true })
-    if (frame) cancelAnimationFrame(frame)
-  }
-}
-
-/** @deprecated Use installSlashMenuPresentation. */
-export const installSlashMenuLabelPresentation = installSlashMenuPresentation
-
 export interface TNotesSlashGroupOptions {
   /** 菜单组 label */
   groupLabel?: string
@@ -499,6 +196,8 @@ export interface TNotesSlashGroupOptions {
 interface AddItemArg {
   label: string
   icon: string
+  keywords: string[]
+  shortcut: string
   onRun?: (ctx: unknown) => void
 }
 
@@ -511,8 +210,8 @@ interface GroupBuilderLike {
 }
 
 /**
- * 在 Crepe BlockEdit GroupBuilder 上追加 TNotes 组。
- * 搜索词并入 label（空格分隔），供 Crepe 默认 includes 过滤命中。
+ * 把 TNotes 项追加到斜杠菜单的一个分组里。
+ * `keywords` / `shortcut` 直接交给菜单（过滤会一并匹配），不拼进 `label`。
  */
 export function buildTNotesSlashGroup(
   builder: GroupBuilderLike,
@@ -521,8 +220,10 @@ export function buildTNotesSlashGroup(
   const group = builder.addGroup('tnotes', options.groupLabel ?? 'TNotes')
   for (const item of TN_NOTES_SLASH_ITEMS) {
     group.addItem(item.id, {
-      label: menuLabelFor(item),
+      label: item.label,
       icon: menuIconFor(item.kind),
+      keywords: item.keywords,
+      shortcut: item.shortcut,
       onRun: (ctx: unknown) => {
         options.onRun(item, ctx)
       }

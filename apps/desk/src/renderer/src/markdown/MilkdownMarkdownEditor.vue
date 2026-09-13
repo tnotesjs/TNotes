@@ -4,7 +4,7 @@ import { parserCtx } from '@milkdown/kit/core'
 import { editorViewCtx, commandsCtx, serializerCtx } from '@milkdown/kit/core'
 import { Plugin, TextSelection } from '@milkdown/kit/prose/state'
 import type { EditorView } from '@milkdown/kit/prose/view'
-import { installSlashMenuPresentation, TN_NOTES_SLASH_ITEMS } from './slashMenu'
+import { TN_NOTES_SLASH_ITEMS } from './slashMenu'
 import { buildExcalidrawSource } from '../editor/markdown/excalidrawComponent'
 import { createExcalidrawClipboardPlugin } from './excalidrawClipboardPlugin'
 import { noteRelativeAssetPath } from './noteAssetPath'
@@ -145,7 +145,6 @@ let originalSource = props.content
 let baselineCanonical = ''
 let lastEmitted: string | null = null
 let contentSyncQueued = false
-let slashMenuPresentationCleanup: (() => void) | null = null
 let blockHandleClickCleanup: (() => void) | null = null
 const rawSourceReadonlyListeners = new Set<(readOnly: boolean) => void>()
 
@@ -1125,7 +1124,6 @@ async function syncExternalContent(content: string): Promise<void> {
 
 onMounted(async () => {
   if (!host.value) return
-  slashMenuPresentationCleanup = installSlashMenuPresentation(host.value)
   originalSource = props.content
   const codeBlockHighlights = createCodeBlockHighlightBundle()
   // 自组装配（替代 Crepe）：基座 + kit 直供能力 + 从 Crepe 移植的 latex / block-edit /
@@ -1338,8 +1336,6 @@ onBeforeUnmount(() => {
   flushCurrentContent()
   destroyed = true
   ready = false
-  slashMenuPresentationCleanup?.()
-  slashMenuPresentationCleanup = null
   blockHandleClickCleanup?.()
   blockHandleClickCleanup = null
   document.removeEventListener('pointerdown', handleBlockMenuOutsidePointer, {

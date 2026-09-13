@@ -7,17 +7,14 @@ import { commonmark, clearTextInCurrentBlockCommand } from '@milkdown/kit/preset
 import { gfm } from '@milkdown/kit/preset/gfm'
 import { insert } from '@milkdown/kit/utils'
 import { TextSelection } from '@milkdown/kit/prose/state'
+import { createApp, nextTick, ref } from 'vue'
 
 import { projectRawBlocksForMilkdown, rawBlockProjectionPlugins } from './rawBlockProjection'
-import {
-  computeSlashMenuViewportAdjustment,
-  installSlashMenuLabelPresentation,
-  menuIconFor,
-  menuLabelFor,
-  SLASH_MENU_ALIAS_SEPARATOR,
-  SLASH_MENU_SHORTCUT_SEPARATOR,
-  TN_NOTES_SLASH_ITEMS
-} from '../../markdown/slashMenu'
+import { getGroups } from '../../markdown/crepePort/blockEdit/menu/config'
+import { computeSlashMenuViewportAdjustment } from '../../markdown/crepePort/blockEdit/menu/constrain'
+import { Menu } from '../../markdown/crepePort/blockEdit/menu/component'
+import { menuIconFor, TN_NOTES_SLASH_ITEMS } from '../../markdown/slashMenu'
+import { createDeskBlockEditConfig } from '../../markdown/deskBlockEditConfig'
 
 async function createEditor(source: string): Promise<Editor> {
   const root = document.createElement('div')
@@ -44,6 +41,11 @@ function countBlocks(editor: Editor): number {
   })
   return n
 }
+
+const menuConfig = createDeskBlockEditConfig({ runSlashItem: () => {} })
+
+/** 用 Desk 的真实菜单配置构造分组（含 TNotes 组），供过滤/渲染断言使用。 */
+const groupsFor = (filter: string) => getGroups(filter, menuConfig).groups
 
 describe('slash menu insert projection', () => {
   it('shrinks and clamps a tall slash menu to the visible editor boundary', () => {
@@ -86,24 +88,20 @@ describe('slash menu insert projection', () => {
     expect(nearBottom.deltaX).toBe(-88)
   })
 
-  it('uses unique stable item ids and keeps aliases searchable but visually hidden', () => {
+  it('uses unique stable item ids and searches by keywords/shortcut, not by label padding', () => {
     expect(new Set(TN_NOTES_SLASH_ITEMS.map((item) => item.id)).size).toBe(
       TN_NOTES_SLASH_ITEMS.length
     )
     const mermaid = TN_NOTES_SLASH_ITEMS.find((item) => item.id === 'mermaid')!
-    const searchableLabel = menuLabelFor(mermaid)
-    expect(searchableLabel.startsWith(`Mermaid${SLASH_MENU_ALIAS_SEPARATOR}`)).toBe(true)
-    expect(searchableLabel).toContain('mmd')
-    expect(searchableLabel).toContain('流程图')
-    expect(searchableLabel.toLowerCase()).toContain(' mmd ')
-    expect(searchableLabel).toContain(`${SLASH_MENU_SHORTCUT_SEPARATOR}/mmd`)
-
-    const root = document.createElement('div')
-    root.innerHTML = `<div class="milkdown-slash-menu"><div class="menu-group"><ul><li><span class="milkdown-icon">icon</span><span>${searchableLabel}</span></li></ul></div></div>`
-    const cleanup = installSlashMenuLabelPresentation(root)
-    expect(root.querySelector('li > span:not(.milkdown-icon)')?.textContent).toBe('Mermaid')
-    expect(root.querySelector('.desk-slash-menu__shortcut')?.textContent).toBe('/mmd')
-    cleanup()
+    // 菜单项不再把别名拼进 label：label 就是展示名。
+    expect(mermaid.label).toBe('Mermaid')
+    // 关键词 / 快捷词由菜单原生过滤命中。
+    for (const query of ['mmd', 'mermaid', '流程图', '/mmd', 'MMD']) {
+      const keys = groupsFor(query).flatMap((group) => group.items.map((item) => item.key))
+      expect(keys, `查询 ${query}`).toContain('mermaid')
+    }
+    // 不相关的查询不应命中。
+    expect(groupsFor('绝对不存在的词').flatMap((group) => group.items)).toHaveLength(0)
   })
 
   it('uses local accessible SVG icons instead of emoji glyphs', () => {
@@ -115,45 +113,63 @@ describe('slash menu insert projection', () => {
     }
   })
 
-  it('keeps every item shortcut visible in its searchable menu metadata', () => {
+  it('keeps every item shortcut unique and searchable', () => {
     const shortcuts = TN_NOTES_SLASH_ITEMS.map((item) => item.shortcut)
     expect(new Set(shortcuts).size).toBe(shortcuts.length)
     for (const item of TN_NOTES_SLASH_ITEMS) {
       expect(item.shortcut).toMatch(/^\/\S+$/)
-      expect(menuLabelFor(item)).toContain(`${SLASH_MENU_SHORTCUT_SEPARATOR}${item.shortcut}`)
+      const keys = groupsFor(item.shortcut).flatMap((group) =>
+        group.items.map((entry) => entry.key)
+      )
+      expect(keys, `快捷词 ${item.shortcut}`).toContain(item.id)
     }
   })
 
-  it('moves keyboard hover in compact two-column visual order', () => {
+  it('renders the compact grid natively and moves hover in two-column order', async () => {
     const root = document.createElement('div')
-    root.innerHTML = `
-      <div class="milkdown-slash-menu" data-show="true">
-        <div class="menu-groups"><div class="menu-group"><h6>Text</h6><ul>
-          <li data-index="0" class="hover">A</li><li data-index="1">B</li>
-          <li data-index="2">C</li><li data-index="3">D</li>
-        </ul></div></div>
-      </div>`
     document.body.append(root)
-    const items = [...root.querySelectorAll<HTMLElement>('li[data-index]')]
-    items.forEach((item) => {
-      item.addEventListener('pointerenter', () => {
-        items.forEach((candidate) => candidate.classList.remove('hover'))
-        item.classList.add('hover')
-      })
+    const show = ref(true)
+    const filter = ref('块')
+    const app = createApp(Menu, {
+      ctx: {} as never,
+      features: { latex: true, imageBlock: false, table: true },
+      columns: 2,
+      groupDataLayout: 'compact-grid',
+      show,
+      filter,
+      hide: () => {},
+      config: menuConfig
     })
-    const cleanup = installSlashMenuLabelPresentation(root)
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }))
-    expect(items[2].classList.contains('hover')).toBe(true)
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }))
-    expect(items[3].classList.contains('hover')).toBe(true)
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp' }))
-    expect(items[1].classList.contains('hover')).toBe(true)
+    app.mount(root)
+    await nextTick()
+
+    // 原生渲染：展示名 + 行尾快捷词 chip + 布局标记（不再由 DOM 观察器补）
+    const firstRow = root.querySelector<HTMLElement>('li[data-index="0"]')
+    expect(firstRow?.querySelector('span:not(.milkdown-icon)')?.textContent).toBe('提示块')
+    expect(firstRow?.querySelector('.desk-slash-menu__shortcut')?.textContent).toBe('/tip')
     expect(root.querySelector('.menu-group')?.getAttribute('data-layout')).toBe('compact-grid')
-    cleanup()
+
+    // 原生键盘导航：双列时上下跨列、左右按行
+    const hoveredIndex = () =>
+      Number(root.querySelector<HTMLElement>('li.hover')?.dataset.index ?? '-1')
+    expect(hoveredIndex()).toBe(0)
+    // Vue 的渲染是异步的：每次按键后等一帧再断言 DOM。
+    for (const [key, expected] of [
+      ['ArrowDown', 2],
+      ['ArrowRight', 3],
+      ['ArrowUp', 1]
+    ] as const) {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key }))
+      await nextTick()
+      expect(hoveredIndex(), key).toBe(expected)
+    }
+
+    app.unmount()
+    root.remove()
   })
 
   for (const item of TN_NOTES_SLASH_ITEMS) {
-    // 普通代码块由 Crepe 代码块承载，不走 deskRawBlock / deskCallout。
+    // 普通代码块由代码块组件承载，不走 deskRawBlock / deskCallout。
     if (item.kind === 'code') continue
     it(`inserts ${item.label} as a TNotes block node`, async () => {
       const editor = await createEditor('# A\n\n- b\n')

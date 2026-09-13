@@ -27,6 +27,10 @@ keepAlive(h)
 type MenuProps = {
   ctx: Ctx
   features: DeskBlockEditFeatures
+  /** Desk 扩展：菜单项按几列排（>1 时键盘上下跨列、左右按行）。默认 1（上游行为）。 */
+  columns?: number
+  /** Desk 扩展：给 `.menu-group` 打的布局标记（Desk 传 `compact-grid`，样式表依赖它）。 */
+  groupDataLayout?: string
   show: Ref<boolean>
   filter: Ref<string>
   hide: () => void
@@ -38,6 +42,14 @@ export const Menu = defineComponent<MenuProps>({
     features: {
       type: Object as PropType<DeskBlockEditFeatures>,
       default: () => DEFAULT_DESK_BLOCK_EDIT_FEATURES
+    },
+    columns: {
+      type: Number,
+      default: 1
+    },
+    groupDataLayout: {
+      type: String,
+      default: undefined
     },
     ctx: {
       type: Object,
@@ -60,7 +72,7 @@ export const Menu = defineComponent<MenuProps>({
       required: false,
     },
   },
-  setup({ ctx, features, show, filter, hide, config }) {
+  setup({ ctx, features, columns, groupDataLayout, show, filter, hide, config }) {
     const host = ref<HTMLElement>()
     const groupInfo = computed(() => getGroups(filter.value, config, features))
     const hoverIndex = ref(0)
@@ -107,8 +119,42 @@ export const Menu = defineComponent<MenuProps>({
       hide()
     }
 
+    const columnCount = Math.max(1, columns ?? 1)
+
+    /** 同组内按列上下移动；越界时（仅多列布局）跨到相邻组。 */
+    const moveVertical = (index: number, direction: 1 | -1): number => {
+      const { groups } = groupInfo.value
+      const group = groups.find((entry) => entry.range[0] <= index && entry.range[1] > index)
+      if (!group) return index
+      const nextLocal = index - group.range[0] + direction * columnCount
+      if (nextLocal >= 0 && nextLocal < group.items.length) return group.range[0] + nextLocal
+      // 单列布局保持上游语义：纵向不跨组。
+      if (columnCount <= 1) return index
+      const adjacent = groups[groups.indexOf(group) + direction]
+      if (!adjacent) return index
+      return direction === 1 ? adjacent.range[0] : adjacent.range[1] - 1
+    }
+
+    /** 单列：左右键跨组（上游语义）；多列：先在同一行内左右走，到行边界再跨组。 */
+    const moveHorizontal = (index: number, direction: 1 | -1): number => {
+      const { groups } = groupInfo.value
+      const group = groups.find((entry) => entry.range[0] <= index && entry.range[1] > index)
+      if (!group) return index
+      if (columnCount > 1) {
+        const local = index - group.range[0]
+        const nextLocal = local + direction
+        const sameRow =
+          nextLocal >= 0 &&
+          nextLocal < group.items.length &&
+          Math.floor(nextLocal / columnCount) === Math.floor(local / columnCount)
+        if (sameRow) return group.range[0] + nextLocal
+      }
+      const adjacent = groups[groups.indexOf(group) + direction]
+      if (!adjacent) return index
+      return direction === 1 ? adjacent.range[0] : adjacent.range[1] - 1
+    }
+
     const onKeydown = (e: KeyboardEvent) => {
-      const { size, groups } = groupInfo.value
       if (e.key === 'Escape') {
         e.preventDefault()
         hide?.()
@@ -117,48 +163,22 @@ export const Menu = defineComponent<MenuProps>({
 
       if (e.key === 'ArrowDown') {
         e.preventDefault()
-        return onHover(
-          (index) => (index < size - 1 ? index + 1 : index),
-          scrollToIndex
-        )
+        return onHover((index) => moveVertical(index, 1), scrollToIndex)
       }
 
       if (e.key === 'ArrowUp') {
         e.preventDefault()
-        return onHover(
-          (index) => (index <= 0 ? index : index - 1),
-          scrollToIndex
-        )
+        return onHover((index) => moveVertical(index, -1), scrollToIndex)
       }
 
       if (e.key === 'ArrowLeft') {
         e.preventDefault()
-        return onHover((index) => {
-          const group = groups.find(
-            (group) => group.range[0] <= index && group.range[1] > index
-          )
-          if (!group) return index
-
-          const prevGroup = groups[groups.indexOf(group) - 1]
-          if (!prevGroup) return index
-
-          return prevGroup.range[1] - 1
-        }, scrollToIndex)
+        return onHover((index) => moveHorizontal(index, -1), scrollToIndex)
       }
 
       if (e.key === 'ArrowRight') {
         e.preventDefault()
-        return onHover((index) => {
-          const group = groups.find(
-            (group) => group.range[0] <= index && group.range[1] > index
-          )
-          if (!group) return index
-
-          const nextGroup = groups[groups.indexOf(group) + 1]
-          if (!nextGroup) return index
-
-          return nextGroup.range[0]
-        }, scrollToIndex)
+        return onHover((index) => moveHorizontal(index, 1), scrollToIndex)
       }
 
       if (e.key === 'Enter') {
@@ -212,7 +232,7 @@ export const Menu = defineComponent<MenuProps>({
           </nav>
           <div class="menu-groups" onPointermove={onPointerMove}>
             {groupInfo.value.groups.map((group) => (
-              <div key={group.key} class="menu-group">
+              <div key={group.key} class="menu-group" data-layout={groupDataLayout}>
                 <h6>{group.label}</h6>
                 <ul>
                   {group.items.map((item) => (
@@ -235,6 +255,15 @@ export const Menu = defineComponent<MenuProps>({
                     >
                       <Icon icon={item.icon} />
                       <span>{item.label}</span>
+                      {item.shortcut ? (
+                        // Desk 扩展：快捷词直接由菜单渲染（类名与样式表、e2e 断言一致）。
+                        <span
+                          class="desk-slash-menu__shortcut"
+                          aria-label={`快捷方式 ${item.shortcut}`}
+                        >
+                          {item.shortcut}
+                        </span>
+                      ) : null}
                     </li>
                   ))}
                 </ul>

@@ -361,10 +361,16 @@ export function getGroups(
   let groups = groupBuilder.build()
 
   if (filter) {
+    const needle = filter.toLowerCase()
     groups = groups
       .map((group) => {
+        // Desk 扩展：除 label 外还匹配 keywords 与 shortcut（多对一的搜索别名），
+        // 因此无需把别名拼进 label。
         const items = group.items.filter((item) =>
-          item.label.toLowerCase().includes(filter.toLowerCase())
+          [item.label, ...(item.keywords ?? []), item.shortcut ?? '']
+            .join(' ')
+            .toLowerCase()
+            .includes(needle)
         )
 
         return {

@@ -39,13 +39,9 @@ import { applyDeskEditorConfigs, type DeskEditorConfigOptions } from './deskEdit
  * 这里复刻的是 Crepe `lib/esm/builder.js` 里那套基座装配：
  *   `Editor.make().config(root/defaultValue/editable/indent=4).use(commonmark, listener,
  *   history, indent, trailing, clipboard, upload, gfm)`
- * 外加 Crepe 各 feature 中属于「kit 直供能力」的部分（code block / list item / table /
- * link tooltip / cursor / placeholder / block handle），见 `crepePort/`（MIT 移植，附来源）。
- *
- * **尚未并入**（迁移计划里的后续阶段）：
- *   - latex（`math_inline` / `math_block` / remark-math / KaTeX 预览）—— 阶段 P2
- *   - 选区格式工具条（Crepe toolbar）—— 阶段 P4
- * 在这些并入之前，可视化编辑器仍走 Crepe；本模块由 canonical 快照测试与后续切换使用。
+ * 外加 Crepe 各 feature：kit 直供的部分（code block / list item / table / link tooltip /
+ * cursor / placeholder / block handle）与从 Crepe 移植的部分（latex、斜杠菜单、选区工具条），
+ * 全部见 `crepePort/`（MIT 移植，附来源）。可视化编辑器已经走这条装配，Crepe 只剩出处注释。
  *
  * 与 Crepe 的语义对齐点：`getMarkdown()` = `editor.action(getMarkdown())`、
  * `setReadonly()` = 闭包可编辑标记 + `view.setProps({ editable })`、`destroy()` =

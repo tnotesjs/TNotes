@@ -1,4 +1,5 @@
 import type { Ctx } from '@milkdown/kit/ctx'
+import { rootCtx } from '@milkdown/kit/core'
 import type { EditorView } from '@milkdown/kit/prose/view'
 
 import {
@@ -22,6 +23,7 @@ import type { BlockEditFeatureConfig } from '../index'
 
 import { isInCodeBlock, isInList } from '../../utils'
 import { Menu } from './component'
+import { constrainSlashMenu, editorVisibleBoundary, type RectLike } from './constrain'
 
 export const menu = slashFactory('CREPE_MENU')
 
@@ -53,6 +55,8 @@ class MenuView implements PluginView {
   readonly #app: App
   readonly #filter: Ref<string>
   readonly #slashProvider: SlashProvider
+  readonly #constrain: () => void
+  readonly #detachConstrain: () => void
   #programmaticallyPos: number | null = null
 
   constructor(
@@ -74,6 +78,9 @@ class MenuView implements PluginView {
       ctx,
       config,
       features,
+      // Desk 扩展：双列紧凑网格（样式表用 data-layout 选网格，键盘导航按列数走）。
+      columns: config?.slashMenuLayout?.columns,
+      groupDataLayout: config?.slashMenuLayout?.groupDataLayout,
       show,
       filter,
       hide,
@@ -137,8 +144,30 @@ class MenuView implements PluginView {
       root: slashMenuOptions.root,
     })
 
+    // Desk 扩展：把菜单夹进编辑器可见区域（原先是 Desk 侧的 DOM 补丁层）。
+    const obstacles = (): RectLike | null => config?.slashMenuViewport?.obstacles?.() ?? null
+    const root = (): HTMLElement | null => {
+      const value = ctx.get(rootCtx) as unknown
+      return value instanceof HTMLElement ? value : null
+    }
+    this.#constrain = () => {
+      if (this.#content.dataset.show !== 'true') return
+      const host = root()
+      if (!host) return
+      constrainSlashMenu(this.#content, editorVisibleBoundary(host), obstacles)
+    }
+    const onViewportChange = () => this.#constrain()
+    const hostElement = root()
+    hostElement?.addEventListener('scroll', onViewportChange, { passive: true })
+    window.addEventListener('resize', onViewportChange, { passive: true })
+    this.#detachConstrain = () => {
+      hostElement?.removeEventListener('scroll', onViewportChange)
+      window.removeEventListener('resize', onViewportChange)
+    }
+
     this.#slashProvider.onShow = () => {
       show.value = true
+      requestAnimationFrame(() => this.#constrain())
     }
     this.#slashProvider.onHide = () => {
       show.value = false
@@ -153,6 +182,7 @@ class MenuView implements PluginView {
 
   update = (view: EditorView) => {
     this.#slashProvider.update(view)
+    this.#constrain()
   }
 
   show = (pos: number) => {
@@ -167,6 +197,7 @@ class MenuView implements PluginView {
   }
 
   destroy = () => {
+    this.#detachConstrain()
     this.#slashProvider.destroy()
     this.#app.unmount()
     this.#content.remove()

@@ -30,7 +30,13 @@ interface DeskMenuItemLike {
 interface DeskGroupHandleLike {
   addItem: (
     key: string,
-    item: { label: string; icon: string; onRun?: (ctx: unknown) => void }
+    item: {
+      label: string
+      icon: string
+      keywords?: string[]
+      shortcut?: string
+      onRun?: (ctx: unknown) => void
+    }
   ) => unknown
 }
 
@@ -45,6 +51,22 @@ interface DeskGroupEntry {
 }
 
 export interface DeskBlockEditConfig {
+  /** 双列紧凑网格：样式表按 `data-layout` 选网格，菜单键盘导航按列数走。 */
+  slashMenuLayout: {
+    columns: number
+    groupDataLayout: string
+  }
+  /** 菜单夹进编辑器可见区域时要避让的遮挡物（块动作菜单）。 */
+  slashMenuViewport: {
+    obstacles: () => {
+      top: number
+      right: number
+      bottom: number
+      left: number
+      width: number
+      height: number
+    } | null
+  }
   textGroup: {
     quote: DeskGroupEntry
     divider: DeskGroupEntry
@@ -63,6 +85,15 @@ export interface DeskBlockEditConfig {
 
 export function createDeskBlockEditConfig(deps: DeskBlockEditDeps): DeskBlockEditConfig {
   return {
+    slashMenuLayout: {
+      columns: 2,
+      groupDataLayout: 'compact-grid'
+    },
+    slashMenuViewport: {
+      obstacles: () =>
+        document.querySelector<HTMLElement>('.desk-block-action-menu')?.getBoundingClientRect() ??
+        null
+    },
     textGroup: {
       quote: { icon: formatIconSvg('quote') },
       divider: { icon: formatIconSvg('divider') }

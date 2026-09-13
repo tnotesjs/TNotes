@@ -10,6 +10,7 @@ import type { SlashProviderOptions } from '@milkdown/kit/plugin/slash'
 import { block, type BlockProviderOptions } from '@milkdown/kit/plugin/block'
 
 import type { DeepPartial } from '../utils'
+import type { RectLike } from './menu/constrain'
 import type { Editor } from '@milkdown/kit/core'
 import type { GroupBuilder } from '../utils/group-builder'
 import type { SlashMenuItem } from './menu/utils'
@@ -42,6 +43,17 @@ interface BlockEditConfig {
     SlashProviderOptions,
     'root' | 'offset' | 'middleware' | 'floatingUIOptions'
   >
+
+  /** Desk 扩展：斜杠菜单的双列紧凑布局（`columns` 同时决定键盘上下步长）。 */
+  slashMenuLayout: {
+    columns: number
+    groupDataLayout: string
+  } | null
+
+  /** Desk 扩展：把菜单夹进编辑器可见区域；`obstacles` 返回需要避让的矩形。 */
+  slashMenuViewport: {
+    obstacles: () => RectLike | null
+  } | null
 
   textGroup: {
     label: string
