@@ -30,6 +30,8 @@ import { linkTooltip } from './crepePort/linktooltip'
 import { listItem } from './crepePort/listitem'
 import { placeholder, type DeskPlaceholderConfig } from './crepePort/placeholder'
 import { table } from './crepePort/table'
+import { toolbar, type ToolbarFeatureConfig } from './crepePort/toolbar'
+import { type DeskToolbarFeatures } from './crepePort/toolbar/features'
 import { applyDeskEditorConfigs, type DeskEditorConfigOptions } from './deskEditorConfigs'
 
 /**
@@ -62,6 +64,10 @@ export interface DeskEditorOptions extends DeskEditorConfigOptions {
   blockEdit?: BlockEditFeatureConfig
   /** 斜杠菜单里按 feature 显隐的项（默认 latex 开、image-block 关、table 开，与生产一致）。 */
   blockEditFeatures?: DeskBlockEditFeatures
+  /** 选区格式工具条（图标/文案/自定义项）。 */
+  toolbar?: ToolbarFeatureConfig
+  /** 工具条里按 feature 显隐的项（默认 latex 开、ai 关 —— Desk 没有 AI）。 */
+  toolbarFeatures?: DeskToolbarFeatures
 }
 
 export interface DeskEditorHandle {
@@ -103,6 +109,7 @@ export function createDeskEditor(options: DeskEditorOptions): DeskEditorHandle {
   placeholder(editor, { config: options.placeholder, isReadOnly: options.isReadOnly })
   latex(editor, options.latex)
   blockEdit(editor, options.blockEdit, options.blockEditFeatures)
+  toolbar(editor, options.toolbar, options.toolbarFeatures)
 
   return {
     editor,

@@ -1,6 +1,7 @@
 /**
- * 移植自 `@milkdown/crepe@7.22.1` 的 `src/icons/*`（MIT），只取 block-edit 用到的图标。
+ * 移植自 `@milkdown/crepe@7.22.1` 的 `src/icons/*`（MIT），只取 block-edit 与 toolbar 用到的图标。
  */
+export * from './bold'
 export * from './bullet-list'
 export * from './code'
 export * from './divider'
@@ -12,10 +13,13 @@ export * from './h4'
 export * from './h5'
 export * from './h6'
 export * from './image'
+export * from './italic'
+export * from './link'
 export * from './menu'
 export * from './ordered-list'
 export * from './plus'
 export * from './quote'
+export * from './strikethrough'
 export * from './table'
 export * from './text'
 export * from './todo-list'
