@@ -1,17 +1,21 @@
 /**
- * 打包配置（JS 而非 YAML 的原因见下）。
+ * 打包配置（JS 而非 YAML 的原因见「一」）。
  *
- * 背景：`@esbuild/*`、`sass-embedded-*`、`@rollup/rollup-*`、`@parcel/watcher-*`、
- * `@napi-rs/lzma-*` 都是一个平台一个包，而 electron-builder 会把整棵 production 依赖树
- * 都带进应用。它们只在运行时按当前平台解析（vite→esbuild、SSG 预览→sass），其余平台
- * 的分支纯属死重量。未裁剪时实测（macOS arm64）：
+ * 一、平台二进制裁剪
+ * `@esbuild/*`、`sass-embedded-*`、`@rollup/rollup-*`、`@parcel/watcher-*`、
+ * `@napi-rs/lzma-*` 都是一个平台一个包，运行时只按当前平台解析（vite→esbuild、
+ * SSG 预览→sass），其它平台分支纯属死重量。**长期 checkout** 的 node_modules 里
+ * 通常装着所有平台（本机实测 158 个平台族包），electron-builder 会整棵带上：
  *
- *   app.asar.unpacked 429MB
- *     @esbuild                 212MB（26 个平台）
- *     sass-embedded-*          ~170MB（17 个平台）
- *     @rollup                   48MB（25 个平台）
- *     @parcel + @napi-rs        ~7MB
- *     @img（sharp 的 libvips）  17.6MB  ← 必须保留
+ *   长期 checkout：app.asar.unpacked 429MB（@esbuild 212 / sass ~170 / @rollup 48
+ *                / @parcel+@napi-rs ~7 / @img 17.6 必须留）→ 裁剪后 65MB；dmg 486MB → 328MB
+ *
+ * 但要注意**这不是发布瘦身手段**：CI / 全新 `pnpm install --frozen-lockfile` 的 pnpm 会
+ * 按 os/cpu 过滤，本就只装本平台（实测 7 个平台族包，仅 darwin-arm64），所以官方 0.6.0
+ * 的包从来没胖过 —— 同一份代码在全新安装下「排除 0 个包」，dmg 249MB → 252MB、zip
+ * 247MB → 262MB（差额来自下面的 asar: false）。保留这段逻辑的理由是：
+ *   · 让包内容与宿主的安装形状无关（本地构建可复现，不会莫名其妙多出 400MB）；
+ *   · 任何保持长期 checkout 的人（包括本地打包）不再把外来平台二进制带进安装包。
  *
  * 为什么不用 YAML：实测 electron-builder 只采信**顶层** `files`，平台级 `mac.files` /
  * `win.files` 的排除项完全不生效；而顶层 `files` 又没法表达「除本次目标平台之外」。
@@ -19,6 +23,11 @@
  *   1. 从 CLI 参数推断目标平台（--mac/--win/--linux，缺省取当前系统）；
  *   2. 扫描 pnpm store 里所有「一平台一包」的原生包（新平台包会自动被覆盖）；
  *   3. 把不属于目标平台的整目录排除。
+ *
+ * 二、asar: false
+ * 见下面 `asar` 处的注释：SSG 预览/构建在进程内跑 Vite，SSR 的 ESM 解析读不了含
+ * `app.asar` 的路径 → 打包版预览必定 500。关掉后预览 200。代价就是文件散开、
+ * zip 比 asar 版大约 15MB（247MB → 262MB），这是为了让预览可用而付的。
  */
 const fs = require('node:fs')
 const path = require('node:path')
@@ -163,7 +172,8 @@ module.exports = {
   //   二进制），把这两个包 unpack 出来后又变成 `Cannot find module 'vue/server-renderer'`
   //   —— 路径字符串里仍带 app.asar，ESM 就是找不到。
   //   asar 关掉 → 预览 200、页面正常渲染，esbuild/sass 都在真实路径上跑。
-  // 代价：应用代码不再打成一个归档文件（体积基本不变，启动略慢一点）。
+  // 代价：应用代码不再打成一个归档文件 —— 实测 zip 247MB → 262MB（dmg 只差 ~3MB），
+  // 换来打包版预览可用；详见文件头「二」。
   asar: false,
   mac: {
     icon: 'build/icon.icns',
