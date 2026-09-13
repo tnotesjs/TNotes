@@ -19,9 +19,17 @@
 只有两处改动：`index.ts` 去掉 Crepe 的 feature 开关登记、`inline-tooltip/component.tsx`
 用等价的 `h()` 渲染函数重写（原文件是 JSX，本仓没有 JSX 编译管线）。
 
-待移植（见迁移计划）：斜杠菜单（P3）、`toolbar`（P4）。
+`blockEdit/`（P3）同样取自 `src/feature/block-edit/**`：`index.ts`（feature 入口）、
+`menu/*`（斜杠菜单：`config.ts` 默认分组与图标、`component.tsx` Vue 菜单、`utils.ts` 项类型）、
+`handle/*`（块手柄的 `+`/拖拽按钮）。同时移植了它依赖的两小块 Crepe 代码：
+`utils/`（`group-builder` / `checker` / `types` / `keep-alive`）与 `icons/`（只取 block-edit
+用到的 18 个图标）。改动同样只有「去掉 feature 登记表」这一处：`features.ts` 用显式参数
+`{ latex, imageBlock, table }` 取代 Crepe 的 `useCrepeFeatures`，
+并把 `buildMenu` 的参数改成结构化类型（两个 `GroupBuilder` 类各带私有字段，名义类型互不兼容）。
 
-本目录**刻意保持与上游一致**（便于 diff 与重新移植），因此不进 eslint；仍受 `tsc`
-与 `prettier` 约束。
+待移植（见迁移计划）：`toolbar`（P4）。
+
+本目录**刻意保持与上游一致**（便于 diff 与重新移植）：既不进 eslint，也在
+`apps/desk/.prettierignore` 里排除（上游用的是另一套 prettier 配置）。仍受 `tsc` 约束。
 
 上游许可：Milkdown / Crepe 均为 MIT。

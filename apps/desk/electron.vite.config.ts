@@ -3,6 +3,7 @@ import { resolve } from 'path'
 import { defineConfig } from 'electron-vite'
 import type { Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import vueJsx from '@vitejs/plugin-vue-jsx'
 
 /**
  * Excalidraw 官方字体随包分发。
@@ -62,7 +63,7 @@ export default defineConfig({
         mermaid: 'mermaid/dist/mermaid.esm.min.mjs'
       }
     },
-    plugins: [vue(), copyExcalidrawFonts()],
+    plugins: [vue(), vueJsx(), copyExcalidrawFonts()],
     // Local file: packages change often; prebundling freezes an old export map.
     optimizeDeps: {
       exclude: ['@tnotesjs/ui', 'mermaid']

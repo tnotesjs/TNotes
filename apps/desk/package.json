@@ -68,6 +68,7 @@
     "@electron-toolkit/tsconfig": "^2.0.0",
     "@types/node": "^22.19.1",
     "@vitejs/plugin-vue": "^6.0.2",
+    "@vitejs/plugin-vue-jsx": "^5.1.6",
     "@vue/test-utils": "^2.4.11",
     "electron": "^39.2.6",
     "electron-builder": "^26.0.12",

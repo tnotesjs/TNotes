@@ -4,3 +4,6 @@ pnpm-lock.yaml
 LICENSE.md
 tsconfig.json
 tsconfig.*.json
+# 从 @milkdown/crepe（MIT）移植的源码：保持与上游逐字一致，便于 diff / 重新移植。
+# 同样原因它也不进 eslint（见 eslint.config.mjs）。
+src/renderer/src/markdown/crepePort

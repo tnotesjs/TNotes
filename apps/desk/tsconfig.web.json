@@ -10,6 +10,8 @@
   "exclude": ["src/renderer/src/**/*.test.ts"],
   "compilerOptions": {
     "composite": true,
+    "jsx": "preserve",
+    "jsxImportSource": "vue",
     "baseUrl": ".",
     "paths": {
       "@renderer/*": ["src/renderer/src/*"]

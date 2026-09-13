@@ -18,6 +18,11 @@ import { commonmark } from '@milkdown/kit/preset/commonmark'
 import { gfm } from '@milkdown/kit/preset/gfm'
 import { getMarkdown } from '@milkdown/kit/utils'
 
+import {
+  blockEdit,
+  type BlockEditFeatureConfig,
+  type DeskBlockEditFeatures
+} from './crepePort/blockEdit'
 import { codeMirror } from './crepePort/codemirror'
 import { cursor } from './crepePort/cursor'
 import { latex, type LatexFeatureConfig } from './crepePort/latex'
@@ -38,7 +43,6 @@ import { applyDeskEditorConfigs, type DeskEditorConfigOptions } from './deskEdit
  *
  * **尚未并入**（迁移计划里的后续阶段）：
  *   - latex（`math_inline` / `math_block` / remark-math / KaTeX 预览）—— 阶段 P2
- *   - 斜杠菜单（Crepe block-edit 的菜单部分）—— 阶段 P3
  *   - 选区格式工具条（Crepe toolbar）—— 阶段 P4
  * 在这些并入之前，可视化编辑器仍走 Crepe；本模块由 canonical 快照测试与后续切换使用。
  *
@@ -54,6 +58,10 @@ export interface DeskEditorOptions extends DeskEditorConfigOptions {
   placeholder?: DeskPlaceholderConfig
   /** 行内/块级公式（`math_inline`、`$$` 代码块预览、KaTeX 选项）。 */
   latex?: LatexFeatureConfig
+  /** 斜杠菜单 / 块手柄（与 Crepe 装配共用 `createDeskBlockEditConfig` 的产物）。 */
+  blockEdit?: BlockEditFeatureConfig
+  /** 斜杠菜单里按 feature 显隐的项（默认 latex 开、image-block 关、table 开，与生产一致）。 */
+  blockEditFeatures?: DeskBlockEditFeatures
 }
 
 export interface DeskEditorHandle {
@@ -94,6 +102,7 @@ export function createDeskEditor(options: DeskEditorOptions): DeskEditorHandle {
   cursor(editor)
   placeholder(editor, { config: options.placeholder, isReadOnly: options.isReadOnly })
   latex(editor, options.latex)
+  blockEdit(editor, options.blockEdit, options.blockEditFeatures)
 
   return {
     editor,

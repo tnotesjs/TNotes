@@ -5,11 +5,7 @@ import { parserCtx } from '@milkdown/kit/core'
 import { editorViewCtx, commandsCtx, serializerCtx } from '@milkdown/kit/core'
 import { Plugin, TextSelection } from '@milkdown/kit/prose/state'
 import type { EditorView } from '@milkdown/kit/prose/view'
-import {
-  buildTNotesSlashGroup,
-  installSlashMenuPresentation,
-  TN_NOTES_SLASH_ITEMS
-} from './slashMenu'
+import { installSlashMenuPresentation, TN_NOTES_SLASH_ITEMS } from './slashMenu'
 import { buildExcalidrawSource } from '../editor/markdown/excalidrawComponent'
 import { createExcalidrawClipboardPlugin } from './excalidrawClipboardPlugin'
 import { noteRelativeAssetPath } from './noteAssetPath'
@@ -29,7 +25,6 @@ import { clearLineStylesPlugin } from './clearLineStyles'
 import { createInlineCodeInteractionPlugin, toggleDeskInlineCode } from './inlineCodeInteractions'
 import { wrapInTaskList } from './taskList'
 import { insertDefaultTable } from './insertDefaultTable'
-import { formatIconSvg } from '../components/formatIcons'
 import {
   createCodeBlockCommand,
   toggleEmphasisCommand,
@@ -62,6 +57,7 @@ import {
   serializeBlockForClipboard,
   type BlockHandleClickTarget
 } from './blockActionMenu'
+import { createDeskBlockEditConfig } from './deskBlockEditConfig'
 import { applyDeskEditorConfigs } from './deskEditorConfigs'
 import { createDocumentSelectAllPlugin } from './documentSelection'
 import { createCodeBlockTitlePlugin } from './codeBlockTitlePlugin'
@@ -1156,33 +1152,9 @@ onMounted(async () => {
         color: 'var(--accent-strong)',
         width: 4
       },
-      [Crepe.Feature.BlockEdit]: {
-        textGroup: {
-          quote: { icon: formatIconSvg('quote') },
-          divider: { icon: formatIconSvg('divider') }
-        },
-        listGroup: {
-          bulletList: { icon: formatIconSvg('unordered-list') },
-          orderedList: { icon: formatIconSvg('ordered-list') },
-          taskList: { icon: formatIconSvg('checkbox') }
-        },
-        advancedGroup: {
-          codeBlock: { icon: formatIconSvg('code-block') },
-          table: { icon: formatIconSvg('table') }
-        },
-        buildMenu: (builder) => {
-          const table = builder
-            .getGroup('advanced')
-            .group.items.find((item) => item.key === 'table')
-          if (table) table.onRun = (ctx) => insertDefaultTable(ctx, 'slash')
-          buildTNotesSlashGroup(builder, {
-            groupLabel: 'TNotes',
-            onRun: (item) => {
-              runSlashItemInsert(item)
-            }
-          })
-        }
-      }
+      [Crepe.Feature.BlockEdit]: createDeskBlockEditConfig({
+        runSlashItem: runSlashItemInsert
+      })
     }
   })
   editor.editor.use(

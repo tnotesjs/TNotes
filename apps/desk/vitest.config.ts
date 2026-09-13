@@ -1,6 +1,7 @@
 import { existsSync } from 'fs'
 import { resolve } from 'path'
 import vue from '@vitejs/plugin-vue'
+import vueJsx from '@vitejs/plugin-vue-jsx'
 import { defineConfig } from 'vitest/config'
 
 // Prefer a sibling ui checkout while iterating; fall back to the published
@@ -12,7 +13,7 @@ const uiSrc = (p: string): string => {
 }
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [vue(), vueJsx()],
   resolve: {
     alias: [
       { find: /^@tnotesjs\/ui\/code$/, replacement: uiSrc('code/highlight.ts') },
