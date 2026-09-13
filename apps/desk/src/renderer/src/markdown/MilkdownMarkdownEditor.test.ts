@@ -49,6 +49,34 @@ describe('MilkdownMarkdownEditor synchronization', () => {
     wrapper.unmount()
   })
 
+  it('syncs props that changed while the editor was still being created', async () => {
+    // 不 await 就绪：onMounted 里 create() 仍挂着，此刻改 props 就是「初始化期间变化」。
+    const wrapper = mount(MilkdownMarkdownEditor, {
+      attachTo: document.body,
+      props: {
+        content: 'first\n',
+        mode: 'visual',
+        readOnly: false,
+        knowledgeBaseId: 'kb-a',
+        noteUuid: 'note-a',
+        active: true,
+        uploadImage: vi.fn(async () => ({ src: './assets/image.png', alt: 'image' }))
+      }
+    })
+    await wrapper.setProps({ content: 'second\n' })
+
+    await vi.waitFor(() => expect(wrapper.find('.ProseMirror').exists()).toBe(true), {
+      timeout: 4_000
+    })
+    // 编辑器按创建时的那份原文建，ready 之后必须补同步到最新 props
+    await vi.waitFor(() =>
+      expect(wrapper.find('.ProseMirror').element.textContent).toContain('second')
+    )
+    expect(wrapper.find('.ProseMirror').element.textContent).not.toContain('first')
+    expect(wrapper.emitted('change')).toBeUndefined()
+    wrapper.unmount()
+  })
+
   it('does not list slash-menu group titles in the page outline', async () => {
     const wrapper = await mountEditor('# 代码分组\n\n正文\n')
     await vi.waitFor(() => expect(wrapper.find('.note-outline__link').exists()).toBe(true))

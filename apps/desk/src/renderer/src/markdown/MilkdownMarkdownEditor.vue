@@ -71,22 +71,11 @@ import {
   projectRawBlocksForMilkdown,
   rawBlockProjectionPlugins
 } from '../editor/markdown/rawBlockProjection'
-import {
-  reconcileMarkdownSource,
-  type ReconcileOptions
-} from '../editor/markdown/sourcePreservation'
-import { literalRegionSourceFor } from '../editor/markdown/literalProjection'
 import { createContainerUpgradePlugin } from '../editor/markdown/containerUpgrade'
-import {
-  actionableProblems,
-  classifyProjectionFidelity,
-  degradableBlockIndexes,
-  extendDegradationIndexes,
-  findAbsorbedBlocks
-} from '../editor/markdown/projectionFidelity'
 import { renumberHeadings, stripHeadingNumbers } from '../editor/markdown/headingNumbering'
 import { clampViewPosition } from '../editor/markdown/noteViewPosition'
 import { flushPendingEdits } from '../editor/markdown/pendingEdits'
+import { createDocumentSync, type DocumentSyncHost, type DocumentSyncSession } from './documentSync'
 import { createDeskRawBlockView } from './createDeskRawBlockView'
 import { createDeskCalloutView, deskCalloutKeymapPlugin } from './deskCalloutView'
 import { imageAttrPlugins } from '../editor/markdown/imageAttrs'
@@ -140,11 +129,12 @@ const outlineActiveId = ref<string | null>(null)
 let deskEditor: DeskEditorHandle | null = null
 let destroyed = false
 let ready = false
-let synchronizing = false
-let originalSource = props.content
-let baselineCanonical = ''
-let lastEmitted: string | null = null
-let contentSyncQueued = false
+/**
+ * 文档同步会话（原文 / 基线 / 保真降级 / 待保存 flush）。
+ * 只在 `onMounted` 里创建 —— 它的初始原文必须与「创建编辑器时用的那份 props.content」
+ * 严格配对，不能把新 props 与旧编辑器内容配成一组基线。
+ */
+let session: DocumentSyncSession | null = null
 let blockHandleClickCleanup: (() => void) | null = null
 const rawSourceReadonlyListeners = new Set<(readOnly: boolean) => void>()
 
@@ -678,8 +668,8 @@ function focus(): void {
 function applyReadonlyState(): void {
   const readOnly = isEffectivelyReadOnly()
   if (readOnly) {
-    flushPendingEdits(props.knowledgeBaseId, props.noteUuid, { requireClean: false })
-    flushCurrentContent()
+    // 切到只读之前把草稿与未提交的对账落下去。
+    session?.flush()
   }
   deskEditor?.setReadonly(readOnly)
   rawSourceReadonlyListeners.forEach((listener) => listener(readOnly))
@@ -892,184 +882,19 @@ function handleKeydown(event: KeyboardEvent): void {
 }
 
 /**
- * 「按原文暴露」的区域（降级产生的普通正文）在基线里的块下标。
- * 写盘时用它告诉 reconcile：这些块被编辑过就用我们渲染的「转义逐行原文」，
- * 不要交给通用序列化器（否则会出现 `\` 断行、转义丢失，重新加载又会变回容器）。
+ * 文档同步会话的宿主接口。
+ *
+ * 分工：**视图连接留在组件里**（选区 / 滚动位置、整篇替换、从文档派生的 TOC 与大纲刷新），
+ * 原文、canonical 基线、保真降级与待保存 flush 由 `createDocumentSync` 持有。
+ *
+ * 会话在 `onMounted` 里创建 —— 它的初始原文必须与「创建编辑器时用的那份 props.content」
+ * 严格配对，不能把新 props 与旧编辑器内容配成一组基线。
  */
-let degradedRegionIndexes = new Set<number>()
-
-/** 被「懒升级」重投影过的段落文本：这些块从文本变成容器属于用户预期内的形状变化 */
-const upgradedParagraphTexts = new Set<string>()
-
-function literalRegionOptions(): ReconcileOptions {
-  if (degradedRegionIndexes.size === 0) return {}
-  return {
-    literalRegions: {
-      baselineIndexes: degradedRegionIndexes,
-      render: (currentIndex: number) => {
-        const node = editorView()?.state.doc.child(currentIndex)
-        if (!node) return null
-        return literalRegionSourceFor(node)
-      }
-    }
-  }
-}
-
-let fidelityScheduled = false
-/** 已经判定并降级过的内容快照；同一份内容不再重复判定（否则会拿降级后的结果反过来污染判定） */
-let fidelityCheckedFor: string | null = null
-
-/**
- * 空闲时检查渲染忠实性：结构性不忠实的块退化成「按原文显示」（unparsed 原始块），
- * 并把 baseline 同步成新文档 —— 未编辑的块在保存时仍然逐字取原文。
- * 只在空闲做，不拖慢打开；判定/重建的成本只在真有问题的笔记上付一次。
- */
-function scheduleFidelityCheck(): void {
-  if (fidelityScheduled || destroyed) return
-  fidelityScheduled = true
-  const run = (): void => {
-    fidelityScheduled = false
-    if (destroyed || !ready || !deskEditor || synchronizing) return
-    // 同一份内容只判定一次：降级会把文档换成"退化形态"，再判定就会基于退化结果
-    // 算出更小的计划（实测把真正被降级的块挤出记录，写盘覆盖因此失效）。
-    if (fidelityCheckedFor === originalSource) return
-    fidelityCheckedFor = originalSource
-    let plan = degradableBlockIndexes(originalSource, deskEditor.getMarkdown())
-    // 计划为空 = 这篇笔记现在没有任何「按原文暴露」的区域，清掉记录
-    degradedRegionIndexes = new Set(plan)
-    if (plan.length === 0) return
-    let remaining = 0
-    for (let round = 0; round < 8; round += 1) {
-      synchronizing = true
-      try {
-        deskEditor.editor.action(
-          replaceAll(
-            projectRawBlocksForMilkdown(originalSource, {
-              literalBlockIndexes: new Set(plan)
-            }),
-            true
-          )
-        )
-        baselineCanonical = deskEditor.getMarkdown()
-        applyGeneratedTocDisplay()
-        refreshOutline()
-      } finally {
-        synchronizing = false
-      }
-      const report = classifyProjectionFidelity(originalSource, deskEditor.getMarkdown())
-      // 收敛判据是「没有可行动的结构性问题」：content-changed（行内 <br/> 等规范化）
-      // 不该继续驱动降级，否则会一路吃掉无关内容。
-      const actionable = actionableProblems(report)
-      if (actionable.length === 0) {
-        remaining = 0
-        break
-      }
-      remaining = actionable.length
-      const next = extendDegradationIndexes(originalSource, deskEditor.getMarkdown(), plan)
-      if (next.length === plan.length) break
-      plan = next
-    }
-    useWorkspaceStore().status =
-      remaining === 0
-        ? `有 ${plan.length} 处内容暂时不能安全排版，已按原文作为普通文字显示`
-        : `有内容暂时不能安全排版，已按原文作为普通文字显示（仍有 ${remaining} 处结构差异）`
-  }
-  const idle = (window as unknown as { requestIdleCallback?: (cb: () => void) => number })
-    .requestIdleCallback
-  if (typeof idle === 'function') idle(run)
-  else window.setTimeout(run, 300)
-}
-
-function flushCurrentContent(editor = deskEditor): void {
-  if (!editor || !ready || synchronizing || destroyed) return
-  const markdown = editor.getMarkdown()
-  const preserved = reconcileMarkdownSource(
-    originalSource,
-    baselineCanonical,
-    markdown,
-    literalRegionOptions()
-  )
-  // 保存守卫：原文里某段内容被并进了别的块（吞并）—— 这是会丢数据的结构，坚决不写盘。
-  // 用户的编辑仍在文档里；切到源码视图可以直接改，或把那段内容改回独立块再保存。
-  const absorbed = findAbsorbedBlocks(originalSource, preserved).filter(
-    (item) => !upgradedParagraphTexts.has(item.source.trim())
-  )
-  if (absorbed.length > 0) {
-    console.error('[desk] 保存被拦截：检测到原文内容被并入其它块', absorbed)
-    useWorkspaceStore().status = `检测到 ${absorbed.length} 处内容会被写坏，已暂停保存；你的文件没有被修改（可切到源码视图检查）`
-    return
-  }
-  if (preserved === props.content || preserved === lastEmitted) return
-  lastEmitted = preserved
-  emit('change', preserved)
-}
-
-/** Commit block-local Edit drafts, then emit. Call before leaving visual mode. */
-function flush(): void {
-  flushPendingEdits(props.knowledgeBaseId, props.noteUuid, { requireClean: false })
-  flushCurrentContent()
-}
-
-/**
- * 标题编号：重排（先剥再按上限重编）与剥除。
- * replaceAll 是单个 ProseMirror 事务，一步撤销；随后刷新基线并 emit。
- */
-function addHeadingNumbers(maxDepth: number): void {
-  if (!deskEditor || !ready || isEffectivelyReadOnly()) return
-  flushPendingEdits(props.knowledgeBaseId, props.noteUuid, { requireClean: false })
-  const preserved = reconcileMarkdownSource(
-    originalSource,
-    baselineCanonical,
-    deskEditor.getMarkdown(),
-    literalRegionOptions()
-  )
-  const result = renumberHeadings(preserved, maxDepth)
-  if (!result.changed) return
-  deskEditor.editor.action(replaceAll(projectRawBlocksForMilkdown(result.text), true))
-  originalSource = result.text
-  baselineCanonical = deskEditor.getMarkdown()
-  applyGeneratedTocDisplay()
-  refreshOutline()
-  flushCurrentContent()
-  focus()
-}
-
-function removeHeadingNumbers(): void {
-  if (!deskEditor || !ready || isEffectivelyReadOnly()) return
-  flushPendingEdits(props.knowledgeBaseId, props.noteUuid, { requireClean: false })
-  const preserved = reconcileMarkdownSource(
-    originalSource,
-    baselineCanonical,
-    deskEditor.getMarkdown(),
-    literalRegionOptions()
-  )
-  const result = stripHeadingNumbers(preserved)
-  if (!result.changed) return
-  deskEditor.editor.action(replaceAll(projectRawBlocksForMilkdown(result.text), true))
-  originalSource = result.text
-  baselineCanonical = deskEditor.getMarkdown()
-  applyGeneratedTocDisplay()
-  refreshOutline()
-  flushCurrentContent()
-  focus()
-}
-
-function applyHeadingFold(command: HeadingFoldCommand): boolean {
-  const view = editorView()
-  if (!view) return false
-  const transaction = applyHeadingFoldCommand(view.state, command)
-  if (!transaction) return false
-  view.dispatch(transaction)
-  return true
-}
-
-function queueCurrentContentSync(): void {
-  if (contentSyncQueued) return
-  contentSyncQueued = true
-  queueMicrotask(() => {
-    contentSyncQueued = false
-    flushCurrentContent()
-  })
+interface EditorViewSnapshot {
+  from: number
+  to: number
+  scrollTop: number
+  scrollEl: HTMLElement | null
 }
 
 function editorScrollElement(view: EditorView | null): HTMLElement | null {
@@ -1077,31 +902,30 @@ function editorScrollElement(view: EditorView | null): HTMLElement | null {
   return (view.dom.closest('.milkdown') as HTMLElement | null) ?? host.value
 }
 
-async function syncExternalContent(content: string): Promise<void> {
-  if (!deskEditor || !ready) return
-  const previous = editorView()
-  const scrollEl = editorScrollElement(previous)
-  const captured = {
-    from: previous?.state.selection.from ?? 0,
-    to: previous?.state.selection.to ?? 0,
-    scrollTop: scrollEl?.scrollTop ?? 0
-  }
-  synchronizing = true
-  originalSource = content
-  lastEmitted = null
-  upgradedParagraphTexts.clear()
-  try {
-    deskEditor.editor.action(replaceAll(projectRawBlocksForMilkdown(content), true))
-    baselineCanonical = deskEditor.getMarkdown()
-    applyGeneratedTocDisplay()
-    refreshOutline()
-    scheduleFidelityCheck()
-    const view = editorView()
-    if (view) {
+function createDocumentSyncHost(): DocumentSyncHost<EditorViewSnapshot> {
+  return {
+    readMarkdown: () => (ready && deskEditor ? deskEditor.getMarkdown() : null),
+    readTopLevelNode: (index) => editorView()?.state.doc.child(index) ?? null,
+    replaceDocument: (projected) => {
+      deskEditor?.editor.action(replaceAll(projected, true))
+    },
+    captureViewState: () => {
+      const view = editorView()
+      const scrollEl = editorScrollElement(view)
+      return {
+        from: view?.state.selection.from ?? 0,
+        to: view?.state.selection.to ?? 0,
+        scrollTop: scrollEl?.scrollTop ?? 0,
+        scrollEl
+      }
+    },
+    restoreViewState: (snapshot) => {
+      const view = editorView()
+      if (!view || !snapshot) return
       const restored = clampViewPosition(
-        captured,
+        snapshot,
         view.state.doc.content.size,
-        Math.max(0, (scrollEl?.scrollHeight ?? 0) - (scrollEl?.clientHeight ?? 0))
+        Math.max(0, (snapshot.scrollEl?.scrollHeight ?? 0) - (snapshot.scrollEl?.clientHeight ?? 0))
       )
       try {
         view.dispatch(
@@ -1115,16 +939,73 @@ async function syncExternalContent(content: string): Promise<void> {
       } catch {
         // Positions that cannot be resolved after a structural rewrite stay at the default caret.
       }
-      if (scrollEl) scrollEl.scrollTop = restored.scrollTop
-    }
-  } finally {
-    synchronizing = false
+      if (snapshot.scrollEl) snapshot.scrollEl.scrollTop = restored.scrollTop
+    },
+    afterDocumentReplaced: () => {
+      applyGeneratedTocDisplay()
+      refreshOutline()
+    },
+    emitSource: (source) => emit('change', source),
+    reportStatus: (message) => {
+      useWorkspaceStore().status = message
+    },
+    currentPropContent: () => props.content,
+    flushPendingDrafts: () =>
+      flushPendingEdits(props.knowledgeBaseId, props.noteUuid, { requireClean: false })
   }
+}
+
+/** Commit block-local Edit drafts, then emit. Call before leaving visual mode. */
+function flush(): void {
+  if (session) {
+    session.flush()
+    return
+  }
+  // 会话在 onMounted 里创建；挂载前被父组件调用时仍要把草稿落下去（与抽取前一致）。
+  flushPendingEdits(props.knowledgeBaseId, props.noteUuid, { requireClean: false })
+}
+
+/**
+ * 标题编号：重排（先剥再按上限重编）与剥除。
+ * replaceAll 是单个 ProseMirror 事务，一步撤销；随后采纳新原文（更新原文 + 基线）并 emit。
+ */
+function addHeadingNumbers(maxDepth: number): void {
+  if (!deskEditor || !ready || isEffectivelyReadOnly() || !session) return
+  flushPendingEdits(props.knowledgeBaseId, props.noteUuid, { requireClean: false })
+  const result = renumberHeadings(session.reconcile(), maxDepth)
+  if (!result.changed) return
+  deskEditor.editor.action(replaceAll(projectRawBlocksForMilkdown(result.text), true))
+  session.adoptSource(result.text)
+  session.flush()
+  focus()
+}
+
+function removeHeadingNumbers(): void {
+  if (!deskEditor || !ready || isEffectivelyReadOnly() || !session) return
+  flushPendingEdits(props.knowledgeBaseId, props.noteUuid, { requireClean: false })
+  const result = stripHeadingNumbers(session.reconcile())
+  if (!result.changed) return
+  deskEditor.editor.action(replaceAll(projectRawBlocksForMilkdown(result.text), true))
+  session.adoptSource(result.text)
+  session.flush()
+  focus()
+}
+
+function applyHeadingFold(command: HeadingFoldCommand): boolean {
+  const view = editorView()
+  if (!view) return false
+  const transaction = applyHeadingFoldCommand(view.state, command)
+  if (!transaction) return false
+  view.dispatch(transaction)
+  return true
 }
 
 onMounted(async () => {
   if (!host.value) return
-  originalSource = props.content
+  // 会话的初始原文 = 创建编辑器用的那份 props.content。两者必须是同一个值，
+  // 否则 markReady() 读到的基线对不上原文；初始化期间 props 变了，在 ready 后补一次同步。
+  const createdFrom = props.content
+  session = createDocumentSync(createDocumentSyncHost(), createdFrom)
   const codeBlockHighlights = createCodeBlockHighlightBundle()
   // 自组装配（替代 Crepe）：基座 + kit 直供能力 + 从 Crepe 移植的 latex / block-edit /
   // toolbar，见 deskEditor.ts 与 crepePort/。序列化配置（序列化选项、上传、块手柄过滤）
@@ -1185,7 +1066,7 @@ onMounted(async () => {
           return (markdown: string) => parse(projectRawBlocksForMilkdown(markdown))
         },
         onUpgraded: (result) => {
-          for (const line of result.lines) upgradedParagraphTexts.add(line.trim())
+          for (const line of result.lines) session?.noteUpgradedParagraph(line.trim())
         }
       })
     )
@@ -1198,7 +1079,7 @@ onMounted(async () => {
   editor.editor.use(
     createReadonlyTransactionGuard({
       isReadOnly: isEffectivelyReadOnly,
-      isExternalSync: () => synchronizing
+      isExternalSync: () => session?.isSynchronizing() ?? false
     })
   )
   editor.editor.use(
@@ -1228,7 +1109,7 @@ onMounted(async () => {
             return {
               update: (view, previousState) => {
                 if (!view.state.doc.eq(previousState.doc)) {
-                  queueCurrentContentSync()
+                  session?.queueFlush()
                   if (ready) queueMicrotask(refreshOutline)
                 }
                 if (
@@ -1258,9 +1139,10 @@ onMounted(async () => {
       await editor.destroy()
       return
     }
-    baselineCanonical = editor.getMarkdown()
+    // ready 先立起来：markReady() 通过 readMarkdown() 读基线，而后者以 ready 为门。
     ready = true
-    scheduleFidelityCheck()
+    session.markReady()
+    session.scheduleFidelityCheck()
     applyReadonlyState()
     applyGeneratedTocDisplay()
     if (host.value) {
@@ -1277,10 +1159,14 @@ onMounted(async () => {
       })
       document.addEventListener('keydown', handleKeydown)
     }
-    if (props.content !== originalSource) await syncExternalContent(props.content)
+    // 初始化期间 props 变过：编辑器是按 createdFrom 建的，这里补一次同步，
+    // 不能把新 props 与旧编辑器内容配成一组基线。
+    if (props.content !== createdFrom) await session.syncExternal(props.content)
     if (props.active) focus()
     refreshOutline()
   } catch (cause) {
+    // 建编辑器失败：会话不该再排任何检查。
+    session?.dispose()
     try {
       await editor.destroy()
     } catch {
@@ -1295,11 +1181,8 @@ watch(
   () => props.content,
   (content) => {
     if (!ready || !deskEditor) return
-    if (content === lastEmitted) {
-      lastEmitted = null
-      return
-    }
-    void syncExternalContent(content)
+    // 是不是自己刚 emit 出去的值、要不要整篇替换，都由会话判断。
+    session?.handleExternalContent(content)
   }
 )
 
@@ -1331,9 +1214,10 @@ watch(
 onBeforeUnmount(() => {
   if (host.value) exitCodeBlockFullscreen(host.value)
   // Switching to source unmounts the visual editor; flush first so pending raw-block
-  // drafts and in-progress visual edits are committed.
-  flushPendingEdits(props.knowledgeBaseId, props.noteUuid, { requireClean: false })
-  flushCurrentContent()
+  // drafts and in-progress visual edits are committed, then retire the session
+  // (queued microtasks / idle fidelity checks stop owning this document).
+  flush()
+  session?.dispose()
   destroyed = true
   ready = false
   blockHandleClickCleanup?.()
