@@ -15,5 +15,5 @@ Electron + Vue 3。可视化编辑器用 Milkdown / ProseMirror（**自组装配
 - 恢复与资源整理**共用** `withAssetWriteGuard`（`main/assetOperations.ts`）这一把写事务锁：同一知识库同时只允许一个写事务，互斥不排队；恢复期间自动写被暂停，恢复后笔记重新读盘、画布在下次可见时 `revalidate`（提示「磁盘上的画布已被其他入口修改」而不是静默覆盖）。
 - 三类「版本/日志」不要混用：Git commit 是笔记与资源的版本真相；`asset-journals` 是资源整理的事务日志；`history-restore-journals` 是历史恢复的事务日志。画布的临时恢复数据仍走画布会话自己的机制，不写进这三者。
 - 测试知识库在 `apps/desk/playground`。
-- 门禁：`pnpm --filter desk lint && pnpm --filter desk test && pnpm --filter desk typecheck && pnpm --filter desk build && pnpm --filter desk exec prettier --check .`
+- 门禁：`pnpm --filter desk lint && pnpm --filter desk test && pnpm --filter desk typecheck && pnpm --filter desk build && pnpm format:check`（格式化检查用**根目录**的 `pnpm format:check`，与 CI 一致 —— prettier 只读运行目录下的 `.prettierignore`，在 `apps/desk` 里跑不到根目录的排除项）
 - E2E（`scripts/e2e-*.mjs`）验的是 `out/`，改完先 `pnpm --filter desk exec electron-vite build`。
