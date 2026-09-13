@@ -1,0 +1,22 @@
+/*
+ * 移植自 `@milkdown/crepe@7.22.1` 的 `lib/theme/common/*.css`（MIT）。
+ *
+ * 只保留自组装配真正用到的组件样式：prosemirror / reset / block-edit / code-mirror /
+ * cursor / link-tooltip / list-item / placeholder / toolbar / table / latex
+ * （不移植 ai / image-block / top-bar / diff —— 对应 feature 按计划不移植或已关闭）。
+ *
+ * 变量（`--crepe-*`）不在这里定义：Desk 自己的 `milkdownMarkdownEditor.scoped.css` 已经
+ * 把 23 个变量全部映射到 Desk 设计令牌（亮/暗都由 Desk 控制），实测两边的变量集合完全一致，
+ * 所以 Crepe 的 frame / frame-dark 主题不需要引进。
+ */
+@import './prosemirror.css';
+@import './reset.css';
+@import './block-edit.css';
+@import './code-mirror.css';
+@import './cursor.css';
+@import './link-tooltip.css';
+@import './list-item.css';
+@import './placeholder.css';
+@import './toolbar.css';
+@import './table.css';
+@import './latex.css';

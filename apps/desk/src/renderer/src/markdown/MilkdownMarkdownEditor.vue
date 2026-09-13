@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Crepe } from '@milkdown/crepe'
 import { parserCtx } from '@milkdown/kit/core'
 import { editorViewCtx, commandsCtx, serializerCtx } from '@milkdown/kit/core'
 import { Plugin, TextSelection } from '@milkdown/kit/prose/state'
@@ -58,7 +57,7 @@ import {
   type BlockHandleClickTarget
 } from './blockActionMenu'
 import { createDeskBlockEditConfig } from './deskBlockEditConfig'
-import { applyDeskEditorConfigs } from './deskEditorConfigs'
+import { createDeskEditor, type DeskEditorHandle } from './deskEditor'
 import { createDocumentSelectAllPlugin } from './documentSelection'
 import { createCodeBlockTitlePlugin } from './codeBlockTitlePlugin'
 import { createCodeBlockLatexPreviewPlugin } from './codeBlockLatexPreview'
@@ -138,7 +137,7 @@ const emit = defineEmits<{
 const host = ref<HTMLElement | null>(null)
 const outlineHeadings = ref<NoteOutlineHeading[]>([])
 const outlineActiveId = ref<string | null>(null)
-let crepe: Crepe | null = null
+let deskEditor: DeskEditorHandle | null = null
 let destroyed = false
 let ready = false
 let synchronizing = false
@@ -169,7 +168,7 @@ function currentNoteSession(): DocumentSession | undefined {
 }
 
 function editorView(): EditorView | null {
-  return crepe?.editor.action((ctx) => ctx.get(editorViewCtx)) ?? null
+  return deskEditor?.editor.action((ctx) => ctx.get(editorViewCtx)) ?? null
 }
 
 function reportHeadingLevel(view: EditorView): void {
@@ -264,8 +263,8 @@ function readCodeBlockPlainText(block: Element): string {
 /** 块边界光标上的 Mod+C / Mod+X：复制/剪切整块的 markdown 源码。 */
 const boundaryOptions: BlockBoundaryNavigationOptions = {
   copyBlockAt: (view, position, cut) => {
-    if (!crepe) return false
-    const text = crepe.editor.action((ctx) =>
+    if (!deskEditor) return false
+    const text = deskEditor.editor.action((ctx) =>
       serializeBlockForClipboard(view.state, position, ctx.get(serializerCtx))
     )
     if (text === null || text === undefined) return false
@@ -282,8 +281,8 @@ async function copyCurrentBlock(cut = false): Promise<boolean> {
   const menu = blockActionMenu.value
   const target = currentBlockTarget()
   const node = target?.view.state.doc.nodeAt(target.position)
-  if (!target || !node || !crepe) return false
-  const text = crepe.editor.action((ctx) =>
+  if (!target || !node || !deskEditor) return false
+  const text = deskEditor.editor.action((ctx) =>
     serializeBlockForClipboard(target.view.state, target.position, ctx.get(serializerCtx))
   )
   if (text === null) return false
@@ -334,9 +333,9 @@ function handleBlockMenuDocumentPointerUp(event: PointerEvent): void {
   }
 }
 
-function run(action: (editor: Crepe) => void): boolean {
-  if (!crepe || !ready || isEffectivelyReadOnly()) return false
-  action(crepe)
+function run(action: (editor: DeskEditorHandle) => void): boolean {
+  if (!deskEditor || !ready || isEffectivelyReadOnly()) return false
+  action(deskEditor)
   focus()
   return true
 }
@@ -385,7 +384,7 @@ function wrapSelection(prefix: string, suffix: string, placeholder = '文字'): 
     return
   }
   if (prefix === '[' && suffix.startsWith('](')) {
-    const hasSelection = crepe?.editor.action(
+    const hasSelection = deskEditor?.editor.action(
       (ctx) => !ctx.get(editorViewCtx).state.selection.empty
     )
     if (!hasSelection) {
@@ -450,7 +449,7 @@ function insertTable(): void {
  * - tip/info/warning/danger：插入 deskCallout（标题可编辑，正文走普通块）。
  * - details / 导图 / 组件 / 代码组 / swiper：插入 deskRawBlock，
  *   并自动打开新插入块的「编辑源码」。
- * - 普通代码块：走 Crepe 代码块（createCodeBlockCommand）。
+ * - 普通代码块：走代码块组件（createCodeBlockCommand）。
  */
 function runSlashItemInsert(item: SlashMenuItem): void {
   if (item.id === 'excalidraw') {
@@ -462,7 +461,7 @@ function runSlashItemInsert(item: SlashMenuItem): void {
       editor.editor.action((ctx) => {
         const commands = ctx.get(commandsCtx)
         // The toolbar command intentionally preserves paragraph text. A slash
-        // insertion must first remove its `/query`, just like Crepe's own menu.
+        // insertion must first remove its `/query`, just like the slash menu does.
         commands.call(clearTextInCurrentBlockCommand.key)
         commands.call(createCodeBlockCommand.key, 'js')
       })
@@ -569,7 +568,7 @@ function openExcalidrawEditorAt(position: number): void {
   let attempts = 0
   const tryOpen = (): void => {
     attempts += 1
-    const view = crepe?.editor.action((ctx) => ctx.get(editorViewCtx))
+    const view = deskEditor?.editor.action((ctx) => ctx.get(editorViewCtx))
     const dom = view?.nodeDOM(position)
     if (!(dom instanceof HTMLElement)) {
       if (attempts >= 20) window.clearInterval(pollTimer)
@@ -597,7 +596,7 @@ function openRawSourceEditorAt(position: number): void {
   let attempts = 0
   const tryOpen = (): void => {
     attempts += 1
-    const view = crepe?.editor.action((ctx) => ctx.get(editorViewCtx))
+    const view = deskEditor?.editor.action((ctx) => ctx.get(editorViewCtx))
     if (!view) {
       if (attempts >= 20) window.clearInterval(pollTimer)
       return
@@ -673,8 +672,8 @@ function findAddedBlockPos(
 }
 
 function focus(): void {
-  if (!crepe || !ready || isEffectivelyReadOnly()) return
-  crepe.editor.action((ctx) => ctx.get(editorViewCtx).focus())
+  if (!deskEditor || !ready || isEffectivelyReadOnly()) return
+  deskEditor.editor.action((ctx) => ctx.get(editorViewCtx).focus())
 }
 
 function applyReadonlyState(): void {
@@ -683,12 +682,12 @@ function applyReadonlyState(): void {
     flushPendingEdits(props.knowledgeBaseId, props.noteUuid, { requireClean: false })
     flushCurrentContent()
   }
-  crepe?.setReadonly(readOnly)
+  deskEditor?.setReadonly(readOnly)
   rawSourceReadonlyListeners.forEach((listener) => listener(readOnly))
   if (!readOnly) return
 
   closeBlockActionMenu(false)
-  // `crepe` is assigned before `editor.create()` resolves; until then the editor
+  // `deskEditor` is assigned before `editor.create()` resolves; until then the editor
   // view ctx still holds Milkdown's placeholder — a non-null object without
   // `state`. Require a ready editor with an initialized view before touching it.
   const view = editorView()
@@ -793,7 +792,7 @@ function scrollToOutlineHeading(id: string): void {
 function handleClick(event: MouseEvent): void {
   if (!(event.target instanceof Element)) return
 
-  // Crepe/Milkdown Copy uses navigator.clipboard.writeText and only sync-catches
+  // Milkdown's Copy uses navigator.clipboard.writeText and only sync-catches
   // failures, so Electron's async NotAllowedError never falls back. Intercept
   // in capture and use Desk's permission-safe path instead.
   const expandButton = event.target.closest('.milkdown-code-block .desk-code-expand')
@@ -931,12 +930,12 @@ function scheduleFidelityCheck(): void {
   fidelityScheduled = true
   const run = (): void => {
     fidelityScheduled = false
-    if (destroyed || !ready || !crepe || synchronizing) return
+    if (destroyed || !ready || !deskEditor || synchronizing) return
     // 同一份内容只判定一次：降级会把文档换成"退化形态"，再判定就会基于退化结果
     // 算出更小的计划（实测把真正被降级的块挤出记录，写盘覆盖因此失效）。
     if (fidelityCheckedFor === originalSource) return
     fidelityCheckedFor = originalSource
-    let plan = degradableBlockIndexes(originalSource, crepe.getMarkdown())
+    let plan = degradableBlockIndexes(originalSource, deskEditor.getMarkdown())
     // 计划为空 = 这篇笔记现在没有任何「按原文暴露」的区域，清掉记录
     degradedRegionIndexes = new Set(plan)
     if (plan.length === 0) return
@@ -944,7 +943,7 @@ function scheduleFidelityCheck(): void {
     for (let round = 0; round < 8; round += 1) {
       synchronizing = true
       try {
-        crepe.editor.action(
+        deskEditor.editor.action(
           replaceAll(
             projectRawBlocksForMilkdown(originalSource, {
               literalBlockIndexes: new Set(plan)
@@ -952,13 +951,13 @@ function scheduleFidelityCheck(): void {
             true
           )
         )
-        baselineCanonical = crepe.getMarkdown()
+        baselineCanonical = deskEditor.getMarkdown()
         applyGeneratedTocDisplay()
         refreshOutline()
       } finally {
         synchronizing = false
       }
-      const report = classifyProjectionFidelity(originalSource, crepe.getMarkdown())
+      const report = classifyProjectionFidelity(originalSource, deskEditor.getMarkdown())
       // 收敛判据是「没有可行动的结构性问题」：content-changed（行内 <br/> 等规范化）
       // 不该继续驱动降级，否则会一路吃掉无关内容。
       const actionable = actionableProblems(report)
@@ -967,7 +966,7 @@ function scheduleFidelityCheck(): void {
         break
       }
       remaining = actionable.length
-      const next = extendDegradationIndexes(originalSource, crepe.getMarkdown(), plan)
+      const next = extendDegradationIndexes(originalSource, deskEditor.getMarkdown(), plan)
       if (next.length === plan.length) break
       plan = next
     }
@@ -982,7 +981,7 @@ function scheduleFidelityCheck(): void {
   else window.setTimeout(run, 300)
 }
 
-function flushCurrentContent(editor = crepe): void {
+function flushCurrentContent(editor = deskEditor): void {
   if (!editor || !ready || synchronizing || destroyed) return
   const markdown = editor.getMarkdown()
   const preserved = reconcileMarkdownSource(
@@ -1017,19 +1016,19 @@ function flush(): void {
  * replaceAll 是单个 ProseMirror 事务，一步撤销；随后刷新基线并 emit。
  */
 function addHeadingNumbers(maxDepth: number): void {
-  if (!crepe || !ready || isEffectivelyReadOnly()) return
+  if (!deskEditor || !ready || isEffectivelyReadOnly()) return
   flushPendingEdits(props.knowledgeBaseId, props.noteUuid, { requireClean: false })
   const preserved = reconcileMarkdownSource(
     originalSource,
     baselineCanonical,
-    crepe.getMarkdown(),
+    deskEditor.getMarkdown(),
     literalRegionOptions()
   )
   const result = renumberHeadings(preserved, maxDepth)
   if (!result.changed) return
-  crepe.editor.action(replaceAll(projectRawBlocksForMilkdown(result.text), true))
+  deskEditor.editor.action(replaceAll(projectRawBlocksForMilkdown(result.text), true))
   originalSource = result.text
-  baselineCanonical = crepe.getMarkdown()
+  baselineCanonical = deskEditor.getMarkdown()
   applyGeneratedTocDisplay()
   refreshOutline()
   flushCurrentContent()
@@ -1037,19 +1036,19 @@ function addHeadingNumbers(maxDepth: number): void {
 }
 
 function removeHeadingNumbers(): void {
-  if (!crepe || !ready || isEffectivelyReadOnly()) return
+  if (!deskEditor || !ready || isEffectivelyReadOnly()) return
   flushPendingEdits(props.knowledgeBaseId, props.noteUuid, { requireClean: false })
   const preserved = reconcileMarkdownSource(
     originalSource,
     baselineCanonical,
-    crepe.getMarkdown(),
+    deskEditor.getMarkdown(),
     literalRegionOptions()
   )
   const result = stripHeadingNumbers(preserved)
   if (!result.changed) return
-  crepe.editor.action(replaceAll(projectRawBlocksForMilkdown(result.text), true))
+  deskEditor.editor.action(replaceAll(projectRawBlocksForMilkdown(result.text), true))
   originalSource = result.text
-  baselineCanonical = crepe.getMarkdown()
+  baselineCanonical = deskEditor.getMarkdown()
   applyGeneratedTocDisplay()
   refreshOutline()
   flushCurrentContent()
@@ -1080,7 +1079,7 @@ function editorScrollElement(view: EditorView | null): HTMLElement | null {
 }
 
 async function syncExternalContent(content: string): Promise<void> {
-  if (!crepe || !ready) return
+  if (!deskEditor || !ready) return
   const previous = editorView()
   const scrollEl = editorScrollElement(previous)
   const captured = {
@@ -1093,8 +1092,8 @@ async function syncExternalContent(content: string): Promise<void> {
   lastEmitted = null
   upgradedParagraphTexts.clear()
   try {
-    crepe.editor.action(replaceAll(projectRawBlocksForMilkdown(content), true))
-    baselineCanonical = crepe.getMarkdown()
+    deskEditor.editor.action(replaceAll(projectRawBlocksForMilkdown(content), true))
+    baselineCanonical = deskEditor.getMarkdown()
     applyGeneratedTocDisplay()
     refreshOutline()
     scheduleFidelityCheck()
@@ -1129,33 +1128,29 @@ onMounted(async () => {
   slashMenuPresentationCleanup = installSlashMenuPresentation(host.value)
   originalSource = props.content
   const codeBlockHighlights = createCodeBlockHighlightBundle()
-  const editor = new Crepe({
+  // 自组装配（替代 Crepe）：基座 + kit 直供能力 + 从 Crepe 移植的 latex / block-edit /
+  // toolbar，见 deskEditor.ts 与 crepePort/。序列化配置（序列化选项、上传、块手柄过滤）
+  // 由 createDeskEditor 内部统一应用。
+  const editor = createDeskEditor({
     root: host.value,
     defaultValue: projectRawBlocksForMilkdown(props.content),
-    features: {
-      [Crepe.Feature.ImageBlock]: false
+    isReadOnly: isEffectivelyReadOnly,
+    uploadImage: (file) => props.uploadImage(file),
+    codeBlock: {
+      languages: deskCodeMirrorLanguages,
+      extensions: codeBlockHighlights.extensions,
+      theme: document.documentElement.dataset.theme === 'light' ? githubLight : githubDark,
+      copyText: '\u200b',
+      copyIcon: COPY_ICON,
+      previewOnlyByDefault: true
     },
-    featureConfigs: {
-      [Crepe.Feature.CodeMirror]: {
-        languages: deskCodeMirrorLanguages,
-        extensions: codeBlockHighlights.extensions,
-        theme: document.documentElement.dataset.theme === 'light' ? githubLight : githubDark,
-        copyText: '\u200b',
-        copyIcon: COPY_ICON,
-        previewOnlyByDefault: true
-      },
-      [Crepe.Feature.Placeholder]: {
-        text: '输入 / 插入内容',
-        mode: 'block'
-      },
-      [Crepe.Feature.Cursor]: {
-        color: 'var(--accent-strong)',
-        width: 4
-      },
-      [Crepe.Feature.BlockEdit]: createDeskBlockEditConfig({
-        runSlashItem: runSlashItemInsert
-      })
-    }
+    placeholder: {
+      text: '输入 / 插入内容',
+      mode: 'block'
+    },
+    latex: {},
+    blockEdit: createDeskBlockEditConfig({ runSlashItem: runSlashItemInsert }),
+    toolbar: {}
   })
   editor.editor.use(
     createExcalidrawClipboardPlugin({
@@ -1257,12 +1252,8 @@ onMounted(async () => {
         })
     )
   )
-  applyDeskEditorConfigs(editor.editor, {
-    isReadOnly: isEffectivelyReadOnly,
-    uploadImage: (file) => props.uploadImage(file)
-  })
   editor.setReadonly(isEffectivelyReadOnly())
-  crepe = editor
+  deskEditor = editor
   try {
     await editor.create()
     if (destroyed) {
@@ -1297,7 +1288,7 @@ onMounted(async () => {
     } catch {
       // A partially-created editor may not have every cleanup timer available.
     }
-    if (crepe === editor) crepe = null
+    if (deskEditor === editor) deskEditor = null
     emit('fatal', cause instanceof Error ? cause.message : String(cause))
   }
 })
@@ -1305,7 +1296,7 @@ onMounted(async () => {
 watch(
   () => props.content,
   (content) => {
-    if (!ready || !crepe) return
+    if (!ready || !deskEditor) return
     if (content === lastEmitted) {
       lastEmitted = null
       return
@@ -1319,7 +1310,7 @@ watch(
   () => {
     // Before `editor.create()` resolves there is no view to update; onMounted
     // applies the readonly state once ready, so skip the pre-ready window.
-    if (!ready || !crepe) return
+    if (!ready || !deskEditor) return
     applyReadonlyState()
   }
 )
@@ -1341,7 +1332,7 @@ watch(
 
 onBeforeUnmount(() => {
   if (host.value) exitCodeBlockFullscreen(host.value)
-  // Switching to source unmounts Crepe; flush first so pending raw-block
+  // Switching to source unmounts the visual editor; flush first so pending raw-block
   // drafts and in-progress visual edits are committed.
   flushPendingEdits(props.knowledgeBaseId, props.noteUuid, { requireClean: false })
   flushCurrentContent()
@@ -1359,8 +1350,8 @@ onBeforeUnmount(() => {
   })
   document.removeEventListener('keydown', handleKeydown)
   closeBlockActionMenu(false)
-  const editor = crepe
-  crepe = null
+  const editor = deskEditor
+  deskEditor = null
   if (editor) void editor.destroy()
 })
 </script>

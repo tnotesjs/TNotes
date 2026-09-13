@@ -1,17 +1,15 @@
 // @vitest-environment happy-dom
-import { Crepe } from '@milkdown/crepe'
+import type { DeskEditorHandle } from './deskEditor'
 import { editorViewCtx } from '@milkdown/kit/core'
 import { TextSelection } from '@milkdown/kit/prose/state'
 import { afterEach, describe, expect, it } from 'vitest'
 import { insertDefaultTable } from './insertDefaultTable'
+import { createTestDeskEditor } from './deskEditorTestKit'
 
-const editors: Crepe[] = []
+const editors: DeskEditorHandle[] = []
 
-async function createEditor(content = ''): Promise<Crepe> {
-  const root = document.createElement('div')
-  document.body.append(root)
-  const editor = new Crepe({ root, defaultValue: content })
-  await editor.create()
+async function createEditor(content = ''): Promise<DeskEditorHandle> {
+  const { handle: editor } = await createTestDeskEditor({ defaultValue: content })
   editors.push(editor)
   editor.editor.action((ctx) => {
     const view = ctx.get(editorViewCtx)

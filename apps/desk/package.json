@@ -36,7 +36,6 @@
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@jsquash/oxipng": "^2.3.0",
-    "@milkdown/crepe": "7.22.1",
     "@milkdown/kit": "7.22.1",
     "@tnotesjs/kb": "workspace:^",
     "@tnotesjs/mindmap-core": "workspace:^",

@@ -6,7 +6,6 @@ import {
   editorViewOptionsCtx,
   rootCtx
 } from '@milkdown/kit/core'
-import type { CodeBlockConfig } from '@milkdown/kit/component/code-block'
 import { block } from '@milkdown/kit/plugin/block'
 import { clipboard } from '@milkdown/kit/plugin/clipboard'
 import { history } from '@milkdown/kit/plugin/history'
@@ -23,7 +22,7 @@ import {
   type BlockEditFeatureConfig,
   type DeskBlockEditFeatures
 } from './crepePort/blockEdit'
-import { codeMirror } from './crepePort/codemirror'
+import { codeMirror, type DeskCodeMirrorConfig } from './crepePort/codemirror'
 import { cursor } from './crepePort/cursor'
 import { latex, type LatexFeatureConfig } from './crepePort/latex'
 import { linkTooltip } from './crepePort/linktooltip'
@@ -35,7 +34,7 @@ import { type DeskToolbarFeatures } from './crepePort/toolbar/features'
 import { applyDeskEditorConfigs, type DeskEditorConfigOptions } from './deskEditorConfigs'
 
 /**
- * Desk 的编辑器装配（替代 `@milkdown/crepe` 的 `Crepe` 类）。
+ * Desk 的编辑器装配（替代 `@milkdown/crepe` 的 `Crepe` 类；crepe 依赖已移除）。
  *
  * 这里复刻的是 Crepe `lib/esm/builder.js` 里那套基座装配：
  *   `Editor.make().config(root/defaultValue/editable/indent=4).use(commonmark, listener,
@@ -56,7 +55,7 @@ export interface DeskEditorOptions extends DeskEditorConfigOptions {
   root: HTMLElement
   defaultValue: string
   /** Desk 的代码块配置（语言、CodeMirror 扩展、主题、复制按钮文案等）。 */
-  codeBlock: Partial<CodeBlockConfig>
+  codeBlock: DeskCodeMirrorConfig
   placeholder?: DeskPlaceholderConfig
   /** 行内/块级公式（`math_inline`、`$$` 代码块预览、KaTeX 选项）。 */
   latex?: LatexFeatureConfig
@@ -73,6 +72,7 @@ export interface DeskEditorOptions extends DeskEditorConfigOptions {
 export interface DeskEditorHandle {
   /** Milkdown `Editor`：Desk 自己的插件都挂在它上面。 */
   editor: Editor
+  create(): Promise<void>
   getMarkdown(): string
   setReadonly(value: boolean): void
   destroy(): Promise<void>
@@ -113,6 +113,9 @@ export function createDeskEditor(options: DeskEditorOptions): DeskEditorHandle {
 
   return {
     editor,
+    create: async () => {
+      await editor.create()
+    },
     getMarkdown: () => editor.action(getMarkdown()),
     setReadonly: (value) => {
       editable = !value

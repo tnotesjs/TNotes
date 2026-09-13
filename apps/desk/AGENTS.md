@@ -1,6 +1,6 @@
 # Desk
 
-Electron + Vue 3。可视化编辑器用 Milkdown / Crepe，源码视图是独立 CodeMirror 6。知识库读写 `@tnotesjs/kb`，预览 `@tnotesjs/ssg`，共享块 `@tnotesjs/ui`。
+Electron + Vue 3。可视化编辑器用 Milkdown / ProseMirror（**自组装配**：`src/renderer/src/markdown/deskEditor.ts` + 从 Crepe 移植的特性 `crepePort/`，不再依赖 `@milkdown/crepe`），源码视图是独立 CodeMirror 6。知识库读写 `@tnotesjs/kb`，预览 `@tnotesjs/ssg`，共享块 `@tnotesjs/ui`。
 
 - Markdown 是磁盘 canonical。自定义语法经 `rawBlockProjection.ts` 投影为 `deskRawBlock`；`sourcePreservation.ts` 保证未编辑块字节级零 diff。
 - 独占一行的 `<br />` 不投影，交给 Milkdown `remark-preserve-empty-line`。段内 / 表格内 `<br>` 仍走投影。

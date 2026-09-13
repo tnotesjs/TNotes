@@ -6,15 +6,15 @@
  * 迁移 `@milkdown/crepe` → 自组 `@milkdown/kit` 时，唯一的硬约束就是**逐字节等价** ——
  * 忠实性判定、sourcePreservation、写盘形态全都建立在 canonical 上。
  *
- * golden 用 Crepe 装配生成（迁移前的现状），随后由 kit 装配对齐；
+ * golden 是**迁移前用 Crepe 装配录制的冻结基线**（去掉 crepe 依赖后仍然保留，作为
+ * 「序列化不许漂移」的长期契约）；当前由自组装配逐字节对齐。
  * 重新生成：`UPDATE_DESK_CANONICAL=1 pnpm --filter desk exec vitest run deskEditorCanonical`
+ * （只在确认行为变化是有意为之、并复核 diff 之后才重新生成。）
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { Crepe } from '@milkdown/crepe'
-import { getMarkdown } from '@milkdown/kit/utils'
 import { describe, expect, it, vi } from 'vitest'
 
 /**
@@ -33,7 +33,6 @@ import {
   rawBlockProjectionPlugins
 } from '../editor/markdown/rawBlockProjection'
 import { createDeskEditor } from './deskEditor'
-import { applyDeskEditorConfigs } from './deskEditorConfigs'
 import { DESK_CANONICAL_CASES } from './deskEditorCanonical.cases'
 
 const goldenPath = join(
@@ -49,33 +48,10 @@ function createRoot(): HTMLElement {
   return root
 }
 
-/**
- * canonical 输出只由「schema + remark 插件 + 序列化选项」决定，因此两条装配路径都挂
- * 同一组投影/图片插件、走同一份共享配置（`applyDeskEditorConfigs`），差异只可能来自装配层。
- */
+/** 装配依赖：只读回调与图片上传（canonical 输出与它们无关，但配置需要）。 */
 const testDeps = {
   isReadOnly: () => false,
   uploadImage: async () => ({ src: 'https://example.com/uploaded.png' })
-}
-
-async function canonicalFromCrepe(source: string): Promise<string> {
-  const root = createRoot()
-  // 必须与生产一致：Desk 关掉了 ImageBlock（见 MilkdownMarkdownEditor.vue），
-  // 否则基线会把 image-block 特性带来的序列化差异也记进 golden。
-  const crepe = new Crepe({
-    root,
-    defaultValue: projectRawBlocksForMilkdown(source),
-    features: { [Crepe.Feature.ImageBlock]: false }
-  })
-  crepe.editor.use(rawBlockProjectionPlugins)
-  crepe.editor.use(imageAttrPlugins)
-  applyDeskEditorConfigs(crepe.editor, testDeps)
-  try {
-    await crepe.create()
-    return crepe.editor.action(getMarkdown())
-  } finally {
-    await crepe.destroy()
-  }
 }
 
 async function canonicalFromKit(source: string): Promise<string> {
@@ -106,12 +82,13 @@ function writeGolden(actual: Record<string, string>): void {
 }
 
 describe('canonical 快照（装配层等价性）', () => {
-  it('Crepe 装配（现状基线）与 golden 一致', async () => {
+  it('自组装配的 canonical 与冻结基线逐字节一致', async () => {
     const actual: Record<string, string> = {}
     for (const testCase of DESK_CANONICAL_CASES) {
-      actual[testCase.name] = await canonicalFromCrepe(testCase.source)
+      actual[testCase.name] = await canonicalFromKit(testCase.source)
     }
 
+    // 只在明确要更新基线时才写盘（默认路径永远是对比，避免「顺手把漂移录进去」）。
     if (UPDATE) {
       writeGolden(actual)
       return
@@ -120,19 +97,6 @@ describe('canonical 快照（装配层等价性）', () => {
     const golden = readGolden()
     for (const testCase of DESK_CANONICAL_CASES) {
       expect(actual[testCase.name], testCase.name).toBe(golden[testCase.name])
-    }
-  }, 120_000)
-
-  // 已经成立：基座 + kit 直供能力 + 共享配置就足以逐字节复现 canonical（公式亦然 ——
-  // 有没有 remark-math，`$x^2$` 的序列化字节都一样）。所以这条断言从现在起就开着，
-  // 后续 P2–P4 每并入一个 feature 都要继续保持绿。
-  // 注意：canonical 等价 **不等于** 渲染等价 —— latex 的 KaTeX 预览、斜杠菜单、工具条
-  // 仍必须移植（P2–P4），否则是可见的 UI 回归。
-  it('kit 自组装配与 golden 一致', async () => {
-    const golden = readGolden()
-    for (const testCase of DESK_CANONICAL_CASES) {
-      const canonical = await canonicalFromKit(testCase.source)
-      expect(canonical, testCase.name).toBe(golden[testCase.name])
     }
   }, 120_000)
 })

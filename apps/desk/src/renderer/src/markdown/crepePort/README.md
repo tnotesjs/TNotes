@@ -27,7 +27,14 @@
 `{ latex, imageBlock, table }` 取代 Crepe 的 `useCrepeFeatures`，
 并把 `buildMenu` 的参数改成结构化类型（两个 `GroupBuilder` 类各带私有字段，名义类型互不兼容）。
 
-待移植（见迁移计划）：`toolbar`（P4）。
+`toolbar/`（P4）取自 `src/feature/toolbar/**`：`index.ts`（`.milkdown-toolbar` 容器 +
+TooltipProvider 的 shouldShow 判定）、`component.tsx`（Vue 工具条）、`config.ts`（默认项：
+粗体/斜体/删除线 + 行内代码/公式/链接）、`features.ts`（`{ latex, ai }`，Desk 默认 ai:false
+—— 「Ask AI」按钮与其依赖一并移除）。它依赖的 `utils/keyboard-shortcut.ts` 与 5 个图标
+（bold/code/italic/link/strikethrough）也一并移植。
+
+**至此 Crepe 里 Desk 用到的 12 个 feature 全部由本目录覆盖**（ai / top-bar / image-block
+按计划未移植），`@milkdown/crepe` 已从依赖中移除。
 
 本目录**刻意保持与上游一致**（便于 diff 与重新移植）：既不进 eslint，也在
 `apps/desk/.prettierignore` 里排除（上游用的是另一套 prettier 配置）。仍受 `tsc` 约束。

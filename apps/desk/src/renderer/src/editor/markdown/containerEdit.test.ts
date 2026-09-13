@@ -1,23 +1,23 @@
 // @vitest-environment happy-dom
 
 import { describe, expect, it } from 'vitest'
-import { Crepe } from '@milkdown/crepe'
 import { editorViewCtx } from '@milkdown/kit/core'
 import { getMarkdown } from '@milkdown/kit/utils'
 
 import { projectRawBlocksForMilkdown, rawBlockProjectionPlugins } from './rawBlockProjection'
+import type { DeskEditorHandle } from '../../markdown/deskEditor'
+import { createTestDeskEditor } from '../../markdown/deskEditorTestKit'
 import { reconcileMarkdownSource } from './sourcePreservation'
 
-function createEditor(source: string): Promise<{ root: HTMLElement; crepe: Crepe }> {
-  const root = document.createElement('div')
-  document.body.append(root)
-  const crepe = new Crepe({ root, defaultValue: projectRawBlocksForMilkdown(source) })
-  crepe.editor.use(rawBlockProjectionPlugins)
-  return crepe.create().then(() => ({ root, crepe }))
+function createEditor(source: string): Promise<{ root: HTMLElement; editor: DeskEditorHandle }> {
+  return createTestDeskEditor({
+    defaultValue: projectRawBlocksForMilkdown(source),
+    configure: (editor) => editor.use(rawBlockProjectionPlugins)
+  }).then(({ root, handle }) => ({ root, editor: handle }))
 }
 
-function findRawContainerPos(crepe: Crepe): number | null {
-  return crepe.editor.action((ctx) => {
+function findRawContainerPos(editor: DeskEditorHandle): number | null {
+  return editor.editor.action((ctx) => {
     const view = ctx.get(editorViewCtx)
     let found: number | null = null
     view.state.doc.descendants((node, pos) => {
@@ -36,14 +36,14 @@ function findRawContainerPos(crepe: Crepe): number | null {
 describe('container source editing', () => {
   it('allows updating a raw-container source while preserving surrounding bytes', async () => {
     const source = '::: details\n\noriginal body\n\n:::\n\nplain paragraph\n'
-    const { root, crepe } = await createEditor(source)
+    const { root, editor } = await createEditor(source)
     try {
-      const baseline = crepe.editor.action(getMarkdown())
-      const pos = findRawContainerPos(crepe)
+      const baseline = editor.editor.action(getMarkdown())
+      const pos = findRawContainerPos(editor)
       expect(pos).not.toBeNull()
 
       const newContainerSource = '::: details 新标题\n\n新正文\n\n:::'
-      crepe.editor.action((ctx) => {
+      editor.editor.action((ctx) => {
         const view = ctx.get(editorViewCtx)
         const node = view.state.doc.nodeAt(pos!)
         expect(node?.type.name).toBe('deskRawBlock')
@@ -55,7 +55,7 @@ describe('container source editing', () => {
         )
       })
 
-      const current = crepe.editor.action(getMarkdown())
+      const current = editor.editor.action(getMarkdown())
       const reconciled = reconcileMarkdownSource(source, baseline, current)
       expect(reconciled).toContain(newContainerSource)
       expect(reconciled).toContain('plain paragraph')
@@ -64,16 +64,16 @@ describe('container source editing', () => {
       // The unchanged paragraph must remain byte-identical (no trailing spaces).
       expect(reconciled.endsWith('\nplain paragraph\n')).toBe(true)
     } finally {
-      await crepe.destroy()
+      await editor.destroy()
       root.remove()
     }
   })
 
   it('keeps non-container raw blocks immutable', async () => {
     const source = '<aside data-x="1">raw</aside>\n\nplain\n'
-    const { root, crepe } = await createEditor(source)
+    const { root, editor } = await createEditor(source)
     try {
-      const pos = crepe.editor.action((ctx) => {
+      const pos = editor.editor.action((ctx) => {
         const view = ctx.get(editorViewCtx)
         let found: number | null = null
         view.state.doc.descendants((node, p) => {
@@ -81,7 +81,7 @@ describe('container source editing', () => {
         })
         return found
       })
-      const blocked = crepe.editor.action((ctx) => {
+      const blocked = editor.editor.action((ctx) => {
         const view = ctx.get(editorViewCtx)
         const node = view.state.doc.nodeAt(pos!)
         const tr = view.state.tr.setNodeMarkup(pos!, undefined, {
@@ -91,19 +91,19 @@ describe('container source editing', () => {
         return view.dispatch(tr)
       })
       expect(blocked).toBeUndefined() // dispatch is void; note the transaction was rejected
-      const markdown = crepe.editor.action(getMarkdown())
+      const markdown = editor.editor.action(getMarkdown())
       expect(markdown).toContain('<aside data-x="1">raw</aside>')
     } finally {
-      await crepe.destroy()
+      await editor.destroy()
       root.remove()
     }
   })
 
   it('deletes an empty tip callout (empty-Backspace path)', async () => {
     const source = 'before\n\n::: tip 💡 TIP\n\n\n\n:::\n\nafter\n'
-    const { root, crepe } = await createEditor(source)
+    const { root, editor } = await createEditor(source)
     try {
-      const pos = crepe.editor.action((ctx) => {
+      const pos = editor.editor.action((ctx) => {
         const view = ctx.get(editorViewCtx)
         let found: number | null = null
         view.state.doc.descendants((node, p) => {
@@ -112,26 +112,26 @@ describe('container source editing', () => {
         return found
       })
       expect(pos).not.toBeNull()
-      crepe.editor.action((ctx) => {
+      editor.editor.action((ctx) => {
         const view = ctx.get(editorViewCtx)
         const node = view.state.doc.nodeAt(pos!)
         expect(node?.type.name).toBe('deskCallout')
         view.dispatch(view.state.tr.delete(pos!, pos! + node!.nodeSize))
       })
       let remaining = 0
-      crepe.editor.action((ctx) => {
+      editor.editor.action((ctx) => {
         const view = ctx.get(editorViewCtx)
         view.state.doc.descendants((node) => {
           if (node.type.name === 'deskCallout') remaining += 1
         })
       })
       expect(remaining).toBe(0)
-      const markdown = crepe.editor.action(getMarkdown())
+      const markdown = editor.editor.action(getMarkdown())
       expect(markdown).toContain('before')
       expect(markdown).toContain('after')
       expect(markdown).not.toContain('::: tip')
     } finally {
-      await crepe.destroy()
+      await editor.destroy()
       root.remove()
     }
   })

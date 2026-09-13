@@ -1,12 +1,13 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Crepe } from '@milkdown/crepe'
 import { editorViewCtx } from '@milkdown/kit/core'
 import { undoInputRule } from '@milkdown/kit/prose/inputrules'
 import { TextSelection } from '@milkdown/kit/prose/state'
 import type { EditorView } from '@milkdown/kit/prose/view'
 
 import { rawBlockProjectionPlugins } from '../editor/markdown/rawBlockProjection'
+import type { DeskEditorHandle } from './deskEditor'
+import { createTestDeskEditor } from './deskEditorTestKit'
 import {
   createBlockShortcutPlugin,
   createMarkdownShortcutInputRules,
@@ -26,26 +27,27 @@ vi.mock('katex', () => ({
   }
 }))
 
-const editors: Crepe[] = []
+const editors: DeskEditorHandle[] = []
 
 async function createEditor(
   onRawBlockInserted = vi.fn(),
   defaultValue = ''
 ): Promise<{
-  crepe: Crepe
+  editor: DeskEditorHandle
   view: EditorView
 }> {
-  const root = document.createElement('div')
-  document.body.append(root)
-  const crepe = new Crepe({ root, defaultValue })
-  crepe.editor.use(rawBlockProjectionPlugins)
-  crepe.editor.use(createMarkdownShortcutInputRules())
-  crepe.editor.use(createBlockShortcutPlugin({ onRawBlockInserted }))
-  await crepe.create()
-  editors.push(crepe)
+  const { handle: editor } = await createTestDeskEditor({
+    defaultValue,
+    configure: (instance) => {
+      instance.use(rawBlockProjectionPlugins)
+      instance.use(createMarkdownShortcutInputRules())
+      instance.use(createBlockShortcutPlugin({ onRawBlockInserted }))
+    }
+  })
+  editors.push(editor)
   return {
-    crepe,
-    view: crepe.editor.action((ctx) => ctx.get(editorViewCtx))
+    editor,
+    view: editor.editor.action((ctx) => ctx.get(editorViewCtx))
   }
 }
 
@@ -75,7 +77,7 @@ afterEach(async () => {
 
 describe('middle-dot code fence shortcut', () => {
   it('creates an empty code block immediately on the third middle dot', async () => {
-    const { view, crepe } = await createEditor()
+    const { view, editor } = await createEditor()
     typeText(view, '··')
     expect(view.state.doc.firstChild?.type.name).toBe('paragraph')
     expect(view.state.doc.textContent).toBe('··')
@@ -85,7 +87,7 @@ describe('middle-dot code fence shortcut', () => {
     expect(view.state.doc.textContent).toBe('')
     expect(view.state.selection.$from.parent.type.name).toBe('code_block')
     expect(view.state.selection.$from.parentOffset).toBe(0)
-    expect(crepe.getMarkdown()).toBe('```\n```\n\n')
+    expect(editor.getMarkdown()).toBe('```\n```\n\n')
   })
 
   it('matches the existing backtick code block, serialization and input-rule undo behavior', async () => {
@@ -94,7 +96,7 @@ describe('middle-dot code fence shortcut', () => {
     typeText(dots.view, '···')
     typeText(backticks.view, '``` ')
     expect(dots.view.state.doc.toJSON()).toEqual(backticks.view.state.doc.toJSON())
-    expect(dots.crepe.getMarkdown()).toBe(backticks.crepe.getMarkdown())
+    expect(dots.editor.getMarkdown()).toBe(backticks.editor.getMarkdown())
     expect(undoInputRule(dots.view.state, dots.view.dispatch)).toBe(
       undoInputRule(backticks.view.state, backticks.view.dispatch)
     )
