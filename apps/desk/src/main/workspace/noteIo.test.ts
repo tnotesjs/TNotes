@@ -25,11 +25,14 @@ afterEach(async () => {
   }
 })
 
-async function makeHandle(): Promise<KnowledgeBaseHandle> {
+async function makeHandle(config: Record<string, unknown> = {}): Promise<KnowledgeBaseHandle> {
   const rootPath = await fs.mkdtemp(path.join(os.tmpdir(), 'desk-kb-'))
   cleanups.push(async () => fs.rm(rootPath, { recursive: true, force: true }))
   await fs.mkdir(path.join(rootPath, 'notes'), { recursive: true })
-  await fs.writeFile(path.join(rootPath, 'tnotes.json'), '{ "title": "测试库" }\n')
+  await fs.writeFile(
+    path.join(rootPath, 'tnotes.json'),
+    `${JSON.stringify({ title: '测试库', ...config })}\n`
+  )
   await fs.writeFile(path.join(rootPath, 'TOC.md'), '- [ ] 0001. 第一篇\n- [x] 0002. 第二篇\n')
   await fs.writeFile(path.join(rootPath, 'notes', '0001. 第一篇.md'), '# 第一篇\n\n正文。\n')
   await fs.writeFile(
@@ -51,6 +54,29 @@ const noopEffects = {
   markInternalWrites: () => {},
   emitChanged: () => {}
 }
+
+/**
+ * 一段「处处不合 Prettier 内置默认」的正文：列表记号、分割线、代码块内部
+ * 都会被整篇重排改掉（`* 甲`→`- 甲`、`***`→`---`、代码加半角分号/换双引号）。
+ * 保存时格式化默认关闭，所以未显式开启时这些字节必须原样落盘。
+ */
+const STYLED_BODY = [
+  '---',
+  'id: note-uuid-1',
+  '---',
+  '',
+  '* 甲',
+  '',
+  '***',
+  '',
+  '```js',
+  'const a  =  1',
+  "const s = 'x'",
+  '```',
+  '',
+  '正文。',
+  ''
+].join('\n')
 
 describe('desk noteIo over @tnotesjs/kb', () => {
   it('resolves renderer uuid (frontmatter id) to the note index', async () => {
@@ -134,6 +160,50 @@ describe('desk noteIo over @tnotesjs/kb', () => {
     )
     expect(saved.note.content).not.toContain('draft')
     expect(saved.note.content).not.toContain('title:')
+  })
+
+  // 保存时格式化默认关闭：这是「未编辑的字节不许被改写」的底线回归。
+  // 把 settings.ts 的 prettier 默认值改回 true，这条会立刻红。
+  it('默认不做保存时格式化，未编辑的字节原样落盘', async () => {
+    const handle = await makeHandle()
+    const doc = await readNote(handle, '0001')
+    const saved = await saveNote(
+      handle,
+      {
+        knowledgeBaseId: handle.id,
+        noteUuid: '0001',
+        content: STYLED_BODY,
+        expectedRevision: doc.revision
+      },
+      noopEffects
+    )
+
+    expect(saved.note.content).toBe(STYLED_BODY)
+    await expect(
+      fs.readFile(path.join(handle.rootPath, 'notes', '0001. 第一篇.md'), 'utf8')
+    ).resolves.toBe(STYLED_BODY)
+  })
+
+  // 库级 tnotes.json 里显式写 prettier:true 是用户（协作者共享）的选择，仍然生效。
+  it('库级显式开启保存时格式化后，整篇按 Prettier 重排', async () => {
+    const handle = await makeHandle({ prettier: true })
+    const doc = await readNote(handle, '0001')
+    const saved = await saveNote(
+      handle,
+      {
+        knowledgeBaseId: handle.id,
+        noteUuid: '0001',
+        content: STYLED_BODY,
+        expectedRevision: doc.revision
+      },
+      noopEffects
+    )
+
+    expect(saved.note.content).toContain('- 甲')
+    expect(saved.note.content).toContain('\n---\n')
+    expect(saved.note.content).toContain('const a = 1;')
+    expect(saved.note.content).toContain('const s = "x";')
+    expect(saved.note.content).not.toContain('* 甲')
   })
 
   it('names pasted local assets with the note index and timestamp', async () => {

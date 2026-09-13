@@ -16,7 +16,38 @@ const noteFile = join(kb, 'notes', '0001. fidelity.md')
 mkdirSync(join(kb, 'notes'), { recursive: true })
 mkdirSync(profile, { recursive: true })
 writeFileSync(join(kb, 'tnotes.json'), JSON.stringify({ title: 'fidelity' }))
-writeFileSync(join(kb, 'TOC.md'), '- [ ] 0001. fidelity\n- [ ] 0002. upgrade\n')
+writeFileSync(join(kb, 'TOC.md'), '- [ ] 0001. fidelity\n- [ ] 0002. upgrade\n- [ ] 0003. format\n')
+
+// 保存时格式化：默认关闭。这段「处处不合 Prettier 内置默认」的正文用来验
+// 「源码视图保存不许重排未编辑的字节」，以及「库级显式开启后确实会重排」。
+const styled = [
+  '---',
+  'id: fidelity-format',
+  '---',
+  '',
+  '* 甲',
+  '',
+  '***',
+  '',
+  '```js',
+  'const a  =  1',
+  "const s = 'x'",
+  '```',
+  '',
+  '正文。',
+  ''
+].join('\n')
+const styledEdited = `${styled}追加。\n`
+const note3File = join(kb, 'notes', '0003. format.md')
+writeFileSync(note3File, styled)
+
+// 第二个库：库级约定显式写 prettier:true（随仓库走、协作者共享），格式化必须仍然生效。
+const kb2 = join(workspace, 'TNotes.format-on')
+const note2File = join(kb2, 'notes', '0001. format-on.md')
+mkdirSync(join(kb2, 'notes'), { recursive: true })
+writeFileSync(join(kb2, 'tnotes.json'), JSON.stringify({ title: 'format-on', prettier: true }))
+writeFileSync(join(kb2, 'TOC.md'), '- [ ] 0001. format-on\n')
+writeFileSync(note2File, styled)
 
 // 嵌套容器是已知的「结构性不忠实」：这段要按普通正文暴露（看得见 ::: 符号）。
 // 后面的 222 段落与正常提示块都与它无关，必须照常渲染 —— 验证「只处理出问题的区域」。
@@ -79,6 +110,21 @@ let failures = 0
 const check = (name, ok, detail) => {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? ` — ${detail}` : ''}`)
   if (!ok) failures += 1
+}
+
+// 等磁盘落到期望内容：保存是异步的，用「等元素消失」会在元素从未出现时假通过。
+const waitForFile = async (file, predicate, timeoutMs = 8000) => {
+  const deadline = Date.now() + timeoutMs
+  let last = ''
+  for (;;) {
+    try {
+      last = readFileSync(file, 'utf8')
+    } catch {
+      last = ''
+    }
+    if (predicate(last) || Date.now() > deadline) return last
+    await new Promise((resolve) => setTimeout(resolve, 200))
+  }
 }
 
 try {
@@ -231,6 +277,69 @@ try {
     JSON.stringify(upgradedFile.slice(0, 60))
   )
   await page.screenshot({ path: join(deskDir, 'scripts', 'shots', 'fidelity-upgrade.png') })
+
+  // ---- 保存时格式化默认关闭：源码视图保存只落用户改动，未编辑的字节不许被重排 ----
+  await page.locator('.toc-row', { hasText: '0003' }).first().locator('.node-label').click()
+  await page.waitForTimeout(2500)
+  check(
+    '可视化加载不改动 0003 的磁盘内容',
+    readFileSync(note3File, 'utf8') === styled,
+    JSON.stringify(readFileSync(note3File, 'utf8').slice(0, 24))
+  )
+  const sourceViewButton = page.getByRole('button', { name: '源码视图', exact: true })
+  await sourceViewButton.filter({ visible: true }).first().click()
+  await page.waitForTimeout(1200)
+  const formatCm = page
+    .locator('.markdown-source-editor .cm-content')
+    .filter({ visible: true })
+    .first()
+  await formatCm.click()
+  await page.keyboard.press('ControlOrMeta+a')
+  await page.keyboard.insertText(styledEdited)
+  await page.keyboard.press('ControlOrMeta+s')
+  const savedDefault = await waitForFile(note3File, (text) => text === styledEdited)
+  check(
+    '默认关闭：源码视图保存只落改动，不整篇重排',
+    savedDefault === styledEdited,
+    JSON.stringify(savedDefault.slice(-24))
+  )
+  check(
+    '默认关闭：列表记号 / 分割线 / 代码块内部逐字保留',
+    savedDefault.includes('* 甲') &&
+      savedDefault.includes('\n***\n') &&
+      savedDefault.includes('const a  =  1') &&
+      savedDefault.includes("const s = 'x'"),
+    JSON.stringify(savedDefault.slice(0, 40))
+  )
+
+  // ---- 库级显式开启（tnotes.json prettier:true）后格式化照旧生效，能力没丢 ----
+  await page.getByText('format-on', { exact: true }).first().click()
+  await page.waitForTimeout(1800)
+  await page.locator('.toc-row', { hasText: 'format-on' }).first().locator('.node-label').click()
+  await page.waitForTimeout(2500)
+  await page
+    .getByRole('button', { name: '源码视图', exact: true })
+    .filter({ visible: true })
+    .first()
+    .click()
+  await page.waitForTimeout(1200)
+  const onCm = page.locator('.markdown-source-editor .cm-content').filter({ visible: true }).first()
+  await onCm.click()
+  await page.keyboard.press('ControlOrMeta+a')
+  await page.keyboard.insertText(styledEdited)
+  await page.keyboard.press('ControlOrMeta+s')
+  const savedOn = await waitForFile(note2File, (text) => text.includes('- 甲'))
+  check(
+    '库级开启后整篇按 Prettier 重排（列表记号 / 分割线）',
+    savedOn.includes('- 甲') && !savedOn.includes('* 甲') && savedOn.includes('\n---\n'),
+    JSON.stringify(savedOn.slice(0, 30))
+  )
+  check(
+    '库级开启后代码块内部也会被改写（这正是默认关闭要避免的破坏）',
+    savedOn.includes('const a = 1;') && savedOn.includes('const s = "x";'),
+    JSON.stringify(savedOn.slice(-40))
+  )
+  await page.screenshot({ path: join(deskDir, 'scripts', 'shots', 'fidelity-prettier.png') })
 
   console.log(failures === 0 ? '\nfidelity e2e: 全部通过' : `\nfidelity e2e: ${failures} 项失败`)
   if (failures > 0) process.exitCode = 1

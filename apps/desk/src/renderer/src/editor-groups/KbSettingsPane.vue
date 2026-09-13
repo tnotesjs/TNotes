@@ -108,7 +108,7 @@ const headingDepthChoice = computed({
     draft.headingNumberMaxDepth = value === 'inherit' ? null : Number(value)
   }
 })
-const globalPrettierLabel = computed(() => ((workspace.settings?.prettier ?? true) ? '开' : '关'))
+const globalPrettierLabel = computed(() => ((workspace.settings?.prettier ?? false) ? '开' : '关'))
 const globalHeadingDepth = computed(() => workspace.settings?.headingNumberMaxDepth ?? 2)
 
 function formSnapshot(): string {

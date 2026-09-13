@@ -143,11 +143,16 @@ async function checkNow(): Promise<void> {
           <em>ms</em>
         </span>
       </label>
-      <label class="switch-field" title="仅源码保存时生效；可视化编辑不会整篇重排">
+      <label class="switch-field" title="仅源码视图保存时生效；可视化编辑不会整篇重排">
         <input v-model="draft.prettier" type="checkbox" />
         <span>保存时用 Prettier 格式化 Markdown</span>
       </label>
     </div>
+    <p class="settings-note">
+      默认关闭。开启后只影响源码视图里的保存（可视化编辑不会整篇重排），并且使用 Prettier
+      内置默认风格、不读取仓库里的 .prettierrc；需要自定义格式风格请在 IDE（VSCode /
+      Cursor）中格式化。
+    </p>
     <div class="settings-row update-row">
       <label class="switch-field">
         <input v-model="draft.updates.autoCheck" type="checkbox" />
@@ -235,5 +240,12 @@ async function checkNow(): Promise<void> {
 .update-summary {
   color: var(--muted);
   font-size: 10px;
+}
+
+.settings-note {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
 }
 </style>

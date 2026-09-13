@@ -110,3 +110,15 @@ describe('配置文件字段级容错', () => {
     expect(loadSettings().imageUpload.optimize.strength).toBe('high')
   })
 })
+
+describe('保存时格式化（Prettier）', () => {
+  it('默认关闭，用户显式开关都按选择持久化', () => {
+    expect(loadSettings().prettier).toBe(false)
+
+    expect(saveSettings({ prettier: true }).prettier).toBe(true)
+    expect(loadSettings().prettier).toBe(true)
+
+    expect(saveSettings({ prettier: false }).prettier).toBe(false)
+    expect(loadSettings().prettier).toBe(false)
+  })
+})

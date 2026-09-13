@@ -68,7 +68,7 @@ const groupDefaults: Record<string, Partial<AppSettings>> = {
     noteTocDisplay: 'expanded',
     autosave: { enabled: true, delayMs: 1000 },
     workspaceLayout: 'kb-dir-content',
-    prettier: true,
+    prettier: false,
     updates: { autoCheck: true }
   },
   tabs: {
