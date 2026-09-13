@@ -18,6 +18,7 @@ import {
 } from './projectionFidelity.cases'
 import { parseMarkdownSource } from './sourcePreservation'
 import {
+  actionableProblems,
   canonicalizeMarkdown,
   classifyProjectionFidelity,
   degradableBlockIndexes,
@@ -273,5 +274,66 @@ describe('projectionFidelity · 降级最小性', () => {
     )
     expect(classifyProjectionFidelity(source, rebuilt).ok).toBe(true)
     expect(rebuilt).toContain('222')
+  })
+})
+
+describe('projectionFidelity · 降级不吞无关内容', () => {
+  it('嵌套容器前面的正常段落/表格/列表不会被降级', async () => {
+    // 回归：收敛判据一度用 report.ok，导致只剩 content-changed（行内 <br/> 规范化）时
+    // 循环仍以为没收敛，一路向左把正常内容吞成原文卡片。
+    const source = [
+      '---',
+      'id: x',
+      '---',
+      '',
+      '# 标题',
+      '',
+      '普通段落里的行内换行：第一行<br/>第二行。',
+      '',
+      '| 表头一 | 表头二 |',
+      '| --- | --- |',
+      '| 第一行<br/>第二行 | 普通单元格 |',
+      '',
+      '- 列表项 A',
+      '- 列表项 B',
+      '',
+      '::: tip 外层',
+      '外层正文',
+      '',
+      '::: info 内层',
+      '内层正文',
+      '',
+      ':::',
+      '',
+      ':::',
+      '',
+      '收尾段落。',
+      ''
+    ].join('\n')
+    const blocks = parseMarkdownSource(source).blocks
+    const contentIndexes = blocks
+      .map((block, index) => ({ block, index }))
+      .filter(
+        ({ block }) =>
+          block.source.includes('<br/>') || block.kind === 'table' || block.kind === 'list'
+      )
+      .map(({ index }) => index)
+    expect(contentIndexes.length).toBeGreaterThanOrEqual(3)
+
+    let plan = degradableBlockIndexes(source, await projectToCanonical(source))
+    for (let round = 0; round < 8; round += 1) {
+      const rebuilt = await canonicalFromVirtual(
+        projectRawBlocksForMilkdown(source, { forceRawBlockIndexes: new Set(plan) })
+      )
+      const report = classifyProjectionFidelity(source, rebuilt)
+      if (actionableProblems(report).length === 0) break
+      const next = extendDegradationIndexes(source, rebuilt, plan)
+      if (next.length === plan.length) break
+      plan = next
+    }
+    for (const index of contentIndexes) {
+      expect(plan, `plan=${JSON.stringify(plan)} 不该包含内容块 ${index}`).not.toContain(index)
+    }
+    expect(plan.length).toBeGreaterThan(0)
   })
 })

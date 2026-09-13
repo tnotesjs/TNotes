@@ -455,6 +455,37 @@ export function findAbsorbedBlocks(
 }
 
 /**
+ * 「可行动」的不忠实：结构性的那几种（吞并 / 丢失 / 多出）。
+ *
+ * `content-changed`（序列化把行内 <br/> 规范化、表格重排…）不在其中 ——
+ * 未编辑的块保存时逐字取原文，内容不会丢；把它也算作"没收敛"会导致降级循环
+ * 一路向左吞掉无关内容（实测会把正常表格/列表/段落变成原文卡片）。
+ * `reordered` 是 extra/lost 的下游症状，同样不单独行动。
+ */
+export function actionableProblems(report: FidelityReport): FidelityBlockResult[] {
+  return report.problematic.filter(
+    (item) => item.reason === 'absorbed' || item.reason === 'lost' || item.reason === 'extra'
+  )
+}
+
+/** 只由闭合标记组成的块（例如单独一行 `:::`），属于结构而非内容 */
+function isDelimiterOnlyBlock(source: string): boolean {
+  const lines = source.split('\n').filter((line) => line.trim() !== '')
+  return lines.length > 0 && lines.every((line) => CLOSER_LINE.test(line))
+}
+
+/** 扩张时允许吃进的结构性块：容器类，或只由闭合标记组成的块 */
+function isStructuralBlock(kind: string, source: string): boolean {
+  return (
+    kind === 'raw-container' ||
+    kind === 'raw-component' ||
+    kind === 'raw-diagram' ||
+    kind === 'html' ||
+    isDelimiterOnlyBlock(source)
+  )
+}
+
+/**
  * 降级计划：算出「哪些顶层块要退化成按原文保留」。
  *
  * 策略是**区域降级**：把每个问题的源码块下标与它被并进/错位到的对端下标取成一个
@@ -494,18 +525,26 @@ export function extendDegradationIndexes(
   current: readonly number[]
 ): number[] {
   const report = classifyProjectionFidelity(source, canonical)
+  const actionable = actionableProblems(report)
+  if (actionable.length === 0) return [...current]
+  const blocks = parseMarkdownSource(canonicalizeMarkdown(source)).blocks
   const next = new Set(current)
-  for (const item of report.problematic) {
+  for (const item of actionable) {
     if (item.reason === 'extra') {
-      next.add(Math.max(0, Math.min(item.index - 1, report.sourceBlockCount - 1)))
+      const anchor = Math.max(0, Math.min(item.index - 1, report.sourceBlockCount - 1))
+      if (isStructuralBlock(blocks[anchor]?.kind ?? '', blocks[anchor]?.source ?? ''))
+        next.add(anchor)
       continue
     }
-    if (item.reason === 'reordered' || item.reason === 'content-changed') continue
-    next.add(Math.min(item.index, Math.max(0, report.sourceBlockCount - 1)))
+    const index = Math.min(Math.max(0, item.index), Math.max(0, report.sourceBlockCount - 1))
+    if (isStructuralBlock(blocks[index]?.kind ?? '', blocks[index]?.source ?? '')) next.add(index)
   }
-  // 仍不忠实 → 区域向左扩一块：结构错位的根因往往在上游（容器/分隔符）那一块
-  if (!report.ok && current.length > 0) {
-    next.add(Math.max(0, Math.min(...current) - 1))
+  // 仍有可行动问题 → 区域向左扩一块，但**只吃结构性块**：结构错位的根因在容器/分隔符，
+  // 绝不把无关的正常内容（段落 / 表格 / 列表）吞成原文卡片。
+  if (actionable.length > 0 && current.length > 0) {
+    const previous = Math.max(0, Math.min(...current) - 1)
+    const block = blocks[previous]
+    if (block && isStructuralBlock(block.kind, block.source)) next.add(previous)
   }
   return [...next].sort((a, b) => a - b)
 }

@@ -87,6 +87,7 @@ import {
 import { serializeDeskCalloutMdast } from '../editor/markdown/deskCallout'
 import { reconcileMarkdownSource } from '../editor/markdown/sourcePreservation'
 import {
+  actionableProblems,
   classifyProjectionFidelity,
   degradableBlockIndexes,
   extendDegradationIndexes,
@@ -935,11 +936,14 @@ function scheduleFidelityCheck(): void {
         synchronizing = false
       }
       const report = classifyProjectionFidelity(originalSource, crepe.getMarkdown())
-      if (report.ok) {
+      // 收敛判据是「没有可行动的结构性问题」：content-changed（行内 <br/> 等规范化）
+      // 不该继续驱动降级，否则会一路吃掉无关内容。
+      const actionable = actionableProblems(report)
+      if (actionable.length === 0) {
         remaining = 0
         break
       }
-      remaining = report.problematic.length
+      remaining = actionable.length
       const next = extendDegradationIndexes(originalSource, crepe.getMarkdown(), plan)
       if (next.length === plan.length) break
       plan = next
