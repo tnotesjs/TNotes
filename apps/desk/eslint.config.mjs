@@ -8,7 +8,17 @@ export default defineConfig(
   {
     // electron-builder 的配置必须是 CJS（它用 require 加载），满足不了 TS 规则的
     // 「禁止 require / 必须写返回类型」，所以交给 prettier 管格式、不进 eslint。
-    ignores: ['**/node_modules', '**/dist', '**/out', 'playground/**', 'electron-builder.cjs']
+    //
+    // crepePort/ 是从 @milkdown/crepe（MIT）移植的源码：**刻意保持与上游一致**，
+    // 便于日后 diff / 重新移植，因此不按本仓风格改写（仍受 tsc 与 prettier 约束）。
+    ignores: [
+      '**/node_modules',
+      '**/dist',
+      '**/out',
+      'playground/**',
+      'electron-builder.cjs',
+      'src/renderer/src/markdown/crepePort/**'
+    ]
   },
   tseslint.configs.recommended,
   eslintPluginVue.configs['flat/recommended'],

@@ -20,6 +20,7 @@ import { getMarkdown } from '@milkdown/kit/utils'
 
 import { codeMirror } from './crepePort/codemirror'
 import { cursor } from './crepePort/cursor'
+import { latex, type LatexFeatureConfig } from './crepePort/latex'
 import { linkTooltip } from './crepePort/linktooltip'
 import { listItem } from './crepePort/listitem'
 import { placeholder, type DeskPlaceholderConfig } from './crepePort/placeholder'
@@ -51,6 +52,8 @@ export interface DeskEditorOptions extends DeskEditorConfigOptions {
   /** Desk 的代码块配置（语言、CodeMirror 扩展、主题、复制按钮文案等）。 */
   codeBlock: Partial<CodeBlockConfig>
   placeholder?: DeskPlaceholderConfig
+  /** 行内/块级公式（`math_inline`、`$$` 代码块预览、KaTeX 选项）。 */
+  latex?: LatexFeatureConfig
 }
 
 export interface DeskEditorHandle {
@@ -90,6 +93,7 @@ export function createDeskEditor(options: DeskEditorOptions): DeskEditorHandle {
   linkTooltip(editor)
   cursor(editor)
   placeholder(editor, { config: options.placeholder, isReadOnly: options.isReadOnly })
+  latex(editor, options.latex)
 
   return {
     editor,

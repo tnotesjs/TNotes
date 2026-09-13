@@ -12,8 +12,16 @@
 - 补上 TypeScript 类型（配置类型直接复用 `@milkdown/kit/component/*` 导出的 `*Config`）。
 
 已移植：`codeMirror`（code block + CodeMirror 装配）、`listItem`、`table`、`linkTooltip`、
-`cursor`（含虚拟光标 `prosemirror-virtual-cursor`）、`placeholder`。
+`cursor`（含虚拟光标 `prosemirror-virtual-cursor`）、`placeholder`、`latex/`（`math_inline` /
+块级 LaTeX schema、`remark-math`、KaTeX 渲染、输入规则、行内公式 tooltip、`$$` 代码块预览）。
 
-待移植（见迁移计划）：`latex`（P2）、斜杠菜单（P3）、`toolbar`（P4）。
+`latex/` 直接取自 Crepe 的 **TypeScript 源码** `src/feature/latex/**`（不是编译产物），
+只有两处改动：`index.ts` 去掉 Crepe 的 feature 开关登记、`inline-tooltip/component.tsx`
+用等价的 `h()` 渲染函数重写（原文件是 JSX，本仓没有 JSX 编译管线）。
+
+待移植（见迁移计划）：斜杠菜单（P3）、`toolbar`（P4）。
+
+本目录**刻意保持与上游一致**（便于 diff 与重新移植），因此不进 eslint；仍受 `tsc`
+与 `prettier` 约束。
 
 上游许可：Milkdown / Crepe 均为 MIT。
