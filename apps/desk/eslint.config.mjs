@@ -5,7 +5,11 @@ import eslintPluginVue from 'eslint-plugin-vue'
 import vueParser from 'vue-eslint-parser'
 
 export default defineConfig(
-  { ignores: ['**/node_modules', '**/dist', '**/out', 'playground/**'] },
+  {
+    // electron-builder 的配置必须是 CJS（它用 require 加载），满足不了 TS 规则的
+    // 「禁止 require / 必须写返回类型」，所以交给 prettier 管格式、不进 eslint。
+    ignores: ['**/node_modules', '**/dist', '**/out', 'playground/**', 'electron-builder.cjs']
+  },
   tseslint.configs.recommended,
   eslintPluginVue.configs['flat/recommended'],
   {

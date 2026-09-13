@@ -38,9 +38,13 @@ describe('e2e registry', () => {
     }
   })
 
-  it('体检结论被固化：mindmap 与 excalidraw-e0 是 manual（无断言/试验台）', () => {
+  it('体检结论被固化：无断言工具与需打包产物的套件都是 manual', () => {
     const manual = SUITES.filter((suite) => suite.tier === 'manual').map((suite) => suite.name)
-    expect(manual.sort()).toEqual(['e2e-excalidraw-e0.mjs', 'e2e-mindmap.mjs'])
+    expect(manual.sort()).toEqual([
+      'e2e-excalidraw-e0.mjs',
+      'e2e-mindmap.mjs',
+      'e2e-packaged-smoke.mjs'
+    ])
   })
 
   it('资源约束按 locks 声明：clipboard / focus 各成一组，回归集不再整机独占', () => {
@@ -62,12 +66,12 @@ describe('e2e registry', () => {
     expect(byLock('focus')).toEqual(
       ['e2e-editor-focus.mjs', 'e2e-numbered-tabs.mjs', 'e2e-tab-drag.mjs'].sort()
     )
-    // serial（整机独占）只剩两个 manual 套件：默认不参与回归
+    // serial（整机独占）只剩 manual 套件：默认不参与回归
     expect(
       SUITES.filter((suite) => suite.serial)
         .map((suite) => suite.name)
         .sort()
-    ).toEqual(['e2e-excalidraw-e0.mjs', 'e2e-mindmap.mjs'])
+    ).toEqual(['e2e-excalidraw-e0.mjs', 'e2e-mindmap.mjs', 'e2e-packaged-smoke.mjs'])
     for (const suite of SUITES) {
       if (suite.serial) expect(suite.locks ?? [], suite.name).toEqual([])
     }

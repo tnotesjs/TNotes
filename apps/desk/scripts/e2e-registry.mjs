@@ -18,6 +18,8 @@
 //     excalidraw-tab 覆盖 → tier=manual
 //   · `e2e-open-random-notes` 的断言点已被单测 + 其它套件的启动/打开流程覆盖，
 //     属可删候选（保留是因为 4.5s 很便宜且是新 fixture 的启动冒烟）
+//   · `e2e-packaged-smoke` 需要打包产物（`build:unpack`），且验的是 asar/Vite 这类
+//     只在 .app 里才暴露的集成问题 → tier=manual
 export const SUITES = [
   {
     name: 'e2e-assets-acceptance.mjs',
@@ -528,5 +530,14 @@ export const SUITES = [
     serial: false,
     smoke: false,
     note: '渲染忠实性：结构性不忠实的区域降级为「按原文显示」，无关内容照常渲染，切视图不改磁盘'
+  },
+  {
+    name: 'e2e-packaged-smoke.mjs',
+    area: 'packaged',
+    tier: 'manual',
+    globs: ['apps/desk/electron-builder.cjs', 'apps/desk/src/main/**', 'apps/desk/src/preload/**'],
+    serial: true,
+    smoke: false,
+    note: '打包产物冒烟：.app 里编辑器可用 + 站点预览真能出页面（验 asar 关闭与平台二进制裁剪）'
   }
 ]
