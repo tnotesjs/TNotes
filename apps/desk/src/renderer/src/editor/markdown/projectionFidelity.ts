@@ -369,6 +369,23 @@ export function classifyProjectionFidelity(source: string, canonical: string): F
       })
       return
     }
+    // 同下标还有块（只是内容不同）= 这一块被改写，不是「丢失 + 多出」。
+    // 这类差异（例如序列化把行内 <br/> 规范化掉、围栏信息串变化）不该触发降级：
+    // 未编辑的块保存时逐字取原文，内容不会丢；把正常内容变成「原文卡片」才是误伤。
+    const counterpart = canonicalComparable[index]
+    if (counterpart !== undefined && counterpart.length > 0) {
+      claimed.add(index)
+      results.push({
+        index,
+        kind: block.kind,
+        verdict: 'unfaithful',
+        reason: 'content-changed',
+        againstIndex: index,
+        source: block.source,
+        canonical: counterpart
+      })
+      return
+    }
     results.push({
       index,
       kind: block.kind,
