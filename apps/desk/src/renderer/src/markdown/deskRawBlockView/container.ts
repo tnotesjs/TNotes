@@ -1,4 +1,5 @@
 import { parseFootprintsSource, type FootprintsPayload } from '@tnotesjs/ui'
+import { applyCollapseChrome, isCollapsibleCode } from '@tnotesjs/ui/code'
 
 import {
   isStructuredCalloutSource,
@@ -17,6 +18,7 @@ import {
   withCodeGroupEntryTitle,
   type CodeGroupEntry
 } from '../../editor/markdown/deskInclude'
+import { CHEVRON_DOWN_ICON } from '../copyIcons'
 import {
   applySwiperTabsPadding,
   createSwiperTabNav,
@@ -198,12 +200,48 @@ export function mountRawContainer(ctx: DeskRawBlockMountContext): void {
       const panelEls: HTMLDivElement[] = []
       const DRAG_THRESHOLD_PX = 8
 
+      /**
+       * 代码分组的折叠 Icon：放在 tab 行最左侧（面板自带的会被 tab 盖住），
+       * 作用于**当前**面板；纯视图状态，不写回 markdown。
+       */
+      const collapseButton = document.createElement('button')
+      collapseButton.type = 'button'
+      collapseButton.className = 'code-group-collapse desk-code-collapse'
+      collapseButton.innerHTML = CHEVRON_DOWN_ICON
+      collapseButton.hidden = true
+      applyCollapseChrome(collapseButton, false)
+      let activePanelIndex = initialActive
+
+      const activePanel = (): HTMLDivElement | undefined => panelEls[activePanelIndex]
+
+      const syncGroupCollapse = (): void => {
+        const entry = codeGroupEntries[activePanelIndex]
+        const collapsible = Boolean(entry && isCollapsibleCode(entry.code))
+        const panel = activePanel()
+        if (!collapsible) panel?.classList.remove('is-collapsed')
+        collapseButton.hidden = !collapsible
+        applyCollapseChrome(collapseButton, Boolean(panel?.classList.contains('is-collapsed')))
+      }
+
       const activateTab = (index: number): void => {
+        activePanelIndex = index
         tabButtons.forEach((button, buttonIndex) =>
           button.classList.toggle('active', buttonIndex === index)
         )
         panelEls.forEach((pane, paneIndex) => pane.classList.toggle('active', paneIndex === index))
+        // 切到的面板若处于收起状态就自动展开：别让人看到一片被裁掉的代码。
+        activePanel()?.classList.remove('is-collapsed')
+        syncGroupCollapse()
       }
+
+      collapseButton.addEventListener('pointerdown', (event) => event.stopPropagation())
+      collapseButton.addEventListener('click', (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        const panel = activePanel()
+        if (!panel) return
+        applyCollapseChrome(collapseButton, panel.classList.toggle('is-collapsed'))
+      })
 
       const swapAdjacent = <T>(items: T[], index: number, toward: -1 | 1): void => {
         const other = index + toward
@@ -532,6 +570,8 @@ export function mountRawContainer(ctx: DeskRawBlockMountContext): void {
         void addCodeGroupTab()
       })
       tabs.append(addButton)
+      tabs.prepend(collapseButton)
+      syncGroupCollapse()
       if (options?.renameIndex != null) {
         const renameTab = tabButtons[options.renameIndex]
         if (renameTab) startTabRename(renameTab, options.renameIndex)

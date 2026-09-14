@@ -92,10 +92,23 @@ graph TD
   - 子
 \`\`\`
 
+\`\`\`js [long.js]
+` +
+      Array.from({ length: 30 }, (_, index) => `console.log(${index})`).join('\n') +
+      `
+\`\`\`
+
+\`\`\`text [one-line.txt]
+` +
+      'x'.repeat(400) +
+      `
+\`\`\`
+
 ::: footprints 2026-09-06 12:00
 一段足迹正文。
 :::
-` + '\n行内 `{{ count }}`。正文 {{ n }}。\n'
+` +
+      '\n行内 `{{ count }}`。正文 {{ n }}。\n'
   )
   write('assets/pic.txt', 'asset file')
   write('public/fixture.txt', 'public asset')
@@ -125,6 +138,17 @@ describe('static site build', () => {
     expect(home).toContain('<figcaption>图片</figcaption>')
     expect(home).toContain('width:50%')
     expect(fs.existsSync(dist('404.html'))).toBe(true)
+  })
+
+  it('长代码块 SSR 出折叠 Icon，短代码块不出', () => {
+    const guide = fs.readFileSync(dist('notes/2.html'), 'utf8')
+    // 30 行的那个块带折叠 Icon，且默认是展开状态（折叠只是页面内的视图状态）
+    expect(guide).toContain('tn-code-block__collapse-btn')
+    expect(guide).toContain('aria-label="收起代码"')
+    expect(guide).toContain('aria-expanded="true"')
+    // 短的 `console.log(1)` 块不该有折叠 Icon
+    const collapseCount = guide.split('tn-code-block__collapse-btn').length - 1
+    expect(collapseCount).toBe(1)
   })
 
   it('renders the TOC sidebar with done markers', () => {

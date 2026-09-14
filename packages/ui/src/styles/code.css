@@ -5,6 +5,10 @@
   background: var(--tn-c-bg-soft);
   color: var(--tn-c-text);
   overflow: hidden;
+  /* 宽度只由正文容器决定：长行走块内横向滚动，永远不把页面撑宽 */
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
 }
 .tn-code-block__header,
 .tn-code-fullscreen > header {
@@ -17,6 +21,19 @@
   padding: 0 12px;
   border-bottom: 1px solid var(--tn-c-divider);
   font: 13px/24px var(--tn-font-sans);
+}
+.tn-code-block__collapse-btn,
+.tn-code-group__collapse-btn {
+  flex: none;
+}
+.tn-code-block__collapse-btn svg,
+.tn-code-group__collapse-btn svg {
+  display: block;
+  transition: transform 0.15s ease;
+}
+.tn-code-block__collapse-btn.is-collapsed svg,
+.tn-code-group__collapse-btn.is-collapsed svg {
+  transform: rotate(-90deg);
 }
 .tn-code-block__title,
 .tn-code-fullscreen > header > span {
@@ -67,12 +84,20 @@
   outline: 2px solid var(--tn-c-brand);
   outline-offset: -2px;
 }
+/*
+ * 默认（VitePress 同款宽高处理）：高度由内容撑开，不设 max-height、不出现内部纵向滚动；
+ * 宽度不超出容器，超长单行在代码块内横向滚动；原始换行与缩进原样保留。
+ * 「收起」是显式可选的视图状态（见文件末尾 .is-collapsed），默认不存在。
+ */
 .tn-code-block pre {
   background: transparent;
   margin: 0;
   padding: 8px 0;
-  max-height: 480px;
-  overflow: auto;
+  max-height: none;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: pre;
   font: 14px/24px var(--tn-font-mono);
   tab-size: 2;
 }
@@ -155,6 +180,36 @@ html[data-theme='dark'] .tn-code-highlight span:not(.line) {
   color: var(--tn-c-brand);
   border-bottom-color: var(--tn-c-brand);
 }
+/*
+ * 代码分组：折叠 Icon 放在 tab 行最左侧——面板自带的那个会被 tab 行盖住，
+ * 所以带 tab 的分组统一用 tab 行里这颗（点它作用于**当前**面板）。
+ */
+.tn-code-group__tabs .tn-code-group__collapse-btn {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 4px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--tn-c-bg-soft);
+  color: var(--tn-c-text-2);
+}
+.tn-code-group__tabs .tn-code-group__collapse-btn:hover {
+  background: var(--tn-c-hover);
+  color: var(--tn-c-text);
+}
+.tn-code-group__collapse-btn[hidden] {
+  display: none;
+}
+.tn-code-group.has-tabs .tn-code-block__collapse-btn {
+  display: none;
+}
 .tn-code-group .tn-code-block__title {
   visibility: hidden;
 }
@@ -181,4 +236,27 @@ html[data-theme='dark'] .tn-code-highlight span:not(.line) {
 }
 .tn-code-fullscreen .tn-code-block pre {
   max-height: none;
+}
+
+/* -------------------------- 收起（视图状态，不落库） -------------------------- */
+
+.tn-code-block__content {
+  position: relative;
+}
+
+.tn-code-block.is-collapsed .tn-code-block__content pre {
+  max-height: var(--tn-code-collapse-height, 360px);
+  overflow-y: hidden;
+}
+
+/* 收起时底部渐隐，提示下面还有内容 */
+.tn-code-block.is-collapsed .tn-code-block__content::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 64px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--tn-c-bg-soft));
 }

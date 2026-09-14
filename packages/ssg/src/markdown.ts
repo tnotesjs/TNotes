@@ -10,7 +10,7 @@ import path from 'node:path'
 import { componentPlugin } from '@mdit-vue/plugin-component'
 import { frontmatterPlugin } from '@mdit-vue/plugin-frontmatter'
 import { sfcPlugin } from '@mdit-vue/plugin-sfc'
-import { highlightCodeSync, prepareCodeHighlighter } from '@tnotesjs/ui/code'
+import { highlightCodeSync, isCollapsibleCode, prepareCodeHighlighter } from '@tnotesjs/ui/code'
 import { parseImageAttrs, type ImageAlign } from '@tnotesjs/ui/image-markdown'
 import { parseFootprintsDatetime, parseFootprintsSource } from '@tnotesjs/ui/footprints-parse'
 import { normalizeMindmapMarkdown, parseMindmapFence } from '@tnotesjs/ui/mindmap-parse'
@@ -143,14 +143,15 @@ function configureContainers(md: MarkdownIt) {
   md.use(markdownItContainer, 'code-group', {
     render(tokens: any[], index: number) {
       if (tokens[index].nesting === -1) return '</CodeGroup>\n'
-      const items: Array<{ info: string }> = []
+      const items: Array<{ info: string; collapsible: boolean }> = []
       let itemIndex = 0
       for (let i = index + 1; i < tokens.length; i++) {
         if (tokens[i].type === 'container_code-group_close') break
         if (tokens[i].type !== 'fence') continue
         tokens[i].meta ??= {}
         tokens[i].meta.tnCodeGroupIndex = itemIndex++
-        items.push({ info: tokens[i].info })
+        // 只带「够不够长」的结论，不带 code：代码在页面里已经有一份，别再加一份。
+        items.push({ info: tokens[i].info, collapsible: isCollapsibleCode(tokens[i].content) })
       }
       return `<CodeGroup :items="${bindJson(items)}">\n`
     }

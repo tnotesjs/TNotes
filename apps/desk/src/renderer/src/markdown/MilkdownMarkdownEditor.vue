@@ -64,6 +64,7 @@ import { createCodeBlockTitlePlugin } from './codeBlockTitlePlugin'
 import { createCodeBlockLatexPreviewPlugin } from './codeBlockLatexPreview'
 import { createCodeBlockHighlightBundle } from './codeBlockHighlightPlugin'
 import { CHECK_ICON, COPY_ICON } from './copyIcons'
+import { setDeskCodeBlockCollapsed, toggleDeskCodeBlockCollapsed } from './codeBlockCollapse'
 import { exitCodeBlockFullscreen, toggleCodeBlockFullscreen } from './codeBlockFullscreen'
 import { githubDark, githubLight } from '@uiw/codemirror-theme-github'
 
@@ -807,6 +808,16 @@ function handleClick(event: MouseEvent): void {
   // Milkdown's Copy uses navigator.clipboard.writeText and only sync-catches
   // failures, so Electron's async NotAllowedError never falls back. Intercept
   // in capture and use Desk's permission-safe path instead.
+  // 代码块标题左侧的「收起 / 展开」（纯视图状态，不写回 markdown）
+  const collapseButton = event.target.closest('.milkdown-code-block .desk-code-collapse')
+  if (collapseButton instanceof HTMLElement) {
+    event.preventDefault()
+    event.stopPropagation()
+    const block = collapseButton.closest('.milkdown-code-block')
+    if (block instanceof HTMLElement) toggleDeskCodeBlockCollapsed(block)
+    return
+  }
+
   const expandButton = event.target.closest('.milkdown-code-block .desk-code-expand')
   if (expandButton instanceof HTMLElement) {
     event.preventDefault()
@@ -814,6 +825,12 @@ function handleClick(event: MouseEvent): void {
     const block = expandButton.closest('.milkdown-code-block')
     if (block instanceof HTMLElement) toggleCodeBlockFullscreen(block, expandButton)
     return
+  }
+
+  // 收起的代码块：点到块内任意位置就展开，避免「看不到自己在改什么」。
+  const collapsedBlock = event.target.closest('.milkdown-code-block.is-collapsed')
+  if (collapsedBlock instanceof HTMLElement) {
+    setDeskCodeBlockCollapsed(collapsedBlock, false)
   }
 
   const copyButton = event.target.closest('.milkdown-code-block .copy-button')

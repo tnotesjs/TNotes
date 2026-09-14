@@ -6,6 +6,12 @@
  */
 
 import { createApp } from 'vue'
+import {
+  applyCollapseChrome,
+  expandCollapsedCodeBlocks,
+  isCodeBlockCollapsed,
+  toggleCodeBlockCollapsed
+} from '@tnotesjs/ui/code'
 import { hydrateTnSwipers } from '@tnotesjs/ui/swiper'
 
 export interface HydrateIslandsOptions {
@@ -62,9 +68,10 @@ function hydrateCodeGroups(root: ParentNode): void {
   for (const group of root.querySelectorAll<HTMLElement>('.tn-code-group')) {
     if (group.dataset.tnReady === '1') continue
     group.dataset.tnReady = '1'
+    // 只认 tab：tab 行最左侧还有折叠 Icon，不能按「里面所有 button」取。
     const tabs = [
       ...group.querySelectorAll<HTMLButtonElement>(
-        ':scope > .tn-code-group__tabs button, :scope > .code-group-tabs button'
+        ':scope > .tn-code-group__tabs button[role="tab"], :scope > .code-group-tabs button[role="tab"]'
       )
     ]
     const panels = [
@@ -74,7 +81,15 @@ function hydrateCodeGroups(root: ParentNode): void {
     ]
     if (tabs.length === 0 || panels.length === 0) continue
 
+    const collapseBtn = group.querySelector<HTMLButtonElement>(
+      ':scope > .tn-code-group__tabs .tn-code-group__collapse-btn, :scope > .code-group-tabs .tn-code-group__collapse-btn'
+    )
+    const activeBlock = (index: number): HTMLElement | null =>
+      panels[index]?.querySelector<HTMLElement>('.tn-code-block') ?? null
+    let current = 0
+
     const activate = (index: number) => {
+      current = index
       tabs.forEach((tab, i) => {
         const on = i === index
         tab.classList.toggle('active', on)
@@ -87,7 +102,22 @@ function hydrateCodeGroups(root: ParentNode): void {
         panel.hidden = !on
         panel.style.display = on ? '' : 'none'
       })
+      // 切到的面板若是收起状态，自动展开：读者不该看到一片被裁掉的代码。
+      expandCollapsedCodeBlocks(panels[index] ?? null)
+      const block = activeBlock(index)
+      if (collapseBtn) {
+        // 面板自带的那颗被 tab 行盖住，它的存在就是「这段代码够长」的判据。
+        collapseBtn.hidden = !block?.querySelector('.tn-code-block__collapse-btn')
+        applyCollapseChrome(collapseBtn, isCodeBlockCollapsed(block))
+      }
     }
+
+    collapseBtn?.addEventListener('click', () => {
+      const block = activeBlock(current)
+      if (!block) return
+      toggleCodeBlockCollapsed(block)
+      applyCollapseChrome(collapseBtn, isCodeBlockCollapsed(block))
+    })
 
     tabs.forEach((tab, index) => {
       tab.addEventListener('click', () => activate(index))
@@ -118,13 +148,16 @@ function hydrateCodeBlocks(root: ParentNode): void {
     host.dataset.tnReady = '1'
     const code = decodeData(host.dataset.tnCode).replace(/\n$/, '')
     const block = host.querySelector('.tn-code-block')
-    const buttons = [
-      ...(block?.querySelectorAll<HTMLButtonElement>(
-        ':scope > .tn-code-block__header .tn-code-block__icon-btn'
-      ) ?? [])
-    ]
-    const copyBtn = buttons[0]
-    const fullBtn = buttons[1]
+    const header = block?.querySelector(':scope > .tn-code-block__header')
+    // 按类名取，别按顺序：标题左侧还可能有折叠 Icon。
+    const collapseBtn = header?.querySelector<HTMLButtonElement>('.tn-code-block__collapse-btn')
+    const copyBtn = header?.querySelector<HTMLButtonElement>('.tn-code-block__copy-btn')
+    const fullBtn = header?.querySelector<HTMLButtonElement>('.tn-code-block__fullscreen-btn')
+    if (collapseBtn) {
+      collapseBtn.addEventListener('click', () => {
+        toggleCodeBlockCollapsed(block)
+      })
+    }
     if (copyBtn) {
       copyBtn.addEventListener('click', () => {
         void copyText(code).then(() => {

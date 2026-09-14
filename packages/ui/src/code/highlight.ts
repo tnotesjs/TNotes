@@ -2,6 +2,22 @@ import { createHighlighterCore, type HighlighterCore, type ShikiTransformer } fr
 import { createJavaScriptRegexEngine } from 'shiki/engine/javascript'
 import { bundledLanguages, bundledLanguagesAlias } from 'shiki/langs'
 
+export {
+  CODE_BLOCK_COLLAPSED_CLASS,
+  CODE_COLLAPSE_HEIGHT_PX,
+  CODE_COLLAPSE_MIN_LINES,
+  applyCollapseChrome,
+  codeBlockFrom,
+  codeBlockIn,
+  collapseButtonLabel,
+  codeLineCount,
+  expandCollapsedCodeBlocks,
+  isCodeBlockCollapsed,
+  isCollapsibleCode,
+  setCodeBlockCollapsed,
+  toggleCodeBlockCollapsed
+} from './collapse'
+
 export interface CodeMeta {
   language: string
   title: string

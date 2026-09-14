@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onServerPrefetch, ref, watch } from 'vue'
 import { highlightCode, parseCodeMeta } from '../../code/highlight'
+import { isCollapsibleCode, toggleCodeBlockCollapsed } from '../../code/collapse'
 import { copyText } from '../../browser/clipboard'
 
 const props = withDefaults(
@@ -14,6 +15,12 @@ const props = withDefaults(
   { info: '', lineNumbers: true }
 )
 const meta = computed(() => parseCodeMeta(props.info, props.lineNumbers))
+/**
+ * 折叠是**纯视图状态**：默认展开、不落库、不写 localStorage，刷新后回到展开。
+ * 只有长代码块才露出折叠 Icon（见 code/collapse.ts 的行数阈值）。
+ */
+const collapsible = computed(() => isCollapsibleCode(props.code))
+const root = ref<HTMLElement>()
 const html = ref(props.highlightedHtml || '')
 const error = ref('')
 const copied = ref(false)
@@ -53,6 +60,9 @@ async function copy(): Promise<void> {
     error.value = '复制失败，请检查剪贴板权限'
   }
 }
+function toggleCollapse(): void {
+  toggleCodeBlockCollapsed(root.value ?? null)
+}
 function closeFullscreen(): void {
   fullscreen.value = false
   trigger.value?.focus({ preventScroll: true })
@@ -64,15 +74,39 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section class="tn-code-block" :class="{ 'has-line-numbers': meta.lineNumbers }">
+  <section ref="root" class="tn-code-block" :class="{ 'has-line-numbers': meta.lineNumbers }">
     <header class="tn-code-block__header">
+      <button
+        v-if="collapsible"
+        type="button"
+        class="tn-code-block__icon-btn tn-code-block__collapse-btn"
+        aria-expanded="true"
+        aria-label="收起代码"
+        title="收起代码"
+        @click="toggleCollapse"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </button>
       <span class="tn-code-block__title">{{ title || meta.title }}</span>
       <slot name="language" :language="meta.language"
         ><span class="tn-code-block__language">{{ meta.language }}</span></slot
       >
       <button
         type="button"
-        class="tn-code-block__icon-btn"
+        class="tn-code-block__icon-btn tn-code-block__copy-btn"
         :aria-label="copied ? '已复制' : '复制代码'"
         @click="copy"
       >
@@ -111,7 +145,7 @@ onBeforeUnmount(() => {
       <button
         ref="trigger"
         type="button"
-        class="tn-code-block__icon-btn"
+        class="tn-code-block__icon-btn tn-code-block__fullscreen-btn"
         aria-label="全屏代码"
         @click="fullscreen = true"
       >
@@ -135,8 +169,10 @@ onBeforeUnmount(() => {
       </button>
     </header>
     <slot>
-      <div v-if="html" class="tn-code-block__content" v-html="html" />
-      <pre v-else class="tn-code-block__plain"><code>{{ code }}</code></pre>
+      <div class="tn-code-block__content">
+        <div v-if="html" v-html="html" />
+        <pre v-else class="tn-code-block__plain"><code>{{ code }}</code></pre>
+      </div>
     </slot>
     <p v-if="error" role="status" class="tn-code-block__error">{{ error }}</p>
     <Teleport v-if="fullscreen" to="body">

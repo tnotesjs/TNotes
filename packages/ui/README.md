@@ -8,6 +8,57 @@ TNotes 内置块的 Vue 组件。消费方：`@tnotesjs/ssg`、Desk。需要 `vu
 pnpm add @tnotesjs/ui
 ```
 
+### 代码块（`CodeBlock` / `CodeGroup`）
+
+默认行为跟 VitePress 一致，**不限制高度**：
+
+- 宽度不超出正文容器，超长单行在代码块内横向滚动，页面不会被撑宽；
+- 原始换行与缩进原样保留（`white-space: pre`），不强制换行；
+- 高度由内容撑开，没有 `max-height`，也不会出现内部纵向滚动。
+
+**折叠是显式、可选的视图状态**：只有长代码块（默认 > 20 行）标题左侧才有折叠 Icon，
+点一下收起 / 再点展开。折叠状态**只存在当前页面的内存里** —— 不写进 markdown、
+不写 localStorage，刷新或重新进入页面一律回到展开。代码分组切换 tab 时，
+新露出来的面板若处于收起状态会自动展开。
+
+收藏的视觉与交互：`--tn-code-collapse-height`（默认 `360px`）控制收起后可见的高度。
+
+````md
+```js
+console.log('短代码块：没有折叠 Icon')
+```
+
+```ts:line-numbers {2} [multi.ts]
+function add(a: number, b: number) {
+  const sum = a + b
+  return sum
+}
+```
+
+```text [one-line.txt]
+这一行很长很长……它在代码块内横向滚动，不会把页面撑宽
+```
+
+```js [long.js]
+// 超过 20 行 → 标题左侧出现折叠 Icon
+```
+
+::: code-group
+
+```js [a-short.js]
+console.log('a')
+```
+
+```ts [b-long.ts]
+// 长的那一个 tab 才有折叠 Icon
+```
+
+:::
+````
+
+作者不需要写任何额外标记：行数决定有没有那颗 Icon。站点读者可以随时收起 / 展开，
+编辑器（Desk）里也是同一套规则，且光标点进收起的代码块会自动展开。
+
 ### `BilibiliVideo`
 
 | Prop       | Default  |

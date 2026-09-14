@@ -3455,3 +3455,138 @@
   :deep(figure.desk-image.is-canvas .desk-image__frame > img) {
   filter: invert(93%) hue-rotate(180deg);
 }
+
+/*
+ * 代码块「收起 / 展开」（编辑器侧）。
+ *
+ * 折叠是纯视图状态：不写回 markdown、不写 localStorage，重新打开笔记一律展开。
+ * Icon 固定在最左侧（`order: -1`），与站点 CodeBlock.vue 的位置一致。
+ */
+.milkdown-markdown-editor :deep(.milkdown-code-block .tools .desk-code-collapse) {
+  order: -1;
+  flex: none;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-code-block .tools .desk-code-collapse:hover) {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.milkdown-markdown-editor :deep(.milkdown-code-block .tools .desk-code-collapse svg) {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  transition: transform 0.15s ease;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-code-block .tools .desk-code-collapse.is-collapsed svg) {
+  transform: rotate(-90deg);
+}
+
+.milkdown-markdown-editor :deep(.milkdown-code-block.is-collapsed) {
+  position: relative;
+}
+
+/* 收起时只露出前一段；点击块内任意位置会自动展开（见 handleClick）。 */
+.milkdown-markdown-editor :deep(.milkdown-code-block.is-collapsed:not(.is-fullscreen) .cm-editor) {
+  max-height: var(--desk-code-collapse-height, 360px);
+  overflow: hidden;
+}
+
+.milkdown-markdown-editor :deep(.milkdown-code-block.is-collapsed:not(.is-fullscreen))::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 64px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--tn-c-bg-soft));
+}
+
+/*
+ * 代码分组面板的收起（tab 行最左侧那颗 Icon 控制）。
+ * 与单块代码块同一套规则：纯视图状态，切 tab 自动展开（见 container.ts 的 activateTab）。
+ */
+.milkdown-markdown-editor :deep(.desk-raw-block--container .code-group-panel.is-collapsed) {
+  position: relative;
+}
+
+.milkdown-markdown-editor
+  :deep(.desk-raw-block--container .code-group-panel.is-collapsed .desk-code-tab__cm),
+.milkdown-markdown-editor
+  :deep(.desk-raw-block--container .code-group-panel.is-collapsed .cm-editor) {
+  max-height: var(--desk-code-collapse-height, 360px);
+  overflow: hidden;
+}
+
+.milkdown-markdown-editor :deep(.desk-raw-block--container .code-group-panel.is-collapsed)::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 64px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--tn-c-bg-soft));
+}
+
+/* tab 行最左侧的折叠 Icon：与单块代码块那颗同款 */
+.milkdown-markdown-editor :deep(.desk-raw-block--container .code-group-tabs .code-group-collapse) {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  flex: none;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: var(--tn-c-bg-soft);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0;
+}
+
+.milkdown-markdown-editor
+  :deep(.desk-raw-block--container .code-group-tabs .code-group-collapse[hidden]) {
+  display: none;
+}
+
+.milkdown-markdown-editor
+  :deep(.desk-raw-block--container .code-group-tabs .code-group-collapse:hover) {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.milkdown-markdown-editor
+  :deep(.desk-raw-block--container .code-group-tabs .code-group-collapse svg) {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  transition: transform 0.15s ease;
+}
+
+.milkdown-markdown-editor
+  :deep(.desk-raw-block--container .code-group-tabs .code-group-collapse.is-collapsed svg) {
+  transform: rotate(-90deg);
+}

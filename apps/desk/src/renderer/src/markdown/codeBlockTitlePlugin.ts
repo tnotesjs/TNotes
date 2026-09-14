@@ -3,6 +3,7 @@ import { Plugin } from '@milkdown/kit/prose/state'
 import type { EditorView } from '@milkdown/kit/prose/view'
 import { $prose } from '@milkdown/kit/utils'
 
+import { ensureCodeCollapseButton } from './codeBlockCollapse'
 import { ensureCodeExpandButton } from './codeBlockFullscreen'
 import { UNLABELED_CODE_LANGUAGE } from './codeLanguage'
 
@@ -26,6 +27,7 @@ export function createCodeBlockTitlePlugin(): MilkdownPlugin {
           syncCodeBlockTitles(view)
           syncCodeBlockLanguages(view)
           syncCodeBlockExpand(view)
+          syncCodeBlockCollapse(view)
         }
         const schedule = (): void => {
           cancelAnimationFrame(syncRaf)
@@ -242,6 +244,21 @@ function syncCodeBlockLanguages(view: EditorView): void {
       input.value = language
       input.size = Math.max(2, language.length || 1)
     }
+  })
+}
+
+/**
+ * 代码块标题左侧的折叠 Icon：只有长代码块才给，位置固定在 `.tools` 最左侧。
+ * 收起状态本身是纯视图状态（不写回 markdown），所以这里只同步 chrome。
+ */
+function syncCodeBlockCollapse(view: EditorView): void {
+  if (view.isDestroyed) return
+  view.state.doc.descendants((node, pos) => {
+    if (node.type.name !== 'code_block') return
+    const dom = view.nodeDOM(pos) as HTMLElement | null
+    if (!dom?.classList?.contains('milkdown-code-block')) return
+    if (dom.classList.contains('desk-code-tab')) return
+    ensureCodeCollapseButton(dom, node.textContent)
   })
 }
 
