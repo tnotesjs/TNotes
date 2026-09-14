@@ -4,6 +4,7 @@ Electron + Vue 3。可视化编辑器用 Milkdown / ProseMirror（**自组装配
 
 - 知识库文本文件浏览（只读）：主进程 `kb-files:list` / `kb-files:read`（`packages/kb/src/files.ts`）只列一层目录，并按拒绝名单过滤 `.git` / `node_modules` / `.tnotes/dist` / 系统垃圾；**能不能当文本看由字节判定**（采样里有 NUL 或非法 UTF-8 → 不是文本），不看扩展名。标签页类型 `text-file` 用 Monaco 只读渲染，本阶段不支持写入。
 - Monaco 不注册 worker：生产环境渲染端是 `file://` 加载（Chromium 不允许 file:// 起 Worker），CSP 又是 `script-src 'self'`（blob: 也被挡）。因此关掉了所有依赖 worker 的能力（JSON/YAML/TS 诊断、diff、基于词的建议）。要用语言服务得先把渲染端改成自定义协议加载。
+- 标题里按一次 Backspace（光标在行首）**直接回正文**，不论几级标题 —— 覆盖 Milkdown 默认的逐级降级（`markdown/headingKeymap.ts` 用优先级 100 抢在 `DowngradeHeading` 前）。行内其它位置、Delete、空选区之外的场景都放行给默认行为。
 - Markdown 是磁盘 canonical。自定义语法经 `rawBlockProjection.ts` 投影为 `deskRawBlock`；`sourcePreservation.ts` 保证未编辑块字节级零 diff。
 - 独占一行的 `<br />` 不投影，交给 Milkdown `remark-preserve-empty-line`。段内 / 表格内 `<br>` 仍走投影。
 - 自由绘图是**两个文件一份资源**：`assets/*.excalidraw` 是唯一真相源，同名 `.svg`（如 `0013-x.excalidraw` ↔ `0013-x.svg`）是**派生图**，由 `exportToSvg` 导出（字体已内联）。笔记里引用的就是那张派生 `.svg`（`![画布](../assets/0013-x.svg)`），**完全按图片处理**：拖拽改尺寸、描述、对齐都走 `markdown/deskImageView.ts`。判据只有一条：同名 `.excalidraw` 在 → 图上多一项「编辑」（打开 `editor-groups/ExcalidrawTabPane.vue` 的画布标签页）；不在 → 就是一张普通图片。**没有笔记内嵌编辑器**，SSG 也没有画布岛（站点只是渲染那张派生 SVG）。

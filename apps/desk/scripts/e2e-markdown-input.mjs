@@ -220,6 +220,21 @@ try {
   assert.equal(await shortcutTip.getAttribute('data-title'), '💡 TIP')
   record(':::TIP Enter uses the shared canonical tip insert')
 
+  // 标题层级：一次 Backspace 直接回正文（Milkdown 默认是逐级降级）
+  await focusEmptyParagraph()
+  await page.keyboard.type('### 三级标题')
+  await pm.locator('h3').last().waitFor()
+  // Meta+ArrowLeft = 行首（Home 在 Electron 里不动光标）
+  await page.keyboard.press('Meta+ArrowLeft')
+  await page.keyboard.press('Backspace')
+  await page.waitForTimeout(200)
+  assert.equal(
+    await pm.locator('h1, h2, h3, h4, h5, h6').filter({ hasText: '三级标题' }).count(),
+    0
+  )
+  assert.equal((await pm.locator(':scope > p').last().textContent())?.includes('三级标题'), true)
+  record('标题行首一次 Backspace 直接回到正文（不一档一档降级）')
+
   // 复制提示块里的文字再粘贴：不能凭空长出一个提示块（ProseMirror 的 data-pm-slice
   // 会记下「复制时所在的容器」，粘贴时按它重新包一个 —— 规则见 markdown/pasteContext.ts）
   const pasteCallout = page.locator('[data-type="desk-callout"][data-callout="tip"]').last()

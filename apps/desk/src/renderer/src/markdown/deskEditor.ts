@@ -32,6 +32,7 @@ import { table } from './crepePort/table'
 import { toolbar, type ToolbarFeatureConfig } from './crepePort/toolbar'
 import { type DeskToolbarFeatures } from './crepePort/toolbar/features'
 import { applyDeskEditorConfigs, type DeskEditorConfigOptions } from './deskEditorConfigs'
+import { headingKeymap } from './headingKeymap'
 
 /**
  * Desk 的编辑器装配（替代 `@milkdown/crepe` 的 `Crepe` 类；crepe 依赖已移除）。
@@ -91,6 +92,10 @@ export function createDeskEditor(options: DeskEditorOptions): DeskEditorHandle {
     .use(trailing)
     .use(clipboard)
     .use(upload)
+    // 标题里按一次 Backspace 直接回正文（语雀对齐），覆盖 Milkdown 的逐级降级
+    .use(headingKeymap)
+    // 标题里按一次 Backspace 直接回正文（语雀对齐），覆盖 Milkdown 的逐级降级
+    // 标题里按一次 Backspace 直接回正文（语雀对齐），覆盖 Milkdown 的逐级降级
     .use(gfm)
     .use(block)
 
