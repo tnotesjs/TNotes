@@ -28,6 +28,41 @@ function cssVar(name: string, fallback: string): string {
   return value || fallback
 }
 
+const HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i
+
+/**
+ * 把 CSS 颜色变成 Monaco 能解析的十六进制。
+ *
+ * Monaco 的颜色解析器只认 `#rgb/#rrggbb/#rrggbbaa`（不认 `color-mix()`、
+ * 也不认 CSS Color 4 的 `rgb(r g b / a)`）。喂不进去时它会**回退成纯红**
+ * （实测选中背景变成 `rgb(255,0,0)`）。所以这里统一用浏览器把颜色解析成
+ * 计算值，再转成 `#rrggbb[aa]`：拿不到就退回给定的安全值。
+ */
+function toMonacoColor(value: string, fallback: string): string {
+  if (HEX_COLOR.test(value.trim())) return value.trim()
+  if (typeof document === 'undefined') return fallback
+  const probe = document.createElement('span')
+  probe.style.backgroundColor = value
+  probe.style.display = 'none'
+  document.body.append(probe)
+  const computed = getComputedStyle(probe).backgroundColor
+  probe.remove()
+  const match = /^rgba?\(([^)]+)\)$/.exec(computed)
+  if (!match) return fallback
+  const parts = match[1]
+    .split(/[,\s/]+/)
+    .filter(Boolean)
+    .map(Number)
+  if (parts.length < 3 || parts.slice(0, 3).some((part) => !Number.isFinite(part))) return fallback
+  const [r, g, b] = parts
+  const alpha = parts.length > 3 && Number.isFinite(parts[3]) ? parts[3] : 1
+  const hex = `#${[r, g, b].map((part) => Math.round(part).toString(16).padStart(2, '0')).join('')}`
+  if (alpha >= 1) return hex
+  return `${hex}${Math.round(alpha * 255)
+    .toString(16)
+    .padStart(2, '0')}`
+}
+
 /**
  * 用 Desk 的 CSS 变量现算一套 Monaco 主题。
  *
@@ -35,15 +70,18 @@ function cssVar(name: string, fallback: string): string {
  * 所以明暗切换直接重定义再 `setTheme`。
  */
 function defineTheme(monaco: Monaco): void {
-  const background = cssVar('--editor-bg', '#ffffff')
-  const foreground = cssVar('--text', '#1f2328')
-  const muted = cssVar('--muted', '#8a8a8a')
-  const border = cssVar('--border', '#e5e7eb')
-  const accent = cssVar('--accent-strong', '#3b82f6')
-  const selection = cssVar('--selection', 'rgb(59 130 246 / 0.25)')
+  const dark = document?.documentElement.dataset.theme === 'dark'
+  const background = toMonacoColor(cssVar('--editor-bg', dark ? '#1b1b1f' : '#ffffff'), '#ffffff')
+  const foreground = toMonacoColor(cssVar('--text', dark ? '#dfdfd6' : '#1f2328'), '#1f2328')
+  const muted = toMonacoColor(cssVar('--muted', '#8a8a8a'), '#8a8a8a')
+  const border = toMonacoColor(cssVar('--border', dark ? '#2e2e32' : '#e5e7eb'), '#e5e7eb')
+  const accent = toMonacoColor(cssVar('--accent-strong', '#3b82f6'), '#3b82f6')
+  // 选中背景直接取 VS Code 自己的默认值（用户要求与 VS Code 一致）：
+  // 深色 #264F78 / 浅色 #ADD6FF，失焦时用 #3A3D41 / #E5EBF1
+  const selection = dark ? '#264f78' : '#add6ff'
+  const selectionInactive = dark ? '#3a3d41' : '#e5ebf1'
 
-  const base: MonacoApi.editor.IStandaloneThemeData['base'] =
-    document?.documentElement.dataset.theme === 'dark' ? 'vs-dark' : 'vs'
+  const base: MonacoApi.editor.IStandaloneThemeData['base'] = dark ? 'vs-dark' : 'vs'
   monaco.editor.defineTheme(base === 'vs-dark' ? DARK_THEME : LIGHT_THEME, {
     base,
     inherit: true,
@@ -58,6 +96,10 @@ function defineTheme(monaco: Monaco): void {
       'editorLineNumber.activeForeground': foreground,
       'editor.lineHighlightBackground': border,
       'editor.selectionBackground': selection,
+      'editor.inactiveSelectionBackground': selectionInactive,
+      'editor.selectionHighlightBackground': selectionInactive,
+      'editor.findMatchBackground': dark ? '#9e6a03' : '#a8ac94',
+      'editor.findMatchHighlightBackground': dark ? '#ea5c0055' : '#ea5c0055',
       'editorCursor.foreground': accent,
       'editorWidget.background': background,
       'editorWidget.border': border,
@@ -90,6 +132,9 @@ export function loadMonaco(): Promise<Monaco> {
       // 做成空模块的目的就是不起 worker，所以这里没有需要"关掉"的默认值了。
     }
     defineTheme(monaco)
+    // find widget 的图标是 codicon 字形：字体没到位时会先画成空白小方块
+    // （首次按下 Cmd+F 的一两百毫秒）。这里提前把字体拉起来，避免"图标丢失"的观感。
+    void document.fonts?.load('16px codicon').catch(() => undefined)
     return monaco
   })()
   return loading
