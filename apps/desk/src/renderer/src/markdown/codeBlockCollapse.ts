@@ -52,10 +52,19 @@ function createButton(): HTMLButtonElement {
 /**
  * 保证 `.tools` 最左侧有这颗折叠按钮（每个代码块都有）。
  *
- * `prepend` 对已存在的子节点是「移到最前」，所以标题输入框后插进来也不会把顺序弄乱。
+ * 只在「按钮不存在」或「按钮不在最左侧」时才动 DOM：`prepend` 对已在最前面的节点
+ * 依然会先移除再插入，产生 childList 变更 —— 而 `codeBlockTitlePlugin` 的
+ * MutationObserver 把 `.tools` 的 childList 变更当作「tools 重挂载」并重新同步，
+ * 于是变成每秒几十次的死循环，按钮每帧被重插一次，鼠标点击落在刚被摘下的节点上，
+ * 表现就是「点折叠按钮没反应」。
  */
 export function ensureCodeCollapseButton(block: HTMLElement): void {
   const tools = block.querySelector('.tools')
   if (!(tools instanceof HTMLElement)) return
-  tools.prepend(tools.querySelector<HTMLButtonElement>('.desk-code-collapse') ?? createButton())
+  const existing = tools.querySelector<HTMLButtonElement>('.desk-code-collapse')
+  if (!existing) {
+    tools.prepend(createButton())
+    return
+  }
+  if (tools.firstElementChild !== existing) tools.prepend(existing)
 }

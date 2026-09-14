@@ -47,6 +47,28 @@ describe('code block header chrome', () => {
     expect(mutationsIndicateCodeToolsRemount([record])).toBe(true)
   })
 
+  it('自身 chrome 的变更不算 tools 重挂载（否则同步会自激成死循环）', () => {
+    const tools = remountedTools()
+    const collapse = document.createElement('button')
+    collapse.className = 'desk-code-collapse'
+    const record = {
+      type: 'childList',
+      target: tools,
+      addedNodes: [collapse],
+      removedNodes: []
+    } as unknown as MutationRecord
+    expect(mutationsIndicateCodeToolsRemount([record])).toBe(false)
+
+    // Crepe 重建整个 .tools 仍然要认出来
+    const toolsRecord = {
+      type: 'childList',
+      target: document.createElement('div'),
+      addedNodes: [tools],
+      removedNodes: []
+    } as unknown as MutationRecord
+    expect(mutationsIndicateCodeToolsRemount([toolsRecord])).toBe(true)
+  })
+
   it('re-injects title, language, and expand after Crepe remounts .tools', async () => {
     const wrapper = mount(MilkdownMarkdownEditor, {
       attachTo: document.body,

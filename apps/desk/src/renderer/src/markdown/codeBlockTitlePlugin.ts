@@ -86,6 +86,9 @@ export function createCodeBlockTitlePlugin(): MilkdownPlugin {
 export function mutationsIndicateCodeToolsRemount(mutations: MutationRecord[]): boolean {
   for (const mutation of mutations) {
     if (mutation.type !== 'childList') continue
+    // 我们自己插 chrome（标题 / 语言 / 复制 / 全屏 / 折叠）也会动 `.tools` 的子节点，
+    // 那不是「重挂载」；只有 Crepe 重建 `.tools` 才算，否则会自激同步。
+    if (isSelfInflictedChromeMutation(mutation)) continue
     if (mutation.target instanceof Element && isCodeToolsHost(mutation.target)) return true
     for (const node of mutation.addedNodes) {
       if (!(node instanceof Element)) continue
@@ -100,6 +103,22 @@ export function mutationsIndicateCodeToolsRemount(mutations: MutationRecord[]): 
   }
   return false
 }
+
+/** 变更只涉及我们注入的 chrome 节点（不是 Crepe 重建 tools）。 */
+function isSelfInflictedChromeMutation(mutation: MutationRecord): boolean {
+  const nodes = [...mutation.addedNodes, ...mutation.removedNodes].filter(
+    (node): node is Element => node instanceof Element
+  )
+  if (nodes.length === 0) return false
+  return nodes.every((node) => CHROME_CLASSES.some((name) => node.classList.contains(name)))
+}
+
+const CHROME_CLASSES = [
+  'desk-code-title',
+  'desk-code-language',
+  'desk-code-expand',
+  'desk-code-collapse'
+]
 
 function isCodeToolsHost(el: Element): boolean {
   return (
