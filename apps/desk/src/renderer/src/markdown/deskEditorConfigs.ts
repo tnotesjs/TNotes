@@ -1,4 +1,9 @@
-import { remarkPluginsCtx, remarkStringifyOptionsCtx, type Editor } from '@milkdown/kit/core'
+import {
+  editorViewOptionsCtx,
+  remarkPluginsCtx,
+  remarkStringifyOptionsCtx,
+  type Editor
+} from '@milkdown/kit/core'
 import { blockConfig } from '@milkdown/kit/plugin/block'
 import { uploadConfig } from '@milkdown/kit/plugin/upload'
 import { strikethroughKeymap } from '@milkdown/kit/preset/gfm'
@@ -7,6 +12,7 @@ import { serializeDeskCalloutMdast } from '../editor/markdown/deskCallout'
 import { breakMarkdown, remarkHtmlBreakToBreak } from '../editor/markdown/htmlBreak'
 import { resolvePastedImageWidth } from '../editor/markdown/pasteImageWidth'
 import { canShowBlockHandle } from './blockActionMenu'
+import { stripContainerPasteContext } from './pasteContext'
 
 export interface DeskEditorConfigOptions {
   /** 有效只读状态（props.readOnly || mode === 'readonly'）。 */
@@ -57,6 +63,16 @@ export function applyDeskEditorConfigs(editor: Editor, options: DeskEditorConfig
         // 逻辑在 htmlBreak.ts 的纯函数里（可单测），这里按上下文的 Handle 类型内联。
         break: (node, _parent, state, info) =>
           breakMarkdown(node?.data, state.stack, state.unsafe, info.before ?? '')
+      }
+    }))
+    // 粘贴时别把「复制时所在的提示块」一起还原回来（规则见 pasteContext.ts）。
+    ctx.update(editorViewOptionsCtx, (current) => ({
+      ...current,
+      transformPastedHTML: (html, view) => {
+        const previous = current.transformPastedHTML
+          ? current.transformPastedHTML(html, view)
+          : html
+        return stripContainerPasteContext(previous)
       }
     }))
     ctx.update(uploadConfig.key, (current) => ({

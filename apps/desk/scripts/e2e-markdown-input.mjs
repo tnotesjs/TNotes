@@ -220,6 +220,29 @@ try {
   assert.equal(await shortcutTip.getAttribute('data-title'), '💡 TIP')
   record(':::TIP Enter uses the shared canonical tip insert')
 
+  // 复制提示块里的文字再粘贴：不能凭空长出一个提示块（ProseMirror 的 data-pm-slice
+  // 会记下「复制时所在的容器」，粘贴时按它重新包一个 —— 规则见 markdown/pasteContext.ts）
+  const pasteCallout = page.locator('[data-type="desk-callout"][data-callout="tip"]').last()
+  await pasteCallout.locator('.custom-block-body p').first().click()
+  await page.keyboard.type('错误块正文。')
+  await focusEmptyParagraph()
+  await pasteCallout.locator('.custom-block-body').evaluate((element) => {
+    const range = document.createRange()
+    range.selectNodeContents(element)
+    const selection = window.getSelection()
+    selection.removeAllRanges()
+    selection.addRange(range)
+  })
+  await page.keyboard.press('Meta+c')
+  await page.waitForTimeout(200)
+  const pastedInto = await focusEmptyParagraph()
+  await page.keyboard.press('Meta+v')
+  await page.waitForTimeout(400)
+  assert.equal(await page.locator('[data-type="desk-callout"]').count(), 2)
+  assert.equal((await pastedInto.textContent())?.includes('错误块正文。'), true)
+  assert.equal(await pastedInto.locator('[data-type="desk-callout"]').count(), 0)
+  record('复制提示块内的文字粘贴到正文：得到文字，不会长出提示块')
+
   await focusEmptyParagraph()
   await page.keyboard.type('```mmd ')
   const shortcutDiagram = page
