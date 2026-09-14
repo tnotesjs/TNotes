@@ -63,7 +63,13 @@ async function load(): Promise<void> {
   }
   file.value = result.value
   phase.value = 'ready'
-  await mountEditor(result.value.content, result.value.language)
+  try {
+    await mountEditor(result.value.content, result.value.language)
+  } catch (cause) {
+    // Monaco 懒加载失败（依赖预构建 hash 过期 / chunk 404 / 断网）：落成可见错误态
+    phase.value = 'error'
+    message.value = `编辑器加载失败：${cause instanceof Error ? cause.message : String(cause)}。若刚更新过依赖或代码，重新加载窗口即可恢复。`
+  }
 }
 
 let themeObserver: MutationObserver | null = null

@@ -58,6 +58,8 @@ const emit = defineEmits<{
 }>()
 
 const host = ref<HTMLElement | null>(null)
+const mountError = ref('')
+
 let monaco: Awaited<ReturnType<typeof loadMonaco>> | null = null
 let editor: MonacoApi.editor.IStandaloneCodeEditor | null = null
 let appearanceObserver: MutationObserver | null = null
@@ -66,6 +68,31 @@ let pasteListener: ((event: ClipboardEvent) => void) | null = null
 let disposing = false
 /** 外部同步期间不回抛 change（初始化与 props 回流都算） */
 let syncing = false
+
+/**
+ * 懒加载失败的原因归一化：这类失败几乎都是「页面里的模块地址过期了」，
+ * 重新加载窗口就能拿到新的地址，所以提示里给出这个动作。
+ */
+function loadFailureMessage(cause: unknown): string {
+  const detail = cause instanceof Error ? cause.message : String(cause)
+  return `源码编辑器加载失败：${detail}。若刚更新过依赖或代码，重新加载窗口即可恢复。`
+}
+
+async function retryMount(): Promise<void> {
+  mountError.value = ''
+  if (disposing || !host.value) return
+  try {
+    monaco = await loadMonaco()
+  } catch (cause) {
+    mountError.value = loadFailureMessage(cause)
+    return
+  }
+  createEditor(host.value)
+}
+
+function reloadWindow(): void {
+  window.location.reload()
+}
 
 const isEffectivelyReadOnly = (): boolean => props.readOnly || props.mode === 'readonly'
 
@@ -277,8 +304,22 @@ function handlePaste(event: ClipboardEvent): void {
 onMounted(async () => {
   const current = host.value
   if (!current) return
-  monaco = await loadMonaco()
+  try {
+    monaco = await loadMonaco()
+  } catch (cause) {
+    // 懒加载失败（依赖预构建 hash 过期 / chunk 404 / 断网）以前会变成
+    // 「Unhandled error during execution of mounted hook」+ 未处理的 promise，
+    // 界面上什么都不说。这里落成可见的错误态 + 重试入口。
+    mountError.value = loadFailureMessage(cause)
+    return
+  }
   if (disposing || !host.value) return
+  createEditor(current)
+})
+
+/** 用已经加载好的 Monaco 建编辑器（首次挂载与失败重试共用）。 */
+function createEditor(current: HTMLElement): void {
+  if (disposing || !monaco || editor) return
   syncing = true
   editor = monaco.editor.create(current, {
     ...readOnlyEditorOptions(),
@@ -317,7 +358,7 @@ onMounted(async () => {
     if (props.active) editor?.layout()
   })
   resizeObserver.observe(current)
-})
+}
 
 function cssFontMono(): string {
   const value = getComputedStyle(document.documentElement).getPropertyValue('--font-mono').trim()
@@ -398,15 +439,33 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div
-    ref="host"
-    class="markdown-source-editor"
-    :class="{ 'is-wide': pageWidth === 'wide' }"
-    data-testid="markdown-source-editor"
-  />
+  <div class="markdown-source-host">
+    <div
+      ref="host"
+      class="markdown-source-editor"
+      :class="{ 'is-wide': pageWidth === 'wide' }"
+      data-testid="markdown-source-editor"
+    />
+    <div v-if="mountError" class="markdown-source-error" role="alert">
+      <p>{{ mountError }}</p>
+      <div class="markdown-source-error__actions">
+        <button type="button" @click="retryMount">重试</button>
+        <button type="button" @click="reloadWindow">重新加载窗口</button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <style scoped>
+.markdown-source-host {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
 .markdown-source-editor {
   width: 100%;
   height: 100%;
@@ -414,6 +473,45 @@ onBeforeUnmount(() => {
   overflow: hidden;
   background: var(--editor-bg);
   color: var(--editor-text);
+}
+
+/* 懒加载失败（多为页面里的模块地址过期）：给出原因与恢复入口，而不是静默空白 */
+.markdown-source-error {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+  background: var(--editor-bg);
+  color: var(--muted);
+  font: 13px/1.7 var(--font-sans);
+}
+
+.markdown-source-error p {
+  margin: 0;
+  max-width: 48ch;
+}
+
+.markdown-source-error__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.markdown-source-error__actions button {
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.markdown-source-error__actions button:hover {
+  background: var(--hover);
 }
 
 /* 标准页宽：编辑器整体居中收窄（Monaco 的行号与内容一起居中，视觉与旧版一致） */

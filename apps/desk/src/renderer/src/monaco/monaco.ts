@@ -114,9 +114,22 @@ export function monacoThemeName(): string {
   return document?.documentElement.dataset.theme === 'dark' ? DARK_THEME : LIGHT_THEME
 }
 
-/** 懒加载 Monaco（只加载一次），并把环境与主题配置好 */
+/**
+ * 懒加载 Monaco（只加载一次），并把环境与主题配置好。
+ *
+ * 加载失败（依赖预构建 hash 过期 / 断网 / chunk 404）时**不要**把 rejected promise
+ * 缓存下来：否则调用方重试永远拿到同一个失败结果。清掉缓存后重试会重新发起 import。
+ */
 export function loadMonaco(): Promise<Monaco> {
-  loading ??= (async () => {
+  loading ??= loadMonacoOnce().catch((error: unknown) => {
+    loading = null
+    throw error
+  })
+  return loading
+}
+
+async function loadMonacoOnce(): Promise<Monaco> {
+  return (async () => {
     const monaco = await import('monaco-editor')
     if (!configured) {
       configured = true
@@ -137,7 +150,6 @@ export function loadMonaco(): Promise<Monaco> {
     void document.fonts?.load('16px codicon').catch(() => undefined)
     return monaco
   })()
-  return loading
 }
 
 /** 明暗主题变化时重算主题并广播（已挂载的编辑器各自 setTheme） */

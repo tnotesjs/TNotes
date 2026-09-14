@@ -219,8 +219,11 @@ const fakeMonaco = {
   }
 }
 
+/** 可切换的懒加载实现：用来测「Monaco 加载失败」这条路径。 */
+let loadMonacoImpl: () => Promise<typeof fakeMonaco> = async () => fakeMonaco
+
 vi.mock('../monaco/monaco', () => ({
-  loadMonaco: async () => fakeMonaco,
+  loadMonaco: () => loadMonacoImpl(),
   monacoThemeName: () => 'tnotes-light',
   readOnlyEditorOptions: () => ({}),
   baseEditorOptions: () => ({}),
@@ -458,5 +461,36 @@ describe('MarkdownSourceEditor（Monaco）', () => {
     const editor = editorOf()
     wrapper.unmount()
     expect(editor.disposed).toBe(true)
+  })
+})
+
+describe('Monaco 懒加载失败', () => {
+  afterEach(() => {
+    loadMonacoImpl = async () => fakeMonaco
+  })
+
+  it('落成可见错误态（而不是未处理的 mounted hook 异常），重试后恢复', async () => {
+    loadMonacoImpl = async () => {
+      throw new TypeError('Failed to fetch dynamically imported module: monaco-editor.js?v=stale')
+    }
+    const wrapper = mountEditor()
+    await settle()
+
+    // 加载失败：可见错误态，且此时没有编辑器实例（用增量判断，避免同文件其它
+    // 用例遗留的挂载实例干扰）
+    const baseline = created.length
+    const alert = wrapper.get('[role="alert"]')
+    expect(alert.text()).toContain('源码编辑器加载失败')
+    expect(alert.text()).toContain('重新加载窗口')
+    expect(wrapper.find('.monaco-editor').exists()).toBe(false)
+    expect(created.length).toBe(baseline)
+
+    // 依赖恢复（或换了新地址）后重试：应当真的建出编辑器
+    loadMonacoImpl = async () => fakeMonaco
+    await wrapper.findAll('button')[0]!.trigger('click')
+    await settle()
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    expect(created.length).toBe(baseline + 1)
+    wrapper.unmount()
   })
 })
