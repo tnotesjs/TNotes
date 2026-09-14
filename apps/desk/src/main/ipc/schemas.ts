@@ -21,6 +21,7 @@ const noteTabSchema = z.object({
   viewMode: z.enum(['visual', 'readonly', 'source']),
   pageWidth: z.enum(['standard', 'wide']).default('standard'),
   outlineVisible: z.boolean().optional(),
+  noteAssetsVisible: z.boolean().optional(),
   preview: z.boolean().optional(),
   pinned: z.boolean().optional(),
   openedAt: z.number().finite().optional(),

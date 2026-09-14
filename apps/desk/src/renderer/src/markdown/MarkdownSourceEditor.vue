@@ -182,6 +182,23 @@ function clearLineStyles(): boolean {
   return true
 }
 
+/**
+ * 定位一处资源引用：在源码里找该相对路径，选中它并滚动到中间。
+ *
+ * 源码视图的位置就是 markdown 偏移，所以这里可以直接用 indexOf 的偏移。
+ */
+function revealReference(rawPath: string): boolean {
+  const textModel = model()
+  if (!editor || !textModel || !rawPath) return false
+  const index = textModel.getValue().indexOf(rawPath)
+  if (index < 0) return false
+  const range = rangeOf(index, index + rawPath.length)
+  editor.setSelection(range)
+  editor.revealRangeInCenter(range)
+  editor.focus()
+  return true
+}
+
 function selectAll(): void {
   const textModel = model()
   if (!editor || !textModel || !shouldHandleDeskSelectAll(host.value, props.active)) return
@@ -190,6 +207,7 @@ function selectAll(): void {
 }
 
 defineExpose({
+  revealReference,
   insertTextAt,
   wrapSelection,
   prefixSelection,

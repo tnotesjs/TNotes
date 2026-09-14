@@ -2,7 +2,7 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { parserCtx } from '@milkdown/kit/core'
 import { editorViewCtx, commandsCtx, serializerCtx } from '@milkdown/kit/core'
-import { Plugin, TextSelection } from '@milkdown/kit/prose/state'
+import { NodeSelection, Plugin, TextSelection } from '@milkdown/kit/prose/state'
 import type { EditorView } from '@milkdown/kit/prose/view'
 import { serializeImageMarkdown } from '@tnotesjs/ui/image-markdown'
 import { createCanvasImageClipboardPlugin } from './canvasImageClipboardPlugin'
@@ -334,6 +334,55 @@ function command(commandKey: { key: unknown }, payload?: unknown): boolean {
   return run((editor) => {
     editor.editor.action(callCommand(commandKey.key as never, payload as never))
   })
+}
+
+/**
+ * 定位一处资源引用：找到 src / 文本等于该相对路径的节点，选中它并滚动到可见。
+ *
+ * 资源面板的「定位引用」走这里。按**节点语义**找而不是按文本偏移：ProseMirror 位置
+ * 与 markdown 偏移不是一回事。
+ */
+function revealReference(rawPath: string): boolean {
+  let found = false
+  run((editor) => {
+    editor.editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      const doc = view.state.doc
+      let from = -1
+      let to = -1
+      let isImage = false
+      doc.descendants((node, pos) => {
+        if (found) return false
+        if (node.type.name === 'image') {
+          const src = String(node.attrs.src ?? '')
+          if (src === rawPath || src.endsWith(rawPath) || rawPath.endsWith(src)) {
+            from = pos
+            to = pos + node.nodeSize
+            isImage = true
+            return false
+          }
+          return true
+        }
+        if (node.isText && node.text?.includes(rawPath)) {
+          const offset = node.text.indexOf(rawPath)
+          from = pos + offset
+          to = from + rawPath.length
+          return false
+        }
+        return true
+      })
+      if (from < 0) return
+      found = true
+      const tr = view.state.tr
+      tr.setSelection(
+        isImage ? NodeSelection.create(doc, from) : TextSelection.create(doc, from, to)
+      )
+      tr.scrollIntoView()
+      view.dispatch(tr)
+      view.focus()
+    })
+  })
+  return found
 }
 
 function insertTextAt(text: string, position?: number): void {
@@ -673,6 +722,7 @@ function applyGeneratedTocDisplay(): void {
 }
 
 defineExpose({
+  revealReference,
   insertTextAt,
   wrapSelection,
   prefixSelection,

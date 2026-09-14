@@ -8,12 +8,15 @@ import HeadingMenu from './HeadingMenu.vue'
 import FormatIcon from './FormatIcon.vue'
 import FormatOverflowBar from './FormatOverflowBar.vue'
 import KbPathBreadcrumb from './KbPathBreadcrumb.vue'
+import NoteAssetsIcon from './NoteAssetsIcon.vue'
+import NoteAssetsPanel from './NoteAssetsPanel.vue'
 import MarkdownSourceEditor from '../markdown/MarkdownSourceEditor.vue'
 import { useEditorStore } from '../stores/editor'
 import { useWorkspaceStore } from '../stores/workspace'
 
 import { registerHeadingFoldRunner } from '../commands/headingFoldBridge'
 import { findTab } from './layoutModel'
+import { insertableImageMarkdown } from './noteAssets'
 import { pastedImageMarkdown } from '../editor/markdown/pasteImageWidth'
 import { HEADING_NUMBER_DEFAULT_MAX_DEPTH } from '../../../shared/headingNumbering'
 
@@ -70,6 +73,12 @@ const headingNumberMaxDepth = computed(
     workspace.settings?.headingNumberMaxDepth ??
     HEADING_NUMBER_DEFAULT_MAX_DEPTH
 )
+const noteAssetsVisible = computed(() => {
+  const located = findTab(editor.layout, props.tab.id)
+  const tab = located?.tab.type === 'note' ? located.tab : props.tab
+  return tab.noteAssetsVisible === true
+})
+
 const outlineVisible = computed(() => {
   const located = findTab(editor.layout, props.tab.id)
   const tab = located?.tab.type === 'note' ? located.tab : props.tab
@@ -189,6 +198,37 @@ function activate(): void {
 
 function insertTemplate(text: string): void {
   markdownEditor.value?.insertTextAt(text)
+}
+
+/** 资源面板：把已有资源一键插入当前笔记（初版只图片，走与粘贴同一条插入路径） */
+function insertAssetReference(relPath: string): void {
+  if (session.value?.document.readOnly) return
+  const noteRelPath = session.value?.document.relPath ?? ''
+  const markdown = insertableImageMarkdown(noteRelPath, relPath)
+  if (!markdown) {
+    workspace.error = `该类型暂不支持一键插入：${relPath}`
+    return
+  }
+  activeEditor()?.insertTextAt(`${markdown}\n`)
+}
+
+/** 资源面板：定位笔记里的引用（可视化视图选中节点，源码视图选中那一段文本） */
+function locateAssetReference(rawPath: string): void {
+  const found = activeEditor()?.revealReference?.(rawPath) ?? false
+  if (!found) workspace.status = `没有在正文里找到这处引用：${rawPath}`
+}
+
+/** 当前视图对应的编辑器句柄（两个视图暴露了同一组方法） */
+function activeEditor(): {
+  insertTextAt: (text: string, position?: number) => void
+  revealReference?: (rawPath: string) => boolean
+} | null {
+  const handle =
+    props.tab.viewMode === 'source' ? markdownSourceEditor.value : milkdownMarkdownEditor.value
+  return handle as unknown as {
+    insertTextAt: (text: string, position?: number) => void
+    revealReference?: (rawPath: string) => boolean
+  } | null
 }
 
 async function pasteImage(file: File, insertAt: number): Promise<void> {
@@ -459,6 +499,19 @@ function openLink(url: string): void {
               <OutlineIcon />
             </button>
           </UiTooltip>
+          <UiTooltip :label="noteAssetsVisible ? '隐藏本笔记资源' : '显示本笔记资源'">
+            <button
+              type="button"
+              class="note-assets-toggle"
+              data-testid="note-assets-toggle"
+              :class="{ active: noteAssetsVisible }"
+              :aria-label="noteAssetsVisible ? '隐藏本笔记资源' : '显示本笔记资源'"
+              :aria-pressed="noteAssetsVisible"
+              @click="editor.toggleNoteAssetsVisible(tab.id)"
+            >
+              <NoteAssetsIcon />
+            </button>
+          </UiTooltip>
         </div>
         <span class="view-divider" aria-hidden="true"></span>
         <div class="view-switcher" aria-label="笔记视图">
@@ -504,49 +557,66 @@ function openLink(url: string): void {
       </div>
     </div>
 
-    <MilkdownMarkdownEditor
-      v-if="tab.viewMode !== 'source' && !milkdownFailed"
-      :key="milkdownMountKey"
-      ref="milkdownMarkdownEditor"
-      class="editor-surface"
-      :content="session.content"
-      :mode="tab.viewMode"
-      :read-only="session.document.readOnly"
-      :knowledge-base-id="tab.knowledgeBaseId"
-      :note-uuid="tab.noteUuid"
-      :active="active"
-      :page-width="tab.pageWidth"
-      :outline-visible="outlineVisible"
-      :toc-display="workspace.settings?.noteTocDisplay ?? 'expanded'"
-      :upload-image="uploadVisualImage"
-      @change="updateContent"
-      @open-link="openLink"
-      @open-note="workspace.openNoteByUuid(tab.knowledgeBaseId, $event)"
-      @fatal="handleMilkdownFatal"
-      @heading-level-change="headingLevel = $event"
-    />
-    <div v-else-if="tab.viewMode !== 'source'" class="editor-fatal" role="alert">
-      <strong>可视化编辑器加载失败</strong>
-      <span>内容没有被修改。你可以重试，或切换到源码视图继续编辑。</span>
-      <div>
-        <button type="button" @click="retryMilkdown">重试</button>
-        <button type="button" @click="setMode('source')">打开源码视图</button>
+    <div class="note-body">
+      <div class="note-editor-area">
+        <MilkdownMarkdownEditor
+          v-if="tab.viewMode !== 'source' && !milkdownFailed"
+          :key="milkdownMountKey"
+          ref="milkdownMarkdownEditor"
+          class="editor-surface"
+          :content="session.content"
+          :mode="tab.viewMode"
+          :read-only="session.document.readOnly"
+          :knowledge-base-id="tab.knowledgeBaseId"
+          :note-uuid="tab.noteUuid"
+          :active="active"
+          :page-width="tab.pageWidth"
+          :outline-visible="outlineVisible"
+          :toc-display="workspace.settings?.noteTocDisplay ?? 'expanded'"
+          :upload-image="uploadVisualImage"
+          @change="updateContent"
+          @open-link="openLink"
+          @open-note="workspace.openNoteByUuid(tab.knowledgeBaseId, $event)"
+          @fatal="handleMilkdownFatal"
+          @heading-level-change="headingLevel = $event"
+        />
+        <div v-else-if="tab.viewMode !== 'source'" class="editor-fatal" role="alert">
+          <strong>可视化编辑器加载失败</strong>
+          <span>内容没有被修改。你可以重试，或切换到源码视图继续编辑。</span>
+          <div>
+            <button type="button" @click="retryMilkdown">重试</button>
+            <button type="button" @click="setMode('source')">打开源码视图</button>
+          </div>
+        </div>
+        <MarkdownSourceEditor
+          v-else
+          ref="markdownSourceEditor"
+          class="editor-surface"
+          :content="session.content"
+          :mode="tab.viewMode"
+          :read-only="session.document.readOnly"
+          :knowledge-base-id="tab.knowledgeBaseId"
+          :note-uuid="tab.noteUuid"
+          :active="active"
+          :page-width="tab.pageWidth"
+          @change="updateContent"
+          @paste-image="pasteImage"
+        />
       </div>
+      <NoteAssetsPanel
+        v-if="noteAssetsVisible"
+        class="note-assets-sidebar"
+        :knowledge-base-id="tab.knowledgeBaseId"
+        :note-uuid="tab.noteUuid"
+        :note-rel-path="session.document.relPath"
+        :note-index="session.document.index"
+        :source="session.content"
+        :read-only="session.document.readOnly"
+        @insert="insertAssetReference"
+        @locate="locateAssetReference"
+        @close="editor.toggleNoteAssetsVisible(tab.id)"
+      />
     </div>
-    <MarkdownSourceEditor
-      v-else
-      ref="markdownSourceEditor"
-      class="editor-surface"
-      :content="session.content"
-      :mode="tab.viewMode"
-      :read-only="session.document.readOnly"
-      :knowledge-base-id="tab.knowledgeBaseId"
-      :note-uuid="tab.noteUuid"
-      :active="active"
-      :page-width="tab.pageWidth"
-      @change="updateContent"
-      @paste-image="pasteImage"
-    />
   </div>
   <div v-else class="loading-note">正在读取笔记…</div>
 </template>
@@ -770,6 +840,44 @@ function openLink(url: string): void {
 .editor-surface {
   flex: 1;
   min-height: 0;
+}
+
+/* 编辑器 + 右侧「本笔记资源」面板：两者各自滚动，互不影响 */
+.note-body {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+}
+
+.note-editor-area {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.note-assets-sidebar {
+  flex: none;
+  width: 300px;
+  min-width: 0;
+  min-height: 0;
+  border-left: 1px solid var(--border);
+  background: var(--editor-bg);
+}
+
+/* 窄面板放不下 300px 侧栏：收窄一些，仍然可用 */
+@container desk-note-pane (max-width: 900px) {
+  .note-assets-sidebar {
+    width: 240px;
+  }
+}
+
+.note-assets-toggle.active {
+  color: var(--accent-strong);
+  background: var(--hover);
 }
 
 .editor-fatal {

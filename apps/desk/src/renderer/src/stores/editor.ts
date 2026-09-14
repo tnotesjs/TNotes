@@ -111,7 +111,8 @@ function sanitizeLayout(
                 tab.pageWidth === 'standard' || tab.pageWidth === 'wide'
                   ? tab.pageWidth
                   : defaultNotePageWidth,
-              outlineVisible: tab.outlineVisible !== false
+              outlineVisible: tab.outlineVisible !== false,
+              noteAssetsVisible: tab.noteAssetsVisible === true
             }
           : tab.type === 'kb-settings' || tab.type === 'kb-assets'
             ? { dirty: Boolean(tab.dirty) }
@@ -656,6 +657,7 @@ export const useEditorStore = defineStore('editor', () => {
       viewMode,
       pageWidth: defaultNotePageWidth.value,
       outlineVisible: true,
+      noteAssetsVisible: false,
       preview: openBehavior === 'preview',
       pinned: false,
       openedAt: Date.now(),
@@ -1169,6 +1171,18 @@ export const useEditorStore = defineStore('editor', () => {
     }))
   }
 
+  function toggleNoteAssetsVisible(tabId: string): void {
+    const located = findTab(layout.value, tabId)
+    if (located?.tab.type !== 'note') return
+    const noteAssetsVisible = located.tab.noteAssetsVisible !== true
+    layout.value = updateGroup(layout.value, located.group.id, (group) => ({
+      ...group,
+      tabs: group.tabs.map((tab) =>
+        tab.id === tabId && tab.type === 'note' ? { ...tab, noteAssetsVisible } : tab
+      )
+    }))
+  }
+
   function moveTab(tabId: string, targetGroupId: string, targetIndex?: number): void {
     const located = findTab(layout.value, tabId)
     if (!located) return
@@ -1303,6 +1317,7 @@ export const useEditorStore = defineStore('editor', () => {
     setNotePageWidth,
     toggleNotePageWidth,
     toggleNoteOutlineVisible,
+    toggleNoteAssetsVisible,
     setNoteDirty,
     keepOpen,
     setPinned,

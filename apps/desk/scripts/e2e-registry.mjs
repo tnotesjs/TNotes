@@ -312,6 +312,21 @@ export const SUITES = [
     note: '中点代码围栏快捷键的真实输入路径（体检结论：可合并进 e2e-markdown-input，省一次启动、覆盖不减）'
   },
   {
+    name: 'e2e-note-assets.mjs',
+    area: 'note-assets',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/renderer/src/editor-groups/NoteAssetsPanel.vue',
+      'apps/desk/src/renderer/src/editor-groups/noteAssets.ts',
+      'apps/desk/src/renderer/src/editor-groups/NoteTabPane.vue',
+      'apps/desk/src/main/assetOperations.ts',
+      'packages/kb/src/asset-scan/**'
+    ],
+    serial: false,
+    smoke: false,
+    note: '笔记级资源面板：引用/编号匹配/无效/缺失分组、复制路径、定位引用、插入、删除、修复编号'
+  },
+  {
     name: 'e2e-kb-files.mjs',
     area: 'kb-files',
     tier: 'regression',

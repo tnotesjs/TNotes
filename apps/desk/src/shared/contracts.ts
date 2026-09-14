@@ -668,6 +668,8 @@ export interface NoteEditorTab {
   pageWidth: NotePageWidth
   /** Side outline next to the visual editor. Default true. */
   outlineVisible?: boolean
+  /** 右侧「本笔记资源」面板是否展开（默认收起） */
+  noteAssetsVisible?: boolean
   preview?: boolean
   pinned?: boolean
   openedAt?: number

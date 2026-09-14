@@ -69,6 +69,7 @@ describe('note header', () => {
     expect(controls.findAll('button').map((button) => button.attributes('aria-label'))).toEqual([
       '标准页宽',
       '隐藏目录',
+      '显示本笔记资源',
       '可视化编辑',
       '只读视图',
       '源码视图'
