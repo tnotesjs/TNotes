@@ -3517,6 +3517,14 @@
   display: none;
 }
 
+/*
+ * tab 行是绝对定位（叠在面板头部上），面板高度塌到 0 时它会压住后面的内容 ——
+ * 收起态必须把 tab 行那 38px 占位留住。
+ */
+.milkdown-markdown-editor :deep(.desk-raw-block--container .code-group-panel.is-collapsed) {
+  min-height: 38px;
+}
+
 /* tab 行最左侧的折叠 Icon：与单块代码块那颗同款 */
 .milkdown-markdown-editor :deep(.desk-raw-block--container .code-group-tabs .code-group-collapse) {
   position: sticky;

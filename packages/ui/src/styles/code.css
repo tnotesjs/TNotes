@@ -216,6 +216,13 @@ html[data-theme='dark'] .tn-code-highlight span:not(.line) {
 .tn-code-group__panel > .tn-code-block {
   margin: 0;
 }
+/*
+ * tab 行是绝对定位（叠在面板头部上）。面板里代码块收起后只剩标题栏那 38px，
+ * 这里兜一个下限：万一头部被隐藏，tab 行也不会压住后面的正文。
+ */
+.tn-code-group__panels > .tn-code-group__panel {
+  min-height: 38px;
+}
 .tn-code-fullscreen {
   position: fixed;
   inset: 0;
