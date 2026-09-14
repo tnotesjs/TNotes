@@ -113,4 +113,10 @@ jobs:
             exit 1
           fi
           version="${GITHUB_REF_NAME#desk@}"
-          gh release create "$GITHUB_REF_NAME" "${files[@]}" --generate-notes --title "TNotes Desk $version"
+          # 幂等：某个平台偶发失败后重跑时，release 已经建好了，这时改成补传资产，
+          # 否则 `gh release create` 会因「release already exists」整条失败。
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "${files[@]}" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "${files[@]}" --generate-notes --title "TNotes Desk $version"
+          fi
