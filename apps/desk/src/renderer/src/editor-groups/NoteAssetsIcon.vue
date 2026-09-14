@@ -14,7 +14,6 @@
     aria-hidden="true"
     focusable="false"
   >
-    <path d="M0 0h24v24H0z" fill="none" />
     <path
       fill="none"
       stroke="currentColor"
