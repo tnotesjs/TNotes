@@ -64,7 +64,7 @@ import { createCodeBlockTitlePlugin } from './codeBlockTitlePlugin'
 import { createCodeBlockLatexPreviewPlugin } from './codeBlockLatexPreview'
 import { createCodeBlockHighlightBundle } from './codeBlockHighlightPlugin'
 import { CHECK_ICON, COPY_ICON } from './copyIcons'
-import { setDeskCodeBlockCollapsed, toggleDeskCodeBlockCollapsed } from './codeBlockCollapse'
+import { toggleDeskCodeBlockCollapsed } from './codeBlockCollapse'
 import { exitCodeBlockFullscreen, toggleCodeBlockFullscreen } from './codeBlockFullscreen'
 import { githubDark, githubLight } from '@uiw/codemirror-theme-github'
 
@@ -825,12 +825,6 @@ function handleClick(event: MouseEvent): void {
     const block = expandButton.closest('.milkdown-code-block')
     if (block instanceof HTMLElement) toggleCodeBlockFullscreen(block, expandButton)
     return
-  }
-
-  // 收起的代码块：点到块内任意位置就展开，避免「看不到自己在改什么」。
-  const collapsedBlock = event.target.closest('.milkdown-code-block.is-collapsed')
-  if (collapsedBlock instanceof HTMLElement) {
-    setDeskCodeBlockCollapsed(collapsedBlock, false)
   }
 
   const copyButton = event.target.closest('.milkdown-code-block .copy-button')

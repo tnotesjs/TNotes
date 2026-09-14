@@ -1213,8 +1213,9 @@
 .milkdown-markdown-editor :deep(.desk-raw-block__include-pre) {
   margin: 0;
   padding: 10px 12px;
-  overflow: auto;
-  max-height: 420px;
+  overflow-x: auto;
+  overflow-y: visible;
+  max-height: none;
   border-radius: 6px;
   background: color-mix(in srgb, var(--panel) 70%, var(--editor-bg));
   color: var(--editor-text);
@@ -1262,8 +1263,8 @@
 
 .milkdown-markdown-editor :deep(.desk-raw-block__include-cm) {
   min-height: 160px;
-  max-height: 480px;
-  overflow: auto;
+  max-height: none;
+  overflow: visible;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--editor-bg);
@@ -2123,7 +2124,7 @@
 
 .milkdown-markdown-editor :deep(.desk-code-tab__cm) {
   min-height: 0;
-  max-height: 480px;
+  max-height: none;
   border: 0;
   border-radius: 0;
   background: var(--tn-c-bg-soft);
@@ -2729,8 +2730,9 @@
   padding-bottom: 8px;
 }
 
+/* 高度由内容撑开：不设 max-height，也不产生内部纵向滚动（收起态见文件末尾）。 */
 .milkdown-markdown-editor :deep(.milkdown-code-block:not(.is-fullscreen) .cm-editor) {
-  max-height: 480px;
+  max-height: none;
 }
 
 .milkdown-markdown-editor :deep(.milkdown .milkdown-code-block) {
@@ -3497,52 +3499,22 @@
   transform: rotate(-90deg);
 }
 
-.milkdown-markdown-editor :deep(.milkdown-code-block.is-collapsed) {
-  position: relative;
-}
-
-/* 收起时只露出前一段；点击块内任意位置会自动展开（见 handleClick）。 */
-.milkdown-markdown-editor :deep(.milkdown-code-block.is-collapsed:not(.is-fullscreen) .cm-editor) {
-  max-height: var(--desk-code-collapse-height, 360px);
-  overflow: hidden;
-}
-
-.milkdown-markdown-editor :deep(.milkdown-code-block.is-collapsed:not(.is-fullscreen))::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: 64px;
-  pointer-events: none;
-  background: linear-gradient(to bottom, transparent, var(--tn-c-bg-soft));
+/*
+ * 收起 = 代码区整体隐藏，只剩标题栏（跟折叠标题一样），不是「露出前几行」。
+ * 只有点标题左侧那颗 Icon 才切换。
+ */
+.milkdown-markdown-editor :deep(.milkdown-code-block.is-collapsed > :not(.tools)) {
+  display: none;
 }
 
 /*
  * 代码分组面板的收起（tab 行最左侧那颗 Icon 控制）。
  * 与单块代码块同一套规则：纯视图状态，切 tab 自动展开（见 container.ts 的 activateTab）。
  */
-.milkdown-markdown-editor :deep(.desk-raw-block--container .code-group-panel.is-collapsed) {
-  position: relative;
-}
-
+/* 代码分组面板的收起：代码区整体隐藏，只留 tab 行。 */
 .milkdown-markdown-editor
-  :deep(.desk-raw-block--container .code-group-panel.is-collapsed .desk-code-tab__cm),
-.milkdown-markdown-editor
-  :deep(.desk-raw-block--container .code-group-panel.is-collapsed .cm-editor) {
-  max-height: var(--desk-code-collapse-height, 360px);
-  overflow: hidden;
-}
-
-.milkdown-markdown-editor :deep(.desk-raw-block--container .code-group-panel.is-collapsed)::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: 64px;
-  pointer-events: none;
-  background: linear-gradient(to bottom, transparent, var(--tn-c-bg-soft));
+  :deep(.desk-raw-block--container .code-group-panel.is-collapsed .desk-raw-block__include-body) {
+  display: none;
 }
 
 /* tab 行最左侧的折叠 Icon：与单块代码块那颗同款 */
@@ -3564,11 +3536,6 @@
   color: var(--muted);
   cursor: pointer;
   font-size: 0;
-}
-
-.milkdown-markdown-editor
-  :deep(.desk-raw-block--container .code-group-tabs .code-group-collapse[hidden]) {
-  display: none;
 }
 
 .milkdown-markdown-editor

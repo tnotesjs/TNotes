@@ -85,9 +85,9 @@
   outline-offset: -2px;
 }
 /*
- * 默认（VitePress 同款宽高处理）：高度由内容撑开，不设 max-height、不出现内部纵向滚动；
- * 宽度不超出容器，超长单行在代码块内横向滚动；原始换行与缩进原样保留。
- * 「收起」是显式可选的视图状态（见文件末尾 .is-collapsed），默认不存在。
+ * 默认（VitePress 同款宽高处理）：不管多少行都由内容撑开，不设 max-height、
+ * 不出现内部纵向滚动；宽度不超出容器，超长单行在代码块内横向滚动；
+ * 原始换行与缩进原样保留。「收起」是页面内的视图状态（见文件末尾 .is-collapsed）。
  */
 .tn-code-block pre {
   background: transparent;
@@ -240,23 +240,10 @@ html[data-theme='dark'] .tn-code-highlight span:not(.line) {
 
 /* -------------------------- 收起（视图状态，不落库） -------------------------- */
 
-.tn-code-block__content {
-  position: relative;
-}
-
-.tn-code-block.is-collapsed .tn-code-block__content pre {
-  max-height: var(--tn-code-collapse-height, 360px);
-  overflow-y: hidden;
-}
-
-/* 收起时底部渐隐，提示下面还有内容 */
-.tn-code-block.is-collapsed .tn-code-block__content::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: 64px;
-  pointer-events: none;
-  background: linear-gradient(to bottom, transparent, var(--tn-c-bg-soft));
+/*
+ * 收起 = 代码内容整体隐藏，只剩标题栏（跟折叠标题一样），不是「露出前几行」。
+ * 展开态完全不做高度限制。
+ */
+.tn-code-block.is-collapsed .tn-code-block__content {
+  display: none;
 }

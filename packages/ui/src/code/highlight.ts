@@ -4,16 +4,12 @@ import { bundledLanguages, bundledLanguagesAlias } from 'shiki/langs'
 
 export {
   CODE_BLOCK_COLLAPSED_CLASS,
-  CODE_COLLAPSE_HEIGHT_PX,
-  CODE_COLLAPSE_MIN_LINES,
   applyCollapseChrome,
   codeBlockFrom,
   codeBlockIn,
   collapseButtonLabel,
-  codeLineCount,
   expandCollapsedCodeBlocks,
   isCodeBlockCollapsed,
-  isCollapsibleCode,
   setCodeBlockCollapsed,
   toggleCodeBlockCollapsed
 } from './collapse'

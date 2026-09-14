@@ -2,33 +2,17 @@
  * 代码块折叠：**纯视图状态**，只存在于当前页面的内存里。
  *
  * - 不进 markdown，不写 localStorage：刷新 / 重新进入页面后一律**默认展开**；
- * - 默认不限制高度（保持 VitePress 的宽高处理：宽度不超出正文、长行在块内横向滚动、
- *   高度由内容撑开、不产生内部纵向滚动）；
- * - 只有「够长」的代码块才给出折叠 Icon（显式、可选），点击在收起 / 展开之间切换。
+ * - 折叠 = 代码内容整体隐藏，只剩标题栏（跟折叠标题一样，不是「露出前几行」）；
+ * - 默认（未折叠）不做任何高度限制：不管多少行都由内容撑开，没有 max-height、
+ *   没有内部纵向滚动，超长单行在代码块内横向滚动；
+ * - 每个代码块标题左侧都有折叠 Icon，点击在收起 / 展开之间切换。
  *
  * DOM 是唯一状态源（`is-collapsed` class + `aria-expanded`），因此 SSR 出来的静态
  * HTML 和客户端补强（`hydrateIslands`）以及 Vue 组件本身共用一套契约。
  */
 
-/** 行数超过这个值才提供折叠能力（收起后可见约 15 行）。 */
-export const CODE_COLLAPSE_MIN_LINES = 20
-
-/** 收起时可见的高度（px）。 */
-export const CODE_COLLAPSE_HEIGHT_PX = 360
-
 /** 收起状态挂在代码块根节点上的 class。 */
 export const CODE_BLOCK_COLLAPSED_CLASS = 'is-collapsed'
-
-/** 代码内容行数（末尾换行不算一行）。 */
-export function codeLineCount(code: string): number {
-  const normalized = code.replace(/\n+$/, '')
-  return normalized ? normalized.split('\n').length : 0
-}
-
-/** 是否值得提供折叠 Icon：长内容才给，短代码块不打扰。 */
-export function isCollapsibleCode(code: string): boolean {
-  return codeLineCount(code) > CODE_COLLAPSE_MIN_LINES
-}
 
 /** 代码块根节点（`.tn-code-block`）或它内部任意节点 → 根节点。 */
 export function codeBlockFrom(node: Element | null | undefined): HTMLElement | null {
@@ -64,10 +48,7 @@ export function applyCollapseChrome(button: Element | null, collapsed: boolean):
   if (button instanceof HTMLElement) button.title = label
 }
 
-/**
- * 设置某个代码块的收起状态，并同步按钮的 aria / 文案 / 图标方向。
- * 找不到折叠按钮（短代码块）时只保证 class 与状态一致。
- */
+/** 设置某个代码块的收起状态（`is-collapsed` 决定内容是否隐藏，见 code.css）。 */
 export function setCodeBlockCollapsed(block: Element | null, collapsed: boolean): void {
   if (!block) return
   block.classList.toggle(CODE_BLOCK_COLLAPSED_CLASS, collapsed)
@@ -85,7 +66,7 @@ export function toggleCodeBlockCollapsed(block: Element | null): boolean {
  * 展开 root 里所有被收起的代码块。
  *
  * 代码分组切换 tab 时用它：新露出来的面板如果是收起状态，自动展开，
- * 读者不会看到一片被裁掉的代码。
+ * 读者不会只看到一个标题栏。
  */
 export function expandCollapsedCodeBlocks(root: ParentNode | null | undefined): void {
   if (!root) return

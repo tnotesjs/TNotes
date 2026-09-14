@@ -248,7 +248,7 @@ function syncCodeBlockLanguages(view: EditorView): void {
 }
 
 /**
- * 代码块标题左侧的折叠 Icon：只有长代码块才给，位置固定在 `.tools` 最左侧。
+ * 代码块标题左侧的折叠 Icon：每个代码块都有，位置固定在 `.tools` 最左侧。
  * 收起状态本身是纯视图状态（不写回 markdown），所以这里只同步 chrome。
  */
 function syncCodeBlockCollapse(view: EditorView): void {
@@ -258,7 +258,7 @@ function syncCodeBlockCollapse(view: EditorView): void {
     const dom = view.nodeDOM(pos) as HTMLElement | null
     if (!dom?.classList?.contains('milkdown-code-block')) return
     if (dom.classList.contains('desk-code-tab')) return
-    ensureCodeCollapseButton(dom, node.textContent)
+    ensureCodeCollapseButton(dom)
   })
 }
 

@@ -4,11 +4,10 @@ import { describe, expect, it } from 'vitest'
 
 import { hydrateIslands } from '../src/client/hydrateIslands'
 
-/** 一份贴近真实 SSR 输出的代码块（长代码块带折叠 Icon）。 */
-function codeBlockMarkup(code: string, collapsible: boolean): string {
-  const collapse = collapsible
-    ? '<button type="button" class="tn-code-block__icon-btn tn-code-block__collapse-btn" aria-expanded="true" aria-label="收起代码"></button>'
-    : ''
+/** 一份贴近真实 SSR 输出的代码块（每个代码块标题左侧都有折叠 Icon）。 */
+function codeBlockMarkup(code: string): string {
+  const collapse =
+    '<button type="button" class="tn-code-block__icon-btn tn-code-block__collapse-btn" aria-expanded="true" aria-label="收起代码"></button>'
   return `
     <section class="tn-code-block">
       <header class="tn-code-block__header">
@@ -45,7 +44,7 @@ describe('hydrateIslands', () => {
   })
 
   it('代码块折叠按钮就地切换 is-collapsed（不落库、不写 storage）', async () => {
-    document.body.innerHTML = `<div data-tn-code="YQ==">${codeBlockMarkup('a', true)}</div>`
+    document.body.innerHTML = `<div data-tn-code="YQ==">${codeBlockMarkup('a')}</div>`
     await hydrateIslands(document.body)
     const block = document.querySelector('.tn-code-block')!
     const button = document.querySelector<HTMLButtonElement>('.tn-code-block__collapse-btn')!
@@ -69,10 +68,10 @@ describe('hydrateIslands', () => {
         </div>
         <div class="tn-code-group__panels">
           <div class="tn-code-group__panel active">
-            <div data-tn-code="YQ==">${codeBlockMarkup('a', false)}</div>
+            <div data-tn-code="YQ==">${codeBlockMarkup('a')}</div>
           </div>
           <div class="tn-code-group__panel" style="display:none">
-            <div data-tn-code="Yg==">${codeBlockMarkup(long, true)}</div>
+            <div data-tn-code="Yg==">${codeBlockMarkup(long)}</div>
           </div>
         </div>
       </section>
@@ -93,8 +92,8 @@ describe('hydrateIslands', () => {
     groupButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     expect(blocks[1]?.classList.contains('is-collapsed')).toBe(true)
     expect(groupButton.getAttribute('aria-expanded')).toBe('false')
-    // 短代码块的面板：没有可折叠的块，按钮隐藏
+    // 切回第一个面板：收起状态只属于面板 B，A 不受影响
     tabs[0]?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-    expect(groupButton.hidden).toBe(true)
+    expect(blocks[0]?.classList.contains('is-collapsed')).toBe(false)
   })
 })

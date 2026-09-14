@@ -44,12 +44,12 @@ describe('shared code and media components', () => {
       highlightedHtml: '<pre class="tn-code-highlight"><code>ok</code></pre>'
     })
 
-    const buttons = host.querySelectorAll<HTMLButtonElement>('button')
-    buttons[0].click()
+    // 按类名取，别按顺序：标题左侧还有折叠 Icon
+    host.querySelector<HTMLButtonElement>('.tn-code-block__copy-btn')!.click()
     await nextTick()
     expect(writeText).toHaveBeenCalledWith('const value = 1')
 
-    buttons[1].click()
+    host.querySelector<HTMLButtonElement>('.tn-code-block__fullscreen-btn')!.click()
     await nextTick()
     expect(document.body.querySelector('[role="dialog"]')).not.toBeNull()
     document.body

@@ -1,5 +1,5 @@
 import { parseFootprintsSource, type FootprintsPayload } from '@tnotesjs/ui'
-import { applyCollapseChrome, isCollapsibleCode } from '@tnotesjs/ui/code'
+import { applyCollapseChrome } from '@tnotesjs/ui/code'
 
 import {
   isStructuredCalloutSource,
@@ -208,19 +208,16 @@ export function mountRawContainer(ctx: DeskRawBlockMountContext): void {
       collapseButton.type = 'button'
       collapseButton.className = 'code-group-collapse desk-code-collapse'
       collapseButton.innerHTML = CHEVRON_DOWN_ICON
-      collapseButton.hidden = true
       applyCollapseChrome(collapseButton, false)
       let activePanelIndex = initialActive
 
       const activePanel = (): HTMLDivElement | undefined => panelEls[activePanelIndex]
 
       const syncGroupCollapse = (): void => {
-        const entry = codeGroupEntries[activePanelIndex]
-        const collapsible = Boolean(entry && isCollapsibleCode(entry.code))
-        const panel = activePanel()
-        if (!collapsible) panel?.classList.remove('is-collapsed')
-        collapseButton.hidden = !collapsible
-        applyCollapseChrome(collapseButton, Boolean(panel?.classList.contains('is-collapsed')))
+        applyCollapseChrome(
+          collapseButton,
+          Boolean(activePanel()?.classList.contains('is-collapsed'))
+        )
       }
 
       const activateTab = (index: number): void => {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { nextTick, onMounted, ref, watch } from 'vue'
 import CodeBlock from '../CodeBlock/CodeBlock.vue'
 import { parseCodeMeta } from '../../code/highlight'
 import {
@@ -7,7 +7,6 @@ import {
   codeBlockIn,
   expandCollapsedCodeBlocks,
   isCodeBlockCollapsed,
-  isCollapsibleCode,
   toggleCodeBlockCollapsed
 } from '../../code/collapse'
 
@@ -16,8 +15,6 @@ export interface CodeGroupItem {
   info?: string
   highlightedHtml?: string
   key?: string
-  /** SSR 只带行数结论，不带 code，避免把代码再复制一份到页面里。 */
-  collapsible?: boolean
 }
 const props = defineProps<{ items: CodeGroupItem[] }>()
 const root = ref<HTMLElement>()
@@ -39,13 +36,6 @@ function activePanel(): HTMLElement | null {
 function activeBlock(): HTMLElement | null {
   return codeBlockIn(activePanel())
 }
-
-/** 当前 tab 的代码是否长到值得给折叠 Icon。 */
-const activeCollapsible = computed(() => {
-  const item = props.items[active.value]
-  if (!item) return false
-  return item.collapsible ?? isCollapsibleCode(item.code ?? '')
-})
 
 function toggleCollapse(): void {
   const block = activeBlock()
@@ -105,7 +95,6 @@ function navigate(event: KeyboardEvent, index: number): void {
       <button
         ref="collapseButton"
         type="button"
-        :hidden="!activeCollapsible"
         class="tn-code-block__icon-btn tn-code-group__collapse-btn"
         aria-expanded="true"
         aria-label="收起代码"

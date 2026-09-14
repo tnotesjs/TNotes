@@ -140,15 +140,13 @@ describe('static site build', () => {
     expect(fs.existsSync(dist('404.html'))).toBe(true)
   })
 
-  it('长代码块 SSR 出折叠 Icon，短代码块不出', () => {
+  it('每个代码块 SSR 都带折叠 Icon，且默认展开', () => {
     const guide = fs.readFileSync(dist('notes/2.html'), 'utf8')
-    // 30 行的那个块带折叠 Icon，且默认是展开状态（折叠只是页面内的视图状态）
     expect(guide).toContain('tn-code-block__collapse-btn')
     expect(guide).toContain('aria-label="收起代码"')
     expect(guide).toContain('aria-expanded="true"')
-    // 短的 `console.log(1)` 块不该有折叠 Icon
-    const collapseCount = guide.split('tn-code-block__collapse-btn').length - 1
-    expect(collapseCount).toBe(1)
+    // 折叠是页面内的视图状态：SSR 出来的块都不是收起态
+    expect(guide).not.toContain('tn-code-block is-collapsed')
   })
 
   it('renders the TOC sidebar with done markers', () => {

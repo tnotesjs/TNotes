@@ -104,11 +104,8 @@ function hydrateCodeGroups(root: ParentNode): void {
       })
       // 切到的面板若是收起状态，自动展开：读者不该看到一片被裁掉的代码。
       expandCollapsedCodeBlocks(panels[index] ?? null)
-      const block = activeBlock(index)
       if (collapseBtn) {
-        // 面板自带的那颗被 tab 行盖住，它的存在就是「这段代码够长」的判据。
-        collapseBtn.hidden = !block?.querySelector('.tn-code-block__collapse-btn')
-        applyCollapseChrome(collapseBtn, isCodeBlockCollapsed(block))
+        applyCollapseChrome(collapseBtn, isCodeBlockCollapsed(activeBlock(index)))
       }
     }
 

@@ -154,30 +154,6 @@ describe('Markdown compatibility helpers', () => {
     )
   })
 
-  it('代码分组把「够不够长」的结论带给组件（不复制代码）', async () => {
-    const compiler = await createMarkdownCompiler(compilerConfig)
-    const group = [
-      '::: code-group',
-      '',
-      '```js [short.js]',
-      'console.log(1)',
-      '```',
-      '',
-      '```ts [long.ts]',
-      ...Array.from({ length: 30 }, (_, i) => `const v${i} = ${i}`),
-      '```',
-      '',
-      ':::'
-    ].join('\n')
-    await compiler.prepare([group])
-    // 折叠 Icon 由 CodeBlock 组件 SSR 出来，完整产物在 site.test.ts 里验。
-    const groupHtml = compiler.compile(group, 'n.md', '/n', 'n').html
-    // items 是 URL 编码 + JSON.parse 的绑定串
-    expect(groupHtml).toContain(encodeURIComponent('"collapsible":false'))
-    expect(groupHtml).toContain(encodeURIComponent('"collapsible":true'))
-    expect(groupHtml).not.toContain(encodeURIComponent('"code":'))
-  })
-
   it('exposes structured outline headings with github-style ids', async () => {
     const compiler = await createMarkdownCompiler(compilerConfig)
     const { html, data } = compiler.compile(

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onServerPrefetch, ref, watch } from 'vue'
 import { highlightCode, parseCodeMeta } from '../../code/highlight'
-import { isCollapsibleCode, toggleCodeBlockCollapsed } from '../../code/collapse'
+import { toggleCodeBlockCollapsed } from '../../code/collapse'
 import { copyText } from '../../browser/clipboard'
 
 const props = withDefaults(
@@ -17,9 +17,8 @@ const props = withDefaults(
 const meta = computed(() => parseCodeMeta(props.info, props.lineNumbers))
 /**
  * 折叠是**纯视图状态**：默认展开、不落库、不写 localStorage，刷新后回到展开。
- * 只有长代码块才露出折叠 Icon（见 code/collapse.ts 的行数阈值）。
+ * 每个代码块标题左侧都有折叠 Icon，点击把代码内容整体隐藏 / 显示。
  */
-const collapsible = computed(() => isCollapsibleCode(props.code))
 const root = ref<HTMLElement>()
 const html = ref(props.highlightedHtml || '')
 const error = ref('')
@@ -77,7 +76,6 @@ onBeforeUnmount(() => {
   <section ref="root" class="tn-code-block" :class="{ 'has-line-numbers': meta.lineNumbers }">
     <header class="tn-code-block__header">
       <button
-        v-if="collapsible"
         type="button"
         class="tn-code-block__icon-btn tn-code-block__collapse-btn"
         aria-expanded="true"
