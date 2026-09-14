@@ -203,11 +203,12 @@ const api: DeskApi = {
         toRelPath,
         generation
       }),
-    planRecycle: (knowledgeBaseId, relPaths, generation) =>
+    planRecycle: (knowledgeBaseId, relPaths, generation, options) =>
       invoke<AssetOperationPlanDto>(IPC_CHANNELS.assetsPlanRecycle, {
         knowledgeBaseId,
         relPaths,
-        generation
+        generation,
+        targeted: options?.targeted
       }),
     planMerge: (knowledgeBaseId, keepRelPath, dropRelPaths, generation) =>
       invoke<AssetOperationPlanDto>(IPC_CHANNELS.assetsPlanMerge, {

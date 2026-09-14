@@ -6,6 +6,12 @@ import { createHash, randomUUID } from 'node:crypto'
 import path from 'node:path'
 
 import { ASSETS_DIR, KB_ICON_BASENAME } from '../constants'
+import {
+  EXCALIDRAW_DERIVED_EXTENSION,
+  EXCALIDRAW_EXTENSION,
+  derivedSvgRelPath,
+  sourceRelPathForDerived
+} from '../excalidraw'
 import { rewriteLocalAssetUrl } from './paths'
 
 import type {
@@ -63,6 +69,40 @@ function validateDestRelPath(destRelPath: string): string | null {
   return null
 }
 
+/**
+ * 画布是「两个文件一份资源」：`x.excalidraw`（真相源）+ 同名 `x.svg`（派生图）。
+ * 重命名任一侧都必须把另一半一起搬走，否则配对被打断——`.svg` 会退化成普通图片，
+ * 而 `.excalidraw` 变成没人认领的孤儿。返回另一半的「源 → 目标」。
+ */
+function canvasCompanion(
+  report: AssetScanReport,
+  fromRelPath: string,
+  toRelPath: string
+): { fromRelPath: string; toRelPath: string } | null {
+  const lower = fromRelPath.toLowerCase()
+  let companionFrom: string
+  let companionExt: string
+  if (lower.endsWith(EXCALIDRAW_EXTENSION)) {
+    companionFrom = derivedSvgRelPath(fromRelPath)
+    companionExt = EXCALIDRAW_DERIVED_EXTENSION
+  } else if (lower.endsWith(EXCALIDRAW_DERIVED_EXTENSION)) {
+    companionFrom = sourceRelPathForDerived(fromRelPath)
+    companionExt = EXCALIDRAW_EXTENSION
+  } else {
+    return null
+  }
+  if (!report.assets.some((asset) => asset.relPath === companionFrom)) return null
+  const toExt = path.posix.extname(toRelPath)
+  // 改名不能换后缀，否则另一半跟不过去（`x.svg` → `y.png`）
+  if (toExt.toLowerCase() !== path.posix.extname(fromRelPath).toLowerCase()) {
+    return { fromRelPath: companionFrom, toRelPath: '' }
+  }
+  return {
+    fromRelPath: companionFrom,
+    toRelPath: `${toRelPath.slice(0, -toExt.length)}${companionExt}`
+  }
+}
+
 export function planRename(
   report: AssetScanReport,
   input: { fromRelPath: string; toRelPath: string }
@@ -82,29 +122,48 @@ export function planRename(
   if (destClash) return emptyPlan('rename', report, [`目标已存在: ${destClash.relPath}`])
 
   const blocked: string[] = []
-  if (!from.renameAllowed) {
+  // 画布源文件的 `renameAllowed` 永远是 false（它带着 excalidraw-source 保护），
+  // 但**重命名**是显式动作、不是当闲置清理，所以这里只放开这一条保护。
+  const onlyCanvasProtection =
+    from.protection.length > 0 && from.protection.every((item) => item === 'excalidraw-source')
+  if (!from.renameAllowed && !onlyCanvasProtection) {
     blocked.push('该资源存在未知引用或覆盖未完成，不能重命名')
-  }
-  if (from.protection.includes('excalidraw-source')) {
-    blocked.push('Excalidraw 是绘图真相源，禁止当闲置处理；重命名需在覆盖完成后单独评估')
   }
   if (from.protection.includes('kb-icon')) blocked.push('知识库图标文件名固定，不能重命名')
   if (!report.coverageComplete) {
     blocked.push('扫描覆盖未完成，无法证明未知来源与该文件无关')
   }
 
-  const rewritable = report.references.filter(
-    (ref) => ref.targetRelPath === from.relPath && ref.rewritable
+  const companion = canvasCompanion(report, from.relPath, input.toRelPath)
+  if (companion && !companion.toRelPath) {
+    blocked.push('画布改名不能改后缀，否则派生图跟不上')
+  }
+  const renameTargets = new Map<string, string>([[from.relPath, input.toRelPath]])
+  if (companion?.toRelPath) {
+    renameTargets.set(companion.fromRelPath, companion.toRelPath)
+    const pairClash = report.assets.find(
+      (asset) =>
+        asset.relPath.toLocaleLowerCase() === companion.toRelPath.toLocaleLowerCase() &&
+        !renameTargets.has(asset.relPath)
+    )
+    if (pairClash) blocked.push(`目标已存在: ${pairClash.relPath}`)
+  }
+
+  const targetedRefs = (relPath: string) =>
+    report.references.filter((ref) => ref.targetRelPath === relPath)
+  const rewritable = [...renameTargets.keys()].flatMap((relPath) =>
+    targetedRefs(relPath).filter((ref) => ref.rewritable)
   )
-  const uncertain = report.references.filter(
-    (ref) => ref.targetRelPath === from.relPath && !ref.rewritable
+  const uncertain = [...renameTargets.keys()].flatMap((relPath) =>
+    targetedRefs(relPath).filter((ref) => !ref.rewritable)
   )
   if (uncertain.length > 0) {
     blocked.push('存在不可改写或不确定的引用')
   }
 
   const patches: AssetSourcePatch[] = rewritable.map((ref) => {
-    const replacement = rewriteLocalAssetUrl(ref.rawUrl, input.toRelPath, ref.sourceRelPath)
+    const target = ref.targetRelPath ? renameTargets.get(ref.targetRelPath) : undefined
+    const replacement = target ? rewriteLocalAssetUrl(ref.rawUrl, target, ref.sourceRelPath) : null
     if (!replacement) {
       blocked.push(`无法保持原 URL 形式: ${ref.rawUrl}`)
     }
@@ -119,12 +178,16 @@ export function planRename(
 
   if (blocked.length > 0) return emptyPlan('rename', report, [...new Set(blocked)])
 
-  const move: AssetFileMove = {
-    fromRelPath: from.relPath,
-    toRelPath: input.toRelPath,
+  const moves: AssetFileMove[] = [...renameTargets.entries()].map(([fromRelPath, toRelPath]) => ({
+    fromRelPath,
+    toRelPath,
     sha256: ''
-  }
-  const sources = new Set([from.relPath, ...patches.map((patch) => patch.sourceRelPath)])
+  }))
+  const sources = new Set([...renameTargets.keys(), ...patches.map((patch) => patch.sourceRelPath)])
+  const bytesMoved = moves.reduce(
+    (total, move) => total + (report.assets.find((a) => a.relPath === move.fromRelPath)?.size ?? 0),
+    0
+  )
   return {
     id: randomUUID(),
     knowledgeBaseId: '',
@@ -135,17 +198,32 @@ export function planRename(
     refFingerprint: fingerprintRefs(rewritable),
     patches,
     backups: [...sources].map((relPath) => ({ relPath, sha256: '' })),
-    moves: [move],
+    moves,
     outputs: [],
     createdRelPaths: [],
-    estimated: { filesTouched: sources.size, bytesMoved: from.size },
+    estimated: { filesTouched: sources.size, bytesMoved },
     blockedReasons: []
   }
 }
 
-export function planRecycle(report: AssetScanReport, relPaths: string[]): AssetOperationPlan {
+export interface RecyclePlanOptions {
+  /**
+   * 定向删除：用户在笔记资源面板里**逐个确认**后删自己那条资源。
+   *
+   * 与"资源面板批量清理"的区别只在两处放开：不再要求扫描覆盖完成（不是批量动作），
+   * 并允许删 Excalidraw 真相源（笔记里已经不再引用它了，源文件留着才是垃圾）。
+   * **"该资源确实没有引用"这条安全线不放开**——任何模式下都不删还被引用的资源。
+   */
+  targeted?: boolean
+}
+
+export function planRecycle(
+  report: AssetScanReport,
+  relPaths: string[],
+  options: RecyclePlanOptions = {}
+): AssetOperationPlan {
   const blocked: string[] = []
-  if (!report.batchCleanupAllowed || !report.coverageComplete) {
+  if (!options.targeted && (!report.batchCleanupAllowed || !report.coverageComplete)) {
     blocked.push('扫描覆盖未完成，整库禁用批量清理')
   }
   const moves: AssetFileMove[] = []
@@ -156,13 +234,29 @@ export function planRecycle(report: AssetScanReport, relPaths: string[]): AssetO
       blocked.push(`找不到资源 ${relPath}`)
       continue
     }
-    if (asset.status !== 'idle-candidate') {
+    // 画布源文件平时永远是 `protected`（不进批量清理）。但用户在笔记资源面板里
+    // 逐个确认删除自己那条资源时，它必须能删——前提是**真的没有任何引用**，
+    // 连不确定引用（uncertain-*/unsupported-*）也算引用，宁可不删。
+    const canvasSource =
+      asset.kind === 'excalidraw' || asset.protection.includes('excalidraw-source')
+    const mentionedAtAll = report.references.some((ref) => ref.targetRelPath === asset.relPath)
+    const deletable =
+      asset.status === 'idle-candidate' ||
+      Boolean(options.targeted && canvasSource && !mentionedAtAll)
+    if (!deletable) {
       blocked.push(`${relPath} 不是可清理的闲置候选`)
     }
-    if (asset.protection.length > 0) {
-      blocked.push(`${relPath} 受保护（${asset.protection.join(', ')}）`)
+    // 定向删除只放开 excalidraw-source；别的保护（例如库图标）照旧拦住
+    const protections = options.targeted
+      ? asset.protection.filter((item) => item !== 'excalidraw-source')
+      : asset.protection
+    if (protections.length > 0) {
+      blocked.push(`${relPath} 受保护（${protections.join(', ')}）`)
     }
-    if (asset.kind === 'excalidraw' || asset.protection.includes('excalidraw-source')) {
+    if (
+      !options.targeted &&
+      (asset.kind === 'excalidraw' || asset.protection.includes('excalidraw-source'))
+    ) {
       blocked.push(`${relPath} 是 Excalidraw 真相源，不能清理`)
     }
     moves.push({ fromRelPath: relPath, sha256: '' })
@@ -186,6 +280,8 @@ export function planRecycle(report: AssetScanReport, relPaths: string[]): AssetO
     outputs: [],
     createdRelPaths: [],
     estimated: { filesTouched: sources.length, bytesMoved },
+    // 计划自带模式：apply 重新校验时要用同一套规则，否则会「预览通过、执行被拒」
+    targeted: options.targeted,
     blockedReasons: []
   }
 }

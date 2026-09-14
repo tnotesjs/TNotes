@@ -47,7 +47,9 @@ export function registerAssets(getWindow: GetWindow): () => void {
     z.object({
       knowledgeBaseId: z.string().min(1),
       relPaths: z.array(z.string().min(1)).min(1),
-      generation: z.number().int().nonnegative().optional()
+      generation: z.number().int().nonnegative().optional(),
+      // 定向删除：笔记资源面板逐个确认，允许删没被引用的画布源文件
+      targeted: z.boolean().optional()
     }),
     (input) => planAssetRecycle(input)
   )

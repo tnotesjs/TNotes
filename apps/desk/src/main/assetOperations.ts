@@ -160,11 +160,14 @@ export async function planAssetRecycle(input: {
   knowledgeBaseId: string
   relPaths: string[]
   generation?: number
+  /** 定向删除（笔记资源面板）：允许删没被引用的画布源文件 */
+  targeted?: boolean
 }): Promise<AssetOperationPlanDto> {
   const handle = workspaceManager.getHandle(input.knowledgeBaseId)
   const plan = await handle.workspace.assets.planRecycle({
     relPaths: input.relPaths,
-    generation: input.generation
+    generation: input.generation,
+    targeted: input.targeted
   })
   return rememberPlan(input.knowledgeBaseId, plan)
 }

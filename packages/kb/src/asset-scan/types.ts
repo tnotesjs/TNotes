@@ -216,6 +216,13 @@ export interface AssetOperationPlan {
   /** Files created by this plan that restore should delete when hashes still match. */
   createdRelPaths: string[]
   estimated: { filesTouched: number; bytesMoved: number; bytesSaved?: number }
+  /**
+   * 定向删除（笔记资源面板逐个确认）生成的回收计划。
+   *
+   * 必须随计划落盘：`apply` 会按同一套规则**重新校验**计划，校验时若丢掉这个标记，
+   * 画布真相源就会被默认模式的保护拦下，出现「预览通过、执行被拒」。
+   */
+  targeted?: boolean
   blockedReasons: string[]
 }
 

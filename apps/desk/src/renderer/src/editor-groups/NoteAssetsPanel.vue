@@ -307,7 +307,19 @@ async function recycleInvalid(entry: NoteAssetEntry): Promise<void> {
   actionError.value = null
   try {
     if (!(await saveNoteFirst())) return
-    const planned = await window.desk.assets.planRecycle(props.knowledgeBaseId, [entry.relPath])
+    // 画布是「一份资源两半」：同名配对文件同样无效时一起回收，避免留下孤儿
+    const targets = [entry.relPath]
+    if (entry.pairRelPath && invalidPaths.value.has(entry.pairRelPath)) {
+      targets.push(entry.pairRelPath)
+    }
+    // targeted：这是用户逐个确认的定向删除（不是整库批量清理），
+    // 主进程据此放开"画布源文件受保护"这条；"资源确实没有引用"仍然挡着。
+    const planned = await window.desk.assets.planRecycle(
+      props.knowledgeBaseId,
+      targets,
+      undefined,
+      { targeted: true }
+    )
     if (!planned.ok) {
       actionError.value = planned.error.message
       return

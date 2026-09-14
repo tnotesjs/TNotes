@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
+import { existsSync } from 'node:fs'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
@@ -411,3 +412,167 @@ async function spawnWorker(
     })
   })
 }
+
+describe('定向删除（笔记资源面板逐个确认）', () => {
+  /** 未被任何笔记引用的画布：源文件 + 同名派生图 */
+  async function writeOrphanCanvas(): Promise<void> {
+    await fs.writeFile(
+      path.join(root, 'assets/0099-orphan.excalidraw'),
+      '{"type":"excalidraw","elements":[]}\n'
+    )
+    await fs.writeFile(
+      path.join(root, 'assets/0099-orphan.svg'),
+      '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"></svg>\n'
+    )
+  }
+
+  it('默认（批量清理）仍然拦住画布源文件', async () => {
+    await writeOrphanCanvas()
+    const report = await scanAssets(root)
+    const plan = planRecycle(report, ['assets/0099-orphan.excalidraw'])
+    expect(plan.blockedReasons.some((reason) => reason.includes('Excalidraw 真相源'))).toBe(true)
+  })
+
+  it('targeted 模式允许删没被引用的画布源文件与派生图', async () => {
+    await writeOrphanCanvas()
+    const report = await scanAssets(root)
+    const plan = planRecycle(report, ['assets/0099-orphan.excalidraw', 'assets/0099-orphan.svg'], {
+      targeted: true
+    })
+    expect(plan.blockedReasons).toEqual([])
+    expect(plan.moves.map((move) => move.fromRelPath).sort()).toEqual([
+      'assets/0099-orphan.excalidraw',
+      'assets/0099-orphan.svg'
+    ])
+  })
+
+  it('targeted 计划落盘执行也会过：apply 复验时不能退回默认模式', async () => {
+    await writeOrphanCanvas()
+    const report = await scanAssets(root)
+    const plan = await fillPlanHashes(
+      root,
+      planRecycle(report, ['assets/0099-orphan.excalidraw', 'assets/0099-orphan.svg'], {
+        targeted: true
+      })
+    )
+    expect(plan.targeted).toBe(true)
+    const applied = await applyAssetPlan(root, plan, { journalDir, recycleDir })
+    expect(applied.status, applied.error).toBe('applied')
+    expect(existsSync(path.join(root, 'assets/0099-orphan.excalidraw'))).toBe(false)
+    expect(existsSync(path.join(root, 'assets/0099-orphan.svg'))).toBe(false)
+  })
+
+  it('targeted 也**不**放开「有引用就不能删」这条安全线', async () => {
+    const report = await scanAssets(root)
+    // used.png 被 notes/0001 引用：任何模式下都不能回收
+    const plan = planRecycle(report, ['assets/used.png'], { targeted: true })
+    expect(plan.blockedReasons.some((reason) => reason.includes('闲置候选'))).toBe(true)
+    expect(plan.moves).toEqual([])
+  })
+})
+
+describe('画布「两个文件一份资源」的重命名', () => {
+  /** 基础 fixture 里没有画布，这里按新模型补一份：源文件 + 同名派生图 */
+  async function writeCanvasSource(): Promise<void> {
+    await fs.writeFile(
+      path.join(root, 'assets/board.excalidraw'),
+      '{"type":"excalidraw","elements":[]}\n'
+    )
+  }
+
+  /** 再补上派生图，并在一篇笔记里**按派生图引用**（新模型的写法） */
+  async function writeCanvasPairReference(): Promise<void> {
+    await writeCanvasSource()
+    await fs.writeFile(
+      path.join(root, 'assets/board.svg'),
+      '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"></svg>\n'
+    )
+    await fs.writeFile(
+      path.join(root, 'notes/0007. 画布.md'),
+      '---\ntitle: 画布\n---\n\n# 画布\n\n![画布](../assets/board.svg)\n'
+    )
+  }
+
+  it('从派生图一侧改名：`.svg` 与 `.excalidraw` 一起搬，并改写笔记里的引用', async () => {
+    await writeCanvasPairReference()
+    const report = await scanAssets(root)
+    const plan = planRename(report, {
+      fromRelPath: 'assets/board.svg',
+      toRelPath: 'assets/0007-board.svg'
+    })
+    expect(plan.blockedReasons).toEqual([])
+    expect(plan.moves.map((move) => `${move.fromRelPath} -> ${move.toRelPath}`).sort()).toEqual([
+      'assets/board.excalidraw -> assets/0007-board.excalidraw',
+      'assets/board.svg -> assets/0007-board.svg'
+    ])
+    expect(plan.patches).toHaveLength(1)
+    expect(plan.patches[0]?.expected).toBe('../assets/board.svg')
+    expect(plan.patches[0]?.replacement).toBe('../assets/0007-board.svg')
+  })
+
+  it('从真相源一侧改名：同样把派生图带上（源文件不再是「禁止重命名」）', async () => {
+    await writeCanvasPairReference()
+    const report = await scanAssets(root)
+    const plan = planRename(report, {
+      fromRelPath: 'assets/board.excalidraw',
+      toRelPath: 'assets/0007-board.excalidraw'
+    })
+    expect(plan.blockedReasons).toEqual([])
+    expect(plan.moves.map((move) => move.toRelPath).sort()).toEqual([
+      'assets/0007-board.excalidraw',
+      'assets/0007-board.svg'
+    ])
+    expect(plan.patches[0]?.replacement).toBe('../assets/0007-board.svg')
+  })
+
+  it('画布改名不许换后缀（换了派生图跟不上）', async () => {
+    await writeCanvasPairReference()
+    const report = await scanAssets(root)
+    const plan = planRename(report, {
+      fromRelPath: 'assets/board.svg',
+      toRelPath: 'assets/0007-board.png'
+    })
+    expect(plan.blockedReasons.some((reason) => reason.includes('后缀'))).toBe(true)
+    expect(plan.moves).toEqual([])
+  })
+
+  it('落盘：两个文件一起搬，撤销时两个一起还原', async () => {
+    await writeCanvasPairReference()
+    const report = await scanAssets(root)
+    const plan = await fillPlanHashes(
+      root,
+      planRename(report, {
+        fromRelPath: 'assets/board.svg',
+        toRelPath: 'assets/0007-board.svg'
+      })
+    )
+    const result = await applyAssetPlan(root, plan, { journalDir, recycleDir })
+    expect(result.status).toBe('applied')
+    await fs.access(path.join(root, 'assets/0007-board.excalidraw'))
+    await fs.access(path.join(root, 'assets/0007-board.svg'))
+    await expect(fs.access(path.join(root, 'assets/board.excalidraw'))).rejects.toThrow()
+    await expect(fs.access(path.join(root, 'assets/board.svg'))).rejects.toThrow()
+    expect(await fs.readFile(path.join(root, 'notes/0007. 画布.md'), 'utf8')).toContain(
+      '../assets/0007-board.svg'
+    )
+
+    const undone = await restoreAssetPlanSafe(plan.id)
+    expect(undone.status).toBe('applied')
+    await fs.access(path.join(root, 'assets/board.excalidraw'))
+    await fs.access(path.join(root, 'assets/board.svg'))
+    expect(await fs.readFile(path.join(root, 'notes/0007. 画布.md'), 'utf8')).toContain(
+      '../assets/board.svg'
+    )
+  })
+
+  it('没有配对文件时，单独改名照常', async () => {
+    await writeCanvasSource()
+    const report = await scanAssets(root)
+    const plan = planRename(report, {
+      fromRelPath: 'assets/board.excalidraw',
+      toRelPath: 'assets/0007-board.excalidraw'
+    })
+    expect(plan.blockedReasons).toEqual([])
+    expect(plan.moves.map((move) => move.toRelPath)).toEqual(['assets/0007-board.excalidraw'])
+  })
+})

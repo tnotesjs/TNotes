@@ -73,6 +73,12 @@ writeFileSync(
   join(assets, '0007-canvas.svg'),
   '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"></svg>\n'
 )
+// 孤儿画布：两半都没被引用 → 两半都算无效资源，应当能一起删掉
+writeFileSync(join(assets, '0007-lonely.excalidraw'), '{"type":"excalidraw","elements":[]}\n')
+writeFileSync(
+  join(assets, '0007-lonely.svg'),
+  '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"></svg>\n'
+)
 rmSync(join(assets, '0007-gone.png'))
 writeFileSync(join(profile, 'workspace.v1.json'), JSON.stringify({ path: workspace }))
 writeFileSync(
@@ -171,12 +177,16 @@ try {
   const canvasDeleteCount = await panel
     .getByRole('button', { name: /删除资源 0007-canvas/ })
     .count()
+  const lonelyDelete = rowFor('0007-lonely.svg').getByRole('button', {
+    name: '删除资源 0007-lonely.svg'
+  })
   record(
     '无效资源给删除按钮；被引用的资源与画布（同名 .svg 被引用）都不给',
     (await orphanDelete.count()) === 1 &&
       (await usedDelete.count()) === 0 &&
-      canvasDeleteCount === 0,
-    `orphan=${await orphanDelete.count()} used=${await usedDelete.count()} canvas=${canvasDeleteCount}`
+      canvasDeleteCount === 0 &&
+      (await lonelyDelete.count()) === 1,
+    `orphan=${await orphanDelete.count()} used=${await usedDelete.count()} canvas=${canvasDeleteCount} lonely=${await lonelyDelete.count()}`
   )
 
   // 4) 编号不匹配的被引用资源给修复按钮
@@ -254,6 +264,27 @@ try {
       existsSync(join(assets, '0007-used.png')) &&
       existsSync(join(assets, '0001-foreign.png')) === false,
     `assets=${JSON.stringify(assetNames())}`
+  )
+
+  // 9b) 删无效画布：两半一起回收（以前真相源被主进程拦下，会报错）
+  await rowFor('0007-lonely.svg').getByRole('button', { name: '删除资源 0007-lonely.svg' }).click()
+  await page.waitForTimeout(300)
+  const confirmPair = panel.getByRole('button', { name: '确认删除 0007-lonely.svg' })
+  await confirmPair.click()
+  const pairRecycled = await waitFor(
+    () =>
+      !existsSync(join(assets, '0007-lonely.svg')) &&
+      !existsSync(join(assets, '0007-lonely.excalidraw')),
+    25000
+  )
+  const pairErrorText = await panel
+    .locator('[data-note-assets-action-error]')
+    .innerText()
+    .catch(() => '')
+  record(
+    '删无效画布：`.svg` 与 `.excalidraw` 一起回收，不报错',
+    Boolean(pairRecycled) && pairErrorText === '',
+    `assets=${JSON.stringify(assetNames())} error=${JSON.stringify(pairErrorText)}`
   )
 
   // 10) 关掉面板

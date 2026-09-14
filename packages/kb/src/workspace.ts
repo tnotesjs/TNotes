@@ -218,7 +218,12 @@ export interface TNotesKbWorkspace {
       toRelPath: string
       generation?: number
     }): Promise<AssetOperationPlan>
-    planRecycle(input: { relPaths: string[]; generation?: number }): Promise<AssetOperationPlan>
+    planRecycle(input: {
+      relPaths: string[]
+      generation?: number
+      /** 定向删除（笔记资源面板逐个确认）：放开批量闸门与画布源文件保护 */
+      targeted?: boolean
+    }): Promise<AssetOperationPlan>
     planMerge(input: {
       keepRelPath: string
       dropRelPaths: string[]
@@ -570,7 +575,7 @@ export function createWorkspace(options: CreateWorkspaceOptions): TNotesKbWorksp
       },
       async planRecycle(input) {
         const report = await scanAssets(rootPath, { generation: input.generation })
-        const plan = planRecycle(report, input.relPaths)
+        const plan = planRecycle(report, input.relPaths, { targeted: input.targeted })
         if (plan.blockedReasons.length > 0) return plan
         return fillPlanHashes(rootPath, plan)
       },

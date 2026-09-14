@@ -338,9 +338,29 @@ describe('NoteAssetsPanel 修复编号与删除', () => {
     await flushMicrotasks()
 
     expect(saveDocument).toHaveBeenCalledWith('kb-a:uuid-0007')
-    expect(planRecycle).toHaveBeenCalledWith(KB, ['assets/0007-b.png'])
+    // targeted：逐个确认的定向删除，主进程据此放开「画布真相源受保护」这一条
+    expect(planRecycle).toHaveBeenCalledWith(KB, ['assets/0007-b.png'], undefined, {
+      targeted: true
+    })
     expect(apply).toHaveBeenCalledWith(KB, 'plan-recycle')
     expect(list).toHaveBeenCalledTimes(2)
+  })
+
+  it('删无效画布时两半一起交给主进程（`.svg` + 同名 `.excalidraw`）', async () => {
+    listing = [fileEntry('assets/0007-pair.svg'), fileEntry('assets/0007-pair.excalidraw')]
+    const { wrapper } = await mountPanel()
+    const row = wrapper.get('[data-note-assets-row="assets/0007-pair.svg"]')
+
+    await row.get('.row-delete').trigger('click')
+    await row.get('.row-confirm').trigger('click')
+    await flushMicrotasks()
+
+    expect(planRecycle).toHaveBeenCalledWith(
+      KB,
+      ['assets/0007-pair.svg', 'assets/0007-pair.excalidraw'],
+      undefined,
+      { targeted: true }
+    )
   })
 
   it('计划被门禁阻止时把 blockedReasons 显示在面板内，且不执行', async () => {

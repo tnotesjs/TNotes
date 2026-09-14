@@ -222,7 +222,11 @@ async function verifyPlanFresh(rootPath: string, plan: AssetOperationPlan): Prom
   if (plan.kind === 'recycle') {
     const again = planRecycle(
       report,
-      plan.moves.map((move) => move.fromRelPath)
+      plan.moves.map((move) => move.fromRelPath),
+      {
+        // 定向删除的计划要用定向规则复验，否则画布真相源会被默认保护拦下
+        targeted: plan.targeted
+      }
     )
     if (again.blockedReasons.length > 0) {
       throw new KbError('INVALID_OPERATION', again.blockedReasons.join('；'), {
@@ -310,14 +314,19 @@ async function applyMutations(
 ): Promise<string[]> {
   const changed: string[] = []
   if (plan.kind === 'rename') {
-    const move = plan.moves[0]
-    if (!move?.toRelPath) throw new KbError('INVALID_OPERATION', '重命名计划缺少目标路径')
-    const destAbs = path.join(rootPath, move.toRelPath)
-    if (await pathExists(destAbs)) {
-      throw new KbError('INVALID_OPERATION', `目标已存在: ${move.toRelPath}`)
+    // 重命名可能一次搬多个文件（画布：`x.excalidraw` + 同名派生图 `x.svg`）
+    if (plan.moves.length === 0 || plan.moves.some((move) => !move.toRelPath)) {
+      throw new KbError('INVALID_OPERATION', '重命名计划缺少目标路径')
     }
-    await copyFileStreaming(path.join(rootPath, move.fromRelPath), destAbs)
-    changed.push(move.toRelPath)
+    for (const move of plan.moves) {
+      const dest = move.toRelPath as string
+      const destAbs = path.join(rootPath, dest)
+      if (await pathExists(destAbs)) {
+        throw new KbError('INVALID_OPERATION', `目标已存在: ${dest}`)
+      }
+      await copyFileStreaming(path.join(rootPath, move.fromRelPath), destAbs)
+      changed.push(dest)
+    }
   }
 
   if (plan.kind === 'optimize') {
@@ -510,11 +519,22 @@ async function restoreAssetPlanUnlocked(
         })
       }
     }
-    const dest = plan.kind === 'rename' ? plan.moves[0]?.toRelPath : undefined
-    const destAbs = dest ? path.join(rootPath, dest) : null
-    const destHash = destAbs ? await pathHash(destAbs) : null
-    if (dest && destHash && destHash !== plan.moves[0].sha256) {
-      throw new KbError('INVALID_OPERATION', `恢复拒绝删除较新的重命名目标: ${dest}`)
+    // 重命名的撤销要删掉**所有**目标（画布是源文件 + 派生图两个文件），逐个比对字节
+    const renamedDests =
+      plan.kind === 'rename'
+        ? plan.moves
+            .filter((move) => move.toRelPath)
+            .map((move) => ({
+              relPath: move.toRelPath as string,
+              abs: path.join(rootPath, move.toRelPath as string),
+              sha256: move.sha256
+            }))
+        : []
+    for (const dest of renamedDests) {
+      const destHash = await pathHash(dest.abs)
+      if (destHash && destHash !== dest.sha256) {
+        throw new KbError('INVALID_OPERATION', `恢复拒绝删除较新的重命名目标: ${dest.relPath}`)
+      }
     }
     for (const created of plan.createdRelPaths) {
       const expected = plan.outputs.find((item) => item.relPath === created)?.sha256
@@ -530,7 +550,9 @@ async function restoreAssetPlanUnlocked(
         path.join(rootPath, item.relPath)
       )
     }
-    if (destAbs && destHash) await fs.rm(destAbs, { force: true })
+    for (const dest of renamedDests) {
+      await fs.rm(dest.abs, { force: true })
+    }
     for (const created of plan.createdRelPaths) {
       await fs.rm(path.join(rootPath, created), { force: true })
     }

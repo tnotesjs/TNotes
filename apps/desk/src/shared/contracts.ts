@@ -1473,7 +1473,9 @@ export interface DeskApi {
     planRecycle(
       knowledgeBaseId: string,
       relPaths: string[],
-      generation?: number
+      generation?: number,
+      /** 定向删除（笔记资源面板逐个确认）：允许删没被引用的画布源文件 */
+      options?: { targeted?: boolean }
     ): Promise<DeskResult<AssetOperationPlanDto>>
     planMerge(
       knowledgeBaseId: string,
