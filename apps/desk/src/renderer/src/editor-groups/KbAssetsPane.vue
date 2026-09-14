@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 
 import type {
   AssetJournalDto,
@@ -9,7 +9,7 @@ import type {
   AssetOptimizePreviewDto,
   AssetOptimizeSettings,
   AssetOptimizeStrength,
-  AssetRecordDto,
+  AssetReferenceDto,
   AssetScanProgressDto,
   AssetScanReportDto,
   DeskError,
@@ -18,12 +18,22 @@ import type {
 import { focusDialogInput } from '../dialogInputFocus'
 import { useEditorStore } from '../stores/editor'
 import { useWorkspaceStore } from '../stores/workspace'
+import KbAssetsBrowse from './KbAssetsBrowse.vue'
+import KbAssetsDetail from './KbAssetsDetail.vue'
+import { formatBytes } from './kbAssetsDisplay'
 import {
   classifyAssetWriteBlocks,
   renameBlockCode,
   renameBlockReason,
   type ClassifiedAssetWriteBlock
 } from './kbAssetsReasons'
+import {
+  initialAssetsPaneViewState,
+  isBrowseVisible,
+  isDetailVisible,
+  reduceAssetsPaneView,
+  type AssetsPaneViewEvent
+} from './kbAssetsViewState'
 
 const props = defineProps<{ tab: KbAssetsEditorTab; active: boolean }>()
 
@@ -41,6 +51,12 @@ const statusFilter = ref('all')
 const sortKey = ref<'path' | 'size' | 'refs'>('path')
 const selectedPath = ref<string | null>(null)
 const view = ref<'files' | 'broken' | 'diagnostics' | 'history'>('files')
+// 列表 / 网格只改浏览密度，共用同一份筛选、排序与选择状态。
+const browseMode = ref<'list' | 'grid'>('list')
+const paneElement = ref<HTMLElement | null>(null)
+// 断点按面板自身宽度判定（Desk 支持分栏，窗口宽度不可靠）。
+const paneView = reactive(initialAssetsPaneViewState())
+let resizeObserver: ResizeObserver | null = null
 const history = ref<AssetJournalDto[]>([])
 const writeBusy = ref(false)
 // 写入期间文件会移动：旧报告里的缩略图请求会打到已不存在的路径。
@@ -68,42 +84,10 @@ const knowledgeBase = computed(
     null
 )
 
-function formatBytes(value: number): string {
-  if (value < 1024) return `${value} B`
-  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`
-  return `${(value / (1024 * 1024)).toFixed(1)} MB`
-}
-
 function formatTime(value: string): string {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
   return date.toLocaleString('zh-CN')
-}
-
-function statusLabel(status: string): string {
-  if (status === 'referenced') return '已引用'
-  if (status === 'idle-candidate') return '疑似闲置'
-  if (status === 'uncertain-idle') return '闲置未确定'
-  if (status === 'uncertain-affected') return '不确定影响'
-  if (status === 'protected') return '受保护'
-  return status
-}
-
-function protectionLabel(reason: string): string {
-  if (reason === 'kb-icon') return '知识库图标'
-  if (reason === 'symlink-escape') return '符号链接越界'
-  if (reason === 'excalidraw-source') return '自由绘图真相源，不可清理；派生产物不能覆盖它'
-  return reason
-}
-
-function kindLabel(kind: string): string {
-  if (kind === 'image') return '图片'
-  if (kind === 'svg') return 'SVG'
-  if (kind === 'gif') return 'GIF'
-  if (kind === 'excalidraw') return 'Excalidraw'
-  if (kind === 'html') return 'HTML'
-  if (kind === 'css') return 'CSS'
-  return '其他'
 }
 
 function planKindLabel(kind: string): string {
@@ -124,19 +108,6 @@ function stageLabel(stage: string): string {
   if (stage === 'restoring') return '恢复中'
   if (stage === 'failed') return '失败'
   return stage
-}
-
-function canPreviewThumb(asset: AssetRecordDto): boolean {
-  return asset.kind === 'image' || asset.kind === 'gif'
-}
-
-function thumbSrc(relPath: string): string {
-  const params = new URLSearchParams({
-    knowledgeBaseId: props.tab.knowledgeBaseId,
-    path: relPath,
-    v: String(workspace.assetRevisions[props.tab.knowledgeBaseId] ?? 0)
-  })
-  return `tnotes-asset://asset?${params.toString()}`
 }
 
 function moveLabel(move: { fromRelPath: string; toRelPath?: string }): string {
@@ -176,6 +147,46 @@ const mergeableGroups = computed(
 const selectedMergeGroup = computed(() =>
   mergeableGroups.value.find((group) => group.relPaths.includes(selected.value?.relPath ?? ''))
 )
+
+const showBrowse = computed(() => isBrowseVisible(paneView))
+const showDetail = computed(() => isDetailVisible(paneView))
+/** 筛选可能把当前选中项藏起来：详情随之给明确提示，而不是假装它还在列表里。 */
+const selectedInFiltered = computed(() =>
+  selected.value
+    ? filteredAssets.value.some((asset) => asset.relPath === selected.value?.relPath)
+    : true
+)
+
+function dispatchPaneView(event: AssetsPaneViewEvent): void {
+  Object.assign(paneView, reduceAssetsPaneView(paneView, event))
+}
+
+function selectAsset(relPath: string): void {
+  selectedPath.value = relPath
+  dispatchPaneView({ type: 'select' })
+}
+
+function returnToBrowse(): void {
+  dispatchPaneView({ type: 'back' })
+}
+
+function clearFilters(): void {
+  query.value = ''
+  kindFilter.value = 'all'
+  statusFilter.value = 'all'
+}
+
+function recycleSelected(): void {
+  if (selected.value) void openRecycle([selected.value.relPath])
+}
+
+function openSelectedExcalidraw(): void {
+  if (selected.value) openExcalidrawDocument(selected.value.relPath)
+}
+
+function openDetailReference(reference: AssetReferenceDto): void {
+  openReference(reference.sourceRelPath, reference.noteUuid, reference.noteTitle)
+}
 
 function defaultOptimizeSettings(): AssetOptimizeSettings {
   const fromSettings = workspace.settings?.imageUpload.optimize
@@ -616,6 +627,7 @@ watch(
     report.value = null
     selectedPath.value = null
     history.value = []
+    dispatchPaneView({ type: 'clear-selection' })
     closeDialogs()
     void scan(true)
     void loadSummaries()
@@ -631,12 +643,30 @@ watch(
   }
 )
 
+watch(selectedPath, (value) => {
+  // 扫描后选中的文件可能已经不在报告里：回到浏览，别停在空详情。
+  if (!value) dispatchPaneView({ type: 'clear-selection' })
+})
+
 onMounted(() => {
   unsubscribeProgress = window.desk.assets.onScanProgress((event) => {
     if (event.knowledgeBaseId !== props.tab.knowledgeBaseId) return
     if (event.generation !== generation) return
     progress.value = event
   })
+  // 容器查询负责样式，但「窄屏一次只显示一栏」需要可判定的宽度来决定显隐。
+  const element = paneElement.value
+  if (element && typeof ResizeObserver === 'function') {
+    resizeObserver = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width ?? 0
+      if (width > 0) dispatchPaneView({ type: 'resize', width })
+    })
+    try {
+      resizeObserver.observe(element)
+    } catch {
+      resizeObserver = null
+    }
+  }
   if (props.active) {
     void scan(true)
     void loadSummaries()
@@ -645,6 +675,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  resizeObserver?.disconnect()
+  resizeObserver = null
   unsubscribeProgress?.()
   if (loading.value) void window.desk.assets.cancel(props.tab.knowledgeBaseId)
 })
@@ -652,280 +684,259 @@ onUnmounted(() => {
 
 <template>
   <div class="kb-assets-pane">
-    <header class="pane-header">
-      <div>
-        <h2>资源 · {{ tab.knowledgeBaseName }}</h2>
-        <p>盘点引用、重命名、回收与本机恢复。操作只作用于当前知识库。</p>
-      </div>
-      <div class="header-actions">
-        <button type="button" class="ghost" :disabled="!loading" @click="cancel">取消</button>
-        <button type="button" class="save-button" :disabled="loading" @click="scan(true)">
-          {{ loading ? '扫描中…' : '刷新' }}
-        </button>
-      </div>
-    </header>
-
-    <p v-if="progress" class="status">
-      扫描进度 {{ progress.done }} / {{ progress.total }}
-      <span v-if="progress.current"> · {{ progress.current }}</span>
-    </p>
-    <p v-if="error" class="status error">{{ error }}</p>
-    <p v-if="report" class="coverage" :class="{ warn: !report.coverageComplete }">
-      {{ coverageMessage }}
-    </p>
-    <p v-if="incompleteHistory.length" class="status error">
-      事务待恢复：该知识库有未完成的资源事务，请先在「历史」中恢复。未完成前不能开始新的整理。
-    </p>
-
-    <section v-if="report" class="stats">
-      <span>{{ report.stats.assetCount }} 个文件</span>
-      <span>{{ formatBytes(report.stats.assetBytes) }}</span>
-      <span>已解析引用 {{ report.stats.determinedReferenceCount }}</span>
-      <span>不确定引用 {{ report.stats.uncertainReferenceCount }}</span>
-      <span>可合并重复组 {{ report.stats.mergeableDuplicateCount }}</span>
-      <span>跨笔记同内容 {{ report.stats.crossNoteDuplicateCount }}</span>
-    </section>
-
-    <div class="view-tabs">
-      <button type="button" :class="{ active: view === 'files' }" @click="view = 'files'">
-        文件
-      </button>
-      <button type="button" :class="{ active: view === 'broken' }" @click="view = 'broken'">
-        已确定断链
-      </button>
-      <button
-        type="button"
-        :class="{ active: view === 'diagnostics' }"
-        @click="view = 'diagnostics'"
-      >
-        诊断
-      </button>
-      <button type="button" :class="{ active: view === 'history' }" @click="view = 'history'">
-        历史
-      </button>
-    </div>
-
-    <template v-if="view === 'files' && report">
-      <div class="filters">
-        <input v-model="query" type="search" placeholder="搜索路径" />
-        <select v-model="kindFilter">
-          <option value="all">全部类型</option>
-          <option value="image">图片</option>
-          <option value="gif">GIF</option>
-          <option value="svg">SVG</option>
-          <option value="excalidraw">Excalidraw</option>
-          <option value="other">其他</option>
-        </select>
-        <select v-model="statusFilter">
-          <option value="all">全部状态</option>
-          <option value="referenced">已引用</option>
-          <option value="idle-candidate">疑似闲置</option>
-          <option value="uncertain-idle">闲置未确定</option>
-          <option value="uncertain-affected">不确定影响</option>
-          <option value="protected">受保护</option>
-          <option value="duplicates">内容重复</option>
-        </select>
-        <select v-model="sortKey">
-          <option value="path">按路径</option>
-          <option value="size">按体积</option>
-          <option value="refs">按引用数</option>
-        </select>
-        <button
-          type="button"
-          class="ghost"
-          :disabled="writeBusy || idleCandidates.length === 0"
-          @click="openRecycle(idleCandidates.map((asset) => asset.relPath))"
-        >
-          清理闲置候选
-        </button>
-      </div>
-      <p class="hint">重复内容筛选随内容哈希上线；此处不按同名或同大小冒充重复。</p>
-      <div class="split">
-        <ul class="file-list">
-          <li v-for="asset in filteredAssets" :key="asset.relPath">
-            <button
-              type="button"
-              class="file-row"
-              :class="{ selected: selectedPath === asset.relPath }"
-              @click="selectedPath = asset.relPath"
-            >
-              <img
-                v-if="!suppressThumbs && canPreviewThumb(asset)"
-                class="thumb"
-                :src="thumbSrc(asset.relPath)"
-                alt=""
-                loading="lazy"
-                decoding="async"
-              />
-              <span v-else class="thumb placeholder">{{ kindLabel(asset.kind).slice(0, 1) }}</span>
-              <span class="file-meta">
-                <strong>{{ asset.relPath }}</strong>
-                <small>
-                  {{ formatBytes(asset.size) }} · 引用 {{ asset.references.length }} ·
-                  {{ statusLabel(asset.status) }}
-                </small>
-              </span>
-            </button>
-          </li>
-        </ul>
-        <aside v-if="selected" class="detail">
-          <h3>{{ selected.relPath }}</h3>
-          <p>
-            {{ kindLabel(selected.kind) }} · {{ formatBytes(selected.size) }} ·
-            {{ statusLabel(selected.status) }}
-          </p>
-          <p v-if="selected.protection.length" class="hint">
-            保护原因：{{ selected.protection.map(protectionLabel).join('、') }}
-          </p>
-          <p class="hint" data-asset-rename-state>
-            <template v-if="selected.renameAllowed">重命名：可生成重命名计划</template>
-            <template v-else>重命名：已阻止（{{ renameBlock }}）</template>
-          </p>
-          <p v-if="selectedMergeGroup" class="hint">
-            同笔记内容重复 {{ selectedMergeGroup.relPaths.length }} 个，可合并到当前文件。
-          </p>
-          <div class="detail-actions">
-            <button
-              type="button"
-              class="save-button"
-              data-asset-rename
-              :disabled="writeBusy || !selected.renameAllowed"
-              :title="renameBlock"
-              @click="openRename"
-            >
-              重命名
-            </button>
-            <button
-              type="button"
-              class="ghost"
-              :disabled="writeBusy || !selectedMergeGroup"
-              @click="openMerge"
-            >
-              合并重复
-            </button>
-            <button
-              v-if="selected.kind === 'excalidraw'"
-              type="button"
-              class="ghost"
-              :disabled="writeBusy"
-              @click="openExcalidrawDocument(selected.relPath)"
-            >
-              打开画布
-            </button>
-            <button
-              v-else
-              type="button"
-              class="ghost"
-              :disabled="writeBusy || selected.kind !== 'image'"
-              @click="openOptimize"
-            >
-              有损压缩
-            </button>
-            <button
-              type="button"
-              class="ghost"
-              :disabled="writeBusy"
-              @click="openRecycle([selected.relPath])"
-            >
-              移入回收区
+    <!-- 容器查询只作用于这个布局层；对话框留在外面，保持相对视口定位。 -->
+    <div ref="paneElement" class="pane-layout">
+      <div class="pane-head">
+        <header class="pane-header">
+          <div class="pane-title">
+            <h2>资源 · {{ tab.knowledgeBaseName }}</h2>
+            <p class="hint">盘点引用、重命名、回收与本机恢复。操作只作用于当前知识库。</p>
+          </div>
+          <div class="header-actions">
+            <button type="button" class="ghost" :disabled="!loading" @click="cancel">取消</button>
+            <button type="button" class="save-button" :disabled="loading" @click="scan(true)">
+              {{ loading ? '扫描中…' : '刷新' }}
             </button>
           </div>
-          <h4>已识别引用</h4>
-          <ul v-if="selected.references.length" class="refs">
-            <li v-for="(item, index) in selected.references" :key="index">
-              <code>{{ item.sourceRelPath }}:{{ item.line }}</code>
-              · {{ item.syntax }}
-              <button
-                v-if="item.noteUuid"
-                type="button"
-                class="linkish"
-                @click="openReference(item.sourceRelPath, item.noteUuid, item.noteTitle)"
-              >
-                打开笔记
-              </button>
+        </header>
+
+        <p v-if="progress" class="status" role="status">
+          扫描进度 {{ progress.done }} / {{ progress.total }}
+          <span v-if="progress.current"> · {{ progress.current }}</span>
+        </p>
+        <p v-if="error" class="status error" role="alert">{{ error }}</p>
+        <p v-if="report" class="coverage" :class="{ warn: !report.coverageComplete }">
+          {{ coverageMessage }}
+        </p>
+        <p v-if="incompleteHistory.length" class="status error">
+          事务待恢复：该知识库有未完成的资源事务，请先在「历史」中恢复。未完成前不能开始新的整理。
+        </p>
+
+        <section v-if="report" class="stats" aria-label="资源统计">
+          <span class="stat-chip">{{ report.stats.assetCount }} 个文件</span>
+          <span class="stat-chip">{{ formatBytes(report.stats.assetBytes) }}</span>
+          <span class="stat-chip">已解析引用 {{ report.stats.determinedReferenceCount }}</span>
+          <span class="stat-chip">不确定引用 {{ report.stats.uncertainReferenceCount }}</span>
+          <span class="stat-chip">可合并重复组 {{ report.stats.mergeableDuplicateCount }}</span>
+          <span class="stat-chip">跨笔记同内容 {{ report.stats.crossNoteDuplicateCount }}</span>
+        </section>
+
+        <div class="view-tabs" role="group" aria-label="资源视图">
+          <button
+            type="button"
+            :class="{ active: view === 'files' }"
+            :aria-pressed="view === 'files'"
+            @click="view = 'files'"
+          >
+            文件
+          </button>
+          <button
+            type="button"
+            :class="{ active: view === 'broken' }"
+            :aria-pressed="view === 'broken'"
+            @click="view = 'broken'"
+          >
+            已确定断链
+          </button>
+          <button
+            type="button"
+            :class="{ active: view === 'diagnostics' }"
+            :aria-pressed="view === 'diagnostics'"
+            @click="view = 'diagnostics'"
+          >
+            诊断
+          </button>
+          <button
+            type="button"
+            :class="{ active: view === 'history' }"
+            :aria-pressed="view === 'history'"
+            @click="view = 'history'"
+          >
+            历史
+          </button>
+        </div>
+
+        <div v-if="view === 'files'" class="filters">
+          <input
+            v-model="query"
+            class="filter-search"
+            type="search"
+            placeholder="搜索路径"
+            aria-label="搜索资源路径"
+          />
+          <select v-model="kindFilter" class="filter-kind" aria-label="按资源类型筛选">
+            <option value="all">全部类型</option>
+            <option value="image">图片</option>
+            <option value="gif">GIF</option>
+            <option value="svg">SVG</option>
+            <option value="excalidraw">Excalidraw</option>
+            <option value="other">其他</option>
+          </select>
+          <select v-model="statusFilter" class="filter-status" aria-label="按资源状态筛选">
+            <option value="all">全部状态</option>
+            <option value="referenced">已引用</option>
+            <option value="idle-candidate">疑似闲置</option>
+            <option value="uncertain-idle">闲置未确定</option>
+            <option value="uncertain-affected">不确定影响</option>
+            <option value="protected">受保护</option>
+            <option value="duplicates">内容重复</option>
+          </select>
+          <select v-model="sortKey" class="filter-sort" aria-label="资源排序方式">
+            <option value="path">按路径</option>
+            <option value="size">按体积</option>
+            <option value="refs">按引用数</option>
+          </select>
+          <div class="view-mode" role="group" aria-label="浏览方式">
+            <button
+              type="button"
+              :class="{ active: browseMode === 'list' }"
+              :aria-pressed="browseMode === 'list'"
+              @click="browseMode = 'list'"
+            >
+              列表
+            </button>
+            <button
+              type="button"
+              :class="{ active: browseMode === 'grid' }"
+              :aria-pressed="browseMode === 'grid'"
+              @click="browseMode = 'grid'"
+            >
+              网格
+            </button>
+          </div>
+          <button
+            type="button"
+            class="ghost filter-cleanup"
+            :disabled="writeBusy || idleCandidates.length === 0"
+            @click="openRecycle(idleCandidates.map((asset) => asset.relPath))"
+          >
+            清理闲置候选
+          </button>
+        </div>
+        <p v-if="view === 'files'" class="hint">
+          重复内容筛选随内容哈希上线；此处不按同名或同大小冒充重复。
+        </p>
+      </div>
+
+      <div v-if="view === 'files'" class="pane-main" :class="{ 'has-detail': Boolean(selected) }">
+        <KbAssetsBrowse
+          v-show="showBrowse"
+          :assets="filteredAssets"
+          :total-count="report?.assets.length ?? 0"
+          :loading="loading"
+          :error="error"
+          :selected-path="selectedPath"
+          :mode="browseMode"
+          :visible="showBrowse"
+          :suppress-thumbs="suppressThumbs"
+          :knowledge-base-id="tab.knowledgeBaseId"
+          :asset-revision="workspace.assetRevisions[tab.knowledgeBaseId] ?? 0"
+          @select="selectAsset"
+          @clear-filters="clearFilters"
+          @retry="scan(true)"
+        />
+        <KbAssetsDetail
+          v-if="selected"
+          v-show="showDetail"
+          :asset="selected"
+          :knowledge-base-id="tab.knowledgeBaseId"
+          :asset-revision="workspace.assetRevisions[tab.knowledgeBaseId] ?? 0"
+          :merge-group-size="selectedMergeGroup?.relPaths.length ?? null"
+          :rename-block="renameBlock"
+          :write-busy="writeBusy"
+          :show-back="paneView.tier === 'narrow'"
+          :in-filtered-results="selectedInFiltered"
+          :suppress-thumbs="suppressThumbs"
+          @back="returnToBrowse"
+          @rename="openRename"
+          @merge="openMerge"
+          @optimize="openOptimize"
+          @recycle="recycleSelected"
+          @open-excalidraw="openSelectedExcalidraw"
+          @open-reference="openDetailReference"
+        />
+      </div>
+
+      <div v-else class="pane-scroll">
+        <section v-if="view === 'broken' && report">
+          <p v-if="!report.coverageComplete" class="hint warn">
+            未覆盖来源的断链状态未知，不能显示「无断链」。下列仅为已解析语法中确定缺失的本地目标。
+          </p>
+          <ul v-if="report.brokenLinks.length" class="plain-list">
+            <li v-for="(item, index) in report.brokenLinks" :key="index">
+              <code>{{ item.reference.rawUrl }}</code>
+              ← {{ item.reference.sourceRelPath }}:{{ item.reference.line }} ({{ item.reason }})
             </li>
           </ul>
-          <p v-else class="hint">没有已解析的确定引用。</p>
-          <p class="hint">未覆盖来源见「诊断」。部分扫描不能当成全库无引用。</p>
-        </aside>
+          <p v-else class="hint">已解析范围内没有确定的本地断链。</p>
+        </section>
+
+        <section v-else-if="view === 'diagnostics' && report">
+          <h3>适配器</h3>
+          <ul class="plain-list">
+            <li v-for="adapter in report.adapters" :key="adapter.id">
+              <strong>{{ adapter.id }}</strong>
+              · {{ adapter.status }} · {{ adapter.detail }}
+            </li>
+          </ul>
+          <h3>诊断</h3>
+          <ul v-if="report.diagnostics.length" class="plain-list">
+            <li v-for="(item, index) in report.diagnostics" :key="index">
+              {{ item.code }} · {{ item.message }}
+            </li>
+          </ul>
+          <p v-else class="hint">没有诊断项。</p>
+        </section>
+
+        <section v-else-if="view === 'history'" class="history">
+          <p class="hint">
+            恢复记录保存在本机 userData，不随知识库移动。恢复拒绝覆盖后来编辑的文件。
+          </p>
+          <ul v-if="history.length" class="plain-list">
+            <li v-for="item in history" :key="item.planId" class="history-row">
+              <div>
+                <strong>{{ planKindLabel(item.kind) }}</strong>
+                · {{ stageLabel(item.stage) }} · {{ formatTime(item.createdAt) }}
+                <p class="hint">
+                  {{ item.moves.map(moveLabel).join('、') || '无路径变更' }}
+                  · {{ item.estimated.filesTouched }} 个文件 ·
+                  {{ formatBytes(item.estimated.bytesMoved) }}
+                </p>
+              </div>
+              <button
+                v-if="item.restorable"
+                type="button"
+                class="ghost"
+                :disabled="writeBusy"
+                @click="openRestore(item)"
+              >
+                {{ item.stage === 'applied' ? '恢复' : '处理未完成事务' }}
+              </button>
+              <span v-else class="hint">已恢复</span>
+            </li>
+          </ul>
+          <p v-else class="hint">还没有可恢复的整理记录。</p>
+        </section>
       </div>
-    </template>
 
-    <section v-else-if="view === 'broken' && report">
-      <p v-if="!report.coverageComplete" class="hint warn">
-        未覆盖来源的断链状态未知，不能显示「无断链」。下列仅为已解析语法中确定缺失的本地目标。
-      </p>
-      <ul v-if="report.brokenLinks.length" class="plain-list">
-        <li v-for="(item, index) in report.brokenLinks" :key="index">
-          <code>{{ item.reference.rawUrl }}</code>
-          ← {{ item.reference.sourceRelPath }}:{{ item.reference.line }} ({{ item.reason }})
-        </li>
-      </ul>
-      <p v-else class="hint">已解析范围内没有确定的本地断链。</p>
-    </section>
-
-    <section v-else-if="view === 'diagnostics' && report">
-      <h3>适配器</h3>
-      <ul class="plain-list">
-        <li v-for="adapter in report.adapters" :key="adapter.id">
-          <strong>{{ adapter.id }}</strong>
-          · {{ adapter.status }} · {{ adapter.detail }}
-        </li>
-      </ul>
-      <h3>诊断</h3>
-      <ul v-if="report.diagnostics.length" class="plain-list">
-        <li v-for="(item, index) in report.diagnostics" :key="index">
-          {{ item.code }} · {{ item.message }}
-        </li>
-      </ul>
-      <p v-else class="hint">没有诊断项。</p>
-    </section>
-
-    <section v-else-if="view === 'history'" class="history">
-      <p class="hint">恢复记录保存在本机 userData，不随知识库移动。恢复拒绝覆盖后来编辑的文件。</p>
-      <ul v-if="history.length" class="plain-list">
-        <li v-for="item in history" :key="item.planId" class="history-row">
-          <div>
-            <strong>{{ planKindLabel(item.kind) }}</strong>
-            · {{ stageLabel(item.stage) }} · {{ formatTime(item.createdAt) }}
-            <p class="hint">
-              {{ item.moves.map(moveLabel).join('、') || '无路径变更' }}
-              · {{ item.estimated.filesTouched }} 个文件 ·
-              {{ formatBytes(item.estimated.bytesMoved) }}
-            </p>
-          </div>
-          <button
-            v-if="item.restorable"
-            type="button"
-            class="ghost"
-            :disabled="writeBusy"
-            @click="openRestore(item)"
-          >
-            {{ item.stage === 'applied' ? '恢复' : '处理未完成事务' }}
-          </button>
-          <span v-else class="hint">已恢复</span>
-        </li>
-      </ul>
-      <p v-else class="hint">还没有可恢复的整理记录。</p>
-    </section>
-
-    <section class="others">
-      <h3>已管理知识库</h3>
-      <p class="hint">只读汇总，点击可打开对应资源面板。不会跨库改文件。</p>
-      <ul class="plain-list">
-        <li v-for="item in summaries" :key="item.knowledgeBaseId">
-          <button
-            type="button"
-            class="linkish"
-            :disabled="item.knowledgeBaseId === tab.knowledgeBaseId"
-            @click="openOtherKb(item.knowledgeBaseId)"
-          >
-            {{ item.displayName }}
-          </button>
-          · {{ item.fileCount }} 个文件 · {{ formatBytes(item.bytes) }}
-        </li>
-      </ul>
-    </section>
+      <details v-if="summaries.length" class="pane-foot others">
+        <summary>已管理知识库（{{ summaries.length }}）</summary>
+        <p class="hint">只读汇总，点击可打开对应资源面板。不会跨库改文件。</p>
+        <ul class="plain-list">
+          <li v-for="item in summaries" :key="item.knowledgeBaseId">
+            <button
+              type="button"
+              class="linkish"
+              :disabled="item.knowledgeBaseId === tab.knowledgeBaseId"
+              @click="openOtherKb(item.knowledgeBaseId)"
+            >
+              {{ item.displayName }}
+            </button>
+            · {{ item.fileCount }} 个文件 · {{ formatBytes(item.bytes) }}
+          </li>
+        </ul>
+      </details>
+    </div>
 
     <div
       v-if="renameOpen"
@@ -1217,25 +1228,52 @@ onUnmounted(() => {
   </div>
 </template>
 
+<style src="./kbAssetsShared.css" scoped></style>
+
 <style src="../components/settings/settingsShared.css" scoped></style>
 
 <style scoped>
 .kb-assets-pane {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   width: 100%;
   height: 100%;
-  overflow: auto;
-  padding: 20px 28px 40px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   box-sizing: border-box;
+}
+
+/* 断点按面板自身宽度判定：Desk 支持分栏，窗口宽度不可靠。 */
+.pane-layout {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  container-type: inline-size;
+  container-name: kb-assets-pane;
+}
+
+/* 顶部工具区固定在面板内；高度不足时它自己滚动，不挤占浏览 / 详情。 */
+.pane-head {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 24px 8px;
 }
 
 .pane-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.pane-title {
+  min-width: 0;
 }
 
 .pane-header h2 {
@@ -1243,49 +1281,22 @@ onUnmounted(() => {
   font-size: 18px;
 }
 
-.pane-header p,
-.hint {
+.pane-header p {
   margin: 0;
   color: var(--muted);
   font-size: 13px;
 }
 
-.header-actions,
-.detail-actions {
+.header-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.save-button,
-.ghost {
-  border-radius: 8px;
-  padding: 8px 16px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.save-button {
-  border: 0;
-  background: var(--accent);
-  color: #fff;
-}
-
-.ghost {
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text);
-}
-
-.save-button:disabled,
-.ghost:disabled,
-.linkish:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 .status {
+  margin: 8px 0 0;
   color: var(--muted);
+  font-size: 13px;
 }
 
 .status.error,
@@ -1298,21 +1309,35 @@ onUnmounted(() => {
   color: #c44;
 }
 
-.coverage,
-.stats,
-.filters,
-.view-tabs,
-.others,
-.history {
-  margin: 12px 0;
+.coverage {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 13px;
 }
 
-.stats,
-.filters,
+/* 统计只做紧凑小标签，不用大号统计卡片。 */
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 0;
+}
+
+.stat-chip {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 9px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
 .view-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 16px;
+  gap: 6px;
+  margin: 12px 0 0;
 }
 
 .view-tabs button {
@@ -1328,107 +1353,153 @@ onUnmounted(() => {
   border-color: var(--accent);
 }
 
+/*
+ * 用 Grid 约束控件尺寸：共享设置样式给 input / select 设了 width: 100%，
+ * 在 flex-wrap 里会把每个控件拉成整行。Grid 里 width: 100% 只填满所在列，
+ * 不需要 !important，也不去改共享样式。
+ */
+.filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 10px;
+  align-items: center;
+  margin: 12px 0 0;
+}
+
+.filters .filter-search {
+  grid-column: 1 / -1;
+}
+
 .filters input,
 .filters select {
+  min-width: 0;
   height: 32px;
   border: 1px solid var(--border);
   border-radius: 7px;
   background: var(--input-bg);
   color: var(--text);
   padding: 0 8px;
+  box-sizing: border-box;
 }
 
-.split {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(240px, 0.8fr);
-  gap: 16px;
-  align-items: start;
-}
-
-.file-list,
-.plain-list,
-.refs {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.file-row {
-  width: 100%;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  text-align: left;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: transparent;
-  color: inherit;
-  padding: 6px;
-  cursor: pointer;
-}
-
-.file-row.selected,
-.file-row:hover {
-  border-color: var(--border);
-  background: var(--hover, color-mix(in srgb, var(--text) 6%, transparent));
-}
-
-.thumb {
-  width: 40px;
-  height: 40px;
-  object-fit: cover;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--panel);
-  flex: none;
-}
-
-.thumb.placeholder {
+.view-mode {
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.file-meta {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.file-meta strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.detail {
+  justify-self: start;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px;
-  background: var(--panel);
+  border-radius: 7px;
+  overflow: hidden;
 }
 
-.detail h3,
-.detail h4,
-.others h3 {
-  margin: 0 0 8px;
-}
-
-.linkish {
+.view-mode button {
   border: 0;
-  background: none;
-  color: var(--accent);
+  background: transparent;
+  color: var(--muted);
+  padding: 7px 12px;
+  font-size: 12px;
   cursor: pointer;
-  padding: 0;
 }
 
-.plain-list li,
-.refs li {
-  margin: 6px 0;
+.view-mode button + button {
+  border-left: 1px solid var(--border);
+}
+
+.view-mode button.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.filter-cleanup {
+  justify-self: start;
+  padding: 6px 12px;
+}
+
+.history {
+  margin: 12px 0;
+}
+
+.others {
+  margin: 0;
+}
+
+.others summary {
+  cursor: pointer;
+  font-weight: 600;
   font-size: 13px;
+}
+
+.others .hint {
+  margin: 6px 0;
+}
+
+/* 浏览 / 详情：顶部工具区固定，两个区域各自滚动。
+   flex-basis 取 0 让高度由剩余空间决定；min-height 兜底，顶部再高也挤不没它。 */
+.pane-main {
+  flex: 1 1 0;
+  min-height: 200px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 16px;
+  padding: 0 24px 16px;
+}
+
+.pane-scroll {
+  flex: 1 1 0;
+  min-height: 200px;
+  overflow: auto;
+  padding: 0 24px 16px;
+}
+
+/* 「已管理知识库」收成折叠脚注：默认不占浏览空间，需要时仍可达。 */
+.pane-foot {
+  flex: none;
+  min-height: 0;
+  max-height: 35%;
+  overflow: auto;
+  border-top: 1px solid var(--border);
+  padding: 8px 24px;
+}
+
+/* 详情列只在选中后出现；没选中时浏览区占满宽度，不留空列。 */
+@container kb-assets-pane (min-width: 800px) {
+  .pane-main.has-detail {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
+  }
+
+  /* 中屏工具栏允许两行。 */
+  .filters {
+    grid-template-columns: minmax(0, 1fr) minmax(112px, 150px) minmax(112px, 160px);
+  }
+
+  .filters .filter-search {
+    grid-column: auto;
+  }
+}
+
+@container kb-assets-pane (min-width: 1200px) {
+  .pane-main.has-detail {
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 440px);
+  }
+
+  /* 宽屏工具栏回到一行。 */
+  .filters {
+    grid-template-columns:
+      minmax(0, 1fr) minmax(120px, 150px) minmax(120px, 160px) minmax(110px, 140px) max-content
+      max-content;
+  }
+}
+
+@container kb-assets-pane (max-width: 799.98px) {
+  .pane-head {
+    padding: 12px 14px 6px;
+  }
+
+  .pane-main,
+  .pane-scroll,
+  .pane-foot {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
 }
 
 .history-row {

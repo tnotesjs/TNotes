@@ -1,12 +1,14 @@
 # Desk
 
-Electron + Vue 3。可视化编辑器用 Milkdown / ProseMirror（**自组装配**：`src/renderer/src/markdown/deskEditor.ts` + 从 Crepe 移植的特性 `crepePort/`，不再依赖 `@milkdown/crepe`），源码视图是独立 CodeMirror 6。知识库读写 `@tnotesjs/kb`，预览 `@tnotesjs/ssg`，共享块 `@tnotesjs/ui`。
+Electron + Vue 3。可视化编辑器用 Milkdown / ProseMirror（**自组装配**：`src/renderer/src/markdown/deskEditor.ts` + 从 Crepe 移植的特性 `crepePort/`，不再依赖 `@milkdown/crepe`），源码视图是独立 **Monaco**（懒加载，`src/renderer/src/monaco/monaco.ts`；可视化文档内的代码块/源码小编辑器仍是 CodeMirror 6）。知识库读写 `@tnotesjs/kb`，预览 `@tnotesjs/ssg`，共享块 `@tnotesjs/ui`。
 
+- 知识库文本文件浏览（只读）：主进程 `kb-files:list` / `kb-files:read`（`packages/kb/src/files.ts`）只列一层目录，并按拒绝名单过滤 `.git` / `node_modules` / `.tnotes/dist` / 系统垃圾；**能不能当文本看由字节判定**（采样里有 NUL 或非法 UTF-8 → 不是文本），不看扩展名。标签页类型 `text-file` 用 Monaco 只读渲染，本阶段不支持写入。
+- Monaco 不注册 worker：生产环境渲染端是 `file://` 加载（Chromium 不允许 file:// 起 Worker），CSP 又是 `script-src 'self'`（blob: 也被挡）。因此关掉了所有依赖 worker 的能力（JSON/YAML/TS 诊断、diff、基于词的建议）。要用语言服务得先把渲染端改成自定义协议加载。
 - Markdown 是磁盘 canonical。自定义语法经 `rawBlockProjection.ts` 投影为 `deskRawBlock`；`sourcePreservation.ts` 保证未编辑块字节级零 diff。
 - 独占一行的 `<br />` 不投影，交给 Milkdown `remark-preserve-empty-line`。段内 / 表格内 `<br>` 仍走投影。
-- 自由绘图的磁盘真相源是 `assets/*.excalidraw`，不是旁边的 `.svg` / `.png`。后者是历史派生产物。Desk 与 SSG 共用 `@tnotesjs/ui` 的同一套 Excalidraw 组件消费该文件：Desk 侧是标签页（`editor-groups/ExcalidrawTabPane.vue`）与笔记内嵌卡片（`markdown/deskRawBlockView/excalidraw.ts`），两者共用 `editor/excalidraw/canvasController.ts`；SSG 侧是 `data-tn-island="excalidraw"` 只读岛。`.excalidraw` 的清理保护仍然有效，派生 SVG 的移除是后续专门迁移，不是当前资源清理的默认行为。
-- 画布写入必须走 `window.desk.excalidraw.*` 受限 IPC（只允许 `assets/*.excalidraw`、≤32MB、写要带 `expectedRevision`），并经过资源写入门禁；画布标签页/卡片打开期间该库的有未写完内容的画布会阻止资源整理。画布内容变化**不改笔记源码**，只有组件 `path`/`height` 变化才定点改写那一行。
-- 归属规则：`.excalidraw` 文件名四位前缀是主人。笔记内嵌卡片只接受自己编号的画布（其它编号只给诊断、不打开写编辑）；跨笔记粘贴由 `markdown/excalidrawClipboardPlugin.ts` 自动复制一份目标编号的文件，不共享源文件。
+- 自由绘图是**两个文件一份资源**：`assets/*.excalidraw` 是唯一真相源，同名 `.svg`（如 `0013-x.excalidraw` ↔ `0013-x.svg`）是**派生图**，由 `exportToSvg` 导出（字体已内联）。笔记里引用的就是那张派生 `.svg`（`![画布](../assets/0013-x.svg)`），**完全按图片处理**：拖拽改尺寸、描述、对齐都走 `markdown/deskImageView.ts`。判据只有一条：同名 `.excalidraw` 在 → 图上多一项「编辑」（打开 `editor-groups/ExcalidrawTabPane.vue` 的画布标签页）；不在 → 就是一张普通图片。**没有笔记内嵌编辑器**，SSG 也没有画布岛（站点只是渲染那张派生 SVG）。
+- 画布写入必须走 `window.desk.excalidraw.*` 受限 IPC：源文件只允许 `assets/*.excalidraw`（≤32MB、写要带 `expectedRevision`），派生图 `writeDerived` **只能写与源画布同目录同名的 `.svg`**（目标路径由主进程推导，渲染端指定不了），两者都过资源写入门禁。画布标签页打开期间该库有未写完内容的画布会阻止资源整理。画布内容变化**不改笔记源码**；派生 `.svg` 由 `editor/excalidraw/canvasImage.ts` 在编辑期间节流重导出（内存预览即时、落盘 1.2s 节流、关标签页前冲刷）。
+- 归属规则：文件名四位前缀是主人。**引用的资源一律拷贝、不共享**：把画布图粘贴到别的笔记时，由 `markdown/canvasImageClipboardPlugin.ts`（规则在 `editor/markdown/canvasImageRefs.ts`）把 `.excalidraw` 复制成目标编号的新文件、按新内容重新导出同名 `.svg`，并改写插入的引用；同编号粘贴不复制。
 - 资源 journal / 回收区在 `userData/asset-journals|asset-recycle/<kb-root-sha256>/`，打开知识库时会先恢复未完成事务。未完成 journal 会暂停该库 Git 与写入。资源面板在确定性范围内可预览、执行重命名/回收/同笔记合并/sharp 有损压缩并按 journal 恢复；渲染端只提交计划 ID。IPC `assets:plan-*` / `assets:apply` / `assets:restore` / `assets:history` 受脏文档与 Git 门禁约束。压缩默认有损，禁止标成无损。
 - 历史版本（笔记与资源）：只读部分在 `main/history/gitHistory.ts`（按四位编号关联历史文件名与同编号资源、固定 HEAD 分页、只收 40 位 OID + 快照内路径），`renderer/history/*` 是只读渲染（commit 上下文 + `tnotes-asset://history` 协议，缓存键 `commit:blobOID`，绝不回退当前磁盘）。
 - 恢复分成两段：`history:plan` 只验证并固化影响范围（不改文件），`history:apply` 执行写回。渲染端**只能提交计划 ID + revision**，字节与路径不出主进程；确认前必须先受控 flush（画布 settle → 保存笔记 → 写者快照），有未完成写入就拒绝建计划。

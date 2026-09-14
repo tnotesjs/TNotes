@@ -1,9 +1,19 @@
-// E5 笔记内嵌画布：卡片 → 就地编辑 → 全屏 → 标签页，以及源码保真。
+// 笔记里的画布图片：`![画布](../assets/NNNN-x.svg)` 按普通图片处理（可拖拽改尺寸、
+// 描述、对齐），同名 `.excalidraw` 在时多一项「编辑」→ 打开画布标签页；
+// 编辑期间笔记里那张图实时跟着变，标签页开着时图上显示「编辑中」。
 // 需要先构建：pnpm --filter desk exec electron-vite build
 // Run: node apps/desk/scripts/e2e-excalidraw-inline.mjs
 import { _electron } from 'playwright-core'
 import { createRequire } from 'node:module'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -17,8 +27,10 @@ const kb = join(workspace, 'canvas-inline')
 const notes = join(kb, 'notes')
 const assets = join(kb, 'assets')
 const canvasPath = join(assets, '0001-drawing.excalidraw')
+const derivedPath = join(assets, '0001-drawing.svg')
+/** 普通 SVG（没有同名 .excalidraw）：必须仍然只是一张图片 */
+const plainSvgPath = join(assets, '0001-plain.svg')
 const notePath = join(notes, '0001. 画布组件.md')
-const brokenNotePath = join(notes, '0002. 坏组件.md')
 const shots = join(deskDir, 'scripts', 'shots', 'excalidraw-inline')
 mkdirSync(notes, { recursive: true })
 mkdirSync(assets, { recursive: true })
@@ -61,28 +73,20 @@ const SCENE = `${JSON.stringify(
   null,
   2
 )}\n`
+const PLACEHOLDER_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="140"><rect width="240" height="140" fill="#ffffff"/></svg>\n'
+
 writeFileSync(canvasPath, SCENE)
+writeFileSync(derivedPath, PLACEHOLDER_SVG)
+writeFileSync(
+  plainSvgPath,
+  '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><circle cx="60" cy="60" r="40" fill="#ccc"/></svg>\n'
+)
 writeFileSync(
   join(kb, 'tnotes.json'),
-  `${JSON.stringify({ name: 'canvas-inline', title: 'canvas-inline' }, null, 2)}\n`
+  `${JSON.stringify({ name: 'canvas-inline', title: 'canvas-inline' })}\n`
 )
-writeFileSync(
-  join(kb, 'TOC.md'),
-  '- [ ] 0001. 画布组件\n- [ ] 0002. 坏组件\n- [ ] 0003. 跨笔记引用\n'
-)
-writeFileSync(
-  join(notes, '0003. 跨笔记引用.md'),
-  [
-    '---',
-    'id: 44444444-4444-4444-8444-444444444444',
-    '---',
-    '',
-    '# 跨笔记引用',
-    '',
-    '<Excalidraw path="../assets/0001-drawing.excalidraw" />',
-    ''
-  ].join('\n')
-)
+writeFileSync(join(kb, 'TOC.md'), '- [ ] 0001. 画布组件\n')
 const NOTE_BODY = [
   '---',
   'id: 11111111-1111-4111-8111-111111111111',
@@ -92,25 +96,14 @@ const NOTE_BODY = [
   '',
   '组件上方段落。',
   '',
-  '<Excalidraw path="../assets/0001-drawing.excalidraw" />',
+  '![画布](../assets/0001-drawing.svg)',
   '',
-  '组件下方段落。',
+  '普通 SVG：',
+  '',
+  '![普通图](../assets/0001-plain.svg)',
   ''
 ].join('\n')
 writeFileSync(notePath, NOTE_BODY)
-writeFileSync(
-  brokenNotePath,
-  [
-    '---',
-    'id: 22222222-2222-4222-8222-222222222222',
-    '---',
-    '',
-    '# 坏组件',
-    '',
-    '<Excalidraw path="../assets/0002-missing.excalidraw" />',
-    ''
-  ].join('\n')
-)
 writeFileSync(join(profile, 'workspace.v1.json'), JSON.stringify({ path: workspace }))
 writeFileSync(
   join(profile, '.tn-desk-config.json'),
@@ -128,16 +121,23 @@ const record = (name, ok, detail = '') => {
   results.push({ name, ok, detail })
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? ` — ${detail}` : ''}`)
 }
-const readNote = (path = notePath) => readFileSync(path, 'utf8')
-const countElements = (path = canvasPath) => {
+const readNote = () => readFileSync(notePath, 'utf8')
+const readDerived = () => readFileSync(derivedPath, 'utf8')
+const countElements = () => {
   try {
-    return JSON.parse(readFileSync(path, 'utf8')).elements.length
+    return JSON.parse(readFileSync(canvasPath, 'utf8')).elements.length
   } catch {
     return -1
   }
 }
+const filesWith = (extension) =>
+  readdirSync(assets)
+    .filter((name) => name.endsWith(extension))
+    .sort()
+const canvasFiles = () => filesWith('.excalidraw')
+const derivedFiles = () => filesWith('.svg')
 
-async function waitFor(check, timeoutMs = 8000, intervalMs = 120) {
+async function waitFor(check, timeoutMs = 10000, intervalMs = 120) {
   const deadline = Date.now() + timeoutMs
   for (;;) {
     const value = await check()
@@ -166,381 +166,169 @@ try {
   const page = await app.firstWindow({ timeout: 30000 })
   page.on('pageerror', (error) => pageErrors.push(String(error.message ?? error)))
   await page.waitForLoadState('domcontentloaded')
-
-  const card = page.locator('.desk-excalidraw:visible').first()
-  const cardIn = (selector) => card.locator(selector)
-  const openNote = async (label) => {
-    await page.locator('.toc-row', { hasText: label }).first().click()
-    await page.waitForTimeout(600)
-  }
-  const activePane = () => page.locator('.editor-group .tab-content:visible .milkdown').first()
-  const inlineCanvas = () =>
-    page.locator('.desk-excalidraw:visible .excalidraw__canvas.interactive')
-  const drawRectangle = async (offset = 0) => {
-    await page
-      .locator('.desk-excalidraw:visible [data-testid="toolbar-rectangle"]')
-      .first()
-      .click({ force: true })
-    const box = await inlineCanvas().boundingBox()
-    const x = box.x + box.width * 0.5 + offset
-    const y = box.y + box.height * 0.3 + offset
-    await page.mouse.move(x, y, { steps: 4 })
-    await page.waitForTimeout(150)
-    await page.mouse.down()
-    await page.waitForTimeout(100)
-    for (let step = 1; step <= 4; step += 1) {
-      await page.mouse.move(x + step * 26, y + step * 16)
-      await page.waitForTimeout(80)
-    }
-    await page.mouse.up()
-  }
-
   await page.getByText('canvas-inline', { exact: true }).first().click()
   await page.waitForTimeout(1200)
-  await openNote('画布组件')
-  await activePane().waitFor({ timeout: 30000 })
-
-  // 1) 只读卡片：共享 SVG 组件，不挂编辑器、不写文件
-  const noteBefore = readNote()
-  const svgReady = await waitFor(
-    async () =>
-      (await cardIn('.desk-excalidraw__svg img').count()) === 1 &&
-      (await card.getAttribute('data-state')) === 'ready',
-    20000
-  )
-  const svgInfo = await cardIn('.desk-excalidraw__svg img')
-    .first()
-    .evaluate((node) => ({
-      src: node.getAttribute('src')?.slice(0, 24) ?? '',
-      width: node.naturalWidth,
-      height: node.naturalHeight
-    }))
-  record(
-    '内嵌卡片：只读渲染共享 SVG（不挂编辑器）',
-    Boolean(svgReady) &&
-      svgInfo.src.startsWith('data:image/svg+xml') &&
-      svgInfo.width > 0 &&
-      (await inlineCanvas().count()) === 0,
-    JSON.stringify(svgInfo)
-  )
-  record('只读卡片不改笔记字节', readNote() === noteBefore)
-  await page.screenshot({ path: join(shots, 'card.png') })
-
-  // 2) 点编辑 → 就地挂 E3 编辑器，SVG 让位
-  await cardIn('[data-action="edit"]').click()
-  await inlineCanvas().waitFor({ timeout: 60000 })
-  await page.waitForTimeout(900)
-  record(
-    '点编辑：卡片就地出现编辑器（SVG 隐藏）',
-    (await inlineCanvas().count()) === 1 &&
-      (await cardIn('.desk-excalidraw__svg').isHidden()) &&
-      (await cardIn('[data-action="done"]').isVisible())
-  )
-  await page.screenshot({ path: join(shots, 'editing.png') })
-
-  // 3) 画一笔：只写 .excalidraw，不碰笔记源码
-  await drawRectangle()
-  const grew = await waitFor(() => countElements() === 2)
-  record('就地编辑自动写盘：元素 1 → 2', Boolean(grew), `elements=${countElements()}`)
-  await page.waitForTimeout(1200)
-  record(
-    '画布内容更新不序列化笔记：Markdown 字节不变',
-    readNote() === noteBefore,
-    readNote() === noteBefore ? '' : '笔记内容被改写了'
-  )
-  record(
-    '键盘（Cmd+Z）由画布消费：撤销后元素回到 1，笔记仍不变',
-    await (async () => {
-      await page.keyboard.press('ControlOrMeta+z')
-      const undone = await waitFor(() => countElements() === 1, 4000)
-      return Boolean(undone) && readNote() === noteBefore
-    })()
-  )
-
-  // 4) 结束编辑 → 回到卡片并按新内容重渲染
-  await cardIn('[data-action="done"]').click()
-  const backToCard = await waitFor(
-    async () =>
-      (await card.getAttribute('data-state')) === 'ready' && (await inlineCanvas().count()) === 0,
-    20000
-  )
-  record('结束编辑：回到只读卡片并重新渲染 SVG', Boolean(backToCard))
-  await page.screenshot({ path: join(shots, 'after-edit.png') })
-
-  // 5) 全屏：CSS overlay + body 标记，退出后复原
-  await cardIn('[data-action="fullscreen"]').click()
-  await inlineCanvas().waitFor({ timeout: 60000 })
-  await page.waitForTimeout(900)
-  const fullscreenOn = await page.evaluate(() => ({
-    cls: Boolean(document.querySelector('.desk-excalidraw.is-fullscreen')),
-    attr: document.body.dataset.tnCanvasFs === '1'
-  }))
-  record(
-    '全屏：卡片切 CSS overlay 并占住 body 标记',
-    fullscreenOn.cls && fullscreenOn.attr,
-    JSON.stringify(fullscreenOn)
-  )
-  await page.screenshot({ path: join(shots, 'fullscreen.png') })
-  await page.keyboard.press('Escape')
-  const fullscreenOff = await waitFor(
-    async () =>
-      (await page.locator('.desk-excalidraw.is-fullscreen').count()) === 0 &&
-      (await page.evaluate(() => document.body.dataset.tnCanvasFs)) === undefined,
-    5000
-  )
-  record('Esc 退出全屏：class 与 body 标记都清掉', Boolean(fullscreenOff))
-
-  // 5b) 全屏互斥：Mindmap 抢全屏时画布退出全屏；画布进全屏时请 Mindmap 先退出
-  await cardIn('[data-action="fullscreen"]').click()
-  await inlineCanvas().waitFor({ timeout: 60000 })
-  await page.waitForTimeout(700)
-  const peerExit = await page.evaluate(() => {
-    const peer = document.createElement('div')
-    peer.className = 'mindmap-preview is-fullscreen'
-    let forced = 0
-    peer.addEventListener('tnotes-mindmap-force-exit-fullscreen', () => {
-      forced += 1
-      peer.classList.remove('is-fullscreen')
-    })
-    document.body.append(peer)
-    return { forced: () => forced, className: () => peer.className }
-  })
-  await cardIn('[data-action="fullscreen"]').click()
-  await page.waitForTimeout(300)
-  await cardIn('[data-action="fullscreen"]').click()
-  await page.waitForTimeout(400)
-  const canvasFullscreenNow = await page.locator('.desk-excalidraw.is-fullscreen').count()
-  const peerClassName = await page.evaluate(() => {
-    const peer = document.querySelector('.mindmap-preview.is-fullscreen, .mindmap-preview')
-    return peer?.className ?? ''
-  })
-  await page.evaluate(() => {
-    document.body.dataset.tnMindmapFs = '1'
-  })
-  const canvasYielded = await waitFor(
-    async () => (await page.locator('.desk-excalidraw.is-fullscreen').count()) === 0,
-    5000
-  )
-  record(
-    '全屏互斥：画布进全屏会请 Mindmap 退出，Mindmap 抢全屏时画布让位',
-    canvasFullscreenNow === 1 && !peerClassName.includes('is-fullscreen') && Boolean(canvasYielded),
-    `peer="${peerClassName}" canvasFullscreen=${canvasFullscreenNow} yielded=${Boolean(canvasYielded)} forced=${JSON.stringify(peerExit)}`
-  )
-  await page.evaluate(() => {
-    delete document.body.dataset.tnMindmapFs
-    document.querySelector('.mindmap-preview')?.remove()
-  })
-
-  // 5d) 画布激活时滚轮只由画布消费，不滚动笔记
-  const noteScroller = () =>
-    page.evaluate(() => {
-      const host = document.querySelector('.tab-content:not([hidden]) .milkdown')
-      return host?.parentElement?.scrollTop ?? 0
-    })
-  await page.waitForTimeout(700)
-  const scrollBefore = await noteScroller()
-  const canvasBox = await inlineCanvas().boundingBox()
-  await page.mouse.move(canvasBox.x + canvasBox.width / 2, canvasBox.y + canvasBox.height / 2)
-  await page.mouse.wheel(0, 240)
+  await page.locator('.toc-row', { hasText: '画布组件' }).first().click()
+  const pane = page.locator('.tab-content:visible .milkdown .ProseMirror').first()
+  await pane.waitFor({ timeout: 30000 })
   await page.waitForTimeout(600)
-  const scrollAfter = await noteScroller()
+
+  /** 笔记里的两张图：画布图（有同名 .excalidraw）与普通 SVG */
+  const canvasFigure = () => page.locator('figure.desk-image:visible').first()
+  const plainFigure = () => page.locator('figure.desk-image:visible').nth(1)
+  const canvasImage = () => canvasFigure().locator('.desk-image__frame > img').first()
+
+  // 1) 只读渲染：笔记里就是一张普通 <img>，不挂任何 Excalidraw 实例
+  const imageReady = await waitFor(async () => {
+    const src = await canvasImage().getAttribute('src')
+    return src?.startsWith('tnotes-asset://') ? src : null
+  }, 20000)
   record(
-    '画布激活时滚轮只由画布消费（笔记不滚动）',
-    scrollBefore === scrollAfter,
-    `scroll ${scrollBefore} → ${scrollAfter}`
+    '笔记里的画布就是一张普通图片（渲染不挂 Excalidraw）',
+    Boolean(imageReady) &&
+      imageReady.includes('.svg') &&
+      (await page.locator('.ProseMirror .excalidraw').count()) === 0 &&
+      (await pane.locator('.excalidraw__canvas').count()) === 0,
+    `src=${imageReady?.slice(0, 60)}`
+  )
+  record(
+    '图片交互仍在：拖拽把手 + 宽高 / 描述 / 对齐',
+    (await canvasFigure().locator('.desk-image__handle').count()) === 4 &&
+      (await canvasFigure().locator('[data-label="宽高"]').count()) === 1 &&
+      (await canvasFigure().locator('[data-label="描述"]').count()) === 1 &&
+      (await canvasFigure().locator('[data-label="对齐"]').count()) === 1
   )
 
-  await cardIn('[data-action="done"]').click()
-  await page.waitForTimeout(800)
+  // 2) 只有画布图有「编辑」：普通 SVG 没有
+  await canvasFigure().click()
+  await page.waitForTimeout(300)
+  const canvasHasEdit = await canvasFigure().locator('.desk-image__canvas-edit').isVisible()
+  await plainFigure().click()
+  await page.waitForTimeout(300)
+  const plainEditCount = await plainFigure().locator('.desk-image__canvas-edit:visible').count()
+  record(
+    '「编辑」只对有同名 .excalidraw 的图出现',
+    canvasHasEdit && plainEditCount === 0,
+    `canvas=${canvasHasEdit} plain=${plainEditCount}`
+  )
 
-  // 6) 高度写回：只改组件那一行，其它笔记字节不动
-  const beforeHeight = readNote()
-  await cardIn('[data-testid="desk-excalidraw-height"]').selectOption('640')
-  const heightWritten = await waitFor(() => readNote().includes('height="640"'), 8000)
-  const afterHeight = readNote()
-  const beforeLines = beforeHeight.split('\n')
-  const afterLines = afterHeight.split('\n')
+  // 3) 描述写回：只改这一行
+  const beforeCaption = readNote()
+  await canvasFigure().click()
+  await page.waitForTimeout(200)
+  await canvasFigure().locator('[data-label="描述"]').click()
+  const caption = canvasFigure().locator('.desk-image__caption')
+  await caption.fill('架构图')
+  await caption.press('Enter')
+  const captionWritten = await waitFor(
+    () => readNote().includes('![架构图](../assets/0001-drawing.svg)'),
+    10000
+  )
+  const afterCaption = readNote()
+  const beforeLines = beforeCaption.split('\n')
+  const afterLines = afterCaption.split('\n')
   const changedLines = afterLines
     .map((line, index) => (line === beforeLines[index] ? null : index))
     .filter((index) => index != null)
   record(
-    '改高度只改组件那一行（其它字节完全不动）',
-    Boolean(heightWritten) &&
+    '改描述只改图片那一行（其它字节完全不动）',
+    Boolean(captionWritten) &&
       afterLines.length === beforeLines.length &&
       changedLines.length === 1 &&
-      /^<Excalidraw path=.* height="640" \/>$/.test(afterLines[changedLines[0]] ?? ''),
+      canvasFiles().length === 1,
     `changed=${JSON.stringify(changedLines)}`
   )
 
-  // 7) 在标签页打开：结束内嵌会话，同一文件只保留一个写者
-  await cardIn('[data-action="tab"]').click()
-  await waitFor(
+  // 4) 点「编辑」→ 打开画布标签页；笔记里不出现任何就地编辑器
+  await canvasFigure().click()
+  await page.waitForTimeout(200)
+  await canvasFigure().locator('.desk-image__canvas-edit').click()
+  const tabOpened = await waitFor(
     async () => (await page.locator('.tab', { hasText: '.excalidraw' }).count()) === 1,
-    10000
+    15000
   )
-  await page.waitForTimeout(800)
+  const canvas = page.locator('.tab-content:visible .excalidraw__canvas.interactive').first()
+  await canvas.waitFor({ timeout: 60000 })
+  await page.waitForTimeout(1200)
   record(
-    '在标签页打开：生成画布标签页且内嵌编辑已结束',
-    (await page.locator('.tab', { hasText: '.excalidraw' }).count()) === 1
+    '点「编辑」打开画布标签页（笔记里没有就地编辑器）',
+    Boolean(tabOpened) && (await pane.locator('.excalidraw').count()) === 0
   )
-  // 回到笔记标签：卡片此时提示「已在标签页打开」，不再开第二个会话
-  await page.locator('.tab', { hasText: '画布组件' }).first().click()
-  await page.waitForTimeout(600)
-  await cardIn('[data-action="edit"]').click()
-  await page.waitForTimeout(600)
-  record(
-    '同一文件已在标签页编辑时：卡片不再开第二个会话',
-    (await inlineCanvas().count()) === 0 && (await card.innerText()).includes('已在标签页打开')
-  )
+  await page.screenshot({ path: join(shots, 'canvas-tab.png') })
 
-  // 8) 只读视图 / 源码视图
-  // 先回到编辑再切只读：编辑权必须交还，画布入口关掉
-  // （画布标签页还开着，先关掉它才能拿回内嵌编辑权）
-  await page.locator('.tab', { hasText: '.excalidraw' }).first().locator('.tab-close').click()
-  await waitFor(
+  // 5) 在标签页里画一笔：源文件写盘 + 派生 SVG 重导出 + 笔记里的图实时更新
+  const derivedBeforeDraw = readDerived()
+  await page.locator('[data-testid="toolbar-rectangle"]').first().click({ force: true })
+  const box = await canvas.boundingBox()
+  const x = box.x + box.width * 0.4
+  const y = box.y + box.height * 0.35
+  await page.mouse.move(x, y, { steps: 4 })
+  await page.waitForTimeout(150)
+  await page.mouse.down()
+  for (let step = 1; step <= 4; step += 1) {
+    await page.mouse.move(x + step * 24, y + step * 14)
+    await page.waitForTimeout(70)
+  }
+  await page.mouse.up()
+  const written = await waitFor(() => countElements() === 2, 15000)
+  record('画布编辑实时写盘（元素 1 → 2）', Boolean(written), `elements=${countElements()}`)
+
+  // 回到笔记：那张图应当已经换成内存里导出的 data URL（观感上"立刻"）
+  await page.locator('.toc-row', { hasText: '画布组件' }).first().click()
+  await pane.waitFor({ timeout: 20000 })
+  const liveSrc = await waitFor(async () => {
+    const src = await canvasImage().getAttribute('src')
+    return src?.startsWith('data:image/svg+xml') ? src : null
+  }, 15000)
+  record(
+    '编辑期间笔记里的图实时更新（内存导出，不等落盘）',
+    Boolean(liveSrc),
+    `src=${liveSrc?.slice(0, 40)}`
+  )
+  const editingBadge = await canvasFigure().locator('.desk-image__editing').isVisible()
+  const editingBadgeText = await canvasFigure().locator('.desk-image__editing').textContent()
+  record(
+    '画布标签页开着时图上显示「编辑中」',
+    editingBadge && (editingBadgeText ?? '').includes('编辑中'),
+    `text=${JSON.stringify(editingBadgeText)}`
+  )
+  await page.screenshot({ path: join(shots, 'note-live-preview.png') })
+
+  // 6) 关掉标签页：笔消失，派生 SVG 已按最新内容重导出
+  await page.locator('.tab', { hasText: '.excalidraw' }).first().click()
+  await page.locator('.tab', { hasText: '.excalidraw' }).locator('.tab-close').first().click()
+  await page.waitForTimeout(1500)
+  const tabClosed = await waitFor(
     async () => (await page.locator('.tab', { hasText: '.excalidraw' }).count()) === 0,
     10000
   )
-  await page.locator('.tab', { hasText: '画布组件' }).first().click()
-  await page.waitForTimeout(500)
-  await cardIn('[data-action="edit"]').click()
-  await inlineCanvas().waitFor({ timeout: 60000 })
-  await page.waitForTimeout(600)
-  const beforeReadonly = readNote()
-  await page.getByRole('button', { name: '只读视图', exact: true }).first().click()
-  await page.waitForTimeout(1000)
-  record(
-    '切只读视图：释放内嵌编辑权（编辑器卸载）且不改笔记',
-    (await inlineCanvas().count()) === 0 && readNote() === beforeReadonly
+  await page.locator('.toc-row', { hasText: '画布组件' }).first().click()
+  await pane.waitFor({ timeout: 20000 })
+  const badgeGone = await waitFor(
+    async () => (await canvasFigure().locator('.desk-image__editing').isVisible()) === false,
+    10000
   )
-  const readonlyCard = await waitFor(
-    async () =>
-      (await card.getAttribute('data-state')) === 'ready' &&
-      (await cardIn('.desk-excalidraw__svg img').count()) === 1,
-    20000
-  )
-  const readonlyEditEntry = await page.evaluate(() => {
-    const button = document.querySelector('.desk-excalidraw [data-action="edit"]')
-    return {
-      exists: Boolean(button),
-      hidden: !button || button.hasAttribute('hidden'),
-      display: button ? getComputedStyle(button).display : null
-    }
-  })
+  record('关掉标签页后「编辑中」消失', Boolean(tabClosed) && Boolean(badgeGone))
+  const derivedUpdated = await waitFor(() => readDerived() !== derivedBeforeDraw, 20000)
   record(
-    '只读视图：显示 SVG 卡片且没有编辑入口',
-    Boolean(readonlyCard) && readonlyEditEntry.hidden && readonlyEditEntry.display === 'none',
-    `state=${await card.getAttribute('data-state')} imgs=${await cardIn('.desk-excalidraw__svg img').count()} edit=${JSON.stringify(readonlyEditEntry)}`
+    '派生 SVG 按最新画布内容重导出（笔记里那张图不再是占位图）',
+    Boolean(derivedUpdated) && derivedFiles()[0] === '0001-drawing.svg',
+    `bytes=${readDerived().length}`
   )
 
-  // 回到可视化编辑，验证「删除选中图形只动画布内容」
-  await page.getByRole('button', { name: '可视化编辑', exact: true }).first().click()
-  await page.waitForTimeout(800)
-  await cardIn('[data-action="edit"]').click()
-  await inlineCanvas().waitFor({ timeout: 60000 })
-  await page.waitForTimeout(600)
-  // 5c) 删除选中图形只删画布内容：组件与资源文件都还在
-  //     先画一笔把元素变成 2，再用画布内的「全选 + 删除」验证删除只作用于画布
-  //     （缩放会改变场景→屏幕映射，所以这条要在滚轮用例之前做）
-  const beforeDelete = readNote()
-  const beforeDeleteCount = countElements()
-  const deleteBox = await inlineCanvas().boundingBox()
-  await page.mouse.click(deleteBox.x + deleteBox.width / 2, deleteBox.y + deleteBox.height / 2)
-  await page.waitForTimeout(200)
-  await page.keyboard.press('ControlOrMeta+a')
-  await page.waitForTimeout(250)
-  await page.keyboard.press('Delete')
-  const shapeGone = await waitFor(() => countElements() === beforeDeleteCount - 1, 6000)
+  // 7) 画布内容变化不改笔记源码；画布文件与派生图各只有一份
   record(
-    '删除选中图形只动画布内容：组件与 .excalidraw 文件都保留',
-    beforeDeleteCount === 1 &&
-      Boolean(shapeGone) &&
-      readNote() === beforeDelete &&
-      existsSync(canvasPath),
-    `删除前=${beforeDeleteCount} 删除后=${countElements()} 笔记不变=${readNote() === beforeDelete}`
-  )
-
-  await cardIn('[data-action="done"]').click()
-  await page.waitForTimeout(700)
-  await page.getByRole('button', { name: '源码视图', exact: true }).first().click()
-  await page.waitForTimeout(800)
-  const sourceText = await page.locator('.cm-content:visible').first().innerText()
-  record(
-    '源码视图：显示组件源码，不渲染卡片',
-    sourceText.includes('<Excalidraw path="../assets/0001-drawing.excalidraw"') &&
-      (await page.locator('.desk-excalidraw').count()) === 0
-  )
-  // 6b) 删除组件不级联删除资源文件
-  await page.locator('.cm-content:visible').first().click()
-  await page.keyboard.press('ControlOrMeta+f')
-  await page.waitForTimeout(400)
-  const findInput = page.locator('.cm-search input, .cm-panel input').first()
-  if (await findInput.count()) {
-    await findInput.fill('Excalidraw path')
-    await page.keyboard.press('Enter')
-    await page.keyboard.press('Escape')
-    await page.waitForTimeout(300)
-    await page.keyboard.press('Home')
-    await page.keyboard.press('Shift+End')
-    await page.keyboard.press('Backspace')
-    await page.waitForTimeout(900)
-  }
-  record(
-    '删除组件不级联删除资源：.excalidraw 文件仍在',
-    existsSync(canvasPath),
-    `组件行还在=${readNote().includes('<Excalidraw')}`
-  )
-  await page.getByRole('button', { name: '可视化编辑', exact: true }).first().click()
-  await page.waitForTimeout(600)
-
-  // 8b) 手写跨笔记引用：只诊断、不打开写编辑（归属规则 2.1 / E7）
-  await openNote('跨笔记引用')
-  await activePane().waitFor({ timeout: 30000 })
-  const crossCard = page.locator('.desk-excalidraw:visible').first()
-  await crossCard.waitFor({ timeout: 20000 })
-  // 前面的删除用例把画布清空了：这里只要求卡片是 ready（不是错误态）+ 归属诊断，
-  // 只读 SVG 的渲染本身在更早的用例里已经验过
-  const crossReady = await waitFor(
-    async () => (await crossCard.getAttribute('data-state')) === 'ready',
-    20000
-  )
-  const crossNotice = await crossCard.locator('.desk-excalidraw__placeholder').textContent()
-  // 注意：多个笔记标签同时挂载，必须限定在当前可见的卡片里取按钮
-  const crossEditHidden = await crossCard
-    .locator('[data-action="edit"]')
-    .evaluate((node) => node.hasAttribute('hidden') || getComputedStyle(node).display === 'none')
-    .catch(() => true)
-  record(
-    '手写跨笔记引用：只读卡片 + 归属诊断，不打开写编辑',
-    Boolean(crossReady) &&
-      crossEditHidden &&
-      (crossNotice ?? '').includes('0001') &&
-      (crossNotice ?? '').includes('0003'),
-    `notice=${JSON.stringify(crossNotice)}`
-  )
-  await page.screenshot({ path: join(shots, 'cross-note-reference.png') })
-
-  // 9) 坏组件：给出可读错误，不崩
-  await openNote('坏组件')
-  await activePane().waitFor({ timeout: 30000 })
-  const brokenCard = page.locator('.desk-excalidraw:visible').first()
-  await brokenCard.waitFor({ timeout: 20000 })
-  const brokenState = await waitFor(
-    async () => (await brokenCard.getAttribute('data-state')) === 'error',
-    20000
+    '画布内容变化不改笔记源码',
+    readNote().includes('![架构图](../assets/0001-drawing.svg)'),
+    ''
   )
   record(
-    '坏组件（文件不存在）：显示可读错误而不是崩溃，也不创建文件',
-    Boolean(brokenState) &&
-      (await brokenCard.locator('.desk-excalidraw__placeholder').textContent())?.includes(
-        'assets/'
-      ) === true &&
-      !existsSync(join(assets, '0002-missing.excalidraw')),
-    `state=${await brokenCard.getAttribute('data-state')} placeholder=${JSON.stringify(
-      await brokenCard.locator('.desk-excalidraw__placeholder').textContent()
-    )} created=${existsSync(join(assets, '0002-missing.excalidraw'))}`
+    '资源各只有一份（源画布 + 同名派生 SVG）',
+    canvasFiles().length === 1 && derivedFiles().length === 2,
+    `canvas=${JSON.stringify(canvasFiles())} svg=${JSON.stringify(derivedFiles())}`
   )
   record('全流程无页面错误', pageErrors.length === 0, pageErrors.slice(0, 2).join(' | '))
+  record('fixture 未被意外删除', existsSync(notePath) && existsSync(canvasPath))
 } catch (error) {
   record('运行未完成（未捕获异常）', false, String(error).split('\n')[0])
   throw error

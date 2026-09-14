@@ -23,13 +23,11 @@ describe('isEditorBlankTarget：点击空白区才收回焦点', () => {
       [
         '<div class="ProseMirror"><p>正文</p></div>',
         '<div class="cm-editor"><div class="cm-content"></div></div>',
-        '<div class="desk-raw-block"><button class="desk-excalidraw__bar"></button></div>',
         '<a href="https://example.com">链接</a>',
         '<input class="rename-dest" />',
         '<div class="desk-raw-block__boundary-hit"></div>',
         '<div class="milkdown-slash-menu" role="menu"></div>',
         '<div class="milkdown-block-handle"></div>',
-        '<div class="desk-excalidraw"></div>',
         '<div class="mindmap-preview"></div>',
         '<div class="prosemirror-virtual-cursor"></div>'
       ].join('')
@@ -38,13 +36,11 @@ describe('isEditorBlankTarget：点击空白区才收回焦点', () => {
       '.ProseMirror',
       '.ProseMirror p',
       '.cm-content',
-      '.desk-excalidraw__bar',
       'a[href]',
       'input',
       '.desk-raw-block__boundary-hit',
       '.milkdown-slash-menu',
       '.milkdown-block-handle',
-      '.desk-excalidraw',
       '.mindmap-preview',
       '.prosemirror-virtual-cursor'
     ]) {

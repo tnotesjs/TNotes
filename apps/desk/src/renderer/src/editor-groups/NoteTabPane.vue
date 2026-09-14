@@ -7,6 +7,7 @@ import PageWidthIcon from '../components/PageWidthIcon.vue'
 import HeadingMenu from './HeadingMenu.vue'
 import FormatIcon from './FormatIcon.vue'
 import FormatOverflowBar from './FormatOverflowBar.vue'
+import KbPathBreadcrumb from './KbPathBreadcrumb.vue'
 import MarkdownSourceEditor from '../markdown/MarkdownSourceEditor.vue'
 import { useEditorStore } from '../stores/editor'
 import { useWorkspaceStore } from '../stores/workspace'
@@ -243,6 +244,16 @@ function openLink(url: string): void {
       <span>磁盘内容已经变化，Desk 没有覆盖你的编辑。</span>
       <button type="button" @click="workspace.reloadCurrentDocument">载入磁盘</button>
       <button type="button" @click="workspace.keepEditorAgainstDisk">保留编辑内容</button>
+    </div>
+
+    <!-- 面包屑内部有 Teleport（下拉挂 body），是多根组件：class 无法自动落到 nav 上，
+         所以这里必须自己包一层容器，样式与 e2e 选择器都挂在这一层 -->
+    <div class="note-path-bar">
+      <KbPathBreadcrumb
+        :knowledge-base-id="tab.knowledgeBaseId"
+        :rel-path="session.document.relPath"
+        :fallback-name="tab.knowledgeBaseName"
+      />
     </div>
 
     <div class="document-toolbar">
@@ -558,6 +569,15 @@ function openLink(url: string): void {
   display: flex;
   align-items: center;
   gap: 12px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--editor-bg);
+}
+
+/* 路径面包屑：独立的 slim 行，压在标题工具条上方；不改动标题行的布局与选择器 */
+.note-path-bar {
+  flex: none;
+  height: 22px;
   padding: 0 12px;
   border-bottom: 1px solid var(--border);
   background: var(--editor-bg);

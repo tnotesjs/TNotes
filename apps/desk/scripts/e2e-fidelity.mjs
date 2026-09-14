@@ -289,8 +289,9 @@ try {
   const sourceViewButton = page.getByRole('button', { name: '源码视图', exact: true })
   await sourceViewButton.filter({ visible: true }).first().click()
   await page.waitForTimeout(1200)
+  // 源码视图已是 Monaco：文本层是 .view-lines
   const formatCm = page
-    .locator('.markdown-source-editor .cm-content')
+    .locator('.markdown-source-editor .view-lines')
     .filter({ visible: true })
     .first()
   await formatCm.click()
@@ -323,7 +324,7 @@ try {
     .first()
     .click()
   await page.waitForTimeout(1200)
-  const onCm = page.locator('.markdown-source-editor .cm-content').filter({ visible: true }).first()
+  const onCm = page.locator('.markdown-source-editor .view-lines').filter({ visible: true }).first()
   await onCm.click()
   await page.keyboard.press('ControlOrMeta+a')
   await page.keyboard.insertText(styledEdited)

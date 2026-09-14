@@ -17,7 +17,7 @@ import { ref, shallowRef, watch, type Ref } from 'vue'
 
 import type { ExcalidrawSession, ExcalidrawWriteState } from '@tnotesjs/ui/excalidraw-editor'
 
-import { registerExcalidrawSession } from './sessionRegistry'
+import { notifyExcalidrawContent, registerExcalidrawSession } from './sessionRegistry'
 
 /**
  * 官方字体基址。主进程的 `tnotes-asset://app/` 路由只暴露渲染端产物目录，
@@ -217,11 +217,14 @@ export function createExcalidrawCanvasController(
         if (!baselineAdopted && !interacted) {
           baselineAdopted = true
           session.value?.adopt(content)
+          notifyExcalidrawContent(options.knowledgeBaseId(), options.relPath(), content)
           syncDirty()
           return
         }
         baselineAdopted = true
         session.value?.update(content)
+        // 笔记里那张派生图靠这条通知实时重绘（只读视图不碰磁盘）
+        notifyExcalidrawContent(options.knowledgeBaseId(), options.relPath(), content)
         syncDirty()
       }
     })
@@ -241,7 +244,8 @@ export function createExcalidrawCanvasController(
     // 登记到会话表：跨笔记复制前会先把这里 settle 掉，避免复制到过时磁盘内容
     unregisterSession?.()
     unregisterSession = registerExcalidrawSession(options.knowledgeBaseId(), options.relPath(), {
-      settle
+      settle,
+      currentContent: () => session.value?.currentContent() ?? ''
     })
     phase.value = 'ready'
     syncDirty()

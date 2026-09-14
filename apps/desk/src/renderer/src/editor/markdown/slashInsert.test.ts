@@ -171,6 +171,9 @@ describe('slash menu insert projection', () => {
   for (const item of TN_NOTES_SLASH_ITEMS) {
     // 普通代码块由代码块组件承载，不走 deskRawBlock / deskCallout。
     if (item.kind === 'code') continue
+    // 画布插入产生的是**图片节点**（笔记里就是一张 .svg），走的是
+    // MilkdownMarkdownEditor.insertExcalidrawComponent 的自定义路径，见下方专门用例。
+    if (item.id === 'excalidraw') continue
     it(`inserts ${item.label} as a TNotes block node`, async () => {
       const editor = await createEditor('# A\n\n- b\n')
       const before = countBlocks(editor)
@@ -191,6 +194,36 @@ describe('slash menu insert projection', () => {
       document.body.replaceChildren()
     })
   }
+})
+
+describe('画布插入的落点是图片节点', () => {
+  it('插入占位图片引用后文档里出现 image 节点', async () => {
+    const editor = await createEditor('# A\n\n')
+    const item = TN_NOTES_SLASH_ITEMS.find((entry) => entry.id === 'excalidraw')!
+    expect(item.insert).toBe('![画布](./assets/0000-excalidraw.svg)\n')
+
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      const end = view.state.doc.content.size
+      view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, end, end)))
+    })
+    editor.action((ctx) => {
+      const commands = ctx.get(commandsCtx)
+      commands.call(clearTextInCurrentBlockCommand.key)
+      insert(item.insert)(ctx)
+    })
+
+    let images = 0
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      view.state.doc.descendants((node) => {
+        if (node.type.name === 'image') images += 1
+      })
+    })
+    expect(images).toBe(1)
+    await editor.destroy()
+    document.body.replaceChildren()
+  })
 })
 
 describe('projectRawBlocksForMilkdown output', () => {

@@ -5,6 +5,7 @@ import { registerGit } from './ipc/git'
 import { registerNotes } from './ipc/notes'
 import { registerAssets } from './ipc/assets'
 import { registerExcalidraw } from './ipc/excalidraw'
+import { registerKbFiles } from './ipc/kbFiles'
 import { registerHistory } from './ipc/history'
 import { registerRecovery } from './ipc/recovery'
 import { registerSettings } from './ipc/settings'
@@ -19,6 +20,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): () => void {
   registerNotes(getWindow)
   const offAssets = registerAssets(getWindow)
   const offExcalidraw = registerExcalidraw(getWindow)
+  const offKbFiles = registerKbFiles(getWindow)
   const offHistory = registerHistory(getWindow)
   registerRecovery(getWindow)
   const offWeb = registerWeb(getWindow)
@@ -30,6 +32,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): () => void {
     offGit()
     offAssets()
     offExcalidraw()
+    offKbFiles()
     offHistory()
     offUpdate()
     for (const channel of Object.values(IPC_CHANNELS)) {

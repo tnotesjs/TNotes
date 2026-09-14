@@ -10,6 +10,16 @@ import {
 import { applyImageClipboardAttrs } from './imageAttrs'
 import { resolveMarkdownImageUrl } from '../../markdown/markdownAssetUrl'
 import { COPY_ICON, EXPAND_ICON } from '../../markdown/copyIcons'
+import {
+  canvasAssetRevision,
+  cachedCanvasSource,
+  probeCanvasSource,
+  subscribeCanvasPreview
+} from '../excalidraw/canvasImage'
+import { subscribeExcalidrawSession } from '../excalidraw/sessionRegistry'
+import { resolveNoteAssetRelPath } from '../../markdown/noteAssetPath'
+import { useEditorStore } from '../../stores/editor'
+import { useWorkspaceStore } from '../../stores/workspace'
 
 import { NodeSelection } from '@milkdown/kit/prose/state'
 
@@ -28,6 +38,12 @@ const DELETE_ICON =
   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>'
 const MORE_ICON =
   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>'
+/** 画布图片专用：去标签页里编辑 */
+const CANVAS_EDIT_ICON =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>'
+/** 「正在编辑中」的笔：盖在图中央 */
+const CANVAS_EDITING_ICON =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>'
 const SIZE_ICON =
   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="6" width="12" height="12" rx="1"/><path d="M16 10h4v10H10v-4"/></svg>'
 const CAPTION_ICON =
@@ -43,6 +59,8 @@ const ALIGN_ICONS: Record<ImageAlign, string> = {
 export function createDeskImageView(options: {
   knowledgeBaseId: () => string
   noteUuid: () => string
+  /** 当前笔记的 KB 相对路径：把图片 src 解析成 assets/ 下的路径（画布判据要用） */
+  noteRelPath: () => string
   isReadOnly: () => boolean
   writeClipboard?: (text: string) => Promise<void> | void
 }): MilkdownPlugin {
@@ -117,7 +135,11 @@ export function createDeskImageView(options: {
       alignPanel.append(action)
     }
     alignWrap.append(alignButton, alignPanel)
-    toolbar.append(sizeWrap, captionButton, alignWrap)
+    // 「编辑」只对画布图片出现（同名 .excalidraw 存在时），见 syncCanvas()
+    const canvasEditButton = toolButton(CANVAS_EDIT_ICON, '编辑', '在标签页里编辑画布')
+    canvasEditButton.classList.add('desk-image__canvas-edit')
+    canvasEditButton.hidden = true
+    toolbar.append(sizeWrap, captionButton, alignWrap, canvasEditButton)
     chrome.append(toolbar)
 
     const stage = document.createElement('div')
@@ -174,9 +196,16 @@ export function createDeskImageView(options: {
     captionRow.className = 'desk-image__caption-row'
     captionRow.append(caption)
 
+    // 「正在编辑中」：该画布的标签页开着时，盖在图正中的一支笔
+    const editingBadge = document.createElement('div')
+    editingBadge.className = 'desk-image__editing'
+    editingBadge.hidden = true
+    editingBadge.innerHTML = `${CANVAS_EDITING_ICON}<span>编辑中</span>`
+
     frame.append(
       image,
       ghost,
+      editingBadge,
       ...CORNERS.map((corner) => handles[corner]),
       quick,
       morePanel,
@@ -457,18 +486,129 @@ export function createDeskImageView(options: {
       syncCompact()
     }
 
-    const render = (node: ProseMirrorNode, nextSelected: boolean): void => {
-      current = node
-      selected = nextSelected
-      const source = String(node.attrs.src ?? '')
+    /**
+     * 画布图片状态：同名 `.excalidraw` 的 KB 相对路径（null = 普通图片），
+     * 标签页是否开着，以及订阅的取消函数。
+     */
+    let canvasSource: string | null = null
+    let canvasSvgRelPath = ''
+    let canvasOpen = false
+    let canvasPreview = ''
+    let canvasTeardown: Array<() => void> = []
+
+    /** 笔记里的相对路径 → assets/ 下的 KB 相对路径（不是 `.svg` 就直接放弃） */
+    const canvasRelPathFor = (src: string): string => {
+      if (!src || src.startsWith('data:') || /^[a-z][a-z\d+.-]*:/i.test(src)) return ''
+      if (!src.split(/[?#]/, 1)[0]?.toLowerCase().endsWith('.svg')) return ''
+      const noteRelPath = options.noteRelPath()
+      if (!noteRelPath) return ''
+      return resolveNoteAssetRelPath(noteRelPath, src) ?? ''
+    }
+
+    const applyCanvasImageSrc = (): void => {
+      const source = String(current.attrs.src ?? '')
       const presentationUrl = resolveMarkdownImageUrl(
         source,
         options.knowledgeBaseId(),
         options.noteUuid()
       )
-      if (presentationUrl) image.setAttribute('src', presentationUrl)
+      // 编辑期间用内存里导出的那张（实时）；没预览过才读文件，并带上版本号绕开同 URL 缓存
+      const live = canvasPreview
+      const withRevision =
+        !live && presentationUrl && canvasSource
+          ? `${presentationUrl}&rev=${canvasAssetRevision(options.knowledgeBaseId(), canvasSource)}`
+          : presentationUrl
+      const next = live || withRevision
+      if (next) image.setAttribute('src', next)
       else image.removeAttribute('src')
-      image.classList.toggle('is-unavailable', !presentationUrl)
+      image.classList.toggle('is-unavailable', !next)
+    }
+
+    const applyEditingBadge = (): void => {
+      editingBadge.hidden = !canvasOpen
+      figure.classList.toggle('is-canvas-editing', canvasOpen)
+    }
+
+    const teardownCanvas = (): void => {
+      for (const off of canvasTeardown) off()
+      canvasTeardown = []
+      canvasSource = null
+      canvasSvgRelPath = ''
+      canvasOpen = false
+      canvasPreview = ''
+      canvasEditButton.hidden = true
+      figure.classList.remove('is-canvas')
+      applyEditingBadge()
+    }
+
+    /** 认下这张图画布：挂「编辑」按钮、实时预览、编辑中徽标 */
+    const attachCanvas = (sourceRelPath: string, svgRelPath: string): void => {
+      teardownCanvas()
+      canvasSource = sourceRelPath
+      canvasSvgRelPath = svgRelPath
+      figure.classList.add('is-canvas')
+      canvasEditButton.hidden = options.isReadOnly()
+      canvasTeardown.push(
+        subscribeExcalidrawSession(options.knowledgeBaseId(), sourceRelPath, (open) => {
+          canvasOpen = open
+          // 预览不清空：它比磁盘上那份新（写盘是节流的），关掉标签页也要显示最新内容
+          applyEditingBadge()
+          applyCanvasImageSrc()
+        }),
+        subscribeCanvasPreview(options.knowledgeBaseId(), sourceRelPath, (dataUrl) => {
+          canvasPreview = dataUrl
+          applyCanvasImageSrc()
+        })
+      )
+      canvasEditButton.onclick = (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        openCanvasTab(sourceRelPath)
+      }
+    }
+
+    /** 判据：同名 `.excalidraw` 在 → 画布；不在 → 普通图片 */
+    const syncCanvas = (): void => {
+      const svgRelPath = canvasRelPathFor(String(current.attrs.src ?? ''))
+      if (!svgRelPath) {
+        teardownCanvas()
+        return
+      }
+      if (canvasSvgRelPath === svgRelPath) return
+      const knowledgeBaseId = options.knowledgeBaseId()
+      const cached = cachedCanvasSource(knowledgeBaseId, svgRelPath)
+      if (cached !== undefined) {
+        if (cached) attachCanvas(cached, svgRelPath)
+        else teardownCanvas()
+        return
+      }
+      canvasSvgRelPath = svgRelPath
+      void probeCanvasSource(knowledgeBaseId, svgRelPath).then((source) => {
+        if (canvasSvgRelPath !== svgRelPath) return
+        if (source) attachCanvas(source, svgRelPath)
+        else teardownCanvas()
+      })
+    }
+
+    /** 打开/聚焦该画布的标签页 */
+    const openCanvasTab = (sourceRelPath: string): void => {
+      const knowledgeBaseId = options.knowledgeBaseId()
+      const workspace = useWorkspaceStore()
+      const knowledgeBase =
+        workspace.overview.allKnowledgeBases.find((item) => item.id === knowledgeBaseId) ?? null
+      if (!knowledgeBase) {
+        workspace.error = `无法打开画布标签页：${sourceRelPath}`
+        return
+      }
+      useEditorStore().openExcalidraw(knowledgeBase, sourceRelPath)
+    }
+
+    const render = (node: ProseMirrorNode, nextSelected: boolean): void => {
+      current = node
+      selected = nextSelected
+      const source = String(node.attrs.src ?? '')
+      syncCanvas()
+      applyCanvasImageSrc()
       const alt = String(node.attrs.alt ?? '')
       image.setAttribute('alt', alt)
       const title = String(node.attrs.title ?? '')
@@ -520,6 +660,7 @@ export function createDeskImageView(options: {
       },
       ignoreMutation: () => true,
       destroy: () => {
+        teardownCanvas()
         observer?.disconnect()
         document.removeEventListener('pointerdown', onDocumentPointerDown)
         document.body.classList.remove('is-resizing-image')

@@ -37,6 +37,7 @@ export async function renderExcalidrawSvg(
     },
     files: (scene.files ?? {}) as never
   })
+
   // 只读路径必须自包含：把 CDN/相对字体换成 data URL，离线与 <img> 渲染才不掉字体
   const inlined = await inlineExcalidrawFonts(svg.outerHTML, {
     base: options.fontBase ?? getExcalidrawAssetPath(),

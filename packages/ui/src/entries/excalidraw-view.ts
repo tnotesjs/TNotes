@@ -10,6 +10,11 @@ export type {
   ExcalidrawViewState
 } from '../excalidraw/renderer'
 export { parseExcalidrawScene, sceneCacheKey, svgCache, SvgCache } from '../excalidraw/scene'
+/**
+ * 导出器（`exportToSvg` + 字体内联）只能动态取：入口本身不得把 Excalidraw 拖进静态依赖图。
+ * Desk 用它把画布写成笔记里引用的那张 `.svg`。
+ */
+export const loadExcalidrawExporter = () => import('../excalidraw/exporter')
 /** 部署站点需要把官方字体指向站点内的目录（离线自包含） */
 export { setExcalidrawAssetPath, getExcalidrawAssetPath } from '../excalidraw/fonts'
 export type { ExcalidrawScene, SceneParseResult } from '../excalidraw/scene'

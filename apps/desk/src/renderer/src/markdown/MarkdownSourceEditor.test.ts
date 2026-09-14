@@ -1,11 +1,233 @@
 // @vitest-environment happy-dom
-
+//
+// happy-dom 里跑不起真正的 Monaco（需要真实布局与 worker 环境），所以这里注入一个
+// 行为对齐的假 Monaco：它实现本组件真正用到的那部分 API（模型读写、内容变更事件、
+// 选区、executeEdits），编辑语义由**真实**的纯函数（sourceEdits / clearSourceLineStyles）
+// 承担。集成层面的真实行为由 e2e 覆盖。
 import { mount, type VueWrapper } from '@vue/test-utils'
-import { EditorView } from '@codemirror/view'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import MarkdownSourceEditor from './MarkdownSourceEditor.vue'
 import { DESK_SELECT_ALL_EVENT } from './documentSelection'
+
+const refreshMonacoTheme = vi.fn()
+
+interface FakeEdit {
+  range: {
+    startLineNumber: number
+    startColumn: number
+    endLineNumber: number
+    endColumn: number
+  }
+  text: string
+}
+
+class FakeSelection {
+  constructor(
+    public startLineNumber: number,
+    public startColumn: number,
+    public endLineNumber: number,
+    public endColumn: number
+  ) {}
+  getStartPosition(): { lineNumber: number; column: number } {
+    return { lineNumber: this.startLineNumber, column: this.startColumn }
+  }
+  getEndPosition(): { lineNumber: number; column: number } {
+    return { lineNumber: this.endLineNumber, column: this.endColumn }
+  }
+}
+
+class FakeModel {
+  private value = ''
+  private listeners = new Set<() => void>()
+
+  constructor(initial: string) {
+    this.value = initial
+  }
+
+  getValue(): string {
+    return this.value
+  }
+
+  getValueLength(): number {
+    return this.value.length
+  }
+
+  setValue(next: string): void {
+    if (next === this.value) return
+    this.value = next
+    for (const listener of [...this.listeners]) listener()
+  }
+
+  onDidChangeContent(listener: () => void): void {
+    this.listeners.add(listener)
+  }
+
+  /** 1 基行列 ↔ 0 基偏移（与 Monaco 同语义） */
+  getPositionAt(offset: number): { lineNumber: number; column: number } {
+    const target = Math.max(0, Math.min(offset, this.value.length))
+    const before = this.value.slice(0, target)
+    const lines = before.split('\n')
+    return { lineNumber: lines.length, column: (lines.at(-1)?.length ?? 0) + 1 }
+  }
+
+  getOffsetAt(position: { lineNumber: number; column: number }): number {
+    const lines = this.value.split('\n')
+    let offset = 0
+    for (let index = 0; index < position.lineNumber - 1 && index < lines.length; index += 1) {
+      offset += lines[index].length + 1
+    }
+    return Math.min(offset + position.column - 1, this.value.length)
+  }
+
+  getFullModelRange(): FakeEdit['range'] {
+    const end = this.getPositionAt(this.value.length)
+    return {
+      startLineNumber: 1,
+      startColumn: 1,
+      endLineNumber: end.lineNumber,
+      endColumn: end.column
+    }
+  }
+
+  applyEdits(edits: FakeEdit[]): void {
+    const withOffsets = edits
+      .map((edit) => ({
+        from: this.getOffsetAt({
+          lineNumber: edit.range.startLineNumber,
+          column: edit.range.startColumn
+        }),
+        to: this.getOffsetAt({
+          lineNumber: edit.range.endLineNumber,
+          column: edit.range.endColumn
+        }),
+        text: edit.text
+      }))
+      .sort((a, b) => b.from - a.from)
+    for (const edit of withOffsets) {
+      this.value = `${this.value.slice(0, edit.from)}${edit.text}${this.value.slice(edit.to)}`
+    }
+    for (const listener of [...this.listeners]) listener()
+  }
+}
+
+const created: FakeEditor[] = []
+
+class FakeEditor {
+  model: FakeModel
+  private contentListeners = new Set<() => void>()
+  private commands = new Map<number, () => void>()
+  private keyDownListeners: Array<(event: { preventDefault(): void }) => void> = []
+  selection: FakeSelection
+  scrollTop = 0
+  options: Record<string, unknown>
+  container: HTMLDivElement
+  focused = 0
+  disposed = false
+
+  constructor(host: HTMLElement, options: Record<string, unknown>) {
+    this.options = options
+    this.model = new FakeModel(String(options.value ?? ''))
+    this.model.onDidChangeContent(() => {
+      for (const listener of [...this.contentListeners]) listener()
+    })
+    this.selection = new FakeSelection(1, 1, 1, 1)
+    this.container = document.createElement('div')
+    this.container.className = 'monaco-editor'
+    host.append(this.container)
+    created.push(this)
+  }
+
+  getModel(): FakeModel {
+    return this.model
+  }
+  getContainerDomNode(): HTMLDivElement {
+    return this.container
+  }
+  onDidChangeModelContent(listener: () => void): void {
+    this.contentListeners.add(listener)
+  }
+  onKeyDown(listener: (event: { preventDefault(): void }) => void): void {
+    this.keyDownListeners.push(listener)
+  }
+  addCommand(key: number, handler: () => void): void {
+    this.commands.set(key, handler)
+  }
+  runCommand(key: number): void {
+    this.commands.get(key)?.()
+  }
+  triggerKeyDown(event: { preventDefault(): void }): void {
+    for (const listener of [...this.keyDownListeners]) listener(event)
+  }
+  executeEdits(_source: string, edits: FakeEdit[]): void {
+    this.model.applyEdits(edits)
+  }
+  getSelection(): FakeSelection {
+    return this.selection
+  }
+  setSelection(range: FakeEdit['range'] | FakeSelection): void {
+    const source = range as unknown as {
+      startLineNumber?: number
+      startColumn?: number
+      endLineNumber?: number
+      endColumn?: number
+    }
+    this.selection = new FakeSelection(
+      source.startLineNumber ?? 1,
+      source.startColumn ?? 1,
+      source.endLineNumber ?? source.startLineNumber ?? 1,
+      source.endColumn ?? source.startColumn ?? 1
+    )
+  }
+  getScrollTop(): number {
+    return this.scrollTop
+  }
+  setScrollTop(value: number): void {
+    this.scrollTop = value
+  }
+  updateOptions(options: Record<string, unknown>): void {
+    this.options = { ...this.options, ...options }
+  }
+  focus(): void {
+    this.focused += 1
+  }
+  layout(): void {
+    // 真实 Monaco 会重排；测试里不需要
+  }
+  dispose(): void {
+    this.disposed = true
+  }
+}
+
+const fakeMonaco = {
+  editor: {
+    create: (host: HTMLElement, options: Record<string, unknown>) => new FakeEditor(host, options)
+  },
+  Selection: FakeSelection,
+  KeyMod: { CtrlCmd: 2048, Shift: 1024, Alt: 512 },
+  KeyCode: {
+    KeyB: 32,
+    KeyI: 39,
+    KeyE: 20,
+    KeyX: 53,
+    KeyS: 44,
+    KeyT: 45,
+    KeyU: 46,
+    Digit0: 21,
+    Digit1: 22,
+    Digit7: 28,
+    Digit8: 29
+  }
+}
+
+vi.mock('../monaco/monaco', () => ({
+  loadMonaco: async () => fakeMonaco,
+  monacoThemeName: () => 'tnotes-light',
+  readOnlyEditorOptions: () => ({}),
+  baseEditorOptions: () => ({}),
+  refreshMonacoTheme: (api: unknown) => refreshMonacoTheme(api)
+}))
+
+const { default: MarkdownSourceEditor } = await import('./MarkdownSourceEditor.vue')
 
 interface EditorHandle {
   insertTextAt(text: string, position?: number): void
@@ -13,6 +235,9 @@ interface EditorHandle {
   prefixSelection(prefix: string): void
   setLinePrefix(prefix: string): void
   insertTable(): void
+  addHeadingNumbers(maxDepth: number): void
+  removeHeadingNumbers(): void
+  selectAll(): void
 }
 
 function mountEditor(
@@ -33,141 +258,170 @@ function mountEditor(
   })
 }
 
-function editorHandle(wrapper: VueWrapper): EditorHandle {
-  return wrapper.vm as unknown as EditorHandle
+const handle = (wrapper: VueWrapper): EditorHandle => wrapper.vm as unknown as EditorHandle
+/** 等 onMounted 里的异步加载与编辑器创建完成 */
+const settle = async (): Promise<void> => {
+  for (let tick = 0; tick < 8; tick += 1) await Promise.resolve()
+  await new Promise((resolve) => setTimeout(resolve, 0))
+}
+const editorOf = (): FakeEditor => created.at(-1)!
+const textOf = (wrapper: VueWrapper): string => {
+  void wrapper
+  return editorOf().model.getValue()
 }
 
-function editorText(wrapper: VueWrapper): string {
-  return wrapper.find('.cm-content').text()
-}
+describe('MarkdownSourceEditor（Monaco）', () => {
+  beforeEach(() => {
+    created.length = 0
+    refreshMonacoTheme.mockClear()
+  })
 
-describe('MarkdownSourceEditor', () => {
   afterEach(() => {
     document.documentElement.removeAttribute('data-theme')
     document.body.replaceChildren()
   })
 
-  it('does not emit change for initial or externally synchronized content', async () => {
+  it('初始内容与外同步都不回抛 change', async () => {
     const wrapper = mountEditor()
+    await settle()
 
-    expect(editorText(wrapper)).toBe('alpha')
+    expect(textOf(wrapper)).toBe('alpha')
     expect(wrapper.emitted('change')).toBeUndefined()
 
     await wrapper.setProps({ content: 'external\ncontent' })
-
-    expect(editorText(wrapper)).toContain('external')
-    expect(editorText(wrapper)).toContain('content')
+    await settle()
+    expect(textOf(wrapper)).toBe('external\ncontent')
     expect(wrapper.emitted('change')).toBeUndefined()
     wrapper.unmount()
   })
 
-  it('switches the source page between standard and wide layouts', async () => {
+  it('页宽在标准与超宽之间切换（class 与折行同步）', async () => {
     const wrapper = mountEditor('alpha', { pageWidth: 'wide' })
-
+    await settle()
     expect(wrapper.get('.markdown-source-editor').classes()).toContain('is-wide')
+    expect(editorOf().options.wordWrap).toBe('off')
+
     await wrapper.setProps({ pageWidth: 'standard' })
+    await settle()
     expect(wrapper.get('.markdown-source-editor').classes()).not.toContain('is-wide')
+    expect(editorOf().options.wordWrap).toBe('on')
     wrapper.unmount()
   })
 
-  it('keeps the formatting toolbar interface and emits exact Markdown edits', () => {
+  it('工具栏接口产出与旧版逐字节相同的 Markdown', async () => {
     const insertion = mountEditor()
-    editorHandle(insertion).insertTextAt('!', 5)
+    await settle()
+    handle(insertion).insertTextAt('!', 5)
     expect(insertion.emitted<string[]>('change')?.at(-1)?.[0]).toBe('alpha!')
     insertion.unmount()
 
     const inline = mountEditor()
-    editorHandle(inline).wrapSelection('**', '**')
+    await settle()
+    handle(inline).wrapSelection('**', '**')
     expect(inline.emitted<string[]>('change')?.at(-1)?.[0]).toBe('**文字**alpha')
     inline.unmount()
 
     const block = mountEditor()
-    editorHandle(block).setLinePrefix('## ')
+    await settle()
+    handle(block).setLinePrefix('## ')
     expect(block.emitted<string[]>('change')?.at(-1)?.[0]).toBe('## alpha')
     block.unmount()
 
     const quoted = mountEditor('one\ntwo')
-    editorHandle(quoted).prefixSelection('> ')
+    await settle()
+    handle(quoted).prefixSelection('> ')
     expect(quoted.emitted<string[]>('change')?.at(-1)?.[0]).toBe('> one\ntwo')
     quoted.unmount()
 
     const table = mountEditor()
-    editorHandle(table).insertTable()
+    await settle()
+    handle(table).insertTable()
     expect(table.emitted<string[]>('change')?.at(-1)?.[0]).toBe(
       '\n|  |  |\n| --- | --- |\n|  |  |\nalpha'
     )
     table.unmount()
   })
 
-  it('retains the Markdown formatting keymap', async () => {
+  it('标题编号仍是一步整体重写（有变化才写）', async () => {
+    const wrapper = mountEditor('# one\n## two')
+    await settle()
+    handle(wrapper).addHeadingNumbers(6)
+    const numbered = wrapper.emitted<string[]>('change')?.at(-1)?.[0] ?? ''
+    expect(numbered).not.toBe('# one\n## two')
+    expect(numbered).toContain('one')
+    wrapper.unmount()
+
+    // 已经是编号标题时，剥除回到无编号（编号格式为 `1. ` / `1.1. `）
+    const numberedSource = '# 1. one\n## 1.1. two'
+    const stripped = mountEditor(numberedSource)
+    await settle()
+    handle(stripped).removeHeadingNumbers()
+    expect(stripped.emitted<string[]>('change')?.at(-1)?.[0]).toBe('# one\n## two')
+    stripped.unmount()
+  })
+
+  it('注册了 Markdown 格式快捷键，触发后产出正确编辑', async () => {
     const wrapper = mountEditor()
-    const content = wrapper.get('.cm-content').element
-    const keyOptions =
-      navigator.platform.toLowerCase().includes('mac') ||
-      navigator.userAgent.toLowerCase().includes('mac')
-        ? { metaKey: true }
-        : { ctrlKey: true }
-
-    content.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'b', bubbles: true, cancelable: true, ...keyOptions })
-    )
-    await Promise.resolve()
-
+    await settle()
+    const editor = editorOf()
+    // Mod-B：加粗
+    editor.runCommand(fakeMonaco.KeyMod.CtrlCmd | fakeMonaco.KeyCode.KeyB)
     expect(wrapper.emitted<string[]>('change')?.at(-1)?.[0]).toBe('**文字**alpha')
+    // Mod-E：行内代码（作用在上一步选中的占位文字上）
+    editor.runCommand(fakeMonaco.KeyMod.CtrlCmd | fakeMonaco.KeyCode.KeyE)
+    expect(wrapper.emitted<string[]>('change')?.at(-1)?.[0]).toBe('**`文字`**alpha')
     wrapper.unmount()
   })
 
-  it('blocks exposed methods and keyboard editing while read-only', () => {
-    const wrapper = mountEditor('alpha', { readOnly: true })
-
-    editorHandle(wrapper).insertTextAt('blocked')
-    editorHandle(wrapper).wrapSelection('**', '**')
-    editorHandle(wrapper).setLinePrefix('# ')
-
-    expect(editorText(wrapper)).toBe('alpha')
-    expect(wrapper.emitted('change')).toBeUndefined()
-    expect(wrapper.get('.cm-content').attributes('contenteditable')).toBe('false')
-    wrapper.unmount()
-  })
-
-  it('clears touched lines with the shortcut, supports undo, and respects read-only mode', async () => {
+  it('Mod-\\ 清掉选区内行的样式标记，只读时不动', async () => {
     const source = '**first**\n*second* ~~more~~\n**last**'
     const wrapper = mountEditor(source)
-    const view = EditorView.findFromDOM(wrapper.get('.cm-editor').element as HTMLElement)!
-    const keyOptions = /mac/i.test(navigator.platform + navigator.userAgent)
-      ? { metaKey: true }
-      : { ctrlKey: true }
-    const press = (key: string): void => {
-      view.contentDOM.dispatchEvent(
-        new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...keyOptions })
-      )
-    }
-    view.dispatch({ selection: { anchor: 4, head: source.indexOf('more') + 1 } })
-    press('\\')
-    expect(wrapper.emitted<string[]>('change')?.at(-1)?.[0]).toBe('first\nsecond more\n**last**')
-    press('z')
-    expect(view.state.doc.toString()).toBe(source)
+    await settle()
+    const editor = editorOf()
+    editor.setSelection(new FakeSelection(1, 2, 2, 15))
+    const preventDefault = vi.fn()
+    editor.triggerKeyDown({ metaKey: true, preventDefault, browserEvent: { key: '\\' } })
+    expect(preventDefault).toHaveBeenCalled()
+    expect(editor.model.getValue()).toBe('first\nsecond more\n**last**')
+
     await wrapper.setProps({ readOnly: true })
-    press('\\')
-    expect(view.state.doc.toString()).toBe(source)
+    await settle()
+    editor.setSelection(new FakeSelection(1, 1, 1, 1))
+    const blocked = vi.fn()
+    editor.triggerKeyDown({ metaKey: true, preventDefault: blocked, browserEvent: { key: '\\' } })
+    expect(blocked).not.toHaveBeenCalled()
     wrapper.unmount()
   })
 
-  it('reconfigures its CodeMirror theme when the app appearance changes', async () => {
+  it('只读时暴露的方法全部被挡住', async () => {
+    const wrapper = mountEditor('alpha', { readOnly: true })
+    await settle()
+    handle(wrapper).insertTextAt('blocked')
+    handle(wrapper).wrapSelection('**', '**')
+    handle(wrapper).setLinePrefix('# ')
+    expect(textOf(wrapper)).toBe('alpha')
+    expect(wrapper.emitted('change')).toBeUndefined()
+    expect(editorOf().options.readOnly).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('明暗切换时重算主题，且不产生内容变化', async () => {
     document.documentElement.dataset.theme = 'light'
     const wrapper = mountEditor()
-    const editor = wrapper.get('.cm-editor')
-    const lightClasses = editor.attributes('class')
+    await settle()
+    refreshMonacoTheme.mockClear()
 
     document.documentElement.dataset.theme = 'dark'
-
-    await vi.waitFor(() => expect(editor.attributes('class')).not.toBe(lightClasses))
+    await vi.waitFor(() => expect(refreshMonacoTheme).toHaveBeenCalled())
     expect(wrapper.emitted('change')).toBeUndefined()
     wrapper.unmount()
   })
 
-  it('emits pasted images at the current source position', () => {
-    const wrapper = mountEditor()
+  it('粘贴图片在当前光标处 emit，并拦下默认粘贴', async () => {
+    const wrapper = mountEditor('head\ntail')
+    await settle()
+    const editor = editorOf()
+    editor.setSelection(new FakeSelection(2, 1, 2, 1))
     const transfer = new DataTransfer()
     const image = new File(['image'], 'paste.png', { type: 'image/png' })
     transfer.items.add(image)
@@ -176,25 +430,33 @@ describe('MarkdownSourceEditor', () => {
       cancelable: true,
       clipboardData: transfer
     })
-
-    wrapper.get('.cm-content').element.dispatchEvent(event)
+    editor.getContainerDomNode().dispatchEvent(event)
 
     const pasted = wrapper.emitted<[File, number]>('pasteImage')
     expect(pasted).toHaveLength(1)
     expect(pasted?.[0][0]).toBe(image)
-    expect(pasted?.[0][1]).toBe(0)
+    expect(pasted?.[0][1]).toBe(5) // 第二行行首 = 'head\n'.length
     expect(event.defaultPrevented).toBe(true)
     expect(wrapper.emitted('change')).toBeUndefined()
     wrapper.unmount()
   })
 
-  it('selects the whole source document when the application menu asks for select-all', () => {
+  it('应用菜单的全选覆盖整篇文档', async () => {
     const wrapper = mountEditor('alpha\nbeta')
+    await settle()
     window.dispatchEvent(new Event(DESK_SELECT_ALL_EVENT))
-    const cm = EditorView.findFromDOM(wrapper.get('.cm-editor').element)
-    expect(cm).not.toBeNull()
-    expect(cm!.state.selection.main.from).toBe(0)
-    expect(cm!.state.selection.main.to).toBe(cm!.state.doc.length)
+    const editor = editorOf()
+    expect(editor.selection.getStartPosition()).toEqual({ lineNumber: 1, column: 1 })
+    expect(editor.selection.getEndPosition()).toEqual({ lineNumber: 2, column: 5 })
+    expect(editor.focused).toBeGreaterThan(0)
     wrapper.unmount()
+  })
+
+  it('卸载时释放编辑器', async () => {
+    const wrapper = mountEditor()
+    await settle()
+    const editor = editorOf()
+    wrapper.unmount()
+    expect(editor.disposed).toBe(true)
   })
 })

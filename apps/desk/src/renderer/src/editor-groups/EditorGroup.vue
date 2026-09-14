@@ -5,6 +5,7 @@ import KnowledgeBaseIcon from '../components/KnowledgeBaseIcon.vue'
 import UiTooltip from '../components/UiTooltip.vue'
 import KbSettingsPane from './KbSettingsPane.vue'
 import ExcalidrawTabPane from './ExcalidrawTabPane.vue'
+import TextFileTabPane from './TextFileTabPane.vue'
 import HistoryTabPane from './HistoryTabPane.vue'
 import KbAssetsPane from './KbAssetsPane.vue'
 import NoteTabPane from './NoteTabPane.vue'
@@ -330,6 +331,12 @@ async function runTabAction(action: ContextMenuAction, tab: EditorTab): Promise<
         />
         <ExcalidrawTabPane
           v-else-if="tab.type === 'excalidraw'"
+          :tab="tab"
+          :group-id="group.id"
+          :active="tab.id === group.activeTabId"
+        />
+        <TextFileTabPane
+          v-else-if="tab.type === 'text-file'"
           :tab="tab"
           :group-id="group.id"
           :active="tab.id === group.activeTabId"

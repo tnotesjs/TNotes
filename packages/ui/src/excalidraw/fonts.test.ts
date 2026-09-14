@@ -1,6 +1,7 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  clearExcalidrawFontCache,
   getExcalidrawAssetPath,
   inlineExcalidrawFonts,
   resolveFontUrl,
@@ -18,6 +19,12 @@ function fetchReturning(bytes: number[], ok = true) {
 }
 
 describe('画布字体自包含', () => {
+  // 字体 data URL 是跨调用缓存的（编辑期间会反复重导出）：用例之间必须清掉，
+  // 否则前一个用例的成功结果会让「取不到字体」这个用例读到缓存。
+  beforeEach(() => {
+    clearExcalidrawFontCache()
+  })
+
   it('把字体基址换成配置的本地目录', () => {
     expect(
       resolveFontUrl(
@@ -49,6 +56,17 @@ describe('画布字体自包含', () => {
     expect(result.inlined).toBe(0)
     expect(result.remaining).toEqual(['/excalidraw/fonts/Virgil/Virgil-Regular.woff2'])
     expect(result.svg).toBe(SVG)
+  })
+
+  it('同一字体只 fetch 一次（编辑期间反复重导出是热路径）', async () => {
+    const fetchImpl = fetchReturning([1, 2, 3])
+    const first = await inlineExcalidrawFonts(SVG, { base: '/excalidraw/', fetchImpl })
+    const second = await inlineExcalidrawFonts(SVG, { base: '/excalidraw/', fetchImpl })
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1)
+    expect(first.svg).toContain('data:font/woff2;base64,')
+    expect(second.svg).toBe(first.svg)
+    expect(second.inlined).toBe(1)
   })
 
   it('没有字体引用时不做任何事', async () => {

@@ -6,8 +6,12 @@ import type {
   AppSettings,
   AttachmentWriteLocalRequest,
   AttachmentWriteLocalResult,
+  ExcalidrawDerivedRefDto,
+  KbFilesListResultDto,
+  KbTextFileDto,
   ExcalidrawDocumentDto,
   ExcalidrawDocumentRefDto,
+  ExcalidrawSourceProbeDto,
   HistoryAssetDto,
   HistoryListResultDto,
   HistoryApplyResultDto,
@@ -165,11 +169,19 @@ const api: DeskApi = {
       return () => ipcRenderer.removeListener(IPC_CHANNELS.kbOpenAssetsRequested, listener)
     }
   },
+  kbFiles: {
+    list: (request) => invoke<KbFilesListResultDto>(IPC_CHANNELS.kbFilesList, request),
+    read: (request) => invoke<KbTextFileDto>(IPC_CHANNELS.kbFilesRead, request)
+  },
   excalidraw: {
     create: (request) => invoke<ExcalidrawDocumentRefDto>(IPC_CHANNELS.excalidrawCreate, request),
     read: (request) => invoke<ExcalidrawDocumentDto>(IPC_CHANNELS.excalidrawRead, request),
     write: (request) => invoke<ExcalidrawDocumentRefDto>(IPC_CHANNELS.excalidrawWrite, request),
-    copy: (request) => invoke<ExcalidrawDocumentRefDto>(IPC_CHANNELS.excalidrawCopy, request)
+    copy: (request) => invoke<ExcalidrawDocumentRefDto>(IPC_CHANNELS.excalidrawCopy, request),
+    writeDerived: (request) =>
+      invoke<ExcalidrawDerivedRefDto>(IPC_CHANNELS.excalidrawWriteDerived, request),
+    sourceForDerived: (request) =>
+      invoke<ExcalidrawSourceProbeDto>(IPC_CHANNELS.excalidrawSourceForDerived, request)
   },
   history: {
     list: (request) => invoke<HistoryListResultDto>(IPC_CHANNELS.historyList, request),

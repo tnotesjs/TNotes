@@ -786,19 +786,20 @@ onBeforeUnmount(() => {
   transition: opacity 0.2s;
 }
 
-/* Editable Desk island: chrome must stay hittable. */
-.mindmap-preview.is-editable > .mindmap-preview-actions {
-  opacity: 1;
-  pointer-events: auto;
-}
-
+/* 工具条按需出现：hover、聚焦（键盘 Tab 进来也算）、画布交互中、全屏。
+   Desk 的可编辑岛原本额外钉了 `opacity: 1`（旧注释：“chrome must stay hittable”），
+   结果每张脑图右上角常驻一排按钮，既像噪声又占掉画布右上角的拖拽区；
+   可点击性并没丢 —— 指针进入即 hover 显现，`:focus-within` 保住键盘路径。
+   只读岛（站点）本来就是这套行为，这里让两边一致。 */
 .mindmap-preview-tabs {
   display: flex;
   gap: 4px;
 }
 
 .mindmap-preview:hover > .mindmap-preview-actions,
+.mindmap-preview:focus-within > .mindmap-preview-actions,
 .mindmap-preview-actions:focus-within,
+.mindmap-preview.is-interaction-active > .mindmap-preview-actions,
 .mindmap-preview.is-fullscreen > .mindmap-preview-actions,
 .mindmap-preview:fullscreen > .mindmap-preview-actions {
   opacity: 1;

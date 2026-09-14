@@ -19,6 +19,7 @@ const kb = join(workspace, 'canvas-git')
 const notes = join(kb, 'notes')
 const assets = join(kb, 'assets')
 const canvasPath = join(assets, '0001-drawing.excalidraw')
+const derivedPath = join(assets, '0001-drawing.svg')
 const notePath = join(notes, '0001. 画布.md')
 const shots = join(deskDir, 'scripts', 'shots', 'excalidraw-git')
 mkdirSync(notes, { recursive: true })
@@ -63,6 +64,11 @@ const SCENE = `${JSON.stringify(
   2
 )}\n`
 writeFileSync(canvasPath, SCENE)
+// 派生图：与源画布同名，笔记引用的就是它
+writeFileSync(
+  derivedPath,
+  '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="140"><rect width="240" height="140" fill="#ffffff"/></svg>\n'
+)
 writeFileSync(
   join(kb, 'tnotes.json'),
   `${JSON.stringify({ name: 'canvas-git', title: 'canvas-git' })}\n`
@@ -78,7 +84,7 @@ writeFileSync(
     '',
     '# 画布',
     '',
-    '<Excalidraw path="../assets/0001-drawing.excalidraw" />',
+    '![画布](../assets/0001-drawing.svg)',
     ''
   ].join('\n')
 )
@@ -103,6 +109,7 @@ git('add', '-A')
 git('commit', '-q', '-m', 'fixture: 初始状态')
 const commitsBefore = git('rev-list', '--count', 'HEAD')
 const noteBefore = readFileSync(notePath, 'utf8')
+const derivedBefore = readFileSync(derivedPath, 'utf8')
 
 const results = []
 const record = (name, ok, detail = '') => {
@@ -149,21 +156,20 @@ try {
   await page.getByText('canvas-git', { exact: true }).first().click()
   await page.waitForTimeout(1500)
   await page.locator('.toc-row', { hasText: '画布' }).first().click()
-  const card = page.locator('.desk-excalidraw:visible').first()
-  await card.waitFor({ timeout: 20000 })
+  const figure = page.locator('.desk-image:visible').first()
+  await figure.waitFor({ timeout: 20000 })
   await page.waitForTimeout(800)
-  await card.locator('[data-action="edit"]').click()
-  const canvas = page.locator('.desk-excalidraw:visible .excalidraw__canvas.interactive')
+  // 画布图（同名 .excalidraw 在）才有「编辑」：点它打开画布标签页
+  await figure.click()
+  await page.locator('.desk-image__canvas-edit:visible').first().click()
+  const canvas = page.locator('.excalidraw__canvas.interactive')
   await canvas.waitFor({ timeout: 60000 })
   await page.waitForTimeout(1200)
 
   record('前置：Git 仓库干净', git('status', '--porcelain') === '', git('status', '--porcelain'))
 
   // 画一笔 → 文件实时写盘，但不产生提交
-  await page
-    .locator('.desk-excalidraw:visible [data-testid="toolbar-rectangle"]')
-    .first()
-    .click({ force: true })
+  await page.locator('[data-testid="toolbar-rectangle"]').first().click({ force: true })
   const box = await canvas.boundingBox()
   const x = box.x + box.width * 0.5
   const y = box.y + box.height * 0.3
@@ -193,6 +199,16 @@ try {
     JSON.stringify(status)
   )
   record('画布内容变化不改笔记源码', readFileSync(notePath, 'utf8') === noteBefore, '')
+  // 派生图必须跟着画布走：节流写盘（1.2s）之后内容应当和初始占位图不同
+  const derivedUpdated = await waitFor(
+    () => readFileSync(derivedPath, 'utf8') !== derivedBefore,
+    15000
+  )
+  record(
+    '画布内容变化后同名派生 SVG 被重新导出',
+    Boolean(derivedUpdated) && readFileSync(derivedPath, 'utf8').includes('<svg'),
+    `bytes=${readFileSync(derivedPath, 'utf8').length}`
+  )
   record('全流程无页面错误', pageErrors.length === 0, pageErrors.slice(0, 2).join(' | '))
   await page.screenshot({ path: join(shots, 'edited-with-git.png') })
 } catch (error) {

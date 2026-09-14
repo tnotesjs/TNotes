@@ -266,7 +266,6 @@ const PREVIEW_INTERACTIVE_SELECTOR = [
   '.desk-raw-block__include-cm',
   '.desk-raw-block__boundary-hit',
   '.desk-code-tab',
-  '.desk-excalidraw',
   '.mindmap-preview',
   '[data-view-tab]',
   '.cm-editor',

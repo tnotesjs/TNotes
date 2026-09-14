@@ -1,10 +1,10 @@
-// E6 插入流程与删除语义：斜杠菜单「Excalidraw 画布」→ 主进程先建文件 → 定点插入组件；
-// 撤销/重做/删除组件都不动已创建的资源。
+// 插入流程与删除语义：斜杠菜单「Excalidraw 画布」→ 主进程建 `.excalidraw` + 同名
+// 占位 `.svg` → 笔记里插入图片引用 → 打开画布标签页；撤销/重做/删除引用都不动资源。
 // 需要先构建：pnpm --filter desk exec electron-vite build
 // Run: node apps/desk/scripts/e2e-excalidraw-insert.mjs
 import { _electron } from 'playwright-core'
 import { createRequire } from 'node:module'
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -57,11 +57,15 @@ const record = (name, ok, detail = '') => {
   results.push({ name, ok, detail })
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? ` — ${detail}` : ''}`)
 }
-const canvasFiles = () =>
+const filesWith = (extension) =>
   readdirSync(assets)
-    .filter((name) => name.endsWith('.excalidraw'))
+    .filter((name) => name.endsWith(extension))
     .sort()
+const canvasFiles = () => filesWith('.excalidraw')
+const derivedFiles = () => filesWith('.svg')
 const readNote = () => readFileSync(notePath, 'utf8')
+/** 笔记里的画布图片引用（相对路径） */
+const noteCanvasRefs = () => [...readNote().matchAll(/!\[画布\]\(([^)]+)\)/g)].map((m) => m[1])
 
 async function waitFor(check, timeoutMs = 10000, intervalMs = 120) {
   const deadline = Date.now() + timeoutMs
@@ -94,14 +98,21 @@ try {
   await page.waitForLoadState('domcontentloaded')
   await page.getByText('canvas-insert', { exact: true }).first().click()
   await page.waitForTimeout(1200)
-  await page.locator('.toc-row', { hasText: '画布' }).first().click()
-  const pm = page.locator('.milkdown .ProseMirror')
-  await pm.waitFor({ timeout: 30000 })
-  await page.waitForTimeout(600)
 
-  /** 在正文末尾开一个空段落并打开斜杠菜单。 */
+  /** 回到笔记标签页（插入画布会打开画布标签页） */
+  const openNote = async () => {
+    await page.locator('.toc-row', { hasText: '画布' }).first().click()
+    const pm = page.locator('.milkdown .ProseMirror')
+    await pm.waitFor({ timeout: 30000 })
+    await page.waitForTimeout(400)
+  }
+  await openNote()
+  const pm = page.locator('.milkdown .ProseMirror')
+
+  /** 在正文末尾开一个空段落并打开斜杠菜单 */
   const openSlashMenu = async () => {
-    await pm.locator(':scope > p').last().click()
+    // 插入图片后末段会是图片段落（不可见），固定点第一个正文段落
+    await pm.locator(':scope > p').first().click()
     await page.keyboard.press('End')
     await page.keyboard.press('Enter')
     await page.keyboard.type('/')
@@ -112,100 +123,91 @@ try {
   const insertCanvas = async () => {
     const menu = await openSlashMenu()
     await menu.getByText('Excalidraw 画布', { exact: true }).first().click()
-    return waitFor(async () => canvasFiles().length, 15000)
+    return waitFor(async () => (readNote().includes('.svg') ? true : null), 15000)
   }
-  /** 等笔记落盘出现组件（自动保存有 300ms 防抖）。 */
-  const waitForComponentCount = (count) =>
-    waitFor(() => (readNote().match(/<Excalidraw /g)?.length ?? 0) === count, 10000)
-  const doneButton = () => page.locator('.desk-excalidraw [data-action="done"]:visible').first()
+  const waitForRefCount = (count) => waitFor(() => noteCanvasRefs().length === count, 10000)
+  /** 画布标签页是否打开（标题是 relPath） */
+  const canvasTabCount = async () => page.locator('.tab', { hasText: '.excalidraw' }).count()
 
-  // 1) 斜杠菜单插入：主进程先建文件，再定点插入组件，并直接进入编辑
-  const firstCount = await insertCanvas()
-  const firstFiles = canvasFiles()
+  // 1) 斜杠菜单插入：一次建两个文件、插入图片引用、并打开画布标签页
+  const inserted = await insertCanvas()
   record(
-    '斜杠菜单插入：先建文件再插组件，文件名带笔记编号',
-    firstCount === 1 &&
-      /^0001-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}\.excalidraw$/.test(firstFiles[0] ?? ''),
-    `files=${JSON.stringify(firstFiles)}`
+    '斜杠菜单插入：笔记里出现图片引用',
+    Boolean(inserted),
+    `refs=${JSON.stringify(noteCanvasRefs())}`
   )
-  await waitForComponentCount(1)
-  const insertedSource = readNote()
-  const match = insertedSource.match(/<Excalidraw path="([^"]+)" \/>/)
+  await waitForRefCount(1)
+  const firstCanvases = canvasFiles()
+  const firstDerived = derivedFiles()
   record(
-    '插入的组件指向刚创建的相对路径',
-    match?.[1] === `../assets/${firstFiles[0]}`,
-    `path=${match?.[1]}`
+    '插入同时创建 .excalidraw 与同名占位 .svg（文件名带笔记编号）',
+    firstCanvases.length === 1 &&
+      firstDerived.length === 1 &&
+      /^0001-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}\.excalidraw$/.test(firstCanvases[0] ?? '') &&
+      firstDerived[0] === firstCanvases[0]?.replace(/\.excalidraw$/, '.svg'),
+    `canvas=${JSON.stringify(firstCanvases)} svg=${JSON.stringify(firstDerived)}`
   )
-  const editing = await waitFor(
-    async () =>
-      (await page.locator('.desk-excalidraw:visible .excalidraw__canvas.interactive').count()) ===
-      1,
-    30000
+  record(
+    '插入的引用指向刚创建的那张派生 SVG',
+    noteCanvasRefs()[0] === `../assets/${firstDerived[0]}`,
+    `ref=${noteCanvasRefs()[0]}`
   )
-  record('新插入的卡片直接进入编辑状态', Boolean(editing))
+  const placeholder = readFileSync(join(assets, firstDerived[0] ?? ''), 'utf8')
+  record(
+    '占位 SVG 是合法 SVG（还不是真图）',
+    placeholder.trimStart().startsWith('<svg') && placeholder.includes('画布'),
+    `bytes=${placeholder.length}`
+  )
+  const tabOpened = await waitFor(async () => (await canvasTabCount()) === 1, 15000)
+  record('插入后直接打开该画布的标签页', Boolean(tabOpened), `tabs=${await canvasTabCount()}`)
   await page.screenshot({ path: join(shots, 'inserted.png') })
 
   // 2) 同一篇笔记再插一次：不重名
-  await doneButton().click()
-  await page.waitForTimeout(800)
+  await openNote()
   await insertCanvas()
-  await waitForComponentCount(2)
-  const secondFiles = canvasFiles()
+  await waitForRefCount(2)
+  const secondCanvases = canvasFiles()
   record(
-    '同一篇笔记多张画布不重名',
-    secondFiles.length === 2 && new Set(secondFiles).size === 2,
-    `files=${JSON.stringify(secondFiles)}`
+    '同一篇笔记多张画布不重名（源文件与派生图各两份）',
+    secondCanvases.length === 2 &&
+      new Set(secondCanvases).size === 2 &&
+      derivedFiles().length === 2,
+    `canvas=${JSON.stringify(secondCanvases)} svg=${JSON.stringify(derivedFiles())}`
   )
-  // 第二张卡片同样会进入编辑态，但「完成」按钮只在编辑态可见：先等它真的进编辑态
-  // （CI 上偶发比组件挂载慢，直接点会 30s 超时）。
-  const secondEditing = await waitFor(
-    async () =>
-      (await page.locator('.desk-excalidraw:visible .excalidraw__canvas.interactive').count()) ===
-      1,
-    30000
-  )
-  record('第二张画布也直接进入编辑状态', Boolean(secondEditing))
-  await doneButton().click()
-  await page.waitForTimeout(800)
+  await page.screenshot({ path: join(shots, 'two-canvases.png') })
 
-  // 3) 撤销插入：组件消失但文件保留
+  // 3) 撤销插入：引用消失但文件保留
+  // 插入会打开画布标签页，先回到笔记标签页再操作正文
+  await openNote()
   const noteWithTwo = readNote()
-  await pm.locator(':scope > p').last().click()
+  await pm.locator(':scope > p').first().click()
   await page.keyboard.press('ControlOrMeta+z')
   const undone = await waitFor(() => readNote() !== noteWithTwo, 8000)
-  const afterUndo = readNote()
   record(
-    '撤销插入：组件消失、已创建文件保留',
-    Boolean(undone) &&
-      (afterUndo.match(/<Excalidraw /g)?.length ?? 0) === 1 &&
-      canvasFiles().length === 2,
-    `组件数=${afterUndo.match(/<Excalidraw /g)?.length ?? 0} 文件数=${canvasFiles().length}`
+    '撤销插入：图片引用消失、已创建的两个文件都保留',
+    Boolean(undone) && noteCanvasRefs().length === 1 && canvasFiles().length === 2,
+    `refs=${noteCanvasRefs().length} canvas=${canvasFiles().length} svg=${derivedFiles().length}`
   )
 
-  // 4) 重做：同一个 path 回来，不会创建第二份文件
+  // 4) 重做：同一个引用回来，不会创建第二份文件
   await page.keyboard.press('ControlOrMeta+Shift+z')
-  const redone = await waitFor(() => (readNote().match(/<Excalidraw /g)?.length ?? 0) === 2, 8000)
+  const redone = await waitForRefCount(2)
   record(
     '重做插入：恢复同一路径且不新建文件',
-    Boolean(redone) && canvasFiles().length === 2,
-    `组件数=${readNote().match(/<Excalidraw /g)?.length ?? 0} 文件数=${canvasFiles().length}`
+    Boolean(redone) && canvasFiles().length === 2 && derivedFiles().length === 2,
+    `refs=${noteCanvasRefs().length} canvas=${canvasFiles().length}`
   )
   await page.screenshot({ path: join(shots, 'undo-redo.png') })
 
-  // 5) 删除组件：不级联删除资源
-  const componentCount = readNote().match(/<Excalidraw /g)?.length ?? 0
-  await pm.locator('.desk-excalidraw').last().click()
-  await page.keyboard.press('ControlOrMeta+a')
+  // 5) 删除引用：不级联删除资源
+  await pm.locator('.desk-image').last().click()
   await page.waitForTimeout(150)
   await page.keyboard.press('Backspace')
-  const removed = await waitFor(
-    () => (readNote().match(/<Excalidraw /g)?.length ?? 0) < componentCount,
-    8000
-  )
+  const removed = await waitFor(() => noteCanvasRefs().length < 2, 8000)
   record(
-    '删除组件（画布内全选删除）不级联删除资源',
-    Boolean(removed) && canvasFiles().length === 2,
-    `组件数=${readNote().match(/<Excalidraw /g)?.length ?? 0} 文件数=${canvasFiles().length}`
+    '删除图片引用不级联删除资源',
+    Boolean(removed) && canvasFiles().length === 2 && derivedFiles().length === 2,
+    `refs=${noteCanvasRefs().length} canvas=${canvasFiles().length} svg=${derivedFiles().length}`
   )
   record('全流程无页面错误', pageErrors.length === 0, pageErrors.slice(0, 2).join(' | '))
 } catch (error) {

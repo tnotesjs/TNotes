@@ -545,6 +545,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       return
     }
     if (tab.type === 'note') await ensureDocument(tab.knowledgeBaseId, tab.noteUuid)
+    if (tab.type === 'text-file') return
     if (forceReveal || settings.value?.tabs.autoRevealInToc) {
       if (selectedKnowledgeBaseId.value !== tab.knowledgeBaseId) {
         await selectKnowledgeBase(tab.knowledgeBaseId)

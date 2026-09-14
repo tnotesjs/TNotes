@@ -1,5 +1,3 @@
-import { isExcalidrawSource } from '../../editor/markdown/excalidrawComponent'
-import { mountRawExcalidraw } from './excalidraw'
 import {
   isBilibiliVideoSource,
   isWordListSource,
@@ -19,11 +17,6 @@ import { clearRawBlockBody } from './clearBody'
 
 export function mountRawComponent(ctx: DeskRawBlockMountContext): void {
   const { block, dom, view, getPos, cleanupTasks, deps } = ctx
-
-  if (isExcalidrawSource(block.source)) {
-    mountRawExcalidraw(ctx)
-    return
-  }
 
   if (isBilibiliVideoSource(block.source)) {
     dom.classList.add('desk-raw-block--component', 'desk-raw-block--bilibili-video')

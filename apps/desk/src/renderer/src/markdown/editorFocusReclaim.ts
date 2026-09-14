@@ -30,7 +30,6 @@ const KEEP_FOCUS_SELECTOR = [
   '.desk-code-tab',
   '.desk-raw-block__boundary-hit',
   '.desk-raw-block__component-preview',
-  '.desk-excalidraw',
   '.mindmap-preview',
   '[data-view-tab]',
   '.focus-breadcrumbs',

@@ -13,6 +13,7 @@
  */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
+import { startCanvasDerivedSync } from '../editor/excalidraw/canvasImage'
 import { createExcalidrawCanvasController } from '../editor/excalidraw/canvasController'
 import { useEditorStore } from '../stores/editor'
 import { registerExcalidrawCloseHandler } from '../stores/workspace/excalidrawCloseRegistry'
@@ -58,8 +59,15 @@ function registerCloseHandler(): void {
   })
 }
 
+/**
+ * 派生图实时同步：编辑期间笔记里那张 `.svg` 跟着变（内存预览 + 节流写盘）。
+ * 与画布会话同生命周期 —— 卸载时会把最后一笔落盘。
+ */
+let stopDerivedSync: (() => void) | null = null
+
 onMounted(() => {
   registerCloseHandler()
+  stopDerivedSync = startCanvasDerivedSync(props.tab.knowledgeBaseId, props.tab.relPath)
   void controller.boot()
 })
 
@@ -110,6 +118,8 @@ watch(
 )
 
 onBeforeUnmount(() => {
+  stopDerivedSync?.()
+  stopDerivedSync = null
   controller.destroy()
 })
 </script>

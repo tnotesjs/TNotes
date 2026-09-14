@@ -14,19 +14,43 @@ const opaqueKinds = new Set([
   'math'
 ])
 
-/** Remove Markdown style delimiters, not literal punctuation or other syntax. */
-export function sourceLineStyleChanges(state: EditorState): ChangeSpec[] {
-  const range = state.selection.main
-  const from = state.doc.lineAt(range.from).from
+/** 与编辑器无关的改动描述（Monaco / CodeMirror 都能吃同一份） */
+export interface SourceLineStyleChange {
+  from: number
+  to: number
+  insert: string
+}
+
+/**
+ * 与编辑器无关的实现：输入原文与选区偏移，输出要应用的改动。
+ *
+ * 抽出来是因为源码视图已经从 CodeMirror 换成 Monaco，而这段逻辑必须逐字节保持
+ * （Lezer 解析与保护块判定都不依赖编辑器）。
+ */
+export function sourceLineStyleChangesFor(
+  source: string,
+  selectionFrom: number,
+  selectionTo: number
+): SourceLineStyleChange[] {
+  const lineStartAt = (offset: number): number => {
+    const index = source.lastIndexOf('\n', Math.max(0, offset - 1))
+    return index + 1
+  }
+  const lineEndAt = (offset: number): number => {
+    const index = source.indexOf('\n', offset)
+    return index === -1 ? source.length : index
+  }
+  const from = lineStartAt(selectionFrom)
   // A selection ending at column zero does not include that next line.
   const last =
-    !range.empty && state.doc.lineAt(range.to).from === range.to ? range.to - 1 : range.to
-  const to = state.doc.lineAt(last).to
-  const source = state.doc.toString()
+    selectionTo !== selectionFrom && lineStartAt(selectionTo) === selectionTo
+      ? selectionTo - 1
+      : selectionTo
+  const to = lineEndAt(last)
   const protectedBlocks = parseMarkdownSource(source).blocks.filter((block) =>
     opaqueKinds.has(block.kind)
   )
-  const changes: { from: number; to: number; insert: string }[] = []
+  const changes: SourceLineStyleChange[] = []
   const insertions = new Map<number, { marker: string; order: number }[]>()
   const insert = (pos: number, marker: string, order: number): void => {
     const items = insertions.get(pos) ?? []
@@ -75,6 +99,12 @@ export function sourceLineStyleChanges(state: EditorState): ChangeSpec[] {
     })
   }
   return changes.sort((a, b) => a.from - b.from || a.to - b.to)
+}
+
+/** Remove Markdown style delimiters, not literal punctuation or other syntax. */
+export function sourceLineStyleChanges(state: EditorState): ChangeSpec[] {
+  const range = state.selection.main
+  return sourceLineStyleChangesFor(state.doc.toString(), range.from, range.to)
 }
 
 // This command belongs only to MarkdownSourceEditor (the note README source view).

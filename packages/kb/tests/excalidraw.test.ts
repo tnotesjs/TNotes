@@ -7,8 +7,11 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   copyExcalidrawDocument,
   createExcalidrawDocument,
+  derivedSvgRelPath,
   emptyExcalidrawScene,
+  findExcalidrawSourceFor,
   readExcalidrawDocument,
+  writeExcalidrawDerivedSvg,
   writeExcalidrawDocument
 } from '../src/excalidraw'
 
@@ -197,5 +200,94 @@ describe('路径与归属校验', () => {
     ).rejects.toMatchObject({ code: 'INVALID_OPERATION' })
     const entries = await fs.readdir(path.join(root, 'assets'))
     expect(entries.filter((name) => name.startsWith('0043-'))).toEqual([])
+  })
+})
+
+describe('派生 SVG（笔记里引用那张图）', () => {
+  const SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"></svg>'
+
+  it('与源画布同目录同名，只换后缀', async () => {
+    const created = await createExcalidrawDocument(root, { ownerNoteIndex: '0042' })
+    const written = await writeExcalidrawDerivedSvg(root, {
+      sourceRelPath: created.relPath,
+      content: SVG
+    })
+
+    expect(written.relPath).toBe(created.relPath.replace(/\.excalidraw$/, '.svg'))
+    expect(written.sourceRelPath).toBe(created.relPath)
+    expect(written.ownerNoteIndex).toBe('0042')
+    await expect(fs.readFile(path.join(root, written.relPath), 'utf8')).resolves.toBe(SVG)
+  })
+
+  it('源画布不存在时拒绝写入，不留孤儿文件', async () => {
+    await expect(
+      writeExcalidrawDerivedSvg(root, {
+        sourceRelPath: 'assets/0042-26-09-11-10-20-30.excalidraw',
+        content: SVG
+      })
+    ).rejects.toMatchObject({ code: 'NOTE_NOT_FOUND' })
+    await expect(fs.readdir(path.join(root, 'assets'))).rejects.toThrow()
+  })
+
+  it('内容不是 SVG 就拒绝（防止往 assets 里塞任意 .svg）', async () => {
+    const created = await createExcalidrawDocument(root, { ownerNoteIndex: '0042' })
+    for (const content of ['', 'not svg at all', '{"a":1}']) {
+      await expect(
+        writeExcalidrawDerivedSvg(root, { sourceRelPath: created.relPath, content })
+      ).rejects.toMatchObject({ code: 'INVALID_OPERATION' })
+    }
+  })
+
+  it('允许 XML 声明与注释开头的 SVG', async () => {
+    const created = await createExcalidrawDocument(root, { ownerNoteIndex: '0042' })
+    const withProlog = `<?xml version="1.0" encoding="UTF-8"?>\n<!-- svg-source:excalidraw -->\n${SVG}`
+    await expect(
+      writeExcalidrawDerivedSvg(root, { sourceRelPath: created.relPath, content: withProlog })
+    ).resolves.toMatchObject({ relPath: derivedSvgRelPath(created.relPath) })
+  })
+
+  it('源路径越界或后缀不对时拒绝', async () => {
+    for (const sourceRelPath of [
+      'notes/0042-x.excalidraw',
+      '../outside/0042-x.excalidraw',
+      'assets/0042-x.png'
+    ]) {
+      await expect(
+        writeExcalidrawDerivedSvg(root, { sourceRelPath, content: SVG })
+      ).rejects.toMatchObject({ code: 'INVALID_OPERATION' })
+    }
+  })
+})
+
+describe('识别「这张 .svg 能不能编辑」', () => {
+  const SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"></svg>'
+
+  it('同名 .excalidraw 在 → 返回源画布路径', async () => {
+    const created = await createExcalidrawDocument(root, { ownerNoteIndex: '0042' })
+    await writeExcalidrawDerivedSvg(root, { sourceRelPath: created.relPath, content: SVG })
+    const derived = derivedSvgRelPath(created.relPath)
+
+    await expect(findExcalidrawSourceFor(root, derived)).resolves.toEqual({
+      relPath: created.relPath,
+      ownerNoteIndex: '0042'
+    })
+  })
+
+  it('同名 .excalidraw 不在 → 普通图片（null）', async () => {
+    await fs.mkdir(path.join(root, 'assets'), { recursive: true })
+    await fs.writeFile(path.join(root, 'assets/0042-plain.svg'), SVG)
+    await expect(findExcalidrawSourceFor(root, 'assets/0042-plain.svg')).resolves.toBeNull()
+  })
+
+  it('四位前缀缺失 / 不在 assets / 非 svg 一律 null，不抛错', async () => {
+    for (const relPath of [
+      'assets/plain.svg',
+      'notes/0042-x.svg',
+      '../outside/0042-x.svg',
+      'assets/0042-x.png',
+      ''
+    ]) {
+      await expect(findExcalidrawSourceFor(root, relPath)).resolves.toBeNull()
+    }
   })
 })

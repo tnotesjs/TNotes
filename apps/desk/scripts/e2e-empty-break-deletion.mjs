@@ -121,9 +121,11 @@ try {
   await page.screenshot({ path: join(shots, '05-readonly-no-caret.png') })
 
   await page.getByRole('button', { name: '源码视图', exact: true }).click()
-  const sourceContent = page.locator('.markdown-source-editor .cm-content').first()
+  // 源码视图已是 Monaco：文本层是 .view-lines
+  const sourceContent = page.locator('.markdown-source-editor .view-lines').first()
   await sourceContent.waitFor()
-  const sourceAfterReadonlyAttempts = await sourceContent.textContent()
+  // Monaco 的空格是 \u00a0：比较前统一成普通空格
+  const sourceAfterReadonlyAttempts = (await sourceContent.textContent()).replace(/\u00a0/g, ' ')
   assert.equal(sourceAfterReadonlyAttempts.includes('readonly-should-not-appear'), false)
   assert.equal((sourceAfterReadonlyAttempts.match(/<br \/>/g) ?? []).length, 3)
 

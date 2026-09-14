@@ -23,6 +23,8 @@ export const IPC_CHANNELS = {
   excalidrawRead: 'excalidraw:read',
   excalidrawWrite: 'excalidraw:write',
   excalidrawCopy: 'excalidraw:copy',
+  excalidrawWriteDerived: 'excalidraw:write-derived',
+  excalidrawSourceForDerived: 'excalidraw:source-for-derived',
   historyList: 'history:list',
   historySnapshot: 'history:snapshot',
   historyReadNote: 'history:read-note',
@@ -68,6 +70,8 @@ export const IPC_CHANNELS = {
   imageOptimizePreview: 'image:optimize-preview',
   searchQuery: 'search:query',
   kbBuild: 'kb:build',
+  kbFilesList: 'kb-files:list',
+  kbFilesRead: 'kb-files:read',
   gitList: 'git:list',
   gitRefresh: 'git:refresh',
   gitFetch: 'git:fetch',
@@ -440,7 +444,8 @@ export type ContextMenuRequest =
   | { kind: 'group' }
   | {
       kind: 'tab'
-      tabType: 'note' | 'web' | 'kb-settings' | 'kb-assets' | 'excalidraw' | 'note-history'
+      tabType:
+        'note' | 'web' | 'kb-settings' | 'kb-assets' | 'excalidraw' | 'note-history' | 'text-file'
       pinned: boolean
     }
   | { kind: 'code-group-tab' }
@@ -750,6 +755,27 @@ export interface HistoryApplyResultDto {
   headDrift: boolean
 }
 
+/**
+ * 知识库里的普通文本文件（`.gitignore`、README、JSON/YAML 配置…）。
+ *
+ * 与笔记标签的区别：没有 noteUuid、不走笔记会话；本阶段**只读**，
+ * 所以没有 dirty，也不参与笔记的保存/关闭确认流程。
+ */
+export interface TextFileEditorTab {
+  id: string
+  type: 'text-file'
+  knowledgeBaseId: string
+  knowledgeBaseName: string
+  /** 库根相对路径（posix） */
+  relPath: string
+  title: string
+  icon: KnowledgeBaseIconDto | null
+  pinned?: boolean
+  openedAt?: number
+  /** 本阶段只读，恒为 false；可写文件会话接进来时复用同一字段 */
+  dirty?: boolean
+}
+
 export interface ExcalidrawEditorTab {
   id: string
   type: 'excalidraw'
@@ -868,6 +894,7 @@ export type EditorTab =
   | KbSettingsEditorTab
   | KbAssetsEditorTab
   | ExcalidrawEditorTab
+  | TextFileEditorTab
   | NoteHistoryEditorTab
 
 export interface EditorGroupNode {
@@ -1247,6 +1274,78 @@ export interface ExcalidrawCopyRequest {
   toNoteUuid: string
 }
 
+/**
+ * 派生 SVG：笔记里引用的那张图。
+ *
+ * 路径由主进程从源画布推出（同目录同名），渲染端指定不了 —— 否则等于开了一条
+ * 往 assets/ 里写任意 `.svg` 的口子。
+ */
+export interface ExcalidrawDerivedWriteRequest {
+  knowledgeBaseId: string
+  /** 源画布（assets/*.excalidraw）；必须已存在 */
+  sourceRelPath: string
+  content: string
+}
+
+export interface ExcalidrawDerivedRefDto {
+  knowledgeBaseId: string
+  relPath: string
+  sourceRelPath: string
+  ownerNoteIndex: string
+}
+
+/** 「这张 `.svg` 能不能编辑」的唯一判据：同名 `.excalidraw` 在不在 */
+export interface ExcalidrawSourceProbeRequest {
+  knowledgeBaseId: string
+  relPath: string
+}
+
+export interface ExcalidrawSourceProbeDto {
+  /** 同名源画布；null = 就是一张普通图片 */
+  source: { relPath: string; ownerNoteIndex: string } | null
+}
+
+/** 知识库文件浏览：只列一层，拒绝名单由主进程统一裁定 */
+export interface KbFilesListRequest {
+  knowledgeBaseId: string
+  /** 库根相对路径；空串表示库根 */
+  relPath: string
+}
+
+export interface KbFileEntryDto {
+  name: string
+  relPath: string
+  kind: 'directory' | 'file'
+  bytes: number | null
+  textLike: boolean
+}
+
+export interface KbFilesListResultDto {
+  /** 规范化后的目录路径（空串 = 库根） */
+  relPath: string
+  entries: KbFileEntryDto[]
+}
+
+export interface KbFilesReadRequest {
+  knowledgeBaseId: string
+  relPath: string
+}
+
+export interface KbTextFileDto {
+  relPath: string
+  content: string
+  bytes: number
+  /** 原始字节 hash：后续"可写 + 冲突保护"复用 */
+  revision: string
+  hasBom: boolean
+  eol: 'lf' | 'crlf' | 'mixed' | 'none'
+  language: string
+  /** 本阶段一律 false */
+  writable: boolean
+  /** 不可写的说明，直接给 UI */
+  writableReason: string
+}
+
 export interface DeletePreviewDto {
   knowledgeBaseId: string
   entry: TocEntryRefDto
@@ -1334,11 +1433,21 @@ export interface DeskApi {
     /** main → renderer：右键菜单点了「资源」。 */
     onOpenAssetsRequested(callback: (knowledgeBaseId: string) => void): () => void
   }
+  kbFiles: {
+    list(request: KbFilesListRequest): Promise<DeskResult<KbFilesListResultDto>>
+    read(request: KbFilesReadRequest): Promise<DeskResult<KbTextFileDto>>
+  }
   excalidraw: {
     create(request: ExcalidrawCreateRequest): Promise<DeskResult<ExcalidrawDocumentRefDto>>
     read(request: ExcalidrawReadRequest): Promise<DeskResult<ExcalidrawDocumentDto>>
     write(request: ExcalidrawWriteRequest): Promise<DeskResult<ExcalidrawDocumentRefDto>>
     copy(request: ExcalidrawCopyRequest): Promise<DeskResult<ExcalidrawDocumentRefDto>>
+    writeDerived(
+      request: ExcalidrawDerivedWriteRequest
+    ): Promise<DeskResult<ExcalidrawDerivedRefDto>>
+    sourceForDerived(
+      request: ExcalidrawSourceProbeRequest
+    ): Promise<DeskResult<ExcalidrawSourceProbeDto>>
   }
   /** 只读历史：列表 / 快照 / 正文与资源字节（全部限制在已校验的 commit + path） */
   history: {

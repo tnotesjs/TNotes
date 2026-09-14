@@ -1,6 +1,6 @@
 {
   "name": "desk",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "TNotes Desk — multi knowledge-base desktop client",
   "main": "./out/main/index.js",
   "author": "tnotesjs",
@@ -76,6 +76,7 @@
     "eslint": "^9.39.1",
     "eslint-plugin-vue": "^10.6.2",
     "happy-dom": "^20.11.6",
+    "monaco-editor": "^0.56.0",
     "playwright-core": "^1.62.1",
     "typescript": "^5.9.3",
     "vite": "^7.2.6",

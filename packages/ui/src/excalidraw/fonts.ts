@@ -28,6 +28,19 @@ export interface InlineFontsResult {
 
 const FONT_URL_PATTERN = /url\((?:'|")?([^'")]+\.woff2?)(?:'|")?\)/g
 
+/**
+ * 字体 data URL 缓存。
+ *
+ * 派生产物是「编辑期间反复重导出」的热路径，每 200ms 重新 fetch + base64 一遍
+ * 字体文件（Excalifont/Xiaolai 等十几 KB）纯属浪费；字体在进程生命周期内不会变。
+ */
+const fontDataUrlCache = new Map<string, string>()
+
+/** 便于测试与部署后换基址：清掉缓存 */
+export function clearExcalidrawFontCache(): void {
+  fontDataUrlCache.clear()
+}
+
 /** 把 CDN / 相对基址统一成本地基址下的字体路径。 */
 export function resolveFontUrl(rawUrl: string, base?: string): string {
   const fileName = rawUrl.split('/fonts/').pop() ?? rawUrl.split('/').pop() ?? rawUrl
@@ -63,11 +76,18 @@ export async function inlineExcalidrawFonts(
   const remaining: string[] = []
   for (const original of urls) {
     const target = resolveFontUrl(original, options.base)
+    const cached = fontDataUrlCache.get(target)
+    if (cached !== undefined) {
+      replacements.set(original, cached)
+      continue
+    }
     try {
       const response = await fetchImpl(target)
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       const bytes = new Uint8Array(await response.arrayBuffer())
-      replacements.set(original, `data:${mimeFor(target)};base64,${toBase64(bytes)}`)
+      const dataUrl = `data:${mimeFor(target)};base64,${toBase64(bytes)}`
+      fontDataUrlCache.set(target, dataUrl)
+      replacements.set(original, dataUrl)
     } catch {
       remaining.push(target)
     }

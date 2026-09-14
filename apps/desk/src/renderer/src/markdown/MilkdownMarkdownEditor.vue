@@ -4,10 +4,11 @@ import { parserCtx } from '@milkdown/kit/core'
 import { editorViewCtx, commandsCtx, serializerCtx } from '@milkdown/kit/core'
 import { Plugin, TextSelection } from '@milkdown/kit/prose/state'
 import type { EditorView } from '@milkdown/kit/prose/view'
-import { TN_NOTES_SLASH_ITEMS } from './slashMenu'
-import { buildExcalidrawSource } from '../editor/markdown/excalidrawComponent'
-import { createExcalidrawClipboardPlugin } from './excalidrawClipboardPlugin'
+import { serializeImageMarkdown } from '@tnotesjs/ui/image-markdown'
+import { createCanvasImageClipboardPlugin } from './canvasImageClipboardPlugin'
 import { noteRelativeAssetPath } from './noteAssetPath'
+import { invalidateCanvasSource, placeholderCanvasSvg } from '../editor/excalidraw/canvasImage'
+import { useEditorStore } from '../stores/editor'
 import { useWorkspaceStore } from '../stores/workspace'
 import { documentKey, type DocumentSession } from '../stores/workspace/helpers'
 import type { SlashMenuItem } from './slashMenu'
@@ -484,12 +485,13 @@ function runSlashItemInsert(item: SlashMenuItem): void {
 }
 
 /**
- * 插入 Excalidraw 画布（计划 E6）。
+ * 插入画布（笔记里就是一张图）。
  *
- * 顺序固定为「先让主进程建文件，成功后再定点插入组件」：
+ * 顺序固定为「先让主进程建两个文件，成功后再插入图片引用」：
  * - 笔记必须有四位编号，否则不创建（文件名归属靠它）
+ * - `.excalidraw` 是真相源，同名的 `.svg` 是笔记里引用的那张图（先用占位图）
  * - 创建成功但插入失败时报告文件位置，文件保留（不自动删除）
- * - 撤销/重做只作用在组件调用上，不会删资源、也不会再建第二份文件
+ * - 插完直接打开标签页：笔记里不提供就地编辑
  */
 async function insertExcalidrawComponent(): Promise<void> {
   const workspace = useWorkspaceStore()
@@ -512,67 +514,38 @@ async function insertExcalidrawComponent(): Promise<void> {
     workspace.error = `无法创建画布：${created.error.message}`
     return
   }
-  const createdRelPath = created.value.relPath
-  const relative = noteRelativeAssetPath(noteRelPath, createdRelPath)
-  if (!relative) {
-    workspace.error = `画布已创建但无法计算相对路径，请在资源面板找到它：${createdRelPath}`
-    return
-  }
-  const position = insertRawBlockSource(buildExcalidrawSource({ path: relative }))
-  if (position == null) {
-    workspace.error = `画布已创建但插入组件失败，请在资源面板找到它：${createdRelPath}`
-    return
-  }
-  workspace.status = `已创建画布 ${createdRelPath}`
-  openExcalidrawEditorAt(position)
-}
-
-/** 用给定源码插入一个 raw 原子；返回新原子位置（失败返回 null）。 */
-function insertRawBlockSource(source: string): number | null {
-  let newBlockPos: number | null = null
-  run((editor) => {
-    editor.editor.action((ctx) => {
-      const view = ctx.get(editorViewCtx)
-      const before = rawBlockPositions(view.state.doc)
-      const transaction = replaceCurrentParagraphWithItem(
-        view.state,
-        {
-          ...(TN_NOTES_SLASH_ITEMS.find((entry) => entry.id === 'excalidraw') as SlashMenuItem),
-          insert: source
-        },
-        view.state.selection.from
-      )
-      if (!transaction) return
-      view.dispatch(transaction)
-      const after = rawBlockPositions(view.state.doc)
-      newBlockPos = findAddedBlockPos(before, after)
-    })
+  const sourceRelPath = created.value.relPath
+  const derived = await window.desk.excalidraw.writeDerived({
+    knowledgeBaseId: props.knowledgeBaseId,
+    sourceRelPath,
+    content: placeholderCanvasSvg()
   })
-  return newBlockPos
+  if (!derived.ok) {
+    workspace.error = `画布已创建但占位图写入失败：${derived.error.message}`
+    return
+  }
+  const relative = noteRelativeAssetPath(noteRelPath, derived.value.relPath)
+  if (!relative) {
+    workspace.error = `画布已创建但无法计算相对路径，请在资源面板找到它：${sourceRelPath}`
+    return
+  }
+  // 笔记里写的是图片引用（可拖拽改尺寸 / 加描述 / 改对齐），不是组件
+  insertTextAt(`${serializeImageMarkdown({ alt: '画布', src: relative })}\n`)
+  invalidateCanvasSource(props.knowledgeBaseId, derived.value.relPath)
+  workspace.status = `已创建画布 ${sourceRelPath}`
+  openExcalidrawTab(sourceRelPath)
 }
 
-/** 新插入的画布卡片直接进入编辑（与其它组件插入后打开编辑一致）。 */
-function openExcalidrawEditorAt(position: number): void {
-  if (isEffectivelyReadOnly()) return
-  let attempts = 0
-  const tryOpen = (): void => {
-    attempts += 1
-    const view = deskEditor?.editor.action((ctx) => ctx.get(editorViewCtx))
-    const dom = view?.nodeDOM(position)
-    if (!(dom instanceof HTMLElement)) {
-      if (attempts >= 20) window.clearInterval(pollTimer)
-      return
-    }
-    const editButton = dom.querySelector<HTMLButtonElement>('.desk-excalidraw [data-action="edit"]')
-    if (!editButton) {
-      if (attempts >= 20) window.clearInterval(pollTimer)
-      return
-    }
-    editButton.click()
-    window.clearInterval(pollTimer)
+/** 打开/聚焦该画布的标签页（笔记里不再提供就地编辑） */
+function openExcalidrawTab(sourceRelPath: string): void {
+  const workspace = useWorkspaceStore()
+  const knowledgeBase =
+    workspace.overview.allKnowledgeBases.find((item) => item.id === props.knowledgeBaseId) ?? null
+  if (!knowledgeBase) {
+    workspace.error = `画布已创建但无法打开标签页：${sourceRelPath}`
+    return
   }
-  const pollTimer = window.setInterval(tryOpen, 50)
-  tryOpen()
+  useEditorStore().openExcalidraw(knowledgeBase, sourceRelPath)
 }
 
 /**
@@ -1032,7 +1005,7 @@ onMounted(async () => {
     toolbar: {}
   })
   editor.editor.use(
-    createExcalidrawClipboardPlugin({
+    createCanvasImageClipboardPlugin({
       knowledgeBaseId: () => props.knowledgeBaseId,
       noteUuid: () => props.noteUuid,
       noteIndex: () => currentNoteSession()?.document.index ?? '',
@@ -1096,6 +1069,11 @@ onMounted(async () => {
     createDeskImageView({
       knowledgeBaseId: () => props.knowledgeBaseId,
       noteUuid: () => props.noteUuid,
+      noteRelPath: () => {
+        const session =
+          useWorkspaceStore().documents[documentKey(props.knowledgeBaseId, props.noteUuid)]
+        return session?.document.relPath ?? ''
+      },
       isReadOnly: isEffectivelyReadOnly,
       writeClipboard
     })

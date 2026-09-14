@@ -103,20 +103,38 @@ export {
   fillCompletedNotesCount,
   toMonthKey
 } from './stats'
+export {
+  KB_TEXT_MAX_BYTES,
+  classifyKbPath,
+  isLikelyTextPath,
+  languageForKbPath,
+  listKbDirectory,
+  looksLikeText,
+  readKbTextFile
+} from './files'
+export type { KbDirectoryEntry, KbPathPolicy, KbTextFile } from './files'
 export { applyAtomicWrites, writeFileAtomic } from './atomic'
 export type { AtomicWrite } from './atomic'
 export {
+  EXCALIDRAW_DERIVED_EXTENSION,
   EXCALIDRAW_EXTENSION,
   copyExcalidrawDocument,
   createExcalidrawDocument,
+  derivedSvgRelPath,
   emptyExcalidrawScene,
+  findExcalidrawSourceFor,
   readExcalidrawDocument,
+  sourceRelPathForDerived,
+  writeExcalidrawDerivedSvg,
   writeExcalidrawDocument
 } from './excalidraw'
 export type {
   CopyExcalidrawDocumentInput,
   CreateExcalidrawDocumentInput,
+  ExcalidrawDerivedSvgRef,
   ExcalidrawDocument,
   ExcalidrawDocumentRef,
+  ExcalidrawSourceRef,
+  WriteExcalidrawDerivedSvgInput,
   WriteExcalidrawDocumentInput
 } from './excalidraw'

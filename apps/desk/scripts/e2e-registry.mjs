@@ -127,6 +127,8 @@ export const SUITES = [
     globs: [
       'apps/desk/src/renderer/src/markdown/clearLineStyles.ts',
       'apps/desk/src/renderer/src/markdown/clearSourceLineStyles.ts',
+      'apps/desk/src/renderer/src/markdown/sourceEdits.ts',
+      'apps/desk/src/renderer/src/monaco/**',
       'apps/desk/src/renderer/src/markdown/MilkdownMarkdownEditor.vue',
       'apps/desk/src/renderer/src/markdown/MarkdownSourceEditor.vue'
     ],
@@ -238,6 +240,19 @@ export const SUITES = [
     note: '行内 <br>（段落 + 表格单元格）渲染与磁盘保真（未编辑零 diff、编辑后不丢）'
   },
   {
+    name: 'e2e-block-spacing.mjs',
+    area: 'spacing',
+    tier: 'regression',
+    // 只挂决定块级纵向间距的样式：只有改这些文件时才需要跑它，其它改动不会选中。
+    globs: [
+      'apps/desk/src/renderer/src/markdown/milkdownMarkdownEditor.scoped.css',
+      'apps/desk/src/renderer/src/markdown/crepePort/theme/common/**'
+    ],
+    serial: false,
+    smoke: false,
+    note: '相邻顶层块不能贴合：相邻列表并成一条 / 相邻 callout 卡片连成色带（卡片看 border 间距，文字块看内容间距）'
+  },
+  {
     name: 'e2e-block-boundary-navigation.mjs',
     area: 'block-editing',
     tier: 'regression',
@@ -297,14 +312,31 @@ export const SUITES = [
     note: '中点代码围栏快捷键的真实输入路径（体检结论：可合并进 e2e-markdown-input，省一次启动、覆盖不减）'
   },
   {
+    name: 'e2e-kb-files.mjs',
+    area: 'kb-files',
+    tier: 'regression',
+    globs: [
+      'apps/desk/src/renderer/src/editor-groups/KbPathBreadcrumb.vue',
+      'apps/desk/src/renderer/src/editor-groups/kbPathBreadcrumb.ts',
+      'apps/desk/src/renderer/src/editor-groups/TextFileTabPane.vue',
+      'apps/desk/src/renderer/src/monaco/**',
+      'apps/desk/src/main/ipc/kbFiles.ts',
+      'apps/desk/src/shared/contracts.ts',
+      'packages/kb/src/files.ts'
+    ],
+    serial: false,
+    smoke: false,
+    note: '知识库文本入口：面包屑浏览 + 只读 Monaco 文本标签页 + 拒绝名单/二进制判定'
+  },
+  {
     name: 'e2e-excalidraw-copy.mjs',
     area: 'excalidraw',
     tier: 'regression',
     locks: ['clipboard'],
     globs: [
-      'apps/desk/src/renderer/src/editor/markdown/excalidrawClipboard.ts',
-      'apps/desk/src/renderer/src/markdown/excalidrawClipboardPlugin.ts',
-      'apps/desk/src/renderer/src/markdown/deskRawBlockView/excalidraw.ts',
+      'apps/desk/src/renderer/src/editor/markdown/canvasImageRefs.ts',
+      'apps/desk/src/renderer/src/markdown/canvasImageClipboardPlugin.ts',
+      'apps/desk/src/renderer/src/editor/excalidraw/canvasImage.ts',
       'apps/desk/src/main/ipc/excalidraw.ts',
       'apps/desk/src/main/workspaceManager.ts',
       'packages/kb/src/excalidraw.ts',
@@ -312,7 +344,7 @@ export const SUITES = [
     ],
     serial: false,
     smoke: false,
-    note: '跨笔记粘贴画布走系统剪贴板并按目标编号复制独立文件'
+    note: '跨笔记粘贴画布图：源文件与派生 SVG 一起按目标编号复制（不共享引用）'
   },
   {
     name: 'e2e-excalidraw-e0.mjs',
@@ -347,14 +379,15 @@ export const SUITES = [
     area: 'excalidraw',
     tier: 'regression',
     globs: [
-      'apps/desk/src/renderer/src/markdown/deskRawBlockView/excalidraw.ts',
+      'apps/desk/src/renderer/src/markdown/deskImageView.ts',
       'apps/desk/src/renderer/src/editor/excalidraw/**',
-      'apps/desk/src/renderer/src/editor/markdown/excalidraw*.ts',
-      'packages/ui/src/excalidraw/**'
+      'apps/desk/src/renderer/src/editor/markdown/canvasImage*.ts',
+      'packages/ui/src/excalidraw/exporter.ts',
+      'packages/ui/src/excalidraw/fonts.ts'
     ],
     serial: false,
     smoke: false,
-    note: '笔记内嵌画布卡片：就地编辑、全屏、字节零 diff、归属诊断'
+    note: '笔记里的画布图：按图片处理（拖拽/描述/对齐）、「编辑」开标签页、编辑期间实时预览与「编辑中」'
   },
   {
     name: 'e2e-excalidraw-insert.mjs',
@@ -369,20 +402,7 @@ export const SUITES = [
     ],
     serial: false,
     smoke: true,
-    note: '斜杠插入画布：主进程建文件 → 定点插入 → 直接进入编辑'
-  },
-  {
-    name: 'e2e-excalidraw-ssg.mjs',
-    area: 'ssg',
-    tier: 'regression',
-    globs: [
-      'packages/ssg/**',
-      'packages/ui/src/excalidraw/**',
-      'packages/ui/src/entries/excalidraw-view.ts'
-    ],
-    serial: false,
-    smoke: false,
-    note: 'SSG 产物画布只读岛：自包含字体、0 外部请求、无机器路径'
+    note: '斜杠插入画布：主进程建 .excalidraw + 同名占位 .svg → 插入图片引用 → 打开标签页'
   },
   {
     name: 'e2e-excalidraw-tab.mjs',

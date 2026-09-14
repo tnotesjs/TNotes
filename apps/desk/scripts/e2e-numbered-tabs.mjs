@@ -121,7 +121,7 @@ try {
   await shortcut('2')
   await check('tab-C', 'tab-D', 1)
   await right.getByRole('button', { name: '源码视图', exact: true }).click()
-  await right.locator('.cm-source-editor .cm-content:visible').click()
+  await right.locator('.markdown-source-editor .view-lines:visible').first().click()
   await shortcut('3')
   await check('tab-C', 'tab-E', 1)
   await shortcut('4')

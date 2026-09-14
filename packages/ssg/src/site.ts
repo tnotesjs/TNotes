@@ -350,49 +350,6 @@ async function copyAssets(config: ResolvedSsgConfig) {
   })
 }
 
-/**
- * Excalidraw 官方字体目录（计划 E8）。
- *
- * 官方包把资源基址硬编码成 esm.sh CDN，站点必须自带字体：客户端把
- * `EXCALIDRAW_ASSET_PATH` 指到 `<base>excalidraw/`，这里把字体复制到产物同路径。
- */
-export function resolveExcalidrawFontsDir(): string | null {
-  const candidates: string[] = []
-  const pushFontsFrom = (entry: string): void => {
-    // `@excalidraw/excalidraw` 的入口是 dist/prod/index.js，字体在同目录 fonts/
-    candidates.push(path.join(path.dirname(entry), 'fonts'))
-    candidates.push(path.join(path.dirname(entry), 'dist', 'prod', 'fonts'))
-  }
-  // 1) 通过 workspace 依赖 @tnotesjs/ui 的入口，再用它的 require 解析 Excalidraw
-  //    （@excalidraw/excalidraw 的 exports 不暴露 package.json，只能解析入口）
-  try {
-    const uiEntry = packageRequire.resolve('@tnotesjs/ui')
-    const uiRequire = createRequire(uiEntry)
-    pushFontsFrom(uiRequire.resolve('@excalidraw/excalidraw'))
-  } catch {
-    /* ignore */
-  }
-  // 2) 直接从本包解析（把 @excalidraw/excalidraw 显式装进依赖树时）
-  try {
-    pushFontsFrom(packageRequire.resolve('@excalidraw/excalidraw'))
-  } catch {
-    /* ignore */
-  }
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) return candidate
-  }
-  return null
-}
-
-async function copyExcalidrawFonts(config: ResolvedSsgConfig): Promise<void> {
-  const source = resolveExcalidrawFontsDir()
-  if (!source) {
-    console.warn('[ssg] 未找到 Excalidraw 字体目录，画布文本将回退字体')
-    return
-  }
-  await fs.cp(source, path.join(config.outDir, 'excalidraw', 'fonts'), { recursive: true })
-}
-
 export async function buildSite(root = process.cwd()) {
   const config = await resolveConfig(root)
   await fs.rm(config.cacheDir, { recursive: true, force: true })
@@ -468,7 +425,7 @@ export async function buildSite(root = process.cwd()) {
 
   // Chrome-only client graph — page SFCs are not imported.
   // Vite 的 `development|production` 条件看的是 NODE_ENV（不是 mode）：不显式设置就会
-  // 选中 Excalidraw 的 dev 构建，并在 chunk 里写入绝对源码路径（__file）。
+  // 走 development 条件，在 chunk 里写入绝对源码路径（__file）。
   const previousNodeEnv = process.env.NODE_ENV
   process.env.NODE_ENV = 'production'
   try {
@@ -478,7 +435,6 @@ export async function buildSite(root = process.cwd()) {
     else process.env.NODE_ENV = previousNodeEnv
   }
   await copyAssets(config)
-  await copyExcalidrawFonts(config)
   await writeSearchIndex(config, searchEntries)
   await fs.writeFile(path.join(config.outDir, 'notes-map.json'), `${JSON.stringify(notes)}\n`)
   return { config, pageCount: pages.length, notes }
@@ -496,7 +452,7 @@ async function buildClientGraph(
     publicDir: config.publicDir,
     configFile: false,
     // 显式声明生产模式：否则 Vite 会按 NODE_ENV 走到 development 条件，
-    // 产物选中 Excalidraw 的 dev 构建，并在 chunk 里写入绝对源码路径（__file）
+    // 产物里会写入绝对源码路径（__file）
     mode: 'production',
     plugins: [tnotesPlugin(config, store), vuePlugin()],
     build: {
@@ -798,20 +754,6 @@ export async function createDevServer(
                       response.setHeader('Content-Type', 'application/json;charset=utf-8')
                       response.end(session.searchIndexJson)
                       return
-                    }
-                    if (relative.startsWith('/excalidraw/')) {
-                      // 官方字体：开发时直接从 node_modules 提供，避免站点产物依赖
-                      const fontsRoot = resolveExcalidrawFontsDir()
-                      if (fontsRoot) {
-                        const fontRelative = relative.slice('/excalidraw/'.length)
-                        sendKbFile(
-                          response,
-                          path.join(path.dirname(fontsRoot), fontRelative),
-                          path.dirname(fontsRoot),
-                          next
-                        )
-                        return
-                      }
                     }
                     if (relative.startsWith('/assets/')) {
                       // KB files are served by us, not Vite — this must run

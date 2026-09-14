@@ -74,7 +74,6 @@ export function createDeskRawBlockView(deps: DeskRawBlockViewDeps) {
                 __codeGroupWriteback?: { acceptWriteback: (source: string) => boolean }
                 __swiperWriteback?: { acceptWriteback: (source: string) => boolean }
                 __mermaidWriteback?: { acceptWriteback: (source: string) => boolean }
-                __excalidrawWriteback?: { acceptWriteback: (source: string) => boolean }
               }
             ).__mindmapWriteback
             if (helper?.acceptWriteback(String(nextNode.attrs.source))) {
@@ -108,15 +107,6 @@ export function createDeskRawBlockView(deps: DeskRawBlockViewDeps) {
               currentRawNode = nextNode
               return true
             }
-            const excalidrawHelper = (
-              dom as HTMLElement & {
-                __excalidrawWriteback?: { acceptWriteback: (source: string) => boolean }
-              }
-            ).__excalidrawWriteback
-            if (excalidrawHelper?.acceptWriteback(String(nextNode.attrs.source))) {
-              currentRawNode = nextNode
-              return true
-            }
             return false
           }
           currentRawNode = nextNode
@@ -139,9 +129,6 @@ export function createDeskRawBlockView(deps: DeskRawBlockViewDeps) {
             target?.closest(
               [
                 '.desk-raw-block__component-preview',
-                '.desk-excalidraw',
-                '.desk-excalidraw__bar',
-                '.desk-excalidraw__editor',
                 '.mindmap-preview',
                 '.mindmap-preview-actions',
                 '.mindmap-preview-action',

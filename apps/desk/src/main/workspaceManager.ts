@@ -7,9 +7,13 @@ import {
   copyExcalidrawDocument,
   createExcalidrawDocument,
   createKnowledgeBase as createKbOnDisk,
+  findExcalidrawSourceFor,
+  listKbDirectory,
+  readKbTextFile,
   isKnowledgeBaseRoot,
   listIncompleteJournals,
   readExcalidrawDocument,
+  writeExcalidrawDerivedSvg,
   writeExcalidrawDocument
 } from '@tnotesjs/kb'
 
@@ -43,8 +47,12 @@ import type {
 import type { SearchIndexDocument } from './searchModel'
 import type {
   DeletePreviewDto,
+  KbFilesListResultDto,
+  KbTextFileDto,
+  ExcalidrawDerivedRefDto,
   ExcalidrawDocumentDto,
   ExcalidrawDocumentRefDto,
+  ExcalidrawSourceProbeDto,
   AssetKbSummaryDto,
   AssetScanProgressDto,
   AssetScanReportDto,
@@ -272,6 +280,45 @@ export class WorkspaceManager {
     this.markInternal(handle, [copy.relPath])
     this.emitChanged()
     return { knowledgeBaseId, ...copy }
+  }
+
+  /** 写派生 SVG（笔记里引用那张图）：目标路径由源画布推导，渲染端指定不了 */
+  async writeExcalidrawDerivedSvg(
+    knowledgeBaseId: string,
+    input: { sourceRelPath: string; content: string }
+  ): Promise<ExcalidrawDerivedRefDto> {
+    this.assertWritable(knowledgeBaseId)
+    const handle = this.getHandle(knowledgeBaseId)
+    const written = await writeExcalidrawDerivedSvg(handle.rootPath, input)
+    this.markInternal(handle, [written.relPath])
+    this.emitChanged()
+    return { knowledgeBaseId, ...written }
+  }
+
+  /** 列一层知识库目录（拒绝名单与文本线索都在 kb 层裁定） */
+  async listKbFiles(knowledgeBaseId: string, relPath: string): Promise<KbFilesListResultDto> {
+    const handle = this.getHandle(knowledgeBaseId)
+    return { relPath, entries: await listKbDirectory(handle.rootPath, relPath) }
+  }
+
+  /** 读一个文本文件：二进制 / 超限 / 拒绝名单都由 kb 层抛错 */
+  async readKbTextFile(knowledgeBaseId: string, relPath: string): Promise<KbTextFileDto> {
+    const handle = this.getHandle(knowledgeBaseId)
+    const file = await readKbTextFile(handle.rootPath, relPath)
+    return {
+      ...file,
+      writable: false,
+      writableReason: '当前只支持查看，编辑能力在后续版本开放'
+    }
+  }
+
+  /** 「这张 .svg 能不能编辑」：同名 `.excalidraw` 在不在（探测，不抛错） */
+  async findExcalidrawSourceFor(
+    knowledgeBaseId: string,
+    relPath: string
+  ): Promise<ExcalidrawSourceProbeDto> {
+    const handle = this.getHandle(knowledgeBaseId)
+    return { source: await findExcalidrawSourceFor(handle.rootPath, relPath) }
   }
 
   private markInternal(handle: KnowledgeBaseHandle, relPaths: string[]): void {

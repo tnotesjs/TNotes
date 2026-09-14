@@ -92,6 +92,17 @@
   gap: 5px;
 }
 
+/* 列表与段落共用一套节奏。段落靠 Crepe reset 的 `.ProseMirror p { padding: 4px 0 }` 撑开，
+   相邻段落因此有 8px；而 ul/ol 上下都是 0 —— 源码里用空行分开的两个列表（或列表与段落）
+   会贴在一起，两个相邻列表看起来像一条被换过样式的列表。
+   这里补同样的 padding（不用 margin：相邻块的 margin 会塌陷成 4px，只有 padding 会相加）。
+   只作用于顶层列表：`li > ul` 的缩进层级不能跟着变，容器/引用里的列表由父块管间距。 */
+.milkdown-markdown-editor :deep(.ProseMirror > ul),
+.milkdown-markdown-editor :deep(.ProseMirror > ol) {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
 .milkdown-markdown-editor :deep(.milkdown .milkdown-list-item-block .label-wrapper .label.ordered),
 .milkdown-markdown-editor
   :deep(.milkdown .milkdown-list-item-block .label-wrapper .label.unchecked),
@@ -1469,6 +1480,15 @@
   border: 1px solid transparent;
   border-radius: 8px;
   color: var(--editor-text);
+}
+
+/* 相邻 callout 卡片之间要有节奏。上一组规则为了让 container 内层卡片不留内间距把
+   margin 归零了，但真节点 `.desk-callout` 是 `.ProseMirror` 的直接子块 —— 不加这条时
+   两张卡片的 border 间距是 0，四张连排会变成一整块色带（排版上还读得通，视觉上读不通）。
+   12px 与其它卡片块（container / mindmap / notes-table / bilibili / word-list）一致；
+   站点侧同一张卡片是 16px（`packages/ui/src/styles/prose.css`），编辑器这一族统一走 12px。 */
+.milkdown-markdown-editor :deep(.ProseMirror > .desk-callout) {
+  margin: 12px 0;
 }
 
 /* Soft-tint callouts: compact body typography. */
@@ -3390,122 +3410,48 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--panel);
-  overflow: hidden;
+  /* 悬停工具条浮在卡片上边、拖拽条压在下边框上，都不能被块裁掉；
+     画布本身的圆角裁剪下移到 __stage。 */
+  overflow: visible;
 }
 
 .milkdown-markdown-editor :deep(.desk-raw-block--excalidraw:hover),
-.milkdown-markdown-editor :deep(.desk-raw-block--excalidraw:focus-within),
-.milkdown-markdown-editor :deep(.desk-raw-block--excalidraw.is-canvas-island-active) {
-  border-color: var(--accent-strong);
-}
 
-.milkdown-markdown-editor :deep(.desk-excalidraw) {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
+/* ── 画布图片（笔记里的 `![](./assets/x.svg)`，同名 .excalidraw 在时可编辑） ── */
 
-/* 作者样式里的 display 会盖掉 UA 的 [hidden]，按钮/容器必须显式隐藏 */
-.milkdown-markdown-editor :deep(.desk-excalidraw [hidden]) {
-  display: none !important;
-}
-
-.milkdown-markdown-editor :deep(.desk-excalidraw__bar) {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  border-bottom: 1px solid var(--border);
-  font: 12px/1.6 var(--font-sans);
-  color: var(--text);
-}
-
-.milkdown-markdown-editor :deep(.desk-excalidraw__title) {
-  font-weight: 600;
-}
-
-.milkdown-markdown-editor :deep(.desk-excalidraw__status) {
-  color: var(--muted);
-}
-
-.milkdown-markdown-editor :deep(.desk-excalidraw__actions) {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
-}
-
-.milkdown-markdown-editor :deep(.desk-excalidraw__actions button) {
-  padding: 2px 8px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--input-bg);
-  color: var(--text);
-  font: inherit;
-  cursor: pointer;
-}
-
-.milkdown-markdown-editor :deep(.desk-excalidraw__actions button:hover:not(:disabled)) {
-  border-color: var(--accent-strong);
+/* 「编辑」按钮：与宽高 / 描述 / 对齐 同一排，靠强调色区分 */
+.milkdown-markdown-editor :deep(figure.desk-image .desk-image__tool.desk-image__canvas-edit) {
   color: var(--accent-strong);
 }
 
-.milkdown-markdown-editor :deep(.desk-excalidraw__height) {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--muted);
-}
-
-.milkdown-markdown-editor :deep(.desk-excalidraw__height select) {
-  padding: 1px 4px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--input-bg);
-  color: var(--text);
-  font: inherit;
-}
-
-.milkdown-markdown-editor :deep(.desk-excalidraw__stage) {
-  position: relative;
-  min-width: 0;
-}
-
-.milkdown-markdown-editor :deep(.desk-excalidraw__svg),
-.milkdown-markdown-editor :deep(.desk-excalidraw__editor) {
-  position: relative;
-  min-width: 0;
-}
-
-.milkdown-markdown-editor :deep(.desk-excalidraw__placeholder),
-.milkdown-markdown-editor :deep(.desk-excalidraw__error) {
-  margin: 0;
-  padding: 14px 12px;
-  color: var(--muted);
-  font: 12px/1.7 var(--font-sans);
-}
-
-.milkdown-markdown-editor :deep(.desk-excalidraw.is-fullscreen) {
-  position: fixed;
+/* 「正在编辑中」：该画布的标签页开着时盖在图正中（不参与指针事件，纯状态提示） */
+.milkdown-markdown-editor :deep(figure.desk-image .desk-image__editing) {
+  position: absolute;
   inset: 0;
-  z-index: 200000;
-  margin: 0;
-  border: 0;
-  border-radius: 0;
-  background: var(--editor-bg);
+  /* 不抬 z-index：让后面追加的缩放把手 / 工具条仍然画在徽标之上 */
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 6px;
+  background: rgb(0 0 0 / 0.28);
+  color: #fff;
+  font: 12px/1.4 var(--font-sans);
+  pointer-events: none;
 }
 
-.milkdown-markdown-editor :deep(.desk-excalidraw.is-fullscreen .desk-excalidraw__stage) {
-  flex: 1;
-  min-height: 0;
+.milkdown-markdown-editor :deep(figure.desk-image .desk-image__editing[hidden]) {
+  display: none;
 }
 
-.milkdown-markdown-editor :deep(.desk-excalidraw.is-fullscreen .desk-excalidraw__svg),
-.milkdown-markdown-editor :deep(.desk-excalidraw.is-fullscreen .desk-excalidraw__editor) {
-  height: 100% !important;
-}
-
-/* dataset.tnCanvasFs → DOM 属性是 data-tn-canvas-fs */
-body[data-tn-canvas-fs='1'] {
-  overflow: hidden;
+/*
+ * 派生 SVG 固定按浅色导出，深色主题用 Excalidraw 自己的反色配方
+ * （`--theme-filter` 同款）：这样画布在明暗两种主题下都与编辑器观感一致。
+ */
+:root[data-theme='dark']
+  .milkdown-markdown-editor
+  :deep(figure.desk-image.is-canvas .desk-image__frame > img) {
+  filter: invert(93%) hue-rotate(180deg);
 }

@@ -33,6 +33,32 @@ function copyExcalidrawFonts(): Plugin {
   }
 }
 
+/**
+ * Monaco 的 json / css / html / typescript 语言特性各自会拉起一个 web worker
+ * （ts.worker 12.7MB、css 1.9MB、html 1.3MB、json 若干）。Desk 出于 file:// + CSP
+ * 的限制**不注册任何 worker**（见 `src/renderer/src/monaco/monaco.ts`），这些 worker
+ * 永远不会被请求，却会被打进 `out/renderer/assets`，白送约 16MB 进安装包。
+ *
+ * 这里把它们换成空模块：词法高亮仍由 `basic-languages` 的 Monarch 提供
+ * （markdown / json / yaml / …），只是没有语义校验、格式化与补全 —— 与"不注册 worker"
+ * 的取舍完全一致。只对 monaco 内部的引用生效，不碰业务代码。
+ */
+function stubMonacoLanguageFeatures(): Plugin {
+  const STUB = '\0desk:monaco-language-features-stub'
+  const pattern = /languages\/features\/(json|css|html|typescript)\/register\.js$/
+  return {
+    name: 'desk:stub-monaco-language-features',
+    enforce: 'pre',
+    resolveId(source, importer) {
+      if (!importer?.includes('monaco-editor')) return null
+      return pattern.test(source) ? STUB : null
+    },
+    load(id) {
+      return id === STUB ? 'export {}\n' : null
+    }
+  }
+}
+
 export default defineConfig({
   main: {
     build: {
@@ -53,17 +79,17 @@ export default defineConfig({
       fs: { allow: [resolve('..')] }
     },
     resolve: {
-      alias: {
-        '@renderer': resolve('src/renderer/src'),
+      alias: [
+        { find: '@renderer', replacement: resolve('src/renderer/src') },
         // Use the prebundled ESM build: its diagram chunks ship with CJS deps
         // (dayjs etc.) already inlined. `mermaid.core` pulls raw dayjs.min.js
         // which has no ESM default export and blanks the whole editor when
         // mermaid is left un-optimized; optimizing mermaid.core instead rewrites
         // diagram chunks into flaky `.vite/deps/*` URLs (504).
-        mermaid: 'mermaid/dist/mermaid.esm.min.mjs'
-      }
+        { find: 'mermaid', replacement: 'mermaid/dist/mermaid.esm.min.mjs' }
+      ]
     },
-    plugins: [vue(), vueJsx(), copyExcalidrawFonts()],
+    plugins: [vue(), vueJsx(), copyExcalidrawFonts(), stubMonacoLanguageFeatures()],
     // Local file: packages change often; prebundling freezes an old export map.
     optimizeDeps: {
       exclude: ['@tnotesjs/ui', 'mermaid']

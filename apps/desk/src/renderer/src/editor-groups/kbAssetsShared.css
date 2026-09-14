@@ -1,0 +1,64 @@
+/* 资源面板内部跨组件复用的外观（各组件 scoped 引入）。
+   放到这里是因为 scoped 样式不会作用于子组件内部：浏览区 / 详情区 / 主面板
+   需要同一套按钮、提示与列表样式。 */
+
+.hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.save-button,
+.ghost {
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.save-button {
+  border: 0;
+  background: var(--accent);
+  color: #fff;
+}
+
+.ghost {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+}
+
+.save-button:disabled,
+.ghost:disabled,
+.linkish:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.linkish {
+  border: 0;
+  background: none;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 0;
+}
+
+.plain-list,
+.refs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.plain-list li,
+.refs li {
+  margin: 6px 0;
+  font-size: 13px;
+}
+
+/* 详情可能出现在很窄的分栏里：长路径 / 引用一律允许换行。 */
+.refs li code,
+.plain-list li code {
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}

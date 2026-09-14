@@ -137,9 +137,26 @@ export function attachRawSourceEditor(
   let editorHandle: ContainerSourceEditorHandle | null = null
 
   const fitEditorToSource = (value: string): void => {
-    const lines = value.split(/\r?\n/).length
-    const height = Math.min(320, Math.max(132, lines * 22 + 56))
-    editorHost.style.setProperty('--desk-raw-editor-height', `${height}px`)
+    const lines = Math.max(1, value.split(/\r?\n/).length)
+    editorHost.style.setProperty('--desk-raw-editor-height', `${Math.min(320, lines * 24 + 16)}px`)
+  }
+
+  /**
+   * 编辑器里**真实显示**的文本。
+   *
+   * 结构化块把标题与围栏放进了表头字段（`::: details 标题` 的围栏、``` 围栏、`层` 控件……），
+   * CodeMirror 里只有正文；非结构化块 CM 里才是整块源码。
+   * 高度必须按这个字符串算 —— 按 `editorValue`（重建后的整块源码）算会多出「围栏 + 标题 +
+   * 块间空行」好几行，底部就留一大片空白（3 行正文被撑成 7 行的高度）。
+   */
+  const editorShownText = (): string => {
+    if (ctx.structuredWordList) return draftWordListText
+    if (ctx.structuredMermaid) return draftMermaidBody
+    if (ctx.structuredMindmap) return draftMindmapBody
+    if (ctx.structuredNotesTable) return draftNotesTableIds
+    if (ctx.structuredContainerBody) return draftContainerBody
+    if (structured) return draftBody
+    return editorValue
   }
 
   const clearBlurCommit = (): void => {
@@ -309,7 +326,7 @@ export function attachRawSourceEditor(
           name: parsed.name
         })
     }
-    fitEditorToSource(editorValue)
+    fitEditorToSource(editorShownText())
     pendingEdit.changed()
     if (syncTimer != null) clearTimeout(syncTimer)
     syncTimer = setTimeout(() => {
@@ -443,7 +460,7 @@ export function attachRawSourceEditor(
       const parsed = parseWordListSource(liveSource())
       draftWordListText = (parsed?.words ?? []).join('\n')
       draftWordListNeedSort = parsed?.needSort ?? false
-      fitEditorToSource(editorValue)
+      fitEditorToSource(editorShownText())
 
       const done = document.createElement('button')
       done.type = 'button'
@@ -499,7 +516,7 @@ export function attachRawSourceEditor(
 
     if (ctx.structuredMermaid) {
       draftMermaidBody = parseFencedCode(liveSource()).code
-      fitEditorToSource(editorValue)
+      fitEditorToSource(editorShownText())
 
       const done = document.createElement('button')
       done.type = 'button'
@@ -548,7 +565,7 @@ export function attachRawSourceEditor(
         structuredBaseline = { source: liveSource(), title: parsed.title, body: parsed.body }
       }
       const initial = ctx.structuredMindmap ? draftMindmapBody : draftContainerBody
-      fitEditorToSource(editorValue)
+      fitEditorToSource(editorShownText())
 
       const done = document.createElement('button')
       done.type = 'button'
@@ -589,7 +606,7 @@ export function attachRawSourceEditor(
 
     if (ctx.structuredNotesTable) {
       draftNotesTableIds = (parseNotesTableSource(liveSource())?.ids ?? []).join('\n')
-      fitEditorToSource(editorValue)
+      fitEditorToSource(editorShownText())
 
       const done = document.createElement('button')
       done.type = 'button'
@@ -634,7 +651,7 @@ export function attachRawSourceEditor(
       // Keep the stored source until the user edits — rebuild only normalizes
       // blank lines and would otherwise dirty an untouched block on Done.
       structuredBaseline = { source: liveSource(), title: parsed.title, body: parsed.body }
-      fitEditorToSource(editorValue)
+      fitEditorToSource(editorShownText())
 
       const done = document.createElement('button')
       done.type = 'button'
@@ -698,7 +715,7 @@ export function attachRawSourceEditor(
         commit()
       })
 
-      fitEditorToSource(editorValue)
+      fitEditorToSource(editorShownText())
       const cmHost = document.createElement('div')
       cmHost.className = 'desk-raw-block__editor-cm'
       editorHost.append(header, cmHost)

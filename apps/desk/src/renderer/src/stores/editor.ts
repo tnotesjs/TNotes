@@ -40,6 +40,7 @@ import type {
   KbAssetsEditorTab,
   ExcalidrawEditorTab,
   NoteHistoryEditorTab,
+  TextFileEditorTab,
   NoteEditorTab,
   NotePageWidth,
   NoteViewMode,
@@ -84,6 +85,7 @@ function sanitizeLayout(
           tab.type === 'kb-settings' ||
           tab.type === 'kb-assets' ||
           tab.type === 'excalidraw' ||
+          tab.type === 'text-file' ||
           tab.type === 'note-history'
         ) {
           return (
@@ -913,6 +915,57 @@ export const useEditorStore = defineStore('editor', () => {
     return tab.id
   }
 
+  /**
+   * 打开知识库里的普通文本文件（只读）。
+   *
+   * 同一 KB + 同一路径只有一个标签：从笔记目录和面包屑打开同一份文件必须复用同一页，
+   * 不能出现两份互相覆盖的视图。
+   */
+  function openTextFile(knowledgeBase: KnowledgeBaseDescriptor, relPath: string): string {
+    if (activeKnowledgeBaseId.value !== knowledgeBase.id) switchKnowledgeBase(knowledgeBase.id)
+    for (const group of groups.value) {
+      const existing = group.tabs.find(
+        (tab) =>
+          tab.type === 'text-file' &&
+          tab.knowledgeBaseId === knowledgeBase.id &&
+          tab.relPath === relPath
+      )
+      if (existing) {
+        activate(group.id, existing.id)
+        return existing.id
+      }
+    }
+    ensureRoomForTab()
+    const fileName = relPath.split('/').pop() ?? relPath
+    const tab: TextFileEditorTab = {
+      id: `text-file:${knowledgeBase.id}:${relPath}`,
+      type: 'text-file',
+      knowledgeBaseId: knowledgeBase.id,
+      knowledgeBaseName: knowledgeBase.displayName,
+      relPath,
+      title: fileName,
+      icon: knowledgeBase.icon,
+      pinned: false,
+      openedAt: Date.now()
+    }
+    layout.value = insertTab(layout.value, activeGroupId.value, tab)
+    return tab.id
+  }
+
+  /** 该文件是否已经打开（面包屑据此高亮/复用） */
+  function textFileTabIdFor(knowledgeBaseId: string, relPath: string): string | null {
+    for (const group of groups.value) {
+      const tab = group.tabs.find(
+        (item) =>
+          item.type === 'text-file' &&
+          item.knowledgeBaseId === knowledgeBaseId &&
+          item.relPath === relPath
+      )
+      if (tab) return tab.id
+    }
+    return null
+  }
+
   /** 重命名/外部变更后更新标签身份；文件失效时置 invalid 而不是重建。 */
   function updateExcalidrawTabMeta(
     tabId: string,
@@ -1232,6 +1285,8 @@ export const useEditorStore = defineStore('editor', () => {
     openNoteHistory,
     selectHistoryCommit,
     excalidrawTabIdFor,
+    openTextFile,
+    textFileTabIdFor,
     updateExcalidrawTabMeta,
     repathExcalidrawTab,
     setKbSettingsDirty,

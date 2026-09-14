@@ -112,17 +112,35 @@ try {
   assert.equal(await second.locator('strong, em, del').count(), 3)
 
   await page.getByRole('button', { name: '源码视图', exact: true }).click()
-  const cm = page.locator('.markdown-source-editor .cm-content')
+  // 源码视图已是 Monaco：点文本层聚焦，读它的 innerText
+  const cm = page.locator('.markdown-source-editor .view-lines')
+  // Monaco 的空格是 \u00a0，断言前统一成普通空格
+  const sourceText = async () => (await cm.innerText()).replace(/\u00a0/g, ' ')
+  await cm.waitFor({ timeout: 20000 })
   await cm.click()
-  await page.keyboard.press('ControlOrMeta+a')
-  await page.keyboard.press('ControlOrMeta+Backslash')
-  assert.match(
-    await cm.innerText(),
-    /first italic strike \[link\]\(https:\/\/example.com\) `inline`/
+  // 等编辑器真的拿到焦点再发快捷键：Monaco 的键盘处理挂在它的隐藏输入框上，
+  // 挂载未就绪时 Ctrl+A / Mod-\ 会落空（这正是之前"首次失败、重试才过"的原因）
+  await page.waitForFunction(
+    () => Boolean(document.activeElement?.closest('.monaco-editor')),
+    undefined,
+    {
+      timeout: 20000
+    }
   )
-  assert.match(await cm.innerText(), /second italic strike/)
-  assert.match(await cm.innerText(), /## Heading/)
-  assert.match(await cm.innerText(), /\*\*literal\*\* \*code\* ~~code~~/)
+  await page.keyboard.press('ControlOrMeta+a')
+  await page.waitForTimeout(150)
+  await page.keyboard.press('ControlOrMeta+Backslash')
+  // 编辑是异步提交的：轮询到内容真的变了再断言，不用固定 sleep
+  const deadline = Date.now() + 8000
+  for (;;) {
+    if (!(await sourceText()).includes('**first**')) break
+    if (Date.now() > deadline) break
+    await page.waitForTimeout(120)
+  }
+  assert.match(await sourceText(), /first italic strike \[link\]\(https:\/\/example.com\) `inline`/)
+  assert.match(await sourceText(), /second italic strike/)
+  assert.match(await sourceText(), /## Heading/)
+  assert.match(await sourceText(), /\*\*literal\*\* \*code\* ~~code~~/)
   await page.keyboard.press('ControlOrMeta+s')
   await page.locator('.tab .dirty-dot').waitFor({ state: 'detached' })
   const saved = readFileSync(noteFile, 'utf8')

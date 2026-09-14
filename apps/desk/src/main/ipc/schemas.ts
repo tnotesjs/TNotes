@@ -68,6 +68,18 @@ const excalidrawRelPathSchema = z
   .refine((value) => value.startsWith('assets/'), '画布必须位于 assets/ 下')
   .refine((value) => value.toLowerCase().endsWith('.excalidraw'), '只允许 .excalidraw 源文件')
 
+const textFileTabSchema = z.object({
+  id: z.string().min(1),
+  type: z.literal('text-file'),
+  knowledgeBaseId: z.string().min(1),
+  knowledgeBaseName: z.string(),
+  relPath: z.string().min(1).max(1024),
+  title: z.string(),
+  icon: iconSchema,
+  pinned: z.boolean().optional(),
+  openedAt: z.number().finite().optional()
+})
+
 const excalidrawTabSchema = z.object({
   id: z.string().min(1),
   type: z.literal('excalidraw'),
@@ -107,6 +119,7 @@ const editorTabSchema = z.discriminatedUnion('type', [
   kbSettingsTabSchema,
   kbAssetsTabSchema,
   excalidrawTabSchema,
+  textFileTabSchema,
   noteHistoryTabSchema
 ])
 
@@ -420,4 +433,37 @@ export const excalidrawCopySchema = z.object({
   knowledgeBaseId: z.string().min(1),
   fromRelPath: excalidrawRelPathSchema,
   toNoteUuid: z.string().min(1)
+})
+
+/** 知识库文件浏览：只收库根相对路径，拒绝名单与文本判定都在主进程 */
+const kbRelPathSchema = z.string().max(1024)
+
+export const kbFilesListSchema = z.object({
+  knowledgeBaseId: z.string().min(1),
+  relPath: kbRelPathSchema
+})
+
+export const kbFilesReadSchema = z.object({
+  knowledgeBaseId: z.string().min(1),
+  relPath: kbRelPathSchema.min(1, '必须指定文件路径')
+})
+
+/** 派生 SVG：只收源画布路径 + 内容，目标路径由主进程推导 */
+export const excalidrawDerivedWriteSchema = z.object({
+  knowledgeBaseId: z.string().min(1),
+  sourceRelPath: excalidrawRelPathSchema,
+  content: z
+    .string()
+    .min(1)
+    .max(32 * 1024 * 1024)
+})
+
+/** 派生识别探测：只收 assets/ 下的路径，主进程自己推同名源画布 */
+export const excalidrawSourceProbeSchema = z.object({
+  knowledgeBaseId: z.string().min(1),
+  relPath: z
+    .string()
+    .min(1)
+    .max(300)
+    .refine((value) => value.startsWith('assets/'), '只探测 assets/ 下的资源')
 })

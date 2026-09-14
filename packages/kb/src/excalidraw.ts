@@ -1,11 +1,15 @@
 /**
  * src/excalidraw.ts
  *
- * `.excalidraw` 源文件是自由绘图的唯一真相源：只保存一份，图片内嵌在 JSON 的
- * `files` 里，不拆成 assets 图片，也不维护旁路 SVG/PNG。
+ * `.excalidraw` 源文件是自由绘图的唯一真相源：图片内嵌在 JSON 的 `files` 里，
+ * 不拆成 assets 图片。
+ *
+ * 笔记里引用的是**派生的同名 `.svg`**（`0013-x.excalidraw` ↔ `0013-x.svg`）：
+ * 它由宿主用官方 `exportToSvg` 生成，只服务「别的 markdown 渲染器也能看」。
+ * 判据只有一条：同名 `.excalidraw` 在 → 这张图可以编辑；不在 → 它就是一张普通图片。
  *
  * 本模块只做「文件级」的事：归属前缀校验、排他命名、原子写、期望版本校验、
- * 同笔记复制。会话/自动写入/撤销历史由宿主负责（Desk 主进程 + 编辑器适配层）。
+ * 同笔记复制、派生产物的同名写入与识别。会话/自动写入/撤销历史由宿主负责。
  */
 
 import fs from 'node:fs/promises'
@@ -18,6 +22,8 @@ import { hashBytes } from './asset-scan/hash'
 import { ownerNoteIndexFromName } from './asset-scan/owner'
 
 export const EXCALIDRAW_EXTENSION = '.excalidraw'
+/** 派生产物后缀：与源画布同目录同名，只换后缀 */
+export const EXCALIDRAW_DERIVED_EXTENSION = '.svg'
 
 /** 单文件上限：画布内嵌图片会显著放大 JSON，给足空间但不能无上限。 */
 const MAX_DOCUMENT_BYTES = 32 * 1024 * 1024
@@ -57,6 +63,25 @@ export interface CopyExcalidrawDocumentInput {
   now?: Date
 }
 
+export interface WriteExcalidrawDerivedSvgInput {
+  /** 源画布（assets/*.excalidraw）；派生产物与它同目录同名 */
+  sourceRelPath: string
+  content: string
+}
+
+export interface ExcalidrawDerivedSvgRef {
+  /** 派生产物的 KB 相对路径，笔记里引用的就是它 */
+  relPath: string
+  sourceRelPath: string
+  ownerNoteIndex: string
+}
+
+export interface ExcalidrawSourceRef {
+  /** 同名 `.excalidraw` 的 KB 相对路径 */
+  relPath: string
+  ownerNoteIndex: string
+}
+
 /** 最小合法空场景。字段与官方 serializeAsJSON 输出保持同一形状。 */
 export function emptyExcalidrawScene(): string {
   return `${JSON.stringify(
@@ -82,13 +107,13 @@ function normalizeOwnerIndex(index: string): string {
 }
 
 /** KB 相对路径 → 绝对路径，并确认没有逃出 assets/ 与 KB 根。 */
-function resolveDocumentPath(rootPath: string, relPath: string): string {
+function resolveAssetPath(rootPath: string, relPath: string, extension: string): string {
   const normalized = relPath.replaceAll('\\', '/').replace(/^\.\//, '')
   if (!normalized.startsWith(`${ASSETS_DIR}/`)) {
     throw new KbError('INVALID_OPERATION', `画布必须放在 ${ASSETS_DIR}/ 下：${relPath}`)
   }
-  if (path.posix.extname(normalized).toLowerCase() !== EXCALIDRAW_EXTENSION) {
-    throw new KbError('INVALID_OPERATION', `只允许 ${EXCALIDRAW_EXTENSION} 源文件：${relPath}`)
+  if (path.posix.extname(normalized).toLowerCase() !== extension) {
+    throw new KbError('INVALID_OPERATION', `只允许 ${extension} 文件：${relPath}`)
   }
   const withinAssets = path.posix.normalize(normalized)
   if (!withinAssets.startsWith(`${ASSETS_DIR}/`)) {
@@ -100,6 +125,10 @@ function resolveDocumentPath(rootPath: string, relPath: string): string {
     throw new KbError('INVALID_OPERATION', `画布路径越界：${relPath}`)
   }
   return absolute
+}
+
+function resolveDocumentPath(rootPath: string, relPath: string): string {
+  return resolveAssetPath(rootPath, relPath, EXCALIDRAW_EXTENSION)
 }
 
 function assertOwnership(relPath: string, expectedOwner?: string): string {
@@ -279,4 +308,79 @@ export async function copyExcalidrawDocument(
     content: source.content,
     now: input.now
   })
+}
+
+/** 由源画布路径推出派生产物路径：同目录同名，只换后缀 */
+export function derivedSvgRelPath(sourceRelPath: string): string {
+  const normalized = sourceRelPath.replaceAll('\\', '/')
+  return `${normalized.slice(0, -EXCALIDRAW_EXTENSION.length)}${EXCALIDRAW_DERIVED_EXTENSION}`
+}
+
+/** 由派生产物路径推回源画布路径（同一规则的反向） */
+export function sourceRelPathForDerived(derivedRelPath: string): string {
+  const normalized = derivedRelPath.replaceAll('\\', '/')
+  return `${normalized.slice(0, -EXCALIDRAW_DERIVED_EXTENSION.length)}${EXCALIDRAW_EXTENSION}`
+}
+
+const SVG_DOCUMENT = /^\s*(?:<\?xml[^>]*\?>\s*|<!--[\s\S]*?-->\s*)*<svg[\s>]/i
+
+function assertSvgContent(content: string, relPath: string): void {
+  if (!SVG_DOCUMENT.test(content)) {
+    throw new KbError('INVALID_OPERATION', `派生产物必须是 SVG：${relPath}`)
+  }
+  const bytes = Buffer.byteLength(content, 'utf8')
+  if (bytes > MAX_DOCUMENT_BYTES) {
+    throw new KbError('INVALID_OPERATION', `派生 SVG 过大（${bytes} 字节）`, {
+      limit: MAX_DOCUMENT_BYTES
+    })
+  }
+}
+
+/**
+ * 写入画布的派生 SVG（`assets/0013-x.svg`）。
+ *
+ * 路径不接受调用方指定：只能由源画布路径推出来，且源画布必须已经存在 ——
+ * 否则派生产物就成了没人管的孤儿文件，笔记里那张图也就失去了「可编辑」的判据。
+ */
+export async function writeExcalidrawDerivedSvg(
+  rootPath: string,
+  input: WriteExcalidrawDerivedSvgInput
+): Promise<ExcalidrawDerivedSvgRef> {
+  const owner = assertOwnership(input.sourceRelPath)
+  const sourceAbsolute = resolveDocumentPath(rootPath, input.sourceRelPath)
+  const relPath = derivedSvgRelPath(input.sourceRelPath)
+  assertSvgContent(input.content, relPath)
+  try {
+    await fs.access(sourceAbsolute)
+  } catch {
+    throw new KbError('NOTE_NOT_FOUND', `画布文件不存在：${input.sourceRelPath}`)
+  }
+  await writeFileAtomic(
+    resolveAssetPath(rootPath, relPath, EXCALIDRAW_DERIVED_EXTENSION),
+    input.content
+  )
+  return { relPath, sourceRelPath: input.sourceRelPath, ownerNoteIndex: owner }
+}
+
+/**
+ * 笔记里引用的 `.svg` 是不是某张画布的派生图 —— 判据是**同名 `.excalidraw` 在不在**。
+ *
+ * 这不是校验而是探测：普通图片（含没有四位编号前缀的 `.svg`）一律返回 null，不抛错。
+ */
+export async function findExcalidrawSourceFor(
+  rootPath: string,
+  derivedRelPath: string
+): Promise<ExcalidrawSourceRef | null> {
+  const normalized = derivedRelPath.replaceAll('\\', '/').replace(/^\.\//, '')
+  if (!normalized.startsWith(`${ASSETS_DIR}/`)) return null
+  if (path.posix.extname(normalized).toLowerCase() !== EXCALIDRAW_DERIVED_EXTENSION) return null
+  const sourceRelPath = sourceRelPathForDerived(path.posix.normalize(normalized))
+  const owner = ownerNoteIndexFromName(path.posix.basename(sourceRelPath))
+  if (!owner) return null
+  try {
+    await fs.access(resolveDocumentPath(rootPath, sourceRelPath))
+  } catch {
+    return null
+  }
+  return { relPath: sourceRelPath, ownerNoteIndex: owner }
 }

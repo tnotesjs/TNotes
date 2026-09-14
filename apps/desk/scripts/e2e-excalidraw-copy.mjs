@@ -1,5 +1,7 @@
-// E7 跨笔记复制：复制组件 → 粘贴到别的笔记时按目标前缀复制源文件；
-// 同一个源一次粘贴只复制一次；纯文本组件粘贴也走同一套归属规则；
+// E7 跨笔记复制：引用的资源一律**拷贝、不共享**。
+// 复制笔记里的画布图（`![](./assets/NNNN-x.svg)`）→ 粘贴到别的笔记时，
+// `.excalidraw` 与同名派生 `.svg` 一起换成目标笔记编号重新生成，
+// 同一个源一次粘贴只复制一次；纯文本粘贴也走同一套归属规则；
 // 撤销/重做只影响调用，已复制的文件保留。
 // 需要先构建：pnpm --filter desk exec electron-vite build
 // Run: node apps/desk/scripts/e2e-excalidraw-copy.mjs
@@ -19,6 +21,7 @@ const kb = join(workspace, 'canvas-copy')
 const notes = join(kb, 'notes')
 const assets = join(kb, 'assets')
 const sourceCanvas = join(assets, '0001-26-09-10-15-30-00.excalidraw')
+const sourceDerived = join(assets, '0001-26-09-10-15-30-00.svg')
 const sourceNote = join(notes, '0001. 源.md')
 const targetNote = join(notes, '0002. 目标.md')
 const thirdNote = join(notes, '0003. 另一个目标.md')
@@ -66,6 +69,10 @@ const SCENE = `${JSON.stringify(
 )}\n`
 writeFileSync(sourceCanvas, SCENE)
 writeFileSync(
+  sourceDerived,
+  '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="140"><rect width="240" height="140" fill="#ffffff"/></svg>\n'
+)
+writeFileSync(
   join(kb, 'tnotes.json'),
   `${JSON.stringify({ name: 'canvas-copy', title: 'canvas-copy' })}\n`
 )
@@ -77,7 +84,7 @@ writeFileSync(
     'id: 55555555-5555-4555-8555-555555555555',
     '---',
     '',
-    '<Excalidraw path="../assets/0001-26-09-10-15-30-00.excalidraw" />',
+    '![画布](../assets/0001-26-09-10-15-30-00.svg)',
     ''
   ].join('\n')
 )
@@ -104,7 +111,15 @@ const canvasFiles = () =>
   readdirSync(assets)
     .filter((name) => name.endsWith('.excalidraw'))
     .sort()
+const derivedFiles = () =>
+  readdirSync(assets)
+    .filter((name) => name.endsWith('.svg'))
+    .sort()
 const filesFor = (prefix) => canvasFiles().filter((name) => name.startsWith(prefix))
+const derivedFor = (prefix) => derivedFiles().filter((name) => name.startsWith(prefix))
+/** 笔记里的画布图片引用（KB 相对路径） */
+const noteCanvasRefs = (path) =>
+  [...readNote(path).matchAll(/!\[画布\]\(([^)]+)\)/g)].map((m) => m[1].replace(/^\.\.\//, ''))
 const readNote = (path) => readFileSync(path, 'utf8')
 
 async function waitFor(check, timeoutMs = 10000, intervalMs = 120) {
@@ -145,67 +160,70 @@ try {
     await page.locator('.milkdown:visible .ProseMirror').first().waitFor({ timeout: 30000 })
   }
   const activePane = () => page.locator('.tab-content:visible .milkdown .ProseMirror').first()
-  const card = () => page.locator('.desk-excalidraw:visible').first()
+  const figure = () => page.locator('.desk-image:visible').first()
   /**
-   * 卡片内部事件由节点视图 stopEvent 拦下，点卡片本身不会产生 PM 选择；
-   * 用 raw block 的边界热区（pointerdown 选中整个原子）拿到 NodeSelection。
+   * 复制整篇笔记：ProseMirror 复制图片节点时 text/plain 只有 alt，
+   * 真正的引用在 text/html 里（这也正是插件要处理的那条路径）。
    */
-  const selectCardAtomAndCopy = async () => {
-    const boundary = page
-      .locator('.desk-raw-block--excalidraw:visible .desk-raw-block__boundary-hit')
-      .first()
-    await boundary.click()
-    await page.waitForTimeout(300)
-    const selected = await page.locator('.ProseMirror-selectednode').count()
+  const selectAllAndCopy = async () => {
+    await activePane().click()
+    await page.keyboard.press('ControlOrMeta+a')
     await page.keyboard.press('ControlOrMeta+c')
     await page.waitForTimeout(500)
-    return selected
   }
   const clipboardText = async () => app.evaluate(({ clipboard }) => clipboard.readText())
+  const clipboardHtml = async () => app.evaluate(({ clipboard }) => clipboard.readHTML())
 
-  // 1) 复制组件时写入带来源上下文的载荷
+  // 1) 复制：text/plain 里只有 alt，真正的引用在富文本里（插件必须认这条路径）
   await openNote('源')
-  await card().waitFor({ timeout: 20000 })
-  const selectedNodes = await selectCardAtomAndCopy()
+  await figure().waitFor({ timeout: 20000 })
+  await selectAllAndCopy()
   const payloadText = await clipboardText()
+  const payloadHtml = await clipboardHtml()
   record(
-    '复制组件：剪贴板里带可识别的组件源码（供本 App 与跨应用粘贴）',
-    payloadText.includes('assets/0001-26-09-10-15-30-00.excalidraw') &&
-      (payloadText.match(/<Excalidraw /g)?.length ?? 0) >= 1,
-    `selectedNodes=${selectedNodes} text=${JSON.stringify(payloadText.slice(0, 120))}`
+    '复制画布图：引用出现在富文本剪贴板里（text/plain 只有 alt）',
+    payloadHtml.includes('0001-26-09-10-15-30-00.svg') && payloadText.includes('画布'),
+    `html=${JSON.stringify(payloadHtml.slice(0, 140))} text=${JSON.stringify(payloadText.slice(0, 30))}`
   )
 
   // 2) 跨笔记粘贴：按目标笔记编号复制源文件
   await openNote('目标')
   await activePane().click()
   await page.keyboard.press('ControlOrMeta+v')
-  await waitFor(() => filesFor('0002-').length === 1, 15000)
+  await waitFor(() => filesFor('0002-').length === 1, 20000)
   const copiedName = filesFor('0002-')[0] ?? ''
+  const copiedDerived = copiedName.replace(/\.excalidraw$/, '.svg')
   const targetHasNewPath = await waitFor(
-    () => readNote(targetNote).includes(`<Excalidraw path="../assets/${copiedName}" />`),
-    10000
+    () => noteCanvasRefs(targetNote).includes(`assets/${copiedDerived}`),
+    15000
   )
   record(
-    '跨笔记粘贴：按目标笔记编号复制出独立文件并插入新引用',
+    '跨笔记粘贴：源文件与派生图一起按目标编号复制，并插入新引用',
     Boolean(targetHasNewPath) &&
+      derivedFor('0002-').length === 1 &&
       readFileSync(sourceCanvas, 'utf8') === SCENE &&
       canvasFiles().length === 2,
-    `files=${JSON.stringify(canvasFiles())} noteTail=${JSON.stringify(readNote(targetNote).slice(-60))} 源未变=${readFileSync(sourceCanvas, 'utf8') === SCENE}`
+    `canvas=${JSON.stringify(canvasFiles())} svg=${JSON.stringify(derivedFiles())} refs=${JSON.stringify(noteCanvasRefs(targetNote))} 目标正文=${JSON.stringify(readNote(targetNote).slice(-160))} 源未变=${readFileSync(sourceCanvas, 'utf8') === SCENE}`
   )
+  // 「可编辑」= 同名源画布在 → 图上出现「编辑」按钮
+  await figure().click()
   const pastedEditable = await waitFor(
-    async () => (await card().locator('[data-action="edit"]').isVisible()) === true,
+    async () => (await page.locator('.desk-image__canvas-edit:visible').count()) === 1,
     10000
   )
-  record('粘贴到本笔记后归属正确：卡片可以编辑', Boolean(pastedEditable))
+  record('粘贴到本笔记后归属正确：画布图可以编辑', Boolean(pastedEditable))
   await page.screenshot({ path: join(shots, 'cross-note-paste.png') })
 
   // 3) 再粘一次：独立副本（不共享）
   await page.keyboard.press('ControlOrMeta+v')
-  const secondCopy = await waitFor(() => filesFor('0002-').length === 2, 15000)
+  const secondCopy = await waitFor(
+    () => filesFor('0002-').length === 2 && derivedFor('0002-').length === 2,
+    20000
+  )
   record(
     '再次粘贴：创建独立副本，不与上一份共享',
     Boolean(secondCopy) && canvasFiles().length === 3,
-    `files=${JSON.stringify(filesFor('0002-'))}`
+    `canvas=${JSON.stringify(filesFor('0002-'))} svg=${JSON.stringify(derivedFor('0002-'))}`
   )
 
   // 4) 撤销/重做：只影响调用，文件保留
@@ -213,58 +231,50 @@ try {
   // 焦点要落在正文段落上：点卡片/原子时 Cmd+Z 不一定送到 ProseMirror 的历史
   await activePane().locator(':scope > p').last().click()
   await page.keyboard.press('ControlOrMeta+z')
-  const undone = await waitFor(
-    () => (readNote(targetNote).match(/<Excalidraw /g)?.length ?? 0) === 1,
-    8000
-  )
+  const undone = await waitFor(() => noteCanvasRefs(targetNote).length === 1, 8000)
   record(
-    '撤销粘贴：只移除调用，已复制的文件保留',
-    Boolean(undone) && filesFor('0002-').length === 2,
-    `组件数=${readNote(targetNote).match(/<Excalidraw /g)?.length ?? 0} 文件数=${filesFor('0002-').length} tail=${JSON.stringify(readNote(targetNote).slice(-60))}`
+    '撤销粘贴：只移除引用，已复制的文件保留',
+    Boolean(undone) && filesFor('0002-').length === 2 && derivedFor('0002-').length === 2,
+    `refs=${noteCanvasRefs(targetNote).length} canvas=${filesFor('0002-').length} svg=${derivedFor('0002-').length}`
   )
   await page.keyboard.press('ControlOrMeta+Shift+z')
-  const redone = await waitFor(
-    () => (readNote(targetNote).match(/<Excalidraw /g)?.length ?? 0) === 2,
-    8000
-  )
+  const redone = await waitFor(() => noteCanvasRefs(targetNote).length === 2, 8000)
   record(
     '重做粘贴：恢复同一路径且不新建文件',
-    Boolean(redone) && filesFor('0002-').length === 2,
-    `组件数=${readNote(targetNote).match(/<Excalidraw /g)?.length ?? 0}`
+    Boolean(redone) && filesFor('0002-').length === 2 && derivedFor('0002-').length === 2,
+    `refs=${noteCanvasRefs(targetNote).length}`
   )
 
   // 5) 纯文本粘贴：手写跨笔记引用也按归属复制
   await openNote('另一个目标')
   await activePane().click()
   await app.evaluate(({ clipboard }) => {
-    clipboard.writeText('<Excalidraw path="../assets/0001-26-09-10-15-30-00.excalidraw" />')
+    clipboard.writeText('![画布](../assets/0001-26-09-10-15-30-00.svg)')
   })
   await page.keyboard.press('ControlOrMeta+v')
-  await waitFor(() => filesFor('0003-').length === 1, 15000)
-  const plainName = filesFor('0003-')[0] ?? ''
+  await waitFor(() => filesFor('0003-').length === 1, 20000)
+  const plainDerived = (filesFor('0003-')[0] ?? '').replace(/\.excalidraw$/, '.svg')
   const plainInserted = await waitFor(
-    () => readNote(thirdNote).includes(`<Excalidraw path="../assets/${plainName}" />`),
-    10000
+    () => noteCanvasRefs(thirdNote).includes(`assets/${plainDerived}`),
+    15000
   )
   record(
-    '纯文本组件粘贴：检查归属后复制成目标笔记自己的文件',
-    Boolean(plainInserted),
-    `files=${JSON.stringify(filesFor('0003-'))} note=${JSON.stringify(readNote(thirdNote).slice(-80))}`
+    '纯文本图片引用粘贴：检查归属后复制成目标笔记自己的资源',
+    Boolean(plainInserted) && derivedFor('0003-').length === 1,
+    `canvas=${JSON.stringify(filesFor('0003-'))} svg=${JSON.stringify(derivedFor('0003-'))}`
   )
 
-  // 6) 围栏示例粘贴：不能被当成组件
-  const beforeFenced = canvasFiles().length
-  await app.evaluate(({ clipboard }) => {
-    clipboard.writeText(
-      '```md\n<Excalidraw path="../assets/0001-26-09-10-15-30-00.excalidraw" />\n```'
-    )
-  })
+  // 6) 同笔记内粘贴：编号相同不复制（还是同一张画布）
+  const beforeSameNote = canvasFiles().length
+  await app.evaluate(({ clipboard }, svg) => {
+    clipboard.writeText(`![画布](../assets/${svg})`)
+  }, plainDerived)
   await page.keyboard.press('ControlOrMeta+v')
   await page.waitForTimeout(1500)
   record(
-    '围栏里的示例粘贴：不当作组件、不复制文件',
-    canvasFiles().length === beforeFenced,
-    `文件数=${canvasFiles().length}`
+    '同编号引用粘贴：不复制文件（同一张画布）',
+    canvasFiles().length === beforeSameNote,
+    `canvas=${canvasFiles().length}`
   )
   record('全流程无页面错误', pageErrors.length === 0, pageErrors.slice(0, 2).join(' | '))
   await page.screenshot({ path: join(shots, 'plain-text-paste.png') })

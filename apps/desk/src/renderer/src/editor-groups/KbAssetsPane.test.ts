@@ -352,6 +352,83 @@ describe('KbAssetsPane write flow', () => {
   })
 })
 
+describe('KbAssetsPane 浏览 / 详情视图', () => {
+  it('未选择资源时不预留详情列，选中后才展开', async () => {
+    setupDesk()
+    const wrapper = await mountPane()
+    expect(wrapper.find('.detail').exists()).toBe(false)
+    expect(wrapper.get('.pane-main').classes()).not.toContain('has-detail')
+
+    const used = wrapper.findAll('.file-row').find((row) => row.text().includes('used.png'))
+    await used!.trigger('click')
+    expect(wrapper.get('.pane-main').classes()).toContain('has-detail')
+    expect(wrapper.get('.detail').text()).toContain('used.png')
+    wrapper.unmount()
+  })
+
+  it('切到网格视图后共用选择状态，不清空已选资源', async () => {
+    setupDesk()
+    const wrapper = await mountPane()
+    const used = wrapper.findAll('.file-row').find((row) => row.text().includes('used.png'))
+    await used!.trigger('click')
+
+    const grid = wrapper.findAll('.view-mode button').find((button) => button.text() === '网格')
+    await grid!.trigger('click')
+
+    expect(wrapper.find('.file-list.asset-grid').exists()).toBe(true)
+    expect(wrapper.get('.file-card.selected').text()).toContain('used.png')
+    expect(wrapper.get('.detail').text()).toContain('used.png')
+    wrapper.unmount()
+  })
+
+  it('筛选隐藏当前选中项时在详情里明确提示', async () => {
+    setupDesk()
+    const wrapper = await mountPane()
+    const idle = wrapper.findAll('.file-row').find((row) => row.text().includes('idle.png'))
+    await idle!.trigger('click')
+    // 第 2 个 select 是状态筛选：idle.png 是疑似闲置，切到「已引用」后应被筛掉。
+    await wrapper.findAll('.filters select')[1].setValue('referenced')
+    await flushPromises()
+    expect(wrapper.get('.detail').text()).toContain('当前资源不在筛选结果中')
+    wrapper.unmount()
+  })
+
+  it('放大预览是模态：打开移入焦点，Tab 留在层内，Esc 关闭并归还焦点', async () => {
+    setupDesk()
+    const wrapper = await mountPane()
+    const used = wrapper.findAll('.file-row').find((row) => row.text().includes('used.png'))
+    await used!.trigger('click')
+
+    const zoom = wrapper.findAll('.detail button').find((button) => button.text() === '放大')
+    expect(zoom).toBeTruthy()
+    ;(zoom!.element as HTMLButtonElement).click()
+    await flushPromises()
+
+    const lightbox = document.querySelector<HTMLElement>('.preview-lightbox')
+    expect(lightbox).toBeTruthy()
+    expect(document.activeElement).toBe(lightbox)
+    expect(lightbox!.getAttribute('aria-modal')).toBe('true')
+    expect(lightbox!.getAttribute('aria-labelledby')).toBe(
+      wrapper.get('.detail-name').attributes('id')
+    )
+
+    // 焦点在浮层根节点上时按 Tab，应先进入层内首个可聚焦元素。
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true })
+    )
+    const closeButton = document.querySelector('.lightbox-close')
+    expect(document.activeElement).toBe(closeButton)
+
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    )
+    await flushPromises()
+    expect(document.querySelector('.preview-lightbox')).toBeNull()
+    expect(document.activeElement).toBe(zoom!.element)
+    wrapper.unmount()
+  })
+})
+
 it('requires a fresh preview after switching encoders and clears hidden conversion options', async () => {
   const previewOptimize = vi.fn(async () => ({
     ok: true,
