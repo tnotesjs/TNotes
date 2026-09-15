@@ -284,33 +284,6 @@ async function confirmCopy(): Promise<void> {
   }
 }
 
-/**
- * 复制并切换：用户显式选择「先把草稿复制走，再打开源码视图」。
- *
- * 顺序不能反：复制失败就不切（否则编辑器一销毁，草稿就只剩内存里那一份）。
- * 切换后源码视图显示的是**文件里的旧内容**，状态栏里说清「粘贴后核对」。
- */
-async function copyDraftAndSwitch(): Promise<void> {
-  const draft = milkdownMarkdownEditor.value?.exportDraft?.() ?? null
-  if (!draft) {
-    workspace.status = '拿不到当前修改（编辑器未就绪），未切换视图。'
-    return
-  }
-  try {
-    await navigator.clipboard.writeText(draft)
-  } catch {
-    workspace.status = '复制失败：剪贴板不可用，未切换视图（当前修改仍在编辑器里）。'
-    return
-  }
-  // 草稿已经在剪贴板里托管：把「藏在编辑器里」的标记落下来，然后**显式绕过**
-  // draftBlocked 那道闸（这条路是用户明确选择的「保住草稿再切」）。
-  // 不能走 setMode()：它还会问编辑器 hasUnsavedDraft()，那是 true，会被拦回来。
-  workspace.setDocumentUnsavedDraft(key.value, false)
-  editor.setNoteViewMode(props.tab.id, 'source')
-  workspace.status =
-    '已把当前修改复制到剪贴板，并切到源码视图。这里显示的是文件里的旧内容，粘贴后请核对再保存。'
-}
-
 /** 「以源码显示」列表里点定位：滚到那个块并短暂高亮。 */
 function locateDisplayLimited(item: DisplayLimitedItem): void {
   const found = milkdownMarkdownEditor.value?.revealDisplayLimited?.(item.index) ?? false
@@ -738,15 +711,14 @@ function openLink(url: string): void {
       <div class="note-draft-banner__text">
         <strong>当前修改尚未保存</strong>
         <span>
-          原文件未改动；当前修改仍保留在编辑器中。
+          原文件未改动；当前修改仍保留在编辑器中 ——
+          请在可视化视图里处理这些修改（例如撤销那次改动），
+          或先「复制当前修改」留存。切换视图会丢弃它们，所以已被拦下。
           {{ switchBlockedReason }}
         </span>
       </div>
       <div class="note-draft-banner__actions">
         <button type="button" @click="openCopyPreview">复制当前修改</button>
-        <button type="button" title="先复制到剪贴板，再切到源码视图" @click="copyDraftAndSwitch">
-          复制并切换
-        </button>
         <button type="button" @click="openDiagnosticsPreview">复制诊断信息</button>
       </div>
     </div>

@@ -234,11 +234,10 @@ describe('保存被拦下时的提示与切换（A+B）', () => {
     expect(banner.text()).toContain('当前修改尚未保存')
     expect(banner.text()).toContain('原文件未改动')
     expect(banner.text()).toContain('当前修改仍保留在编辑器中')
-    // 只提供「先复制保命」的入口，没有「直接切过去」的按钮
+    // 出口只有「复制当前修改 / 复制诊断信息」：没有任何绕过保护的切换入口
     const labels = banner.findAll('button').map((button) => button.text())
-    expect(labels).toContain('复制当前修改')
-    expect(labels.some((label) => label.includes('复制并切换'))).toBe(true)
-    expect(labels.some((label) => label.includes('编辑源码'))).toBe(false)
+    expect(labels).toEqual(['复制当前修改', '复制诊断信息'])
+    expect(banner.text()).toContain('切换视图会丢弃它们，所以已被拦下')
   })
 
   it('草稿解决后提示自动消失', async () => {
@@ -291,7 +290,7 @@ describe('保存被拦下时的提示与切换（A+B）', () => {
     expect(workspace.documents['kb-a:note-a']!.content).toBe('# 标题\n\n::: unknown-widget\n')
   })
 
-  it('「复制并切换」：先复制成功，再切到源码视图', async () => {
+  it('任何情况下都没有绕过保护的切换入口（复制不改变可否切换）', async () => {
     const { wrapper, setNoteViewMode, workspace } = setup()
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
@@ -300,29 +299,17 @@ describe('保存被拦下时的提示与切换（A+B）', () => {
     editorStubState.draft = '被拦下的草稿内容'
     await flushPromises()
 
-    const buttons = await wrapper.get('.note-draft-banner').findAll('button')
-    await buttons[1].trigger('click')
+    // 复制成功
+    await wrapper.get('.note-draft-banner').findAll('button')[0]!.trigger('click')
+    await wrapper.get('.note-copy-preview footer button:last-child').trigger('click')
     await flushPromises()
+    expect(writeText).toHaveBeenCalledTimes(1)
 
-    expect(writeText).toHaveBeenCalledWith('被拦下的草稿内容')
-    expect(setNoteViewMode).toHaveBeenCalledWith('tab-a', 'source')
-    expect(String(workspace.status)).toContain('粘贴后请核对')
-  })
-
-  it('复制失败就不切换（草稿不能只剩内存里那一份）', async () => {
-    const { wrapper, setNoteViewMode, workspace } = setup()
-    const writeText = vi.fn().mockRejectedValue(new Error('no clipboard'))
-    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
-    workspace.documents['kb-a:note-a']!.unsavedDraft = true
-    editorStubState.hasUnsavedDraft = true
+    // 复制之后依然不能切
+    await wrapper.get('button[aria-label="源码视图"]').trigger('click')
     await flushPromises()
-
-    const buttons = await wrapper.get('.note-draft-banner').findAll('button')
-    await buttons[1].trigger('click')
-    await flushPromises()
-
     expect(setNoteViewMode).not.toHaveBeenCalled()
-    expect(String(workspace.status)).toContain('未切换视图')
+    expect(workspace.documents['kb-a:note-a']!.unsavedDraft).toBe(true)
   })
 })
 
@@ -473,7 +460,7 @@ describe('批次 3：说明 / 源码定位 / 诊断信息', () => {
     await flushPromises()
 
     const buttons = await wrapper.get('.note-draft-banner').findAll('button')
-    await buttons[2]!.trigger('click')
+    await buttons[1]!.trigger('click')
     const preview = wrapper.get('.note-copy-preview')
     expect(preview.text()).toContain('复制诊断信息')
     expect(preview.text()).toContain('notes/0001. 概述.md')
