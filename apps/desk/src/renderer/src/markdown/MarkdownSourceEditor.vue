@@ -226,6 +226,22 @@ function revealReference(rawPath: string): boolean {
   return true
 }
 
+/**
+ * 跳到指定行（1-based）并聚焦：源码视图是「这块可视化排版不了」时的编辑入口。
+ * 行号越界时夹到有效范围，返回是否真的定位成功。
+ */
+function revealLine(line: number): boolean {
+  const textModel = model()
+  if (!editor || !textModel || !Number.isFinite(line)) return false
+  const lineCount = textModel.getLineCount()
+  const target = Math.min(Math.max(Math.round(line), 1), lineCount)
+  const position = { lineNumber: target, column: 1 }
+  editor.setPosition(position)
+  editor.revealLineInCenter(target)
+  editor.focus()
+  return true
+}
+
 function selectAll(): void {
   const textModel = model()
   if (!editor || !textModel || !shouldHandleDeskSelectAll(host.value, props.active)) return
@@ -235,6 +251,7 @@ function selectAll(): void {
 
 defineExpose({
   revealReference,
+  revealLine,
   insertTextAt,
   wrapSelection,
   prefixSelection,

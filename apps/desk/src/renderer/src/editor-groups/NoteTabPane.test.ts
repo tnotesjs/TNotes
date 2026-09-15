@@ -30,6 +30,20 @@ const MilkdownStub = defineComponent({
 })
 
 vi.mock('../markdown/MilkdownMarkdownEditor.vue', () => ({ default: { template: '<div />' } }))
+const sourceStubState = { revealedLine: null as number | null }
+const SourceStub = defineComponent({
+  name: 'SourceStub',
+  template: '<div class="source-stub" />',
+  setup(_props, { expose }) {
+    expose({
+      revealLine: (line: number) => {
+        sourceStubState.revealedLine = line
+        return true
+      },
+      flush: () => undefined
+    })
+  }
+})
 vi.mock('../markdown/MarkdownSourceEditor.vue', () => ({ default: { template: '<div />' } }))
 
 const tab: NoteEditorTab = {
@@ -79,7 +93,7 @@ function setup(readOnly = false) {
     props: { tab: { ...tab }, groupId: 'group-a', active: true },
     global: {
       renderStubDefaultSlot: true,
-      stubs: { MilkdownMarkdownEditor: MilkdownStub, MarkdownSourceEditor: true }
+      stubs: { MilkdownMarkdownEditor: MilkdownStub, MarkdownSourceEditor: SourceStub }
     }
   })
   return { wrapper, workspace, rename, setNoteViewMode, editor }
@@ -90,6 +104,7 @@ beforeEach(() => {
   editorStubState.hasUnsavedDraft = false
   editorStubState.draft = 'DRAFT'
   editorStubState.revealResult = true
+  sourceStubState.revealedLine = null
 })
 afterEach(() => document.body.replaceChildren())
 
@@ -386,5 +401,76 @@ describe('以源码显示提示 + 复制当前修改预览（第二批）', () =
 
     expect(writeText).not.toHaveBeenCalled()
     expect(wrapper.find('.note-copy-preview').exists()).toBe(false)
+  })
+})
+
+describe('批次 3：说明 / 源码定位 / 诊断信息', () => {
+  const items = [{ index: 3, line: 12, kind: 'paragraph', snippet: '::: unknown' }]
+
+  it('第一次遇到时说明默认展开；点「知道了」后收起，再点「这是什么？」又展开', async () => {
+    const { wrapper } = setup()
+    wrapper.findComponent(MilkdownStub).vm.$emit('displayLimitedChange', items)
+    await flushPromises()
+
+    const notice = wrapper.get('.note-display-limited')
+    expect(notice.find('.note-display-limited__explainer').exists()).toBe(true)
+    expect(notice.text()).toContain('内容不会丢')
+
+    await notice.get('.note-display-limited__explainer button').trigger('click')
+    expect(notice.find('.note-display-limited__explainer').exists()).toBe(false)
+
+    const explainerButton = notice
+      .findAll('button')
+      .find((button) => button.text().includes('这是什么？'))
+    await explainerButton!.trigger('click')
+    expect(notice.find('.note-display-limited__explainer').exists()).toBe(true)
+  })
+
+  it('「编辑源码」切到源码视图并跳到该行', async () => {
+    const { wrapper, setNoteViewMode } = setup()
+    wrapper.findComponent(MilkdownStub).vm.$emit('displayLimitedChange', items)
+    await flushPromises()
+    await wrapper.get('.note-display-limited__head button').trigger('click')
+    const row = wrapper.get('.note-display-limited__list li')
+    await row.findAll('button')[1].trigger('click')
+    // 父组件随后把 viewMode 换成 source：源码编辑器挂载完成才定位
+    await wrapper.setProps({ tab: { ...tab, viewMode: 'source' } })
+    await flushPromises()
+
+    expect(setNoteViewMode).toHaveBeenCalledWith('tab-a', 'source')
+    expect(sourceStubState.revealedLine).toBe(12)
+  })
+
+  it('有受阻草稿时不切源码，只给提示（不销毁编辑器）', async () => {
+    const { wrapper, setNoteViewMode, workspace } = setup()
+    wrapper.findComponent(MilkdownStub).vm.$emit('displayLimitedChange', items)
+    workspace.documents['kb-a:note-a']!.unsavedDraft = true
+    await flushPromises()
+    await wrapper.get('.note-display-limited__head button').trigger('click')
+    await wrapper.get('.note-display-limited__list li').findAll('button')[1].trigger('click')
+
+    expect(setNoteViewMode).not.toHaveBeenCalled()
+    expect(String(workspace.status)).toContain('先处理编辑器的修改')
+  })
+
+  it('复制诊断信息：先预览（含路径与片段），确认才写剪贴板', async () => {
+    const { wrapper, workspace } = setup()
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
+    workspace.documents['kb-a:note-a']!.unsavedDraft = true
+    await flushPromises()
+
+    const buttons = await wrapper.get('.note-draft-banner').findAll('button')
+    await buttons[1].trigger('click')
+    const preview = wrapper.get('.note-copy-preview')
+    expect(preview.text()).toContain('复制诊断信息')
+    expect(preview.text()).toContain('notes/0001. 概述.md')
+    expect(preview.text()).toContain('unsavedDraft')
+    expect(writeText).not.toHaveBeenCalled()
+
+    await preview.get('footer button:last-child').trigger('click')
+    await flushPromises()
+    expect(writeText).toHaveBeenCalledTimes(1)
+    expect(writeText.mock.calls[0]![0]).toContain('notes/0001. 概述.md')
   })
 })

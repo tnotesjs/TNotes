@@ -35,6 +35,8 @@ interface MarkdownEditorHandle {
   reconcileDraft?(): string | null
   /** 可视化编辑器：定位到第 N 个「以源码显示」的块。 */
   revealDisplayLimited?(index: number): boolean
+  /** 源码视图：跳到指定行（1-based）并聚焦。 */
+  revealLine?(line: number): boolean
   wrapSelection(prefix: string, suffix: string, placeholder?: string): void
   prefixSelection(prefix: string): void
   setLinePrefix(prefix: string): void
@@ -85,8 +87,13 @@ const switchBlockedReason = ref('')
 /** 「以源码显示」的块清单（可视化排版不了的块）。 */
 const displayLimited = ref<DisplayLimitedItem[]>([])
 const displayLimitedOpen = ref(false)
-/** 复制当前修改前的预览：草稿未经完整性校验，先让用户看一眼。 */
-const copyPreview = ref<string | null>(null)
+/** 复制前的预览（草稿 / 诊断信息都走它，先让用户看一眼要复制什么）。 */
+const copyPreview = ref<{ title: string; hint: string; text: string } | null>(null)
+/** 切到源码视图后要跳到的行（挂载完成才定位）。 */
+const pendingSourceLine = ref<number | null>(null)
+/** 「这是什么？」说明：应用会话内第一次遇到时展开，点过「知道了」就不再自动展开。 */
+let displayLimitedExplainerSeen = false
+const explainerOpen = ref(!displayLimitedExplainerSeen)
 const markdownEditor = computed(() =>
   props.tab.viewMode === 'source' ? markdownSourceEditor.value : milkdownMarkdownEditor.value
 )
@@ -242,16 +249,44 @@ function openCopyPreview(): void {
     workspace.status = '拿不到当前修改（编辑器未就绪）。'
     return
   }
-  copyPreview.value = draft
+  copyPreview.value = {
+    title: '复制当前修改',
+    hint: '这段内容未经完整性校验，粘贴前请自行核对。',
+    text: draft
+  }
 }
 
-async function confirmCopyDraft(): Promise<void> {
-  const draft = copyPreview.value
-  if (draft === null) return
+/** 「复制诊断信息」：给维护者排查用；含路径与片段，所以同样先预览。 */
+function openDiagnosticsPreview(): void {
+  const document = session.value?.document
+  const payload = {
+    time: new Date().toISOString(),
+    note: document?.relPath ?? null,
+    viewMode: props.tab.viewMode,
+    dirty: session.value?.dirty ?? false,
+    unsavedDraft: session.value?.unsavedDraft ?? false,
+    switchBlockedReason: switchBlockedReason.value || null,
+    displayLimited: displayLimited.value,
+    degradedNotice: displayLimited.value.length > 0
+  }
+  copyPreview.value = {
+    title: '复制诊断信息',
+    hint: '包含笔记路径与块片段；发给维护者前可以先核对。',
+    text: JSON.stringify(payload, null, 2)
+  }
+}
+
+async function confirmCopy(): Promise<void> {
+  const preview = copyPreview.value
+  if (!preview) return
   try {
-    await navigator.clipboard.writeText(draft)
+    await navigator.clipboard.writeText(preview.text)
+    const title = preview.title
     copyPreview.value = null
-    workspace.status = '当前修改已复制到剪贴板（未经完整性校验，粘贴前请自行核对）。'
+    workspace.status =
+      title === '复制当前修改'
+        ? '当前修改已复制到剪贴板（未经完整性校验，粘贴前请自行核对）。'
+        : '诊断信息已复制到剪贴板。'
   } catch {
     workspace.status = '复制失败：剪贴板不可用。'
   }
@@ -261,6 +296,42 @@ async function confirmCopyDraft(): Promise<void> {
 function locateDisplayLimited(item: DisplayLimitedItem): void {
   const found = milkdownMarkdownEditor.value?.revealDisplayLimited?.(item.index) ?? false
   if (!found) workspace.status = `没找到第 ${item.line} 行那块内容（文档可能已改动）。`
+}
+
+/**
+ * 在源码视图里编辑这一块：切过去并跳到行。
+ *
+ * 有受阻草稿时不能切（切过去会销毁可视化编辑器）；那种情况下给回原先的提示。
+ */
+function editDisplayLimitedInSource(item: DisplayLimitedItem): void {
+  if (draftBlocked.value) {
+    workspace.status = '当前修改尚未保存：先处理编辑器的修改，再切到源码视图编辑这一块。'
+    return
+  }
+  pendingSourceLine.value = item.line
+  setMode('source')
+}
+
+/** 切到源码视图后（重新挂载完成）把行定位补上。 */
+watch(
+  () => props.tab.viewMode,
+  async (mode) => {
+    if (mode !== 'source' || pendingSourceLine.value === null) return
+    const line = pendingSourceLine.value
+    pendingSourceLine.value = null
+    await nextTick()
+    // Monaco 是懒加载并异步创建编辑器：给它一点重试窗口，避免刚切过去时定位失败
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      if (markdownSourceEditor.value?.revealLine?.(line)) return
+      await new Promise((resolve) => setTimeout(resolve, 150))
+    }
+    workspace.status = `没能在源码视图里定位第 ${line} 行。`
+  }
+)
+
+function dismissExplainer(): void {
+  displayLimitedExplainerSeen = true
+  explainerOpen.value = false
 }
 
 /** 编辑器上报「哪些块以源码显示」。 */
@@ -654,6 +725,7 @@ function openLink(url: string): void {
       </div>
       <div class="note-draft-banner__actions">
         <button type="button" @click="openCopyPreview">复制当前修改</button>
+        <button type="button" @click="openDiagnosticsPreview">复制诊断信息</button>
         <button type="button" title="先复制或处理这些修改，再切换视图" disabled>
           编辑源码（暂不可用）
         </button>
@@ -668,12 +740,20 @@ function openLink(url: string): void {
         <button type="button" @click="displayLimitedOpen = !displayLimitedOpen">
           {{ displayLimitedOpen ? '收起' : `查看 ${displayLimited.length} 处` }}
         </button>
+        <button type="button" @click="explainerOpen = !explainerOpen">这是什么？</button>
+      </div>
+      <div v-if="explainerOpen" class="note-display-limited__explainer">
+        <p>Desk 的可视化编辑器还不支持这些写法，所以先把它们按原文显示 —— 内容不会丢。</p>
+        <p>不影响保存：这些块会按原文原样写回文件。</p>
+        <p>想改成可可视化编辑的形式，可以点某一条的「编辑源码」到源码视图里改。</p>
+        <button type="button" @click="dismissExplainer">知道了</button>
       </div>
       <ul v-if="displayLimitedOpen" class="note-display-limited__list">
         <li v-for="item in displayLimited" :key="item.index">
           <span class="note-display-limited__where">第 {{ item.line }} 行「{{ item.kind }}」</span>
           <code>{{ item.snippet }}</code>
           <button type="button" @click="locateDisplayLimited(item)">定位</button>
+          <button type="button" @click="editDisplayLimitedInSource(item)">编辑源码</button>
         </li>
       </ul>
     </div>
@@ -681,17 +761,17 @@ function openLink(url: string): void {
       v-if="copyPreview !== null"
       class="note-copy-preview"
       role="dialog"
-      aria-label="复制当前修改"
+      :aria-label="copyPreview.title"
     >
       <div class="note-copy-preview__panel">
         <header>
-          <strong>复制当前修改</strong>
-          <span>这段内容未经完整性校验，粘贴前请自行核对。</span>
+          <strong>{{ copyPreview.title }}</strong>
+          <span>{{ copyPreview.hint }}</span>
         </header>
-        <pre>{{ copyPreview }}</pre>
+        <pre>{{ copyPreview.text }}</pre>
         <footer>
           <button type="button" @click="copyPreview = null">取消</button>
-          <button type="button" @click="confirmCopyDraft">确认复制</button>
+          <button type="button" @click="confirmCopy">确认复制</button>
         </footer>
       </div>
     </div>
@@ -1000,6 +1080,26 @@ function openLink(url: string): void {
 
 .note-display-limited__head button,
 .note-display-limited__list button {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.note-display-limited__explainer {
+  padding: 0 12px 6px 24px;
+  color: var(--muted);
+}
+
+.note-display-limited__explainer p {
+  margin: 2px 0;
+}
+
+.note-display-limited__explainer button {
+  margin-top: 4px;
   padding: 2px 8px;
   border: 1px solid var(--border);
   border-radius: 5px;
