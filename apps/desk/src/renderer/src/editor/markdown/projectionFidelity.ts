@@ -538,6 +538,42 @@ export function describeFidelityProblems(
   })
 }
 
+export interface DisplayLimitedItem {
+  /** 原文块下标（降级区域用它 1:1 对应到文档里的块）。 */
+  index: number
+  /** 1-based 行号 */
+  line: number
+  kind: string
+  snippet: string
+}
+
+/**
+ * 把「按原文显示（降级）」的块做成可读列表：行号 + 类型 + 片段。
+ *
+ * UI 用它渲染「N 处内容以源码显示」的展开列表，并支持逐个定位。
+ */
+export function displayLimitedItems(
+  source: string,
+  indexes: readonly number[]
+): DisplayLimitedItem[] {
+  const normalized = canonicalizeMarkdown(source)
+  const blocks = parseMarkdownSource(normalized).blocks
+  return [...indexes]
+    .sort((a, b) => a - b)
+    .flatMap((index) => {
+      const block = blocks[index]
+      if (!block) return []
+      return [
+        {
+          index,
+          line: lineAt(normalized, block.from),
+          kind: block.kind,
+          snippet: snippet(block.source, 40)
+        }
+      ]
+    })
+}
+
 /**
  * 「可行动」的不忠实：结构性的那几种（吞并 / 丢失 / 多出）。
  *

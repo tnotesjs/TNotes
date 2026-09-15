@@ -17,6 +17,7 @@ import { useWorkspaceStore } from '../stores/workspace'
 import { registerHeadingFoldRunner } from '../commands/headingFoldBridge'
 import { findTab } from './layoutModel'
 import { decideViewSwitch } from './noteViewSwitch'
+import type { DisplayLimitedItem } from '../editor/markdown/projectionFidelity'
 import { insertableImageMarkdown } from './noteAssets'
 import { pastedImageMarkdown } from '../editor/markdown/pasteImageWidth'
 import { HEADING_NUMBER_DEFAULT_MAX_DEPTH } from '../../../shared/headingNumbering'
@@ -30,6 +31,8 @@ interface MarkdownEditorHandle {
   hasUnsavedDraft?(): boolean
   /** 可视化编辑器：导出当前 Markdown 草稿（**未经完整性校验**）。 */
   exportDraft?(): string | null
+  /** 可视化编辑器：定位到第 N 个「以源码显示」的块。 */
+  revealDisplayLimited?(index: number): boolean
   wrapSelection(prefix: string, suffix: string, placeholder?: string): void
   prefixSelection(prefix: string): void
   setLinePrefix(prefix: string): void
@@ -77,6 +80,11 @@ const draftBlocked = computed(() => Boolean(session.value?.unsavedDraft))
 const switchBlockedReason = ref('')
 /** 受控携带：把草稿作为源码视图初值（仅在完整性校验通过时设置）。 */
 const carriedDraft = ref<string | null>(null)
+/** 「以源码显示」的块清单（可视化排版不了的块）。 */
+const displayLimited = ref<DisplayLimitedItem[]>([])
+const displayLimitedOpen = ref(false)
+/** 复制当前修改前的预览：草稿未经完整性校验，先让用户看一眼。 */
+const copyPreview = ref<string | null>(null)
 const markdownEditor = computed(() =>
   props.tab.viewMode === 'source' ? markdownSourceEditor.value : milkdownMarkdownEditor.value
 )
@@ -224,19 +232,38 @@ function setMode(mode: NoteViewMode): void {
   editor.setNoteViewMode(props.tab.id, mode)
 }
 
-/** 复制当前修改：用户最直接的「把刚写的东西拿出来」通道。 */
-async function copyDraft(): Promise<void> {
+/** 打开「复制当前修改」预览（草稿未经完整性校验，先让用户过一眼）。 */
+function openCopyPreview(): void {
   const draft = milkdownMarkdownEditor.value?.exportDraft?.() ?? null
   if (!draft) {
     workspace.status = '拿不到当前修改（编辑器未就绪）。'
     return
   }
+  copyPreview.value = draft
+}
+
+async function confirmCopyDraft(): Promise<void> {
+  const draft = copyPreview.value
+  if (draft === null) return
   try {
     await navigator.clipboard.writeText(draft)
+    copyPreview.value = null
     workspace.status = '当前修改已复制到剪贴板（未经完整性校验，粘贴前请自行核对）。'
   } catch {
     workspace.status = '复制失败：剪贴板不可用。'
   }
+}
+
+/** 「以源码显示」列表里点定位：滚到那个块并短暂高亮。 */
+function locateDisplayLimited(item: DisplayLimitedItem): void {
+  const found = milkdownMarkdownEditor.value?.revealDisplayLimited?.(item.index) ?? false
+  if (!found) workspace.status = `没找到第 ${item.line} 行那块内容（文档可能已改动）。`
+}
+
+/** 编辑器上报「哪些块以源码显示」。 */
+function handleDisplayLimitedChange(items: DisplayLimitedItem[]): void {
+  displayLimited.value = items
+  if (items.length === 0) displayLimitedOpen.value = false
 }
 
 /** 编辑器上报「有/没有尚未 emit 的修改」：状态存 store，提示常驻由它驱动。 */
@@ -625,10 +652,46 @@ function openLink(url: string): void {
         </span>
       </div>
       <div class="note-draft-banner__actions">
-        <button type="button" @click="copyDraft">复制当前修改</button>
+        <button type="button" @click="openCopyPreview">复制当前修改</button>
         <button type="button" title="先复制或处理这些修改，再切换视图" disabled>
           编辑源码（暂不可用）
         </button>
+      </div>
+    </div>
+    <div v-if="displayLimited.length > 0" class="note-display-limited" role="status">
+      <div class="note-display-limited__head">
+        <span
+          >有 {{ displayLimited.length }} 处内容以源码显示（Desk
+          暂不支持这些内容的可视化编辑）</span
+        >
+        <button type="button" @click="displayLimitedOpen = !displayLimitedOpen">
+          {{ displayLimitedOpen ? '收起' : `查看 ${displayLimited.length} 处` }}
+        </button>
+      </div>
+      <ul v-if="displayLimitedOpen" class="note-display-limited__list">
+        <li v-for="item in displayLimited" :key="item.index">
+          <span class="note-display-limited__where">第 {{ item.line }} 行「{{ item.kind }}」</span>
+          <code>{{ item.snippet }}</code>
+          <button type="button" @click="locateDisplayLimited(item)">定位</button>
+        </li>
+      </ul>
+    </div>
+    <div
+      v-if="copyPreview !== null"
+      class="note-copy-preview"
+      role="dialog"
+      aria-label="复制当前修改"
+    >
+      <div class="note-copy-preview__panel">
+        <header>
+          <strong>复制当前修改</strong>
+          <span>这段内容未经完整性校验，粘贴前请自行核对。</span>
+        </header>
+        <pre>{{ copyPreview }}</pre>
+        <footer>
+          <button type="button" @click="copyPreview = null">取消</button>
+          <button type="button" @click="confirmCopyDraft">确认复制</button>
+        </footer>
       </div>
     </div>
     <div class="note-body">
@@ -654,6 +717,7 @@ function openLink(url: string): void {
           @fatal="handleMilkdownFatal"
           @heading-level-change="headingLevel = $event"
           @unsaved-draft-change="handleUnsavedDraftChange"
+          @display-limited-change="handleDisplayLimitedChange"
         />
         <div v-else-if="tab.viewMode !== 'source'" class="editor-fatal" role="alert">
           <strong>可视化编辑器加载失败</strong>
@@ -918,6 +982,126 @@ function openLink(url: string): void {
 }
 
 /* 编辑器 + 右侧「本笔记资源」面板：两者各自滚动，互不影响 */
+.note-display-limited {
+  flex: none;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--muted) 10%, var(--editor-bg));
+  font: 12px/1.7 var(--font-sans);
+}
+
+.note-display-limited__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 12px;
+  color: var(--muted);
+}
+
+.note-display-limited__head button,
+.note-display-limited__list button {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.note-display-limited__list {
+  margin: 0;
+  padding: 0 12px 6px 24px;
+  list-style: none;
+}
+
+.note-display-limited__list li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.note-display-limited__where {
+  flex: none;
+  color: var(--text);
+}
+
+.note-display-limited__list code {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+.note-copy-preview {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 45%);
+}
+
+.note-copy-preview__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(720px, calc(100% - 48px));
+  max-height: 70%;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  font: 12px/1.6 var(--font-sans);
+}
+
+.note-copy-preview__panel header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.note-copy-preview__panel header span {
+  color: var(--muted);
+}
+
+.note-copy-preview__panel pre {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  padding: 10px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--editor-bg);
+  font: 12px/1.6 var(--font-mono);
+  white-space: pre-wrap;
+}
+
+.note-copy-preview__panel footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.note-copy-preview__panel footer button {
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--raised);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+/* 复制预览用 absolute 覆盖在整块笔记面板上 */
+.note-pane {
+  position: relative;
+}
+
 .note-draft-banner {
   flex: none;
   display: flex;

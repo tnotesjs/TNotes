@@ -42,8 +42,10 @@ import {
   classifyProjectionFidelity,
   degradableBlockIndexes,
   describeFidelityProblems,
+  displayLimitedItems,
   extendDegradationIndexes,
   findAbsorbedBlocks,
+  type DisplayLimitedItem,
   type FidelityBlockResult
 } from '../editor/markdown/projectionFidelity'
 
@@ -60,6 +62,12 @@ export interface DocumentSyncHost<ViewState = DocumentSyncViewState> {
    * 提示「有未保存的修改」，切换视图也不能把编辑器销毁掉（否则修改直接消失）。
    */
   reportUnsavedDraft?(hasDraft: boolean): void
+  /**
+   * 「这些块现在以源码形式显示（可视化排版不了）」的清单。
+   *
+   * 空数组表示当前没有任何这类块（UI 据此收起提示）。
+   */
+  reportDisplayLimited?(items: DisplayLimitedItem[]): void
   /** 当前文档第 `index` 个顶层节点（降级区域的「转义逐行原文」渲染用）。 */
   readTopLevelNode(index: number): LiteralWalkableNode | null
   /** 用投影后的 Markdown 整篇替换文档。 */
@@ -221,7 +229,10 @@ export function createDocumentSync<ViewState = DocumentSyncViewState>(
       let plan = degradableBlockIndexes(source, host.readMarkdown() ?? '')
       // 计划为空 = 这篇笔记现在没有任何「按原文暴露」的区域，清掉记录
       degradedRegionIndexes = new Set(plan)
-      if (plan.length === 0) return
+      if (plan.length === 0) {
+        host.reportDisplayLimited?.([])
+        return
+      }
       let remaining = 0
       // 首轮问题（降级前）与最后一轮问题：文案要能说清「哪儿对不上」
       let firstRoundProblems: FidelityBlockResult[] = []
@@ -256,6 +267,8 @@ export function createDocumentSync<ViewState = DocumentSyncViewState>(
         source,
         remaining > 0 ? lastProblems : firstRoundProblems
       )
+      // 「哪些块现在按源码显示」交给 UI 做可展开列表（行号 + 类型 + 片段）
+      host.reportDisplayLimited?.(displayLimitedItems(source, plan))
       // 控制台留全量细节：状态栏只放得下前两条，用户要定位时看这里
       console.warn('[desk] 保真检查发现结构差异', {
         remaining,

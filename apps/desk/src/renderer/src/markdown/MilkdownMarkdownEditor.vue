@@ -2,7 +2,8 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { parserCtx } from '@milkdown/kit/core'
 import { editorViewCtx, commandsCtx, serializerCtx } from '@milkdown/kit/core'
-import { NodeSelection, Plugin, TextSelection } from '@milkdown/kit/prose/state'
+import { NodeSelection, Plugin, PluginKey, TextSelection } from '@milkdown/kit/prose/state'
+import { Decoration, DecorationSet } from '@milkdown/kit/prose/view'
 import type { EditorView } from '@milkdown/kit/prose/view'
 import { serializeImageMarkdown } from '@tnotesjs/ui/image-markdown'
 import { createCanvasImageClipboardPlugin } from './canvasImageClipboardPlugin'
@@ -100,6 +101,7 @@ import {
 } from './blockBoundaryNavigation'
 
 import type { NotePageWidth, NoteTocDisplay, NoteViewMode } from '../../../shared/contracts'
+import type { DisplayLimitedItem } from '../editor/markdown/projectionFidelity'
 
 const props = withDefaults(
   defineProps<{
@@ -129,6 +131,8 @@ const emit = defineEmits<{
    * 这类修改只在编辑器内存里，父组件必须据此提示未保存、并禁止销毁编辑器式切换。
    */
   unsavedDraftChange: [hasDraft: boolean]
+  /** 「这些块以源码显示」的清单（行号 + 类型 + 片段），供父组件渲染可展开提示。 */
+  displayLimitedChange: [items: DisplayLimitedItem[]]
 }>()
 
 const host = ref<HTMLElement | null>(null)
@@ -742,7 +746,8 @@ defineExpose({
   focus,
   flush,
   hasUnsavedDraft,
-  exportDraft
+  exportDraft,
+  revealDisplayLimited
 })
 
 const githubSlugger = new GithubSlugger()
@@ -996,9 +1001,94 @@ function createDocumentSyncHost(): DocumentSyncHost<EditorViewSnapshot> {
       emit('unsavedDraftChange', hasDraft)
     },
     currentPropContent: () => props.content,
+    reportDisplayLimited: (items) => {
+      setDisplayLimited(items)
+    },
     flushPendingDrafts: () =>
       flushPendingEdits(props.knowledgeBaseId, props.noteUuid, { requireClean: false })
   }
+}
+
+/**
+ * 「以源码显示」的块（可视化排版不了的块）在文档里的下标集合。
+ *
+ * 这些块在编辑器里就是普通段落（按原文转义后显示），所以用 **decoration** 给它们加
+ * 标记：既能让作者一眼看到「这块没做可视化排版」，也不会像直接改 DOM 那样在重渲染后丢失。
+ */
+const displayLimitedIndexes = ref<ReadonlySet<number>>(new Set())
+const displayLimitedItems = ref<DisplayLimitedItem[]>([])
+
+function setDisplayLimited(items: DisplayLimitedItem[]): void {
+  displayLimitedItems.value = items
+  displayLimitedIndexes.value = new Set(items.map((item) => item.index))
+  emit('displayLimitedChange', items)
+  refreshDisplayLimitedMarks()
+}
+
+/** 让 decoration 重新计算：只带 meta 的空事务，不动文档。 */
+function refreshDisplayLimitedMarks(): void {
+  const view = ctxView()
+  if (!view || view.isDestroyed) return
+  view.dispatch(view.state.tr.setMeta(displayLimitedKey, Date.now()))
+}
+
+function ctxView(): EditorView | null {
+  try {
+    return deskEditor?.editor.ctx.get(editorViewCtx) ?? null
+  } catch {
+    return null
+  }
+}
+
+const displayLimitedKey = new PluginKey('deskDisplayLimited')
+const displayLimitedPlugin = $prose(
+  () =>
+    new Plugin({
+      key: displayLimitedKey,
+      props: {
+        decorations(state) {
+          const indexes = displayLimitedIndexes.value
+          if (indexes.size === 0) return null
+          const decorations: Decoration[] = []
+          state.doc.forEach((node, offset, index) => {
+            if (!indexes.has(index)) return
+            decorations.push(
+              Decoration.node(offset, offset + node.nodeSize, {
+                class: 'desk-display-limited',
+                'data-display-limited': 'true'
+              })
+            )
+          })
+          return DecorationSet.create(state.doc, decorations)
+        }
+      }
+    })
+)
+
+/**
+ * 定位到第 `index` 个「以源码显示」的块：滚动过去并短暂高亮。
+ * 找不到（文档结构变了）就返回 false，让调用方兜底提示。
+ */
+function revealDisplayLimited(index: number): boolean {
+  const view = ctxView()
+  if (!view || view.isDestroyed) return false
+  let found = false
+  view.state.doc.forEach((_node, offset, current) => {
+    if (current !== index || found) return
+    found = true
+    let dom: Node | null = null
+    try {
+      dom = view.nodeDOM(offset)
+    } catch {
+      dom = null
+    }
+    if (dom instanceof HTMLElement) {
+      dom.scrollIntoView({ block: 'center' })
+      dom.classList.add('is-display-limited-flash')
+      window.setTimeout(() => dom?.classList.remove('is-display-limited-flash'), 1600)
+    }
+  })
+  return found
 }
 
 /**
@@ -1107,6 +1197,7 @@ onMounted(async () => {
   editor.editor.use(deskCalloutKeymapPlugin)
   editor.editor.use(imageAttrPlugins)
   editor.editor.use(standaloneImageParagraphPlugin)
+  editor.editor.use(displayLimitedPlugin)
   editor.editor.use(createCodeBlockTitlePlugin())
   editor.editor.use(createCodeBlockLatexPreviewPlugin())
   editor.editor.use(codeBlockHighlights.plugin)

@@ -19,6 +19,7 @@ import {
   canonicalizeMarkdown,
   classifyProjectionFidelity,
   describeFidelityProblems,
+  displayLimitedItems,
   degradableBlockIndexes,
   extendDegradationIndexes,
   findAbsorbedBlocks
@@ -534,5 +535,25 @@ describe('projectionFidelity · 问题描述', () => {
     expect(descriptions[1]).toContain('第 5 行')
     expect(descriptions[1]).toContain('「表格」的内容被并进了别的块')
     expect(descriptions[2]).toContain('多出一段「![链接图片](../assets/a.svg)」')
+  })
+})
+
+describe('projectionFidelity · 以源码显示的清单', () => {
+  it('给出行号、块类型与片段，并按块下标排序', () => {
+    const source = ['# 标题', '', '第一段', '', '| A | B |', '| - | - |', '| 1 | 2 |', ''].join(
+      '\n'
+    )
+    const items = displayLimitedItems(source, [2, 1])
+    expect(items.map((item) => item.index)).toEqual([1, 2])
+    expect(items[0]?.line).toBe(3)
+    expect(items[0]?.kind).toBe('paragraph')
+    expect(items[0]?.snippet).toContain('第一段')
+    expect(items[1]?.line).toBe(5)
+    expect(items[1]?.kind).toBe('table')
+  })
+
+  it('越界下标被忽略，空输入返回空数组', () => {
+    expect(displayLimitedItems('正文\n', [])).toEqual([])
+    expect(displayLimitedItems('正文\n', [7])).toEqual([])
   })
 })

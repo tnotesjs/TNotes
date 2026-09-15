@@ -35,6 +35,8 @@ interface FakeHost {
   status: string[]
   /** reportUnsavedDraft 的上报序列。 */
   draftStates: boolean[]
+  /** reportDisplayLimited 的上报序列。 */
+  displayLimited: Array<Array<{ index: number; line: number; kind: string }>>
   /** 取走已排队的空闲回调（测试自己控制何时执行）。 */
   takeIdle(): Array<() => void>
   /** 跑掉已排队的空闲回调；返回跑掉的数量。 */
@@ -54,6 +56,7 @@ function createFakeHost(initialDocument: string, options: FakeHostOptions = {}):
   const emitted: string[] = []
   const status: string[] = []
   const draftStates: boolean[] = []
+  const displayLimited: Array<Array<{ index: number; line: number; kind: string }>> = []
 
   const host: DocumentSyncHost<Snapshot> = {
     readMarkdown: () => (ready ? document : null),
@@ -71,6 +74,7 @@ function createFakeHost(initialDocument: string, options: FakeHostOptions = {}):
     emitSource: (source) => emitted.push(source),
     reportStatus: (message) => status.push(message),
     reportUnsavedDraft: (hasDraft) => draftStates.push(hasDraft),
+    reportDisplayLimited: (items) => displayLimited.push(items),
     currentPropContent: () => propContent,
     flushPendingDrafts: () => {},
     scheduleIdle: (run) => idle.push(run)
@@ -92,6 +96,7 @@ function createFakeHost(initialDocument: string, options: FakeHostOptions = {}):
     emitted,
     status,
     draftStates,
+    displayLimited,
     takeIdle: () => idle.splice(0),
     runIdle: () => {
       const pending = idle.splice(0)
@@ -528,5 +533,29 @@ describe('未 emit 的草稿（保存被拦下）', () => {
     await session.syncExternal('另一篇\n')
     expect(session.hasUnsavedDraft()).toBe(false)
     expect(fake.draftStates.at(-1)).toBe(false)
+  })
+})
+
+describe('以源码显示的清单上报', () => {
+  it('没有降级区域时上报空清单（UI 据此收起提示）', () => {
+    const { fake, session } = startSession('# 标题\n\n正文\n')
+    session.scheduleFidelityCheck()
+    fake.runIdle()
+    expect(fake.displayLimited.at(-1)).toEqual([])
+  })
+
+  it('存在降级区域时报出「行号 + 类型」清单', () => {
+    // 用吞并构造：编辑器把独立的 222 并进提示块 → 这块会被降级成按原文显示
+    const { fake, session } = startSession(ABSORBING_SOURCE, {
+      canonicalAfterReplace: () => ABSORBING_CANONICAL
+    })
+    fake.setDocument(ABSORBING_CANONICAL)
+    session.scheduleFidelityCheck()
+    fake.runIdle()
+
+    const reported = fake.displayLimited.at(-1) ?? []
+    expect(reported.length).toBeGreaterThan(0)
+    expect(reported[0]).toMatchObject({ index: expect.any(Number), line: expect.any(Number) })
+    expect(typeof reported[0]?.kind).toBe('string')
   })
 })

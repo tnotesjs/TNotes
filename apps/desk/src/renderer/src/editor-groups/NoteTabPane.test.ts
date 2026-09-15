@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 
+import { defineComponent } from 'vue'
 import { flushPromises, shallowMount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -8,6 +9,24 @@ import { useEditorStore } from '../stores/editor'
 import { useWorkspaceStore } from '../stores/workspace'
 import FormatOverflowBar from './FormatOverflowBar.vue'
 import NoteTabPane from './NoteTabPane.vue'
+
+/**
+ * 可视化编辑器的可控替身：显式 stub，能暴露草稿 API（shallowMount 的自动 stub 不会）。
+ * 自动 stub 会丢掉 setup/expose，导致「复制当前修改 / 定位」这类要走编辑器能力的路径测不到。
+ */
+const editorStubState = { hasUnsavedDraft: false, draft: 'DRAFT', revealResult: true }
+const MilkdownStub = defineComponent({
+  name: 'MilkdownStub',
+  template: '<div class="milkdown-stub" />',
+  setup(_props, { expose }) {
+    expose({
+      flush: () => undefined,
+      hasUnsavedDraft: () => editorStubState.hasUnsavedDraft,
+      exportDraft: () => editorStubState.draft,
+      revealDisplayLimited: () => editorStubState.revealResult
+    })
+  }
+})
 
 vi.mock('../markdown/MilkdownMarkdownEditor.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../markdown/MarkdownSourceEditor.vue', () => ({ default: { template: '<div />' } }))
@@ -57,12 +76,20 @@ function setup(readOnly = false) {
   const wrapper = shallowMount(NoteTabPane, {
     attachTo: document.body,
     props: { tab: { ...tab }, groupId: 'group-a', active: true },
-    global: { renderStubDefaultSlot: true }
+    global: {
+      renderStubDefaultSlot: true,
+      stubs: { MilkdownMarkdownEditor: MilkdownStub, MarkdownSourceEditor: true }
+    }
   })
   return { wrapper, workspace, rename, setNoteViewMode, editor }
 }
 
-beforeEach(() => setActivePinia(createPinia()))
+beforeEach(() => {
+  setActivePinia(createPinia())
+  editorStubState.hasUnsavedDraft = false
+  editorStubState.draft = 'DRAFT'
+  editorStubState.revealResult = true
+})
 afterEach(() => document.body.replaceChildren())
 
 describe('note header', () => {
@@ -217,7 +244,11 @@ describe('保存被拦下时的提示与切换（A+B）', () => {
 
   it('受阻后切视图：拒绝切换（不能销毁编辑器丢掉修改），并说明原因', async () => {
     const { wrapper, setNoteViewMode, workspace } = setup()
+    // 用真实的吞并检测构造「转换不完整」：草稿把原文里独立的 222 并进了提示块
+    workspace.documents['kb-a:note-a']!.content = '::: tip T\n\n111\n\n:::\n\n222\n'
     workspace.documents['kb-a:note-a']!.unsavedDraft = true
+    editorStubState.hasUnsavedDraft = true
+    editorStubState.draft = '::: tip T\n\n111\n222\n\n:::'
     await flushPromises()
 
     await wrapper.get('button[aria-label="源码视图"]').trigger('click')
@@ -225,5 +256,106 @@ describe('保存被拦下时的提示与切换（A+B）', () => {
     expect(setNoteViewMode).not.toHaveBeenCalled()
     expect(wrapper.find('.note-draft-banner').exists()).toBe(true)
     expect(String(workspace.status)).toContain('未切换视图')
+  })
+
+  it('受阻但校验通过：允许切换（草稿作为源码视图初值带过去）', async () => {
+    const { wrapper, setNoteViewMode } = setup()
+    editorStubState.hasUnsavedDraft = true
+    editorStubState.draft = '# 特殊原文\n\n我刚写的一段。\n'
+
+    await wrapper.get('button[aria-label="源码视图"]').trigger('click')
+    await flushPromises()
+
+    expect(setNoteViewMode).toHaveBeenCalledWith('tab-a', 'source')
+  })
+})
+
+describe('以源码显示提示 + 复制当前修改预览（第二批）', () => {
+  const items = [
+    { index: 3, line: 12, kind: 'paragraph', snippet: '::: unknown' },
+    { index: 5, line: 30, kind: 'table', snippet: '| A | B |' }
+  ]
+
+  it('多处同类问题只给汇总，展开后才列出行号/类型/片段', async () => {
+    const { wrapper } = setup()
+    wrapper.findComponent(MilkdownStub).vm.$emit('displayLimitedChange', items)
+    await flushPromises()
+
+    const notice = wrapper.get('.note-display-limited')
+    expect(notice.text()).toContain('有 2 处内容以源码显示')
+    expect(notice.text()).toContain('查看 2 处')
+    expect(wrapper.find('.note-display-limited__list').exists()).toBe(false)
+
+    await notice.get('button').trigger('click')
+    const list = wrapper.get('.note-display-limited__list')
+    expect(list.text()).toContain('第 12 行')
+    expect(list.text()).toContain('第 30 行')
+    expect(list.text()).toContain('::: unknown')
+  })
+
+  it('清单清空后提示收起', async () => {
+    const { wrapper } = setup()
+    const editor = wrapper.findComponent(MilkdownStub)
+    editor.vm.$emit('displayLimitedChange', items)
+    await flushPromises()
+    expect(wrapper.find('.note-display-limited').exists()).toBe(true)
+
+    editor.vm.$emit('displayLimitedChange', [])
+    await flushPromises()
+    expect(wrapper.find('.note-display-limited').exists()).toBe(false)
+  })
+
+  it('列表里点「定位」会调用编辑器的定位能力（就近入口）', async () => {
+    const { wrapper, workspace } = setup()
+    wrapper.findComponent(MilkdownStub).vm.$emit('displayLimitedChange', items)
+    await flushPromises()
+    await wrapper.get('.note-display-limited button').trigger('click')
+    await wrapper.get('.note-display-limited__list li:first-child button').trigger('click')
+
+    expect(String(workspace.status ?? '')).not.toContain('没找到')
+  })
+
+  it('定位失败（文档已改动）时给出提示', async () => {
+    const { wrapper, workspace } = setup()
+    editorStubState.revealResult = false
+    wrapper.findComponent(MilkdownStub).vm.$emit('displayLimitedChange', items)
+    await flushPromises()
+    await wrapper.get('.note-display-limited button').trigger('click')
+    await wrapper.get('.note-display-limited__list li:first-child button').trigger('click')
+
+    expect(String(workspace.status)).toContain('没找到')
+  })
+
+  it('复制当前修改先出预览，确认后才写剪贴板', async () => {
+    const { wrapper, workspace } = setup()
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
+    workspace.documents['kb-a:note-a']!.unsavedDraft = true
+    await flushPromises()
+
+    await wrapper.get('.note-draft-banner button:not(:disabled)').trigger('click')
+    const preview = wrapper.get('.note-copy-preview')
+    expect(preview.text()).toContain('未经完整性校验')
+    expect(writeText).not.toHaveBeenCalled()
+
+    await preview.get('footer button:last-child').trigger('click')
+    await flushPromises()
+    expect(writeText).toHaveBeenCalledTimes(1)
+    expect(wrapper.find('.note-copy-preview').exists()).toBe(false)
+  })
+
+  it('预览里取消不会写剪贴板', async () => {
+    const { wrapper, workspace } = setup()
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
+    workspace.documents['kb-a:note-a']!.unsavedDraft = true
+    await flushPromises()
+
+    await wrapper.get('.note-draft-banner button:not(:disabled)').trigger('click')
+    await wrapper.get('.note-copy-preview footer button:first-child').trigger('click')
+    await flushPromises()
+
+    expect(writeText).not.toHaveBeenCalled()
+    expect(wrapper.find('.note-copy-preview').exists()).toBe(false)
   })
 })
