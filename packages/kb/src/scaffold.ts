@@ -46,8 +46,8 @@ export const CANONICAL_NPMRC = `@tnotesjs:registry=https://registry.npmjs.org/
 `
 
 export const PACKAGE_JSON_DEPS = {
-  kb: '^0.2.1',
-  ssg: '^0.1.5'
+  kb: '^0.5.1',
+  ssg: '^0.2.1'
 } as const
 
 export const DEPLOY_WORKFLOW = `# 构建 TNotes SSG 站点并部署到 GitHub Pages
