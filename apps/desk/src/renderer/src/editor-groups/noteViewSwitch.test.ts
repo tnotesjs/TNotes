@@ -2,101 +2,27 @@ import { describe, expect, it } from 'vitest'
 
 import { decideViewSwitch } from './noteViewSwitch'
 
-const SPECIAL = '# 特殊原文（Desk 不支持的写法）\n\n::: unknown\n\nx\n\n:::\n'
-const EDITED = `${SPECIAL}\n我刚写的一段。\n`
-
 describe('保存被拦下时能否切到源码视图', () => {
-  it('没有未 emit 的草稿 → 正常切换，不携带任何草稿', () => {
-    expect(
-      decideViewSwitch({ hasUnsavedDraft: false, draft: EDITED, storeSource: SPECIAL })
-    ).toEqual({ kind: 'normal' })
+  it('没有未 emit 的草稿 → 正常切换', () => {
+    expect(decideViewSwitch({ hasUnsavedDraft: false })).toEqual({ kind: 'normal' })
   })
 
-  it('有草稿但转换不完整（会吞并原文）→ 拒绝切换', () => {
-    const decision = decideViewSwitch({
-      hasUnsavedDraft: true,
-      draft: EDITED,
-      storeSource: SPECIAL,
-      isComplete: () => false
-    })
+  it('有草稿 → 拒绝切换（不做任何「结构看起来没问题」的推断）', () => {
+    const decision = decideViewSwitch({ hasUnsavedDraft: true })
     expect(decision.kind).toBe('blocked')
-  })
-
-  it('校验通过 → 允许切换，并把「特殊原文 + 新修改」一起带过去', () => {
-    const decision = decideViewSwitch({
-      hasUnsavedDraft: true,
-      draft: EDITED,
-      storeSource: SPECIAL,
-      isComplete: () => true
-    })
-    expect(decision).toEqual({ kind: 'switch-with-draft', carriedDraft: EDITED })
-    if (decision.kind === 'switch-with-draft') {
-      expect(decision.carriedDraft).toContain('特殊原文')
-      expect(decision.carriedDraft).toContain('我刚写的一段。')
+    if (decision.kind === 'blocked') {
+      expect(decision.reason).toContain('保留编辑器')
     }
-  })
-
-  it('拿不到草稿 / 拿不到原文基线 → 拒绝切换（不猜）', () => {
-    expect(
-      decideViewSwitch({ hasUnsavedDraft: true, draft: null, storeSource: SPECIAL }).kind
-    ).toBe('blocked')
-    expect(decideViewSwitch({ hasUnsavedDraft: true, draft: EDITED, storeSource: null }).kind).toBe(
-      'blocked'
-    )
-  })
-
-  it('默认走真实吞并检测：真·吞并草稿被拦下、干净草稿放行', () => {
-    // 与 documentSync 的吞并用例同源：编辑器把独立的 222 并进了提示块
-    const absorbed = '::: tip T\n\n111\n222\n\n:::'
-    const source = '::: tip T\n\n111\n\n:::\n\n222\n'
-    expect(
-      decideViewSwitch({ hasUnsavedDraft: true, draft: absorbed, storeSource: source }).kind
-    ).toBe('blocked')
-    expect(
-      decideViewSwitch({ hasUnsavedDraft: true, draft: source, storeSource: source }).kind
-    ).toBe('switch-with-draft')
-  })
-
-  it('校验函数抛异常时按「不可信」处理，不切换', () => {
-    const decision = decideViewSwitch({
-      hasUnsavedDraft: true,
-      draft: EDITED,
-      storeSource: SPECIAL,
-      isComplete: () => {
-        throw new Error('boom')
-      }
-    })
-    expect(decision.kind).toBe('blocked')
   })
 })
 
-describe('完整性证明：不能只看「有没有吞并」（P1-3 回归）', () => {
-  const SOURCE = '# 标题\n\n第一段\n\n第二段\n\n第三段\n'
-
-  it('原文整段消失（没有吞并）也必须拒绝携带', () => {
-    // 「第二段」整块不见了：findAbsorbedBlocks 明确不看这种丢失
-    const draft = '# 标题\n\n第一段\n\n第三段\n'
-    const decision = decideViewSwitch({ hasUnsavedDraft: true, draft, storeSource: SOURCE })
-    expect(decision.kind).toBe('blocked')
-  })
-
-  it('凭空多出一块也拒绝携带', () => {
-    const draft = `${SOURCE}\n新来的一段\n`
-    const decision = decideViewSwitch({ hasUnsavedDraft: true, draft, storeSource: SOURCE })
-    expect(decision.kind).toBe('blocked')
-  })
-
-  it('结构与原文一一对应时才允许携带', () => {
-    const draft = '# 标题\n\n第一段（改过）\n\n第二段\n\n第三段\n'
-    const decision = decideViewSwitch({ hasUnsavedDraft: true, draft, storeSource: SOURCE })
-    expect(decision).toEqual({ kind: 'switch-with-draft', carriedDraft: draft })
-  })
-
-  it('允许的规范化（列表记号统一）不算不完整', () => {
-    const source = '* 一\n* 二\n'
-    const draft = '- 一\n- 二\n'
-    expect(decideViewSwitch({ hasUnsavedDraft: true, draft, storeSource: source }).kind).toBe(
-      'switch-with-draft'
-    )
+/**
+ * 验收反例（P1）：原文「标题 + 特殊原文」→ 草稿「标题 + 新增内容」。
+ * 块数一致、结构报告只是 content-changed，与「用户主动改写」同形 ——
+ * 旧实现据此放行；现在一律拒绝，不再把结构检查当完整性证明。
+ */
+describe('结构检查不能当作完整性证明', () => {
+  it('同块数替换（特殊原文被换掉）也必须拒绝', () => {
+    expect(decideViewSwitch({ hasUnsavedDraft: true }).kind).toBe('blocked')
   })
 })

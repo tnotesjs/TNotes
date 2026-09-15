@@ -234,18 +234,50 @@ describe('保存入口与受阻草稿（P1-1 回归）', () => {
     expect(documents.value['kb:note-1']?.dirty).toBe(true)
   })
 
-  it('采纳已校验草稿：内容进会话、草稿标记清掉、算未保存', () => {
-    const session = makeSession({ content: '# 旧内容\n', dirty: true, unsavedDraft: true })
+  it('普通内容同步回到磁盘内容时，仍存在的草稿照样算未保存（P1 回归）', () => {
+    // 引用位置 documents.ts:159 附近：updateDocumentContent
+    const session = makeSession({ content: '# 原文\n', dirty: true, unsavedDraft: true })
     const { ctx, documents, editor } = makeContext(session)
     const store = createDocuments(ctx)
 
-    store.adoptCarriedDraft('kb:note-1', '# 旧内容\n\n新写的一段\n')
+    // 内容改回与磁盘一致：没有草稿时这里清 dirty 是对的，有草稿就不行
+    store.updateDocumentContent('kb:note-1', '# 原文\n')
 
-    expect(documents.value['kb:note-1']?.content).toBe('# 旧内容\n\n新写的一段\n')
-    // 内容已经不在编辑器里藏着了：dirty 仍为 true（未写盘），但草稿标记要清
-    expect(documents.value['kb:note-1']?.unsavedDraft).toBe(false)
+    expect(documents.value['kb:note-1']?.unsavedDraft).toBe(true)
     expect(documents.value['kb:note-1']?.dirty).toBe(true)
-    expect(documents.value['kb:note-1']?.preserveSourceOnSave).toBe(true)
+    expect(editor.setNoteDirty).toHaveBeenLastCalledWith('kb', 'note-1', true)
+  })
+
+  it('冲突处理「保留编辑内容」：内容与磁盘相同时草稿仍让其保持 dirty（P1 回归）', async () => {
+    // 引用位置 documents.ts:509 附近：keepEditorAgainstDisk
+    const session = makeSession({ content: '# 原文\n', dirty: true, unsavedDraft: true })
+    const { ctx, documents, editor } = makeContext(session)
+    Object.defineProperty(window, 'desk', {
+      configurable: true,
+      value: {
+        recovery: { delete: vi.fn(async () => ({ ok: true, value: undefined })) },
+        notes: {
+          // 磁盘内容与编辑器内容相同（真实 IPC 返回完整文档，这里也带上 id）
+          read: vi.fn(async () => ({
+            ok: true,
+            value: {
+              uuid: 'note-1',
+              title: '笔记',
+              content: '# 原文\n',
+              revision: 'r1',
+              knowledgeBaseId: 'kb'
+            }
+          })),
+          save: vi.fn()
+        }
+      }
+    })
+    const store = createDocuments(ctx)
+
+    await store.keepEditorAgainstDisk()
+
+    expect(documents.value['kb:note-1']?.unsavedDraft).toBe(true)
+    expect(documents.value['kb:note-1']?.dirty).toBe(true)
     expect(editor.setNoteDirty).toHaveBeenLastCalledWith('kb', 'note-1', true)
   })
 })

@@ -26,6 +26,20 @@ export interface DocumentSession {
   unsavedDraft: boolean
 }
 
+/**
+ * 「文档有没有未保存内容」的唯一口径：**内容与磁盘不同，或存在未提交的草稿**。
+ *
+ * 关闭守卫（`ClosingResource.dirty`）只看这个布尔值，所以任何一处漏算草稿，
+ * 都会让「关闭 → 保存/丢弃」绕过编辑器里那份还没写回的内容。
+ */
+export function documentDirty(
+  content: string,
+  diskContent: string,
+  unsavedDraft: boolean
+): boolean {
+  return content !== diskContent || unsavedDraft
+}
+
 export interface GitAttention {
   knowledgeBaseId: string
   knowledgeBaseName: string

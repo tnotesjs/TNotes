@@ -23,7 +23,6 @@ const MilkdownStub = defineComponent({
       flush: () => undefined,
       hasUnsavedDraft: () => editorStubState.hasUnsavedDraft,
       exportDraft: () => editorStubState.draft,
-      reconcileDraft: () => editorStubState.draft,
       revealDisplayLimited: () => editorStubState.revealResult
     })
   }
@@ -235,9 +234,11 @@ describe('保存被拦下时的提示与切换（A+B）', () => {
     expect(banner.text()).toContain('当前修改尚未保存')
     expect(banner.text()).toContain('原文件未改动')
     expect(banner.text()).toContain('当前修改仍保留在编辑器中')
-    // 不提供「直接切过去」的入口，避免把用户推向丢修改的那一步
-    expect(banner.get('button:disabled').text()).toContain('编辑源码')
-    expect(banner.get('button:not(:disabled)').text()).toContain('复制当前修改')
+    // 只提供「先复制保命」的入口，没有「直接切过去」的按钮
+    const labels = banner.findAll('button').map((button) => button.text())
+    expect(labels).toContain('复制当前修改')
+    expect(labels.some((label) => label.includes('复制并切换'))).toBe(true)
+    expect(labels.some((label) => label.includes('编辑源码'))).toBe(false)
   })
 
   it('草稿解决后提示自动消失', async () => {
@@ -274,43 +275,54 @@ describe('保存被拦下时的提示与切换（A+B）', () => {
     expect(String(workspace.status)).toContain('未切换视图')
   })
 
-  it('受阻但校验通过：草稿进入文档会话（切回可视化也不丢）', async () => {
+  it('同块数替换（特殊原文 → 新增内容）也拒绝切换（验收反例）', async () => {
     const { wrapper, setNoteViewMode, workspace } = setup()
-    // 原文 3 块 → 草稿 3 块（只改了一段）：块数一致才算证明通过
-    const source = '# 标题\n\n第一段\n\n第二段\n'
-    workspace.documents['kb-a:note-a']!.content = source
-    editorStubState.hasUnsavedDraft = true
-    editorStubState.draft = '# 标题\n\n第一段（改过）\n\n第二段\n'
-
-    await wrapper.get('button[aria-label="源码视图"]').trigger('click')
-    await flushPromises()
-
-    expect(setNoteViewMode).toHaveBeenCalledWith('tab-a', 'source')
-    // 关键：草稿落在会话里，而不是组件局部变量 —— 否则切回来会按旧 content 重新加载
-    expect(workspace.documents['kb-a:note-a']!.content).toContain('第一段（改过）')
-    expect(workspace.documents['kb-a:note-a']!.dirty).toBe(true)
-    expect(workspace.documents['kb-a:note-a']!.unsavedDraft).toBe(false)
-
-    // 切回可视化：读到的仍是带修改的内容
-    setNoteViewMode.mockClear()
-    await wrapper.get('button[aria-label="可视化编辑"]').trigger('click')
-    await flushPromises()
-    expect(workspace.documents['kb-a:note-a']!.content).toContain('第一段（改过）')
-  })
-
-  it('草稿整段消失（块数对不上）时拒绝携带（P1-3 回归）', async () => {
-    const { wrapper, setNoteViewMode, workspace } = setup()
-    workspace.documents['kb-a:note-a']!.content = '# 标题\n\n第一段\n\n第二段\n'
+    // 原文：标题 + 特殊原文；草稿：标题 + 新增内容 —— 块数一致，旧实现会放行
+    workspace.documents['kb-a:note-a']!.content = '# 标题\n\n::: unknown-widget\n'
     workspace.documents['kb-a:note-a']!.unsavedDraft = true
     editorStubState.hasUnsavedDraft = true
-    // 「第二段」整块没了
-    editorStubState.draft = '# 标题\n\n第一段\n'
+    editorStubState.draft = '# 标题\n\n我刚写的一段\n'
 
     await wrapper.get('button[aria-label="源码视图"]').trigger('click')
     await flushPromises()
 
     expect(setNoteViewMode).not.toHaveBeenCalled()
     expect(wrapper.find('.note-draft-banner').exists()).toBe(true)
+    expect(workspace.documents['kb-a:note-a']!.content).toBe('# 标题\n\n::: unknown-widget\n')
+  })
+
+  it('「复制并切换」：先复制成功，再切到源码视图', async () => {
+    const { wrapper, setNoteViewMode, workspace } = setup()
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
+    workspace.documents['kb-a:note-a']!.unsavedDraft = true
+    editorStubState.hasUnsavedDraft = true
+    editorStubState.draft = '被拦下的草稿内容'
+    await flushPromises()
+
+    const buttons = await wrapper.get('.note-draft-banner').findAll('button')
+    await buttons[1].trigger('click')
+    await flushPromises()
+
+    expect(writeText).toHaveBeenCalledWith('被拦下的草稿内容')
+    expect(setNoteViewMode).toHaveBeenCalledWith('tab-a', 'source')
+    expect(String(workspace.status)).toContain('粘贴后请核对')
+  })
+
+  it('复制失败就不切换（草稿不能只剩内存里那一份）', async () => {
+    const { wrapper, setNoteViewMode, workspace } = setup()
+    const writeText = vi.fn().mockRejectedValue(new Error('no clipboard'))
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
+    workspace.documents['kb-a:note-a']!.unsavedDraft = true
+    editorStubState.hasUnsavedDraft = true
+    await flushPromises()
+
+    const buttons = await wrapper.get('.note-draft-banner').findAll('button')
+    await buttons[1].trigger('click')
+    await flushPromises()
+
+    expect(setNoteViewMode).not.toHaveBeenCalled()
+    expect(String(workspace.status)).toContain('未切换视图')
   })
 })
 
@@ -461,7 +473,7 @@ describe('批次 3：说明 / 源码定位 / 诊断信息', () => {
     await flushPromises()
 
     const buttons = await wrapper.get('.note-draft-banner').findAll('button')
-    await buttons[1].trigger('click')
+    await buttons[2]!.trigger('click')
     const preview = wrapper.get('.note-copy-preview')
     expect(preview.text()).toContain('复制诊断信息')
     expect(preview.text()).toContain('notes/0001. 概述.md')

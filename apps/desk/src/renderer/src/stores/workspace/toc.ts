@@ -13,6 +13,7 @@ import type {
 } from '../../../../shared/contracts'
 
 import {
+  documentDirty,
   documentKey,
   ipcPlain,
   notePlacement,
@@ -126,7 +127,7 @@ export function createToc(ctx: TocContext) {
       // session went dirty while the request was in flight.
       const current = ctx.documents.value[key] ?? beforeRename
       const content = current.dirty ? current.content : mutation.note.content
-      const dirty = content !== mutation.note.content
+      const dirty = documentDirty(content, mutation.note.content, current.unsavedDraft)
       ctx.setDocumentSession(key, {
         document: mutation.note,
         content,

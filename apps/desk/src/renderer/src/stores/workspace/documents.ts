@@ -13,7 +13,7 @@ import type {
 } from '../../../../shared/contracts'
 
 import { flushPendingEdits } from '../../editor/markdown/pendingEdits'
-import { documentKey, resultValue, type DocumentSession } from './helpers'
+import { documentDirty, documentKey, resultValue, type DocumentSession } from './helpers'
 import { createPendingSaves } from './pendingSaves'
 
 export interface DocumentsContext {
@@ -148,15 +148,13 @@ export function createDocuments(ctx: DocumentsContext) {
     return session
   }
 
-  function updateDocumentContent(
-    key: string,
-    content: string,
-    preserveSource = false,
-    options: { clearUnsavedDraft?: boolean } = {}
-  ): void {
+  function updateDocumentContent(key: string, content: string, preserveSource = false): void {
     const session = ctx.documents.value[key]
     if (!session || session.document.readOnly) return
-    const dirty = content !== session.document.content
+    // 草稿标记只由编辑器上报（setDocumentUnsavedDraft）翻转：内容同步不动它，
+    // 否则「内容刚好回到磁盘内容」会把仍存在的草稿误判成已保存
+    const unsavedDraft = session.unsavedDraft
+    const dirty = documentDirty(content, session.document.content, unsavedDraft)
     const preserveSourceOnSave = dirty
       ? session.preserveSourceOnSave || preserveSource
       : session.saving
@@ -166,9 +164,7 @@ export function createDocuments(ctx: DocumentsContext) {
       ...session,
       content,
       dirty,
-      // 只有「草稿已经落进 content」的调用方才允许清标记；普通内容同步不动它，
-      // 否则编辑器里那份还没写回的草稿会被误判成「已保存」。
-      unsavedDraft: options.clearUnsavedDraft ? false : session.unsavedDraft,
+      unsavedDraft,
       preserveSourceOnSave,
       // 外部冲突标记要保留到用户显式选择「载入磁盘 / 保留编辑」为止：
       // 之前任何一次击键都会清掉它，冲突横幅消失，用户失去选择权
@@ -213,7 +209,7 @@ export function createDocuments(ctx: DocumentsContext) {
     if (!session) return
     if (session.unsavedDraft === hasDraft) return
     // dirty 用与内容同步同一套口径重算：草稿只是额外的一个「未落盘」来源
-    const dirty = session.content !== session.document.content || hasDraft
+    const dirty = documentDirty(session.content, session.document.content, hasDraft)
     ctx.setDocumentSession(key, { ...session, unsavedDraft: hasDraft, dirty })
     ctx.editor.setNoteDirty(session.document.knowledgeBaseId, session.document.uuid, dirty)
     if (hasDraft) {
@@ -222,17 +218,6 @@ export function createDocuments(ctx: DocumentsContext) {
       if (pending) clearTimeout(pending)
       ctx.autosaveTimers.delete(key)
     }
-  }
-
-  /**
-   * 采纳一份「已通过完整性校验」的草稿，把它变成文档当前内容。
-   *
-   * 用途：保存被拦下、但复验证明这次转换完整时，允许把草稿带进源码视图继续编辑。
-   * 必须落到会话里（而不是组件局部变量），否则切回可视化时会按旧 content 重新加载，
-   * 用户刚写的内容就凭空消失了。
-   */
-  function adoptCarriedDraft(key: string, content: string): void {
-    updateDocumentContent(key, content, true, { clearUnsavedDraft: true })
   }
 
   function updateEditorContent(content: string): void {
@@ -283,7 +268,7 @@ export function createDocuments(ctx: DocumentsContext) {
         current && (current.content !== contentToSave || draftAppeared)
       )
       if (changedWhileSaving && current) {
-        const stillDirty = current.content !== mutation.note.content || draftAppeared
+        const stillDirty = documentDirty(current.content, mutation.note.content, draftAppeared)
         ctx.setDocumentSession(key, {
           document: mutation.note,
           content: current.content,
@@ -506,13 +491,19 @@ export function createDocuments(ctx: DocumentsContext) {
     ctx.setDocumentSession(key, {
       document: next,
       content: session.content,
-      dirty: session.content !== next.content,
-      // 磁盘被外部改动：编辑器里未 emit 的草稿还在，标记不能丢
+      // 草稿还在就算未保存（口径见 helpers.documentDirty）——
+      // 否则「保留编辑内容」点下去会把关闭保护一起关掉
+      dirty: documentDirty(session.content, next.content, session.unsavedDraft),
       unsavedDraft: session.unsavedDraft,
       preserveSourceOnSave: session.content !== next.content && session.preserveSourceOnSave,
       externalConflict: false,
       saving: false
     })
+    ctx.editor.setNoteDirty(
+      next.knowledgeBaseId,
+      next.uuid,
+      documentDirty(session.content, next.content, session.unsavedDraft)
+    )
   }
 
   function getDocumentSession(knowledgeBaseId: string, noteUuid: string): DocumentSession | null {
@@ -527,7 +518,6 @@ export function createDocuments(ctx: DocumentsContext) {
     updateDocumentContent,
     updateEditorContent,
     setDocumentUnsavedDraft,
-    adoptCarriedDraft,
     saveDocument,
     pauseDocumentAutosave,
     discardDocumentChanges,

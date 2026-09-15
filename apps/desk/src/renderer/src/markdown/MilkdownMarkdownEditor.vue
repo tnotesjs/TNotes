@@ -747,7 +747,6 @@ defineExpose({
   flush,
   hasUnsavedDraft,
   exportDraft,
-  reconcileDraft,
   revealDisplayLimited
 })
 
@@ -1106,21 +1105,6 @@ function hasUnsavedDraft(): boolean {
  */
 function exportDraft(): string | null {
   return session?.exportDraft() ?? null
-}
-
-/**
- * 对账后的草稿：未编辑块**逐字取原文**、编辑块取编辑器结果。
- *
- * 携带到源码视图要用它（而不是裸 canonical）：它才是「这次保存本来会写下去的内容」，
- * 未编辑块的字节不会被序列化器顺手规范化。同样需要先过完整性证明。
- */
-function reconcileDraft(): string | null {
-  if (!session) return null
-  try {
-    return session.reconcile()
-  } catch {
-    return null
-  }
 }
 
 /** Commit block-local Edit drafts, then emit. Call before leaving visual mode. */

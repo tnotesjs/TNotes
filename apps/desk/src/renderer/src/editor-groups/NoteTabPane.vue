@@ -31,8 +31,6 @@ interface MarkdownEditorHandle {
   hasUnsavedDraft?(): boolean
   /** 可视化编辑器：导出当前 Markdown 草稿（**未经完整性校验**，用于复制）。 */
   exportDraft?(): string | null
-  /** 可视化编辑器：对账后的草稿（未编辑块逐字取原文），携带切换用它。 */
-  reconcileDraft?(): string | null
   /** 可视化编辑器：定位到第 N 个「以源码显示」的块。 */
   revealDisplayLimited?(index: number): boolean
   /** 源码视图：跳到指定行（1-based）并聚焦。 */
@@ -222,22 +220,16 @@ function setMode(mode: NoteViewMode): void {
     const decision = decideViewSwitch({
       // 是否受阻以 store 里的状态为准（编辑器通过事件上报，flush() 内已同步）；
       // 编辑器自己再报一次兜底（事件万一丢了也不会误切）
-      hasUnsavedDraft: draftBlocked.value || (visual?.hasUnsavedDraft?.() ?? false),
-      // 携带「保留原文那份对账结果」，不是裸 canonical（后者会顺手规范化未编辑块）
-      draft: visual?.reconcileDraft?.() ?? null,
-      storeSource: session.value?.content ?? null
+      hasUnsavedDraft: draftBlocked.value || (visual?.hasUnsavedDraft?.() ?? false)
     })
     if (decision.kind === 'blocked') {
       // 危险切换：切过去就会销毁编辑器、丢掉用户刚写的内容 —— 不切。
+      // （草稿没法证明完整，所以这里不提供任何「自动带过去」的路径）
       switchBlockedReason.value = decision.reason
       workspace.status = `未切换视图：${decision.reason}`
       return
     }
     switchBlockedReason.value = ''
-    if (decision.kind === 'switch-with-draft') {
-      // 草稿进**文档会话**（不依赖用户再输入一次）：源码视图读它，切回可视化也读它
-      workspace.adoptCarriedDraft(key.value, decision.carriedDraft)
-    }
   }
   editor.setNoteViewMode(props.tab.id, mode)
 }
@@ -290,6 +282,33 @@ async function confirmCopy(): Promise<void> {
   } catch {
     workspace.status = '复制失败：剪贴板不可用。'
   }
+}
+
+/**
+ * 复制并切换：用户显式选择「先把草稿复制走，再打开源码视图」。
+ *
+ * 顺序不能反：复制失败就不切（否则编辑器一销毁，草稿就只剩内存里那一份）。
+ * 切换后源码视图显示的是**文件里的旧内容**，状态栏里说清「粘贴后核对」。
+ */
+async function copyDraftAndSwitch(): Promise<void> {
+  const draft = milkdownMarkdownEditor.value?.exportDraft?.() ?? null
+  if (!draft) {
+    workspace.status = '拿不到当前修改（编辑器未就绪），未切换视图。'
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(draft)
+  } catch {
+    workspace.status = '复制失败：剪贴板不可用，未切换视图（当前修改仍在编辑器里）。'
+    return
+  }
+  // 草稿已经在剪贴板里托管：把「藏在编辑器里」的标记落下来，然后**显式绕过**
+  // draftBlocked 那道闸（这条路是用户明确选择的「保住草稿再切」）。
+  // 不能走 setMode()：它还会问编辑器 hasUnsavedDraft()，那是 true，会被拦回来。
+  workspace.setDocumentUnsavedDraft(key.value, false)
+  editor.setNoteViewMode(props.tab.id, 'source')
+  workspace.status =
+    '已把当前修改复制到剪贴板，并切到源码视图。这里显示的是文件里的旧内容，粘贴后请核对再保存。'
 }
 
 /** 「以源码显示」列表里点定位：滚到那个块并短暂高亮。 */
@@ -725,10 +744,10 @@ function openLink(url: string): void {
       </div>
       <div class="note-draft-banner__actions">
         <button type="button" @click="openCopyPreview">复制当前修改</button>
-        <button type="button" @click="openDiagnosticsPreview">复制诊断信息</button>
-        <button type="button" title="先复制或处理这些修改，再切换视图" disabled>
-          编辑源码（暂不可用）
+        <button type="button" title="先复制到剪贴板，再切到源码视图" @click="copyDraftAndSwitch">
+          复制并切换
         </button>
+        <button type="button" @click="openDiagnosticsPreview">复制诊断信息</button>
       </div>
     </div>
     <div v-if="displayLimited.length > 0" class="note-display-limited" role="status">
