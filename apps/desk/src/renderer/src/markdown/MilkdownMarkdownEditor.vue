@@ -123,6 +123,12 @@ const emit = defineEmits<{
   openNote: [noteUuid: string]
   fatal: [message: string]
   headingLevelChange: [level: number | null]
+  /**
+   * 编辑器里出现了「比 store 更新、但没能安全 emit」的修改。
+   *
+   * 这类修改只在编辑器内存里，父组件必须据此提示未保存、并禁止销毁编辑器式切换。
+   */
+  unsavedDraftChange: [hasDraft: boolean]
 }>()
 
 const host = ref<HTMLElement | null>(null)
@@ -734,7 +740,9 @@ defineExpose({
   removeHeadingNumbers,
   applyHeadingFold,
   focus,
-  flush
+  flush,
+  hasUnsavedDraft,
+  exportDraft
 })
 
 const githubSlugger = new GithubSlugger()
@@ -983,10 +991,30 @@ function createDocumentSyncHost(): DocumentSyncHost<EditorViewSnapshot> {
     reportStatus: (message) => {
       useWorkspaceStore().status = message
     },
+    reportUnsavedDraft: (hasDraft) => {
+      if (destroyed) return
+      emit('unsavedDraftChange', hasDraft)
+    },
     currentPropContent: () => props.content,
     flushPendingDrafts: () =>
       flushPendingEdits(props.knowledgeBaseId, props.noteUuid, { requireClean: false })
   }
+}
+
+/**
+ * 编辑器里是否有尚未 emit 出去的修改（保存被拦截时为 true）。
+ * 只说明「比 store 新」，不代表导出内容完整安全。
+ */
+function hasUnsavedDraft(): boolean {
+  return session?.hasUnsavedDraft() ?? false
+}
+
+/**
+ * 导出编辑器的当前 Markdown 草稿，用于「复制当前修改」或受控携带到源码视图。
+ * **调用方必须先做完整性校验**，不能直接当成可保存的源码。
+ */
+function exportDraft(): string | null {
+  return session?.exportDraft() ?? null
 }
 
 /** Commit block-local Edit drafts, then emit. Call before leaving visual mode. */

@@ -16,6 +16,7 @@ import { useWorkspaceStore } from '../stores/workspace'
 
 import { registerHeadingFoldRunner } from '../commands/headingFoldBridge'
 import { findTab } from './layoutModel'
+import { decideViewSwitch } from './noteViewSwitch'
 import { insertableImageMarkdown } from './noteAssets'
 import { pastedImageMarkdown } from '../editor/markdown/pasteImageWidth'
 import { HEADING_NUMBER_DEFAULT_MAX_DEPTH } from '../../../shared/headingNumbering'
@@ -25,6 +26,10 @@ import type { HeadingFoldCommand } from '../markdown/headingSectionCollapse'
 
 interface MarkdownEditorHandle {
   insertTextAt(text: string, position?: number): void
+  /** 可视化编辑器：是否存在尚未 emit 的修改（保存被拦下时为 true）。 */
+  hasUnsavedDraft?(): boolean
+  /** 可视化编辑器：导出当前 Markdown 草稿（**未经完整性校验**）。 */
+  exportDraft?(): string | null
   wrapSelection(prefix: string, suffix: string, placeholder?: string): void
   prefixSelection(prefix: string): void
   setLinePrefix(prefix: string): void
@@ -61,6 +66,17 @@ const milkdownMarkdownEditor = ref<MarkdownEditorHandle | null>(null)
 const markdownSourceEditor = ref<MarkdownEditorHandle | null>(null)
 const milkdownFailed = ref(false)
 const milkdownMountKey = ref(0)
+/**
+ * 保存被拦下（编辑器里有尚未 emit 的修改）：状态来自 store，提示常驻直到草稿解决。
+ *
+ * 之所以要拦切换：这类修改只在编辑器内存里，而两个视图是 `v-if` / `v-else` ——
+ * 直接切到源码视图会**销毁可视化编辑器**，用户刚写的内容当场消失。
+ */
+const draftBlocked = computed(() => Boolean(session.value?.unsavedDraft))
+/** 上一次「危险切换被拒」的原因（只在拒绝时出现，不是常驻提示）。 */
+const switchBlockedReason = ref('')
+/** 受控携带：把草稿作为源码视图初值（仅在完整性校验通过时设置）。 */
+const carriedDraft = ref<string | null>(null)
 const markdownEditor = computed(() =>
   props.tab.viewMode === 'source' ? markdownSourceEditor.value : milkdownMarkdownEditor.value
 )
@@ -179,16 +195,59 @@ onMounted(() => {
 })
 
 function setMode(mode: NoteViewMode): void {
+  if (mode === props.tab.viewMode) return
   // Flush while Milkdown is still mounted and viewMode is still `visual`.
   // Switching first lets the source editor mount with the stale session,
   // or applyReadonly discards an uncommitted Edit draft.
   if (props.tab.viewMode === 'visual' && mode !== 'visual') {
     milkdownMarkdownEditor.value?.flush?.()
+    const visual = milkdownMarkdownEditor.value
+    const decision = decideViewSwitch({
+      // 是否受阻以 store 里的状态为准（编辑器通过事件上报，flush() 内已同步）；
+      // 草稿文本只能问编辑器要，且默认不可信。
+      // store 标记为准；编辑器自己再报一次兜底（事件万一丢了也不会误切）
+      hasUnsavedDraft: draftBlocked.value || (visual?.hasUnsavedDraft?.() ?? false),
+      draft: visual?.exportDraft?.() ?? null,
+      storeSource: session.value?.content ?? null
+    })
+    if (decision.kind === 'blocked') {
+      // 危险切换：切过去就会销毁编辑器、丢掉用户刚写的内容 —— 不切。
+      switchBlockedReason.value = decision.reason
+      workspace.status = `未切换视图：${decision.reason}`
+      return
+    }
+    switchBlockedReason.value = ''
+    if (decision.kind === 'switch-with-draft') carriedDraft.value = decision.carriedDraft
   }
+  // 回到可视化视图后，携带的草稿不再适用（下次要带会重新校验）
+  if (mode !== 'source') carriedDraft.value = null
   editor.setNoteViewMode(props.tab.id, mode)
 }
 
+/** 复制当前修改：用户最直接的「把刚写的东西拿出来」通道。 */
+async function copyDraft(): Promise<void> {
+  const draft = milkdownMarkdownEditor.value?.exportDraft?.() ?? null
+  if (!draft) {
+    workspace.status = '拿不到当前修改（编辑器未就绪）。'
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(draft)
+    workspace.status = '当前修改已复制到剪贴板（未经完整性校验，粘贴前请自行核对）。'
+  } catch {
+    workspace.status = '复制失败：剪贴板不可用。'
+  }
+}
+
+/** 编辑器上报「有/没有尚未 emit 的修改」：状态存 store，提示常驻由它驱动。 */
+function handleUnsavedDraftChange(hasDraft: boolean): void {
+  workspace.setDocumentUnsavedDraft(key.value, hasDraft)
+  if (!hasDraft) switchBlockedReason.value = ''
+}
+
 function updateContent(content: string): void {
+  // 源码视图里改动过之后，携带的草稿已经变成「当前内容」，别再当初值
+  if (props.tab.viewMode === 'source') carriedDraft.value = null
   workspace.updateDocumentContent(key.value, content, props.tab.viewMode === 'visual')
 }
 
@@ -557,6 +616,21 @@ function openLink(url: string): void {
       </div>
     </div>
 
+    <div v-if="draftBlocked" class="note-draft-banner" role="alert">
+      <div class="note-draft-banner__text">
+        <strong>当前修改尚未保存</strong>
+        <span>
+          原文件未改动；当前修改仍保留在编辑器中。
+          {{ switchBlockedReason }}
+        </span>
+      </div>
+      <div class="note-draft-banner__actions">
+        <button type="button" @click="copyDraft">复制当前修改</button>
+        <button type="button" title="先复制或处理这些修改，再切换视图" disabled>
+          编辑源码（暂不可用）
+        </button>
+      </div>
+    </div>
     <div class="note-body">
       <div class="note-editor-area">
         <MilkdownMarkdownEditor
@@ -579,6 +653,7 @@ function openLink(url: string): void {
           @open-note="workspace.openNoteByUuid(tab.knowledgeBaseId, $event)"
           @fatal="handleMilkdownFatal"
           @heading-level-change="headingLevel = $event"
+          @unsaved-draft-change="handleUnsavedDraftChange"
         />
         <div v-else-if="tab.viewMode !== 'source'" class="editor-fatal" role="alert">
           <strong>可视化编辑器加载失败</strong>
@@ -592,7 +667,7 @@ function openLink(url: string): void {
           v-else
           ref="markdownSourceEditor"
           class="editor-surface"
-          :content="session.content"
+          :content="carriedDraft ?? session.content"
           :mode="tab.viewMode"
           :read-only="session.document.readOnly"
           :knowledge-base-id="tab.knowledgeBaseId"
@@ -843,6 +918,58 @@ function openLink(url: string): void {
 }
 
 /* 编辑器 + 右侧「本笔记资源」面板：两者各自滚动，互不影响 */
+.note-draft-banner {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--accent) 12%, var(--editor-bg));
+  color: var(--text);
+  font: 12px/1.6 var(--font-sans);
+}
+
+.note-draft-banner__text {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.note-draft-banner__text span {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note-draft-banner__actions {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+
+.note-draft-banner__actions button {
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.note-draft-banner__actions button:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.note-draft-banner__actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .note-body {
   flex: 1;
   min-width: 0;

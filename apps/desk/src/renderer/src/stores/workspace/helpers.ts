@@ -16,6 +16,14 @@ export interface DocumentSession {
   preserveSourceOnSave: boolean
   externalConflict: boolean
   saving: boolean
+  /**
+   * 编辑器里有**尚未 emit 出去**的修改（保存被拦下时会出现）。
+   *
+   * 这类修改只在编辑器内存里，`content` 里没有。它对用户来说是「我刚写的东西」，
+   * 所以必须：① 计入「有未保存的修改」；② 关闭标签/窗口时要提示；
+   * ③ 切换视图不能把编辑器销毁掉。
+   */
+  unsavedDraft: boolean
 }
 
 export interface GitAttention {

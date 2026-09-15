@@ -53,6 +53,13 @@ export type DocumentSyncViewState = unknown
 export interface DocumentSyncHost<ViewState = DocumentSyncViewState> {
   /** 当前编辑器 Markdown；`null` = 编辑器还没 ready（或已销毁）。 */
   readMarkdown(): string | null
+  /**
+   * 「编辑器里有比 store 更新的修改、但没能安全 emit 出去」的状态变化。
+   *
+   * 这类修改**只存在编辑器内存里**：store / 磁盘都拿不到。UI 与关闭守卫必须据此
+   * 提示「有未保存的修改」，切换视图也不能把编辑器销毁掉（否则修改直接消失）。
+   */
+  reportUnsavedDraft?(hasDraft: boolean): void
   /** 当前文档第 `index` 个顶层节点（降级区域的「转义逐行原文」渲染用）。 */
   readTopLevelNode(index: number): LiteralWalkableNode | null
   /** 用投影后的 Markdown 整篇替换文档。 */
@@ -88,6 +95,19 @@ export interface DocumentSyncSession {
   flush(): void
   /** 只对账不 emit；调用方拿它做内部改写（如标题编号）。 */
   reconcile(): string
+  /**
+   * 编辑器里是否存在「尚未 emit 出去」的修改（保存被拦截时会为 true）。
+   *
+   * 只说明「编辑器比 store 新」，**不代表**导出内容一定完整安全。
+   */
+  hasUnsavedDraft(): boolean
+  /**
+   * 导出编辑器当前的 Markdown 草稿（供「复制当前修改」/受控携带到源码视图）。
+   *
+   * **不保证它是完整、安全的源码**：调用方必须先做完整性校验（例如
+   * `findAbsorbedBlocks(storeSource, draft)` 为空）才能携带，否则只能展示/复制。
+   */
+  exportDraft(): string | null
   /**
    * 采纳一次内部改写：调用方必须**已经**把 `source` 替换进文档；
    * 这里读取新 canonical、更新原文、清掉保真判定去重键，并刷新派生视图。
@@ -126,6 +146,8 @@ export function createDocumentSync<ViewState = DocumentSyncViewState>(
 
   let contentSyncQueued = false
   let fidelityScheduled = false
+  /** 编辑器里有比 store 更新的修改、但最近一次对账拒绝 emit。 */
+  let unsavedDraft = false
   /** 已判定过的原文：同一份不再重复判定（否则会拿降级后的结果反污染判定）。 */
   let fidelityCheckedFor: string | null = null
 
@@ -138,6 +160,13 @@ export function createDocumentSync<ViewState = DocumentSyncViewState>(
 
   /** 被「懒升级」重投影过的段落文本：这些块从文本变成容器属于用户预期内的形状变化。 */
   const upgradedParagraphTexts = new Set<string>()
+
+  /** 只在状态真的翻转时上报，避免每次改动都刷 UI。 */
+  function setUnsavedDraft(next: boolean): void {
+    if (unsavedDraft === next) return
+    unsavedDraft = next
+    host.reportUnsavedDraft?.(next)
+  }
 
   function literalRegionOptions(): ReconcileOptions {
     if (degradedRegionIndexes.size === 0) return {}
@@ -261,11 +290,11 @@ export function createDocumentSync<ViewState = DocumentSyncViewState>(
     )
     if (absorbed.length > 0) {
       console.error('[desk] 保存被拦截：检测到原文内容被并入其它块', absorbed)
-      host.reportStatus(
-        `检测到 ${absorbed.length} 处内容会被写坏，已暂停保存；你的文件没有被修改（可切到源码视图检查）`
-      )
+      setUnsavedDraft(true)
+      host.reportStatus('当前修改尚未保存：Desk 无法安全地把这次编辑写回源码，已暂停本次保存')
       return
     }
+    setUnsavedDraft(false)
     if (preserved === host.currentPropContent() || preserved === lastEmitted) return
     lastEmitted = preserved
     host.emitSource(preserved)
@@ -302,6 +331,7 @@ export function createDocumentSync<ViewState = DocumentSyncViewState>(
     try {
       host.replaceDocument(projectRawBlocksForMilkdown(content))
       baselineCanonical = host.readMarkdown() ?? ''
+      setUnsavedDraft(false)
       host.afterDocumentReplaced()
       scheduleFidelityCheck()
       host.restoreViewState(viewState)
@@ -339,6 +369,15 @@ export function createDocumentSync<ViewState = DocumentSyncViewState>(
       return reconcileMarkdownSource(source, baselineCanonical, markdown, literalRegionOptions())
     },
 
+    hasUnsavedDraft(): boolean {
+      return unsavedDraft
+    },
+
+    exportDraft(): string | null {
+      if (disposed) return null
+      return host.readMarkdown()
+    },
+
     adoptSource(next: string): void {
       if (disposed) return
       source = next
@@ -360,6 +399,7 @@ export function createDocumentSync<ViewState = DocumentSyncViewState>(
 
     dispose(): void {
       disposed = true
+      setUnsavedDraft(false)
       invalidatePending()
     }
   }

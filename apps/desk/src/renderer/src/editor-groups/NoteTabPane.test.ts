@@ -29,6 +29,7 @@ const tab: NoteEditorTab = {
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 function setup(readOnly = false) {
   const workspace = useWorkspaceStore()
+  const editor = useEditorStore()
   workspace.documents['kb-a:note-a'] = {
     document: {
       knowledgeBaseId: 'kb-a',
@@ -48,15 +49,17 @@ function setup(readOnly = false) {
     dirty: false,
     saving: false,
     externalConflict: false,
-    preserveSourceOnSave: false
+    preserveSourceOnSave: false,
+    unsavedDraft: false
   }
   const rename = vi.spyOn(workspace, 'renameNote').mockResolvedValue()
+  const setNoteViewMode = vi.spyOn(editor, 'setNoteViewMode')
   const wrapper = shallowMount(NoteTabPane, {
     attachTo: document.body,
     props: { tab: { ...tab }, groupId: 'group-a', active: true },
     global: { renderStubDefaultSlot: true }
   })
-  return { wrapper, workspace, rename, editor: useEditorStore() }
+  return { wrapper, workspace, rename, setNoteViewMode, editor }
 }
 
 beforeEach(() => setActivePinia(createPinia()))
@@ -175,5 +178,52 @@ describe('note header', () => {
     const { wrapper } = setup(true)
     expect(wrapper.getComponent(FormatOverflowBar).props('disabled')).toBe(true)
     wrapper.unmount()
+  })
+})
+
+describe('保存被拦下时的提示与切换（A+B）', () => {
+  it('有未保存修改时提示常驻：说清「原文件未改动 / 修改仍在编辑器里」', async () => {
+    const { wrapper, workspace } = setup()
+    workspace.documents['kb-a:note-a']!.unsavedDraft = true
+    workspace.documents['kb-a:note-a']!.dirty = true
+    await flushPromises()
+
+    const banner = wrapper.get('.note-draft-banner')
+    expect(banner.text()).toContain('当前修改尚未保存')
+    expect(banner.text()).toContain('原文件未改动')
+    expect(banner.text()).toContain('当前修改仍保留在编辑器中')
+    // 不提供「直接切过去」的入口，避免把用户推向丢修改的那一步
+    expect(banner.get('button:disabled').text()).toContain('编辑源码')
+    expect(banner.get('button:not(:disabled)').text()).toContain('复制当前修改')
+  })
+
+  it('草稿解决后提示自动消失', async () => {
+    const { wrapper, workspace } = setup()
+    workspace.documents['kb-a:note-a']!.unsavedDraft = true
+    await flushPromises()
+    expect(wrapper.find('.note-draft-banner').exists()).toBe(true)
+
+    workspace.documents['kb-a:note-a']!.unsavedDraft = false
+    await flushPromises()
+    expect(wrapper.find('.note-draft-banner').exists()).toBe(false)
+  })
+
+  it('没有未保存修改时正常切换视图', async () => {
+    const { wrapper, setNoteViewMode } = setup()
+    await wrapper.get('button[aria-label="源码视图"]').trigger('click')
+    expect(setNoteViewMode).toHaveBeenCalledWith('tab-a', 'source')
+    expect(wrapper.find('.note-draft-banner').exists()).toBe(false)
+  })
+
+  it('受阻后切视图：拒绝切换（不能销毁编辑器丢掉修改），并说明原因', async () => {
+    const { wrapper, setNoteViewMode, workspace } = setup()
+    workspace.documents['kb-a:note-a']!.unsavedDraft = true
+    await flushPromises()
+
+    await wrapper.get('button[aria-label="源码视图"]').trigger('click')
+
+    expect(setNoteViewMode).not.toHaveBeenCalled()
+    expect(wrapper.find('.note-draft-banner').exists()).toBe(true)
+    expect(String(workspace.status)).toContain('未切换视图')
   })
 })

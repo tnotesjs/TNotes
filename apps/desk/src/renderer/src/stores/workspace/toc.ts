@@ -61,6 +61,7 @@ export function createToc(ctx: TocContext) {
       document: mutation.note,
       content: mutation.note.content,
       dirty: false,
+      unsavedDraft: false,
       preserveSourceOnSave: false,
       externalConflict: false,
       saving: false
@@ -130,6 +131,7 @@ export function createToc(ctx: TocContext) {
         document: mutation.note,
         content,
         dirty,
+        unsavedDraft: current.unsavedDraft,
         preserveSourceOnSave: dirty && current.preserveSourceOnSave,
         externalConflict: false,
         saving: false
@@ -220,6 +222,7 @@ export function createToc(ctx: TocContext) {
       document: mutation.note,
       content: mutation.note.content,
       dirty: false,
+      unsavedDraft: false,
       preserveSourceOnSave: false,
       externalConflict: false,
       saving: false

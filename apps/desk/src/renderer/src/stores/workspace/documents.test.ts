@@ -23,6 +23,7 @@ function makeSession(overrides: Partial<DocumentSession> = {}): DocumentSession 
     preserveSourceOnSave: false,
     externalConflict: false,
     saving: false,
+    unsavedDraft: false,
     ...overrides
   } as unknown as DocumentSession
 }
@@ -130,5 +131,41 @@ describe('恢复快照的 path 记录', () => {
 
     expect(pendingRecoveries.value).toHaveLength(0)
     expect(recoveryDelete).toHaveBeenCalledOnce()
+  })
+})
+
+describe('未 emit 的草稿状态', () => {
+  it('置位时把文档标成「有未保存修改」，关闭标签/窗口就会提示', () => {
+    const { ctx, documents, editor } = makeContext()
+    const store = createDocuments(ctx)
+
+    store.setDocumentUnsavedDraft('kb:note-1', true)
+
+    expect(documents.value['kb:note-1']?.unsavedDraft).toBe(true)
+    // dirty 是关闭守卫（ClosingResource.dirty）看的标志：必须是 true
+    expect(documents.value['kb:note-1']?.dirty).toBe(true)
+    expect(editor.setNoteDirty).toHaveBeenLastCalledWith('kb', 'note-1', true)
+  })
+
+  it('标记清除后，dirty 回到「内容 vs 磁盘」的真实状态', () => {
+    const { ctx, documents } = makeContext()
+    const store = createDocuments(ctx)
+    store.setDocumentUnsavedDraft('kb:note-1', true)
+
+    store.setDocumentUnsavedDraft('kb:note-1', false)
+
+    expect(documents.value['kb:note-1']?.unsavedDraft).toBe(false)
+    // 内容仍等于磁盘内容 → 不再算未保存
+    expect(documents.value['kb:note-1']?.dirty).toBe(false)
+  })
+
+  it('丢弃修改时一并清掉草稿标记', async () => {
+    const { ctx, documents } = makeContext(makeSession({ unsavedDraft: true, dirty: true }))
+    const store = createDocuments(ctx)
+
+    await store.discardDocumentChanges('kb:note-1')
+
+    expect(documents.value['kb:note-1']?.unsavedDraft).toBe(false)
+    expect(documents.value['kb:note-1']?.dirty).toBe(false)
   })
 })

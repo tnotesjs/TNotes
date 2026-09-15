@@ -33,6 +33,8 @@ interface FakeHost {
   replacements: string[]
   emitted: string[]
   status: string[]
+  /** reportUnsavedDraft 的上报序列。 */
+  draftStates: boolean[]
   /** 取走已排队的空闲回调（测试自己控制何时执行）。 */
   takeIdle(): Array<() => void>
   /** 跑掉已排队的空闲回调；返回跑掉的数量。 */
@@ -51,6 +53,7 @@ function createFakeHost(initialDocument: string, options: FakeHostOptions = {}):
   const replacements: string[] = []
   const emitted: string[] = []
   const status: string[] = []
+  const draftStates: boolean[] = []
 
   const host: DocumentSyncHost<Snapshot> = {
     readMarkdown: () => (ready ? document : null),
@@ -67,6 +70,7 @@ function createFakeHost(initialDocument: string, options: FakeHostOptions = {}):
     afterDocumentReplaced: () => {},
     emitSource: (source) => emitted.push(source),
     reportStatus: (message) => status.push(message),
+    reportUnsavedDraft: (hasDraft) => draftStates.push(hasDraft),
     currentPropContent: () => propContent,
     flushPendingDrafts: () => {},
     scheduleIdle: (run) => idle.push(run)
@@ -87,6 +91,7 @@ function createFakeHost(initialDocument: string, options: FakeHostOptions = {}):
     replacements,
     emitted,
     status,
+    draftStates,
     takeIdle: () => idle.splice(0),
     runIdle: () => {
       const pending = idle.splice(0)
@@ -455,8 +460,10 @@ describe('documentSync 会话', () => {
       session.flush()
 
       expect(fake.emitted).toEqual([])
+      expect(absorbed.length).toBeGreaterThan(0)
+      // 文案：说清「没保存」与「修改还在编辑器里」，不再引导用户切源码视图（那一步会丢修改）
       expect(fake.status).toEqual([
-        `检测到 ${absorbed.length} 处内容会被写坏，已暂停保存；你的文件没有被修改（可切到源码视图检查）`
+        '当前修改尚未保存：Desk 无法安全地把这次编辑写回源码，已暂停本次保存'
       ])
     })
 
@@ -472,5 +479,54 @@ describe('documentSync 会话', () => {
       expect(fake.status).toEqual([])
       expect(fake.emitted).toHaveLength(1)
     })
+  })
+})
+
+describe('未 emit 的草稿（保存被拦下）', () => {
+  const SOURCE = ABSORBING_SOURCE
+  const BLOCKED = ABSORBED_CANONICAL
+
+  /** 模拟「第一次修改就被拦下」：用户改完，对账认为写回去会吞掉原文。 */
+  function startBlocked(): {
+    fake: FakeHost
+    session: ReturnType<typeof createDocumentSync<Snapshot>>
+  } {
+    const { fake, session } = startSession(SOURCE, { propContent: SOURCE })
+    fake.setDocument(BLOCKED)
+    session.flush()
+    return { fake, session }
+  }
+
+  it('首次修改即受阻：置草稿标记、提示「当前修改尚未保存」，且不 emit', () => {
+    const { fake, session } = startBlocked()
+    expect(fake.emitted).toEqual([])
+    expect(session.hasUnsavedDraft()).toBe(true)
+    expect(fake.draftStates).toEqual([true])
+    expect(fake.status.at(-1)).toContain('当前修改尚未保存')
+    // 不再把用户往「切到源码视图」那条丢数据的路引
+    expect(fake.status.at(-1)).not.toContain('源码视图')
+  })
+
+  it('exportDraft 拿得到编辑器当前内容（但不做任何可信承诺）', () => {
+    const { fake, session } = startBlocked()
+    expect(session.exportDraft()).toBe(BLOCKED)
+    fake.setDocument(`${BLOCKED}\n新写的一行\n`)
+    expect(session.exportDraft()).toBe(`${BLOCKED}\n新写的一行\n`)
+  })
+
+  it('问题解决后草稿标记清除（内容回到与 store 一致时无需再写盘）', () => {
+    const { fake, session } = startBlocked()
+    fake.setDocument(SOURCE)
+    session.flush()
+    expect(session.hasUnsavedDraft()).toBe(false)
+    expect(fake.draftStates).toEqual([true, false])
+    expect(fake.emitted).toEqual([])
+  })
+
+  it('整篇替换（切换笔记 / 外部改动）会清掉草稿标记', async () => {
+    const { fake, session } = startBlocked()
+    await session.syncExternal('另一篇\n')
+    expect(session.hasUnsavedDraft()).toBe(false)
+    expect(fake.draftStates.at(-1)).toBe(false)
   })
 })

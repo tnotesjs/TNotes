@@ -77,6 +77,7 @@ export function createDocuments(ctx: DocumentsContext) {
       dirty: false,
       saving: false,
       externalConflict: false,
+      unsavedDraft: false,
       preserveSourceOnSave: false
     })
     ctx.editor.setNoteDirty(document.knowledgeBaseId, document.uuid, false)
@@ -138,6 +139,7 @@ export function createDocuments(ctx: DocumentsContext) {
       document: next,
       content: next.content,
       dirty: false,
+      unsavedDraft: false,
       preserveSourceOnSave: false,
       externalConflict: false,
       saving: false
@@ -191,6 +193,23 @@ export function createDocuments(ctx: DocumentsContext) {
     }
   }
 
+  /**
+   * 编辑器报告「有尚未 emit 的修改」（保存被拦下）。
+   *
+   * 这类修改 `content` 里没有，但用户认为「我刚写的东西」：必须
+   * ① 让文档显示为有未保存修改（关闭标签/窗口会提示）；
+   * ② 不触发 autosave（写盘路径本来就被拦着，硬存会丢内容）。
+   */
+  function setDocumentUnsavedDraft(key: string, hasDraft: boolean): void {
+    const session = ctx.documents.value[key]
+    if (!session) return
+    if (session.unsavedDraft === hasDraft) return
+    // dirty 用与内容同步同一套口径重算：草稿只是额外的一个「未落盘」来源
+    const dirty = session.content !== session.document.content || hasDraft
+    ctx.setDocumentSession(key, { ...session, unsavedDraft: hasDraft, dirty })
+    ctx.editor.setNoteDirty(session.document.knowledgeBaseId, session.document.uuid, dirty)
+  }
+
   function updateEditorContent(content: string): void {
     if (ctx.activeDocumentKey.value) updateDocumentContent(ctx.activeDocumentKey.value, content)
   }
@@ -231,6 +250,7 @@ export function createDocuments(ctx: DocumentsContext) {
           document: mutation.note,
           content: current.content,
           dirty: stillDirty,
+          unsavedDraft: current.unsavedDraft,
           preserveSourceOnSave: stillDirty && current.preserveSourceOnSave,
           externalConflict: false,
           saving: false
@@ -241,6 +261,7 @@ export function createDocuments(ctx: DocumentsContext) {
           document: mutation.note,
           content: mutation.note.content,
           dirty: false,
+          unsavedDraft: false,
           preserveSourceOnSave: false,
           externalConflict: false,
           saving: false
@@ -376,6 +397,7 @@ export function createDocuments(ctx: DocumentsContext) {
       document: next,
       content: next.content,
       dirty: false,
+      unsavedDraft: false,
       preserveSourceOnSave: false,
       externalConflict: false,
       saving: false
@@ -391,6 +413,7 @@ export function createDocuments(ctx: DocumentsContext) {
       ...loaded,
       content: record.content,
       dirty: record.content !== loaded.document.content,
+      unsavedDraft: false,
       preserveSourceOnSave: record.content !== loaded.document.content,
       externalConflict: false
     })
@@ -446,6 +469,8 @@ export function createDocuments(ctx: DocumentsContext) {
       document: next,
       content: session.content,
       dirty: session.content !== next.content,
+      // 磁盘被外部改动：编辑器里未 emit 的草稿还在，标记不能丢
+      unsavedDraft: session.unsavedDraft,
       preserveSourceOnSave: session.content !== next.content && session.preserveSourceOnSave,
       externalConflict: false,
       saving: false
@@ -463,6 +488,7 @@ export function createDocuments(ctx: DocumentsContext) {
     ensureDocument,
     updateDocumentContent,
     updateEditorContent,
+    setDocumentUnsavedDraft,
     saveDocument,
     pauseDocumentAutosave,
     discardDocumentChanges,
