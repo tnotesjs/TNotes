@@ -17,7 +17,7 @@ describe('保存被拦下时能否切到源码视图', () => {
       hasUnsavedDraft: true,
       draft: EDITED,
       storeSource: SPECIAL,
-      isAbsorbed: () => true
+      isComplete: () => false
     })
     expect(decision.kind).toBe('blocked')
   })
@@ -27,7 +27,7 @@ describe('保存被拦下时能否切到源码视图', () => {
       hasUnsavedDraft: true,
       draft: EDITED,
       storeSource: SPECIAL,
-      isAbsorbed: () => false
+      isComplete: () => true
     })
     expect(decision).toEqual({ kind: 'switch-with-draft', carriedDraft: EDITED })
     if (decision.kind === 'switch-with-draft') {
@@ -62,10 +62,41 @@ describe('保存被拦下时能否切到源码视图', () => {
       hasUnsavedDraft: true,
       draft: EDITED,
       storeSource: SPECIAL,
-      isAbsorbed: () => {
+      isComplete: () => {
         throw new Error('boom')
       }
     })
     expect(decision.kind).toBe('blocked')
+  })
+})
+
+describe('完整性证明：不能只看「有没有吞并」（P1-3 回归）', () => {
+  const SOURCE = '# 标题\n\n第一段\n\n第二段\n\n第三段\n'
+
+  it('原文整段消失（没有吞并）也必须拒绝携带', () => {
+    // 「第二段」整块不见了：findAbsorbedBlocks 明确不看这种丢失
+    const draft = '# 标题\n\n第一段\n\n第三段\n'
+    const decision = decideViewSwitch({ hasUnsavedDraft: true, draft, storeSource: SOURCE })
+    expect(decision.kind).toBe('blocked')
+  })
+
+  it('凭空多出一块也拒绝携带', () => {
+    const draft = `${SOURCE}\n新来的一段\n`
+    const decision = decideViewSwitch({ hasUnsavedDraft: true, draft, storeSource: SOURCE })
+    expect(decision.kind).toBe('blocked')
+  })
+
+  it('结构与原文一一对应时才允许携带', () => {
+    const draft = '# 标题\n\n第一段（改过）\n\n第二段\n\n第三段\n'
+    const decision = decideViewSwitch({ hasUnsavedDraft: true, draft, storeSource: SOURCE })
+    expect(decision).toEqual({ kind: 'switch-with-draft', carriedDraft: draft })
+  })
+
+  it('允许的规范化（列表记号统一）不算不完整', () => {
+    const source = '* 一\n* 二\n'
+    const draft = '- 一\n- 二\n'
+    expect(decideViewSwitch({ hasUnsavedDraft: true, draft, storeSource: source }).kind).toBe(
+      'switch-with-draft'
+    )
   })
 })

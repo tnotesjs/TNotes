@@ -148,7 +148,12 @@ export function createDocuments(ctx: DocumentsContext) {
     return session
   }
 
-  function updateDocumentContent(key: string, content: string, preserveSource = false): void {
+  function updateDocumentContent(
+    key: string,
+    content: string,
+    preserveSource = false,
+    options: { clearUnsavedDraft?: boolean } = {}
+  ): void {
     const session = ctx.documents.value[key]
     if (!session || session.document.readOnly) return
     const dirty = content !== session.document.content
@@ -161,6 +166,9 @@ export function createDocuments(ctx: DocumentsContext) {
       ...session,
       content,
       dirty,
+      // 只有「草稿已经落进 content」的调用方才允许清标记；普通内容同步不动它，
+      // 否则编辑器里那份还没写回的草稿会被误判成「已保存」。
+      unsavedDraft: options.clearUnsavedDraft ? false : session.unsavedDraft,
       preserveSourceOnSave,
       // 外部冲突标记要保留到用户显式选择「载入磁盘 / 保留编辑」为止：
       // 之前任何一次击键都会清掉它，冲突横幅消失，用户失去选择权
@@ -208,6 +216,23 @@ export function createDocuments(ctx: DocumentsContext) {
     const dirty = session.content !== session.document.content || hasDraft
     ctx.setDocumentSession(key, { ...session, unsavedDraft: hasDraft, dirty })
     ctx.editor.setNoteDirty(session.document.knowledgeBaseId, session.document.uuid, dirty)
+    if (hasDraft) {
+      // 排队中的自动保存会写「旧 content」并把状态清干净 —— 直接取消它
+      const pending = ctx.autosaveTimers.get(key)
+      if (pending) clearTimeout(pending)
+      ctx.autosaveTimers.delete(key)
+    }
+  }
+
+  /**
+   * 采纳一份「已通过完整性校验」的草稿，把它变成文档当前内容。
+   *
+   * 用途：保存被拦下、但复验证明这次转换完整时，允许把草稿带进源码视图继续编辑。
+   * 必须落到会话里（而不是组件局部变量），否则切回可视化时会按旧 content 重新加载，
+   * 用户刚写的内容就凭空消失了。
+   */
+  function adoptCarriedDraft(key: string, content: string): void {
+    updateDocumentContent(key, content, true, { clearUnsavedDraft: true })
   }
 
   function updateEditorContent(content: string): void {
@@ -224,6 +249,15 @@ export function createDocuments(ctx: DocumentsContext) {
   ): Promise<void> {
     const session = ctx.documents.value[key]
     if (!session || !session.dirty || session.document.readOnly || session.saving) return
+    // 编辑器里还有没写回 store 的修改：此刻 content 是**旧内容**。写下去会把用户的
+    // 新修改连标记一起抹掉（关闭流程里就是「保存的是旧内容 → 允许关闭」）。
+    // 拒绝这次保存并保持 dirty，让关闭流程停在「仍有未保存的更改」。
+    if (session.unsavedDraft) {
+      if (!options.silent) {
+        ctx.status.value = '当前修改尚未保存：编辑器里还有未写回的修改，已取消这次保存'
+      }
+      return
+    }
     const contentToSave = session.content
     ctx.setDocumentSession(key, { ...session, saving: true })
     const recoveryTimer = ctx.recoveryTimers.get(key)
@@ -243,14 +277,18 @@ export function createDocuments(ctx: DocumentsContext) {
         })
       )
       const current = ctx.documents.value[key]
-      const changedWhileSaving = Boolean(current && current.content !== contentToSave)
+      // 保存期间又出现了未写回的草稿：也算「变了」，不能按保存成功清状态
+      const draftAppeared = Boolean(current?.unsavedDraft)
+      const changedWhileSaving = Boolean(
+        current && (current.content !== contentToSave || draftAppeared)
+      )
       if (changedWhileSaving && current) {
-        const stillDirty = current.content !== mutation.note.content
+        const stillDirty = current.content !== mutation.note.content || draftAppeared
         ctx.setDocumentSession(key, {
           document: mutation.note,
           content: current.content,
           dirty: stillDirty,
-          unsavedDraft: current.unsavedDraft,
+          unsavedDraft: draftAppeared,
           preserveSourceOnSave: stillDirty && current.preserveSourceOnSave,
           externalConflict: false,
           saving: false
@@ -489,6 +527,7 @@ export function createDocuments(ctx: DocumentsContext) {
     updateDocumentContent,
     updateEditorContent,
     setDocumentUnsavedDraft,
+    adoptCarriedDraft,
     saveDocument,
     pauseDocumentAutosave,
     discardDocumentChanges,

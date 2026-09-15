@@ -29,8 +29,10 @@ interface MarkdownEditorHandle {
   insertTextAt(text: string, position?: number): void
   /** 可视化编辑器：是否存在尚未 emit 的修改（保存被拦下时为 true）。 */
   hasUnsavedDraft?(): boolean
-  /** 可视化编辑器：导出当前 Markdown 草稿（**未经完整性校验**）。 */
+  /** 可视化编辑器：导出当前 Markdown 草稿（**未经完整性校验**，用于复制）。 */
   exportDraft?(): string | null
+  /** 可视化编辑器：对账后的草稿（未编辑块逐字取原文），携带切换用它。 */
+  reconcileDraft?(): string | null
   /** 可视化编辑器：定位到第 N 个「以源码显示」的块。 */
   revealDisplayLimited?(index: number): boolean
   wrapSelection(prefix: string, suffix: string, placeholder?: string): void
@@ -78,8 +80,8 @@ const milkdownMountKey = ref(0)
 const draftBlocked = computed(() => Boolean(session.value?.unsavedDraft))
 /** 上一次「危险切换被拒」的原因（只在拒绝时出现，不是常驻提示）。 */
 const switchBlockedReason = ref('')
-/** 受控携带：把草稿作为源码视图初值（仅在完整性校验通过时设置）。 */
-const carriedDraft = ref<string | null>(null)
+/* 携带的草稿不放组件局部变量：校验通过后进入文档会话（见 setMode），
+   否则「切到源码不输入就切回来」会按旧 content 重新加载，用户刚写的内容就没了。 */
 /** 「以源码显示」的块清单（可视化排版不了的块）。 */
 const displayLimited = ref<DisplayLimitedItem[]>([])
 const displayLimitedOpen = ref(false)
@@ -212,10 +214,10 @@ function setMode(mode: NoteViewMode): void {
     const visual = milkdownMarkdownEditor.value
     const decision = decideViewSwitch({
       // 是否受阻以 store 里的状态为准（编辑器通过事件上报，flush() 内已同步）；
-      // 草稿文本只能问编辑器要，且默认不可信。
-      // store 标记为准；编辑器自己再报一次兜底（事件万一丢了也不会误切）
+      // 编辑器自己再报一次兜底（事件万一丢了也不会误切）
       hasUnsavedDraft: draftBlocked.value || (visual?.hasUnsavedDraft?.() ?? false),
-      draft: visual?.exportDraft?.() ?? null,
+      // 携带「保留原文那份对账结果」，不是裸 canonical（后者会顺手规范化未编辑块）
+      draft: visual?.reconcileDraft?.() ?? null,
       storeSource: session.value?.content ?? null
     })
     if (decision.kind === 'blocked') {
@@ -225,10 +227,11 @@ function setMode(mode: NoteViewMode): void {
       return
     }
     switchBlockedReason.value = ''
-    if (decision.kind === 'switch-with-draft') carriedDraft.value = decision.carriedDraft
+    if (decision.kind === 'switch-with-draft') {
+      // 草稿进**文档会话**（不依赖用户再输入一次）：源码视图读它，切回可视化也读它
+      workspace.adoptCarriedDraft(key.value, decision.carriedDraft)
+    }
   }
-  // 回到可视化视图后，携带的草稿不再适用（下次要带会重新校验）
-  if (mode !== 'source') carriedDraft.value = null
   editor.setNoteViewMode(props.tab.id, mode)
 }
 
@@ -273,8 +276,6 @@ function handleUnsavedDraftChange(hasDraft: boolean): void {
 }
 
 function updateContent(content: string): void {
-  // 源码视图里改动过之后，携带的草稿已经变成「当前内容」，别再当初值
-  if (props.tab.viewMode === 'source') carriedDraft.value = null
   workspace.updateDocumentContent(key.value, content, props.tab.viewMode === 'visual')
 }
 
@@ -731,7 +732,7 @@ function openLink(url: string): void {
           v-else
           ref="markdownSourceEditor"
           class="editor-surface"
-          :content="carriedDraft ?? session.content"
+          :content="session.content"
           :mode="tab.viewMode"
           :read-only="session.document.readOnly"
           :knowledge-base-id="tab.knowledgeBaseId"

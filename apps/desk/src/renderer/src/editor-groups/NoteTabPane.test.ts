@@ -23,6 +23,7 @@ const MilkdownStub = defineComponent({
       flush: () => undefined,
       hasUnsavedDraft: () => editorStubState.hasUnsavedDraft,
       exportDraft: () => editorStubState.draft,
+      reconcileDraft: () => editorStubState.draft,
       revealDisplayLimited: () => editorStubState.revealResult
     })
   }
@@ -258,15 +259,43 @@ describe('保存被拦下时的提示与切换（A+B）', () => {
     expect(String(workspace.status)).toContain('未切换视图')
   })
 
-  it('受阻但校验通过：允许切换（草稿作为源码视图初值带过去）', async () => {
-    const { wrapper, setNoteViewMode } = setup()
+  it('受阻但校验通过：草稿进入文档会话（切回可视化也不丢）', async () => {
+    const { wrapper, setNoteViewMode, workspace } = setup()
+    // 原文 3 块 → 草稿 3 块（只改了一段）：块数一致才算证明通过
+    const source = '# 标题\n\n第一段\n\n第二段\n'
+    workspace.documents['kb-a:note-a']!.content = source
     editorStubState.hasUnsavedDraft = true
-    editorStubState.draft = '# 特殊原文\n\n我刚写的一段。\n'
+    editorStubState.draft = '# 标题\n\n第一段（改过）\n\n第二段\n'
 
     await wrapper.get('button[aria-label="源码视图"]').trigger('click')
     await flushPromises()
 
     expect(setNoteViewMode).toHaveBeenCalledWith('tab-a', 'source')
+    // 关键：草稿落在会话里，而不是组件局部变量 —— 否则切回来会按旧 content 重新加载
+    expect(workspace.documents['kb-a:note-a']!.content).toContain('第一段（改过）')
+    expect(workspace.documents['kb-a:note-a']!.dirty).toBe(true)
+    expect(workspace.documents['kb-a:note-a']!.unsavedDraft).toBe(false)
+
+    // 切回可视化：读到的仍是带修改的内容
+    setNoteViewMode.mockClear()
+    await wrapper.get('button[aria-label="可视化编辑"]').trigger('click')
+    await flushPromises()
+    expect(workspace.documents['kb-a:note-a']!.content).toContain('第一段（改过）')
+  })
+
+  it('草稿整段消失（块数对不上）时拒绝携带（P1-3 回归）', async () => {
+    const { wrapper, setNoteViewMode, workspace } = setup()
+    workspace.documents['kb-a:note-a']!.content = '# 标题\n\n第一段\n\n第二段\n'
+    workspace.documents['kb-a:note-a']!.unsavedDraft = true
+    editorStubState.hasUnsavedDraft = true
+    // 「第二段」整块没了
+    editorStubState.draft = '# 标题\n\n第一段\n'
+
+    await wrapper.get('button[aria-label="源码视图"]').trigger('click')
+    await flushPromises()
+
+    expect(setNoteViewMode).not.toHaveBeenCalled()
+    expect(wrapper.find('.note-draft-banner').exists()).toBe(true)
   })
 })
 

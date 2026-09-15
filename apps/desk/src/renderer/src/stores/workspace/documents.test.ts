@@ -56,12 +56,14 @@ function makeContext(session: DocumentSession = makeSession()) {
       documents.value = { ...documents.value, [key]: next }
     },
     pendingRecoveries,
+    applyDetail: vi.fn(),
     deleteRecovery: vi.fn()
   } as unknown as DocumentsContext
   return {
     ctx,
     documents,
     error,
+    status,
     pendingRecoveries,
     recoveryDelete: deleteRecoveryApi,
     editor: ctx.editor as { setNoteDirty: ReturnType<typeof vi.fn> }
@@ -167,5 +169,83 @@ describe('未 emit 的草稿状态', () => {
 
     expect(documents.value['kb:note-1']?.unsavedDraft).toBe(false)
     expect(documents.value['kb:note-1']?.dirty).toBe(false)
+  })
+})
+
+describe('保存入口与受阻草稿（P1-1 回归）', () => {
+  it('有未 emit 草稿时拒绝写盘：不保存旧内容，保持 dirty', async () => {
+    const session = makeSession({ content: '# 旧内容\n', dirty: true, unsavedDraft: true })
+    const { ctx, documents, status } = makeContext(session)
+    const notesSave = vi.fn()
+    Object.defineProperty(window, 'desk', {
+      configurable: true,
+      value: {
+        recovery: { delete: vi.fn(async () => ({ ok: true, value: undefined })) },
+        notes: {
+          read: vi.fn(async () => ({ ok: true, value: { content: '# 磁盘内容\n' } })),
+          save: notesSave
+        }
+      }
+    })
+    const store = createDocuments(ctx)
+
+    await store.saveDocument('kb:note-1')
+
+    // 一个字节都不该写出去：此刻 content 是旧的，写下去等于「保存旧内容」
+    expect(notesSave).not.toHaveBeenCalled()
+    expect(documents.value['kb:note-1']?.unsavedDraft).toBe(true)
+    expect(documents.value['kb:note-1']?.dirty).toBe(true)
+    expect(String(status.value)).toContain('编辑器里还有未写回的修改')
+  })
+
+  it('保存期间新产生草稿：不清标记，仍算有未保存内容', async () => {
+    const session = makeSession({ content: '# 新内容\n', dirty: true })
+    const { ctx, documents } = makeContext(session)
+    const notesSave = vi.fn(async () => {
+      // 保存飞行途中，编辑器报告出现了未写回的草稿
+      documents.value = {
+        ...documents.value,
+        'kb:note-1': { ...documents.value['kb:note-1']!, unsavedDraft: true }
+      }
+      return {
+        ok: true as const,
+        value: {
+          note: { ...session.document, content: '# 新内容\n', revision: 'r2' },
+          knowledgeBase: {}
+        }
+      }
+    })
+    Object.defineProperty(window, 'desk', {
+      configurable: true,
+      value: {
+        recovery: { delete: vi.fn(async () => ({ ok: true, value: undefined })) },
+        notes: {
+          read: vi.fn(async () => ({ ok: true, value: { content: '# 磁盘内容\n' } })),
+          save: notesSave
+        }
+      }
+    })
+    const store = createDocuments(ctx)
+
+    await store.saveDocument('kb:note-1')
+
+    expect(notesSave).toHaveBeenCalledTimes(1)
+    expect(documents.value['kb:note-1']?.unsavedDraft).toBe(true)
+    expect(documents.value['kb:note-1']?.dirty).toBe(true)
+  })
+
+  it('采纳已校验草稿：内容进会话、草稿标记清掉、算未保存', () => {
+    const session = makeSession({ content: '# 旧内容\n', dirty: true, unsavedDraft: true })
+    const { ctx, documents, editor } = makeContext(session)
+    const store = createDocuments(ctx)
+
+    store.adoptCarriedDraft('kb:note-1', '# 旧内容\n\n新写的一段\n')
+
+    expect(documents.value['kb:note-1']?.content).toBe('# 旧内容\n\n新写的一段\n')
+    // 内容已经不在编辑器里藏着了：dirty 仍为 true（未写盘），但草稿标记要清
+    expect(documents.value['kb:note-1']?.unsavedDraft).toBe(false)
+    expect(documents.value['kb:note-1']?.dirty).toBe(true)
+    expect(documents.value['kb:note-1']?.preserveSourceOnSave).toBe(true)
+    expect(editor.setNoteDirty).toHaveBeenLastCalledWith('kb', 'note-1', true)
   })
 })
