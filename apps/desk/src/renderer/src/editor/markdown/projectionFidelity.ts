@@ -472,6 +472,72 @@ export function findAbsorbedBlocks(
   return findings
 }
 
+/** 代码块之类的 kind → 人话（状态栏与日志共用）。 */
+const KIND_LABELS: Record<string, string> = {
+  paragraph: '段落',
+  heading: '标题',
+  list: '列表',
+  table: '表格',
+  blockquote: '引用',
+  'code-block': '代码块',
+  'raw-container': '容器',
+  'raw-component': '组件',
+  'raw-diagram': '图表',
+  html: 'HTML',
+  frontmatter: 'frontmatter'
+}
+
+function kindLabel(kind: string): string {
+  return KIND_LABELS[kind] ?? kind
+}
+
+function snippet(text: string, max = 28): string {
+  const flat = text.replace(/\s+/g, ' ').trim()
+  return flat.length > max ? `${flat.slice(0, max)}…` : flat
+}
+
+/** `offset` 在 `source` 里的 1-based 行号。 */
+function lineAt(source: string, offset: number): number {
+  let line = 1
+  for (let index = 0; index < offset && index < source.length; index += 1) {
+    if (source[index] === '\n') line += 1
+  }
+  return line
+}
+
+/**
+ * 把可行动的保真问题说成「人能直接找到位置」的短句。
+ *
+ * - `lost` / `absorbed`：定位到**原文行号**（块有精确 offset）；
+ * - `extra`：渲染侧多出来的块在原文里没有对应物，只能给内容片段。
+ *
+ * 状态栏与控制台都用它，避免「只报个数、用户不知道去哪儿找」。
+ */
+export function describeFidelityProblems(
+  source: string,
+  problems: FidelityBlockResult[]
+): string[] {
+  // 下标与判定保持一致：两者都基于「规范化后的原文」解析
+  const normalized = canonicalizeMarkdown(source)
+  const blocks = parseMarkdownSource(normalized).blocks
+  return problems.map((problem) => {
+    if (problem.reason === 'extra') {
+      return `多出一段「${snippet(problem.source)}」`
+    }
+    const block = blocks[problem.index]
+    const where = block ? `第 ${lineAt(normalized, block.from)} 行` : `第 ${problem.index + 1} 个块`
+    const label = kindLabel(block?.kind ?? problem.kind)
+    const text = snippet(block?.source ?? problem.source)
+    const what =
+      problem.reason === 'absorbed'
+        ? '的内容被并进了别的块'
+        : problem.reason === 'lost'
+          ? '没有被渲染出来'
+          : '结构不一致'
+    return `${where}「${label}」${what}（${text}）`
+  })
+}
+
 /**
  * 「可行动」的不忠实：结构性的那几种（吞并 / 丢失 / 多出）。
  *

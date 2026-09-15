@@ -41,8 +41,10 @@ import {
   actionableProblems,
   classifyProjectionFidelity,
   degradableBlockIndexes,
+  describeFidelityProblems,
   extendDegradationIndexes,
-  findAbsorbedBlocks
+  findAbsorbedBlocks,
+  type FidelityBlockResult
 } from '../editor/markdown/projectionFidelity'
 
 /** 视图快照由宿主定义（选区 + 滚动位置），模块只负责在替换前后原样带回。 */
@@ -192,6 +194,9 @@ export function createDocumentSync<ViewState = DocumentSyncViewState>(
       degradedRegionIndexes = new Set(plan)
       if (plan.length === 0) return
       let remaining = 0
+      // 首轮问题（降级前）与最后一轮问题：文案要能说清「哪儿对不上」
+      let firstRoundProblems: FidelityBlockResult[] = []
+      let lastProblems: FidelityBlockResult[] = []
       for (let round = 0; round < 8; round += 1) {
         synchronizing = true
         try {
@@ -207,19 +212,32 @@ export function createDocumentSync<ViewState = DocumentSyncViewState>(
         // 收敛判据是「没有可行动的结构性问题」：content-changed（行内 <br/> 等规范化）
         // 不该继续驱动降级，否则会一路吃掉无关内容。
         const actionable = actionableProblems(report)
+        if (round === 0) firstRoundProblems = actionable
         if (actionable.length === 0) {
           remaining = 0
           break
         }
         remaining = actionable.length
+        lastProblems = actionable
         const next = extendDegradationIndexes(source, host.readMarkdown() ?? '', plan)
         if (next.length === plan.length) break
         plan = next
       }
+      const details = describeFidelityProblems(
+        source,
+        remaining > 0 ? lastProblems : firstRoundProblems
+      )
+      // 控制台留全量细节：状态栏只放得下前两条，用户要定位时看这里
+      console.warn('[desk] 保真检查发现结构差异', {
+        remaining,
+        degradedBlockIndexes: plan,
+        problems: details,
+        firstRound: describeFidelityProblems(source, firstRoundProblems)
+      })
       host.reportStatus(
         remaining === 0
           ? `有 ${plan.length} 处内容暂时不能安全排版，已按原文作为普通文字显示`
-          : `有内容暂时不能安全排版，已按原文作为普通文字显示（仍有 ${remaining} 处结构差异）`
+          : `有内容暂时不能安全排版，已按原文作为普通文字显示（仍有 ${remaining} 处结构差异${details.length > 0 ? `：${details.slice(0, 2).join('；')}${details.length > 2 ? ` 等 ${details.length} 处` : ''}` : ''}）`
       )
     })
   }

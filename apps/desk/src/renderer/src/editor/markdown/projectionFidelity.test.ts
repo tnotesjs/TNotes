@@ -18,6 +18,7 @@ import {
   actionableProblems,
   canonicalizeMarkdown,
   classifyProjectionFidelity,
+  describeFidelityProblems,
   degradableBlockIndexes,
   extendDegradationIndexes,
   findAbsorbedBlocks
@@ -495,5 +496,43 @@ describe('projectionFidelity · A2：写盘形态由我们决定', () => {
     expect(kinds).not.toContain('raw-container')
     const canonical = await canonicalFromVirtual(projectRawBlocksForMilkdown(written))
     expect(actionableProblems(classifyProjectionFidelity(written, canonical))).toEqual([])
+  })
+})
+
+describe('projectionFidelity · 问题描述', () => {
+  it('lost / absorbed 给出行号与块类型，extra 给内容片段', () => {
+    const source = ['# 标题', '', '第一段', '', '| A | B |', '| - | - |', '| 1 | 2 |', ''].join(
+      '\n'
+    )
+    const sourceBlocks = parseMarkdownSource(source).blocks
+    const descriptions = describeFidelityProblems(source, [
+      {
+        index: 1,
+        kind: 'paragraph',
+        verdict: 'unfaithful',
+        reason: 'lost',
+        source: sourceBlocks[1]!.source
+      },
+      {
+        index: 2,
+        kind: 'table',
+        verdict: 'unfaithful',
+        reason: 'absorbed',
+        againstIndex: 1,
+        source: sourceBlocks[2]!.source
+      },
+      {
+        index: 3,
+        kind: 'paragraph',
+        verdict: 'unfaithful',
+        reason: 'extra',
+        source: '![链接图片](../assets/a.svg)'
+      }
+    ])
+    expect(descriptions[0]).toContain('第 3 行')
+    expect(descriptions[0]).toContain('「段落」没有被渲染出来')
+    expect(descriptions[1]).toContain('第 5 行')
+    expect(descriptions[1]).toContain('「表格」的内容被并进了别的块')
+    expect(descriptions[2]).toContain('多出一段「![链接图片](../assets/a.svg)」')
   })
 })

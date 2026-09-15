@@ -145,13 +145,26 @@ export function selectionForIndependentBlocks(
   return createBlockRangeSelection(doc, from, to)
 }
 
+/**
+ * 图片卡片上**必须保留**的 mark。
+ *
+ * `link` 是语义不是排版：`[![图](src)](url)` 这种「链接图片」的链接就挂在图片节点上，
+ * 早先这里把所有 mark 一起删掉，导致链接被静默丢掉 —— 序列化后源码里的
+ * `[![图](src)](url)` 变成 `![图](src)`，保真检查随即报「多出一段图片」并拒绝保存。
+ */
+const CARD_KEEP_MARKS = new Set(['link'])
+
 /** PM addMark checks the parent paragraph, so images pick up strong/em. */
 export function stripMarksFromCards(state: EditorState): Transaction | null {
   let tr: Transaction | null = null
   state.doc.descendants((node, pos) => {
     if (isIndependentBlock(node) && !isStandaloneImageParagraph(node)) return false
-    if (node.type.name !== 'image' || node.marks.length === 0) return true
-    tr = (tr ?? state.tr).removeMark(pos, pos + node.nodeSize)
+    if (node.type.name !== 'image') return true
+    const removable = node.marks.filter((mark) => !CARD_KEEP_MARKS.has(mark.type.name))
+    if (removable.length === 0) return false
+    for (const mark of removable) {
+      tr = (tr ?? state.tr).removeMark(pos, pos + node.nodeSize, mark)
+    }
     return false
   })
   return tr

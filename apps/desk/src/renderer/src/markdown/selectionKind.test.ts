@@ -216,6 +216,28 @@ describe('Cmd+B on mixed vs card-only selections', () => {
     })
   })
 
+  it('链接图片的链接 mark 不会被当成排版 mark 删掉', async () => {
+    const editor = await createEditor(
+      '[![链接图片](https://example.com/a.svg)](https://example.com/)\n\n正文\n'
+    )
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      // stripMarksFromCards 只在 docChanged 的 appendTransaction 里跑：
+      // 先制造一次改动（用户在正文里输入），再看图片上的 mark 还剩什么。
+      view.dispatch(view.state.tr.insertText('x', view.state.doc.content.size - 1))
+      let imageHasLink = false
+      let imageHasStrong = false
+      view.state.doc.descendants((node) => {
+        if (node.type.name !== 'image') return
+        if (node.marks.some((mark) => mark.type.name === 'link')) imageHasLink = true
+        if (node.marks.some((mark) => mark.type.name === 'strong')) imageHasStrong = true
+      })
+      // 排版 mark 照样清掉，链接必须留着
+      expect(imageHasStrong).toBe(false)
+      expect(imageHasLink).toBe(true)
+    })
+  })
+
   it('does not apply bold when only cards are selected', async () => {
     const editor = await createEditor('![](https://example.com/a.png)\n\n```js\nconst x = 1\n```\n')
     editor.action((ctx) => {
