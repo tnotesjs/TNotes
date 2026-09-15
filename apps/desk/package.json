@@ -4,7 +4,7 @@
   "description": "TNotes Desk — multi knowledge-base desktop client",
   "main": "./out/main/index.js",
   "author": "tnotesjs",
-  "homepage": "https://github.com/tnotesjs/tnotesjs/tree/main/apps/desk",
+  "homepage": "https://github.com/tnotesjs/tnotes/tree/main/apps/desk",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint --cache .",

@@ -18,12 +18,12 @@ export const SAMPLE_MARKDOWN = `# TNotes Mindmap 使用指南
   - [x] 已经打开默认测试示例
 - mindmap-web
   - 浏览器端编辑应用，负责大纲、脑图、源码视图和本地文件交互
-  - [GitHub 仓库](https://github.com/tnotesjs/tnotesjs/tree/main/apps/mindmap-web)
-  - [在线体验](https://tnotesjs.github.io/tnotesjs/)
+  - [GitHub 仓库](https://github.com/tnotesjs/tnotes/tree/main/apps/mindmap-web)
+  - [在线体验](https://tnotesjs.github.io/tnotes/)
 - mindmap-core
   - 与界面无关的 TypeScript 核心，提供 Markdown 解析、文档会话、布局和画布编辑能力
   - 可供 Web、VS Code 插件和只读渲染场景复用
-  - [GitHub 仓库](https://github.com/tnotesjs/tnotesjs/tree/main/packages/mindmap-core)
+  - [GitHub 仓库](https://github.com/tnotesjs/tnotes/tree/main/packages/mindmap-core)
   - [npm 包](https://www.npmjs.com/package/@tnotesjs/mindmap-core)
 - 数据原则
   - Markdown 是唯一持久化数据源，界面状态不会取代原始文档

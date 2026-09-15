@@ -8,5 +8,5 @@
   - 复制截图后粘贴到主题中
   - ![本地示例](assets/example.svg)
 - 链接
-  - [mindmap-web](https://github.com/tnotesjs/tnotesjs/tree/main/apps/mindmap-web)
-  - [mindmap-core](https://github.com/tnotesjs/tnotesjs/tree/main/packages/mindmap-core)
+  - [mindmap-web](https://github.com/tnotesjs/tnotes/tree/main/apps/mindmap-web)
+  - [mindmap-core](https://github.com/tnotesjs/tnotes/tree/main/packages/mindmap-core)

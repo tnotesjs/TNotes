@@ -1,6 +1,6 @@
 # TNotes Mindmap Web
 
-`*.tn-mindmap.md` 即脑图。在线：<https://tnotesjs.github.io/tnotesjs/>
+`*.tn-mindmap.md` 即脑图。在线：<https://tnotesjs.github.io/tnotes/>
 
 合法文件恰好一个 H1；H1 前除空行外不能有内容，H1 后只能是无序列表。非法源码不自动规范化；修复前只用源码视图。
 

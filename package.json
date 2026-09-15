@@ -1,5 +1,5 @@
 {
-  "name": "tnotesjs",
+  "name": "tnotes",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.10.0",

@@ -35,12 +35,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tnotesjs/tnotesjs.git",
+    "url": "git+https://github.com/tnotesjs/tnotes.git",
     "directory": "packages/mindmap-core"
   },
-  "homepage": "https://github.com/tnotesjs/tnotesjs/tree/main/packages/mindmap-core#readme",
+  "homepage": "https://github.com/tnotesjs/tnotes/tree/main/packages/mindmap-core#readme",
   "bugs": {
-    "url": "https://github.com/tnotesjs/tnotesjs/issues"
+    "url": "https://github.com/tnotesjs/tnotes/issues"
   },
   "keywords": [
     "mindmap",

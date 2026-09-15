@@ -6,10 +6,10 @@ import { deskLog } from './log'
 
 import type { UpdateStatusDto } from '../shared/contracts'
 
-// monorepo（tnotesjs/tnotesjs）里只有 desk 会创建 GitHub Release，tag 形如 desk@x.y.z；
+// monorepo（tnotesjs/tnotes）里只有 desk 会创建 GitHub Release，tag 形如 desk@x.y.z；
 // 用列表端点 + 前缀过滤，避免将来其他包建 Release 后 /releases/latest 误中
-const RELEASES_API = 'https://api.github.com/repos/tnotesjs/tnotesjs/releases?per_page=10'
-export const RELEASES_PAGE = 'https://github.com/tnotesjs/tnotesjs/releases'
+const RELEASES_API = 'https://api.github.com/repos/tnotesjs/tnotes/releases?per_page=10'
+export const RELEASES_PAGE = 'https://github.com/tnotesjs/tnotes/releases'
 const TAG_PREFIX = 'desk@'
 const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000
 const STARTUP_DELAY_MS = 8000
